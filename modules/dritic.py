@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import requests
+import deps.perms as perms
 
 
 class Seethreepio:
@@ -12,6 +12,7 @@ class Seethreepio:
             adapter=discord.RequestsWebhookAdapter())
 
     @commands.command()
+    @perms.admin()
     async def kek(self, ctx, *, message):
         self.webhook.send(message)
 

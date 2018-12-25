@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import deps.perms as perms
 
 
 class Dad:
@@ -32,6 +33,7 @@ class Dad:
                 self.webhook.send(qualitycontent)
 
     @commands.command()
+    @perms.mod()
     async def toggledad(self, ctx):
         if self.toggle:
             self.toggle = False
