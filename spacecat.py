@@ -3,8 +3,11 @@ from discord.ext import commands
 import logging
 import os
 import glob
+import configparser
 import deps.perms as perms
 
+
+# Logging
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler(filename="spacecat.log",
@@ -12,6 +15,14 @@ handler = logging.FileHandler(filename="spacecat.log",
 handler.setFormatter(logging.Formatter(
     '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
+
+
+# Generate Config
+if os.path.isfile('./config.ini'):
+    config = configparser.ConfigParser()
+    config['Base'] = {'APIKey': ''}
+    with open('config.ini', 'w') as file:
+        config.write(file)
 
 
 bot = commands.Bot(command_prefix="!")
@@ -89,4 +100,7 @@ if __name__ == "__main__":
             exc = '{}: {}'.format(type(e).__name__, e)
             print('Failed to load extension {}\n{}'.format(x, exc))
 
-    bot.run("NTAzNTgwMjI2MDM1Mzg0MzQw.Dq7JWQ.15vCCEblm89Pk6YWyYVWm1gCxdg")
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    apikey = config['Base']['APIKey']
+    bot.run(apikey)
