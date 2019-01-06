@@ -18,7 +18,7 @@ logger.addHandler(handler)
 
 
 # Generate Config
-if os.path.isfile('./config.ini'):
+if not os.path.isfile('./config.ini'):
     config = configparser.ConfigParser()
     config['Base'] = {'APIKey': ''}
     with open('config.ini', 'w') as file:
