@@ -5,6 +5,7 @@ import os
 import glob
 import configparser
 import deps.perms as perms
+import asyncio
 
 
 # Logging
@@ -15,14 +16,6 @@ handler = logging.FileHandler(filename="spacecat.log",
 handler.setFormatter(logging.Formatter(
     '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-
-
-# Generate Config
-if not os.path.isfile('./config.ini'):
-    config = configparser.ConfigParser()
-    config['Base'] = {'APIKey': ''}
-    with open('config.ini', 'w') as file:
-        config.write(file)
 
 
 bot = commands.Bot(command_prefix="!")
@@ -90,6 +83,7 @@ def getmodules():
 
 
 if __name__ == "__main__":
+    # Load Modules
     modulelist = getmodules()
     for x in modulelist:
         module = 'modules.' + x
@@ -101,6 +95,25 @@ if __name__ == "__main__":
             print('Failed to load extension {}\n{}'.format(x, exc))
 
     config = configparser.ConfigParser()
+
+    # Generate Config
+    if not os.path.isfile('./config.ini'):
+        keyinput = input("Input your bot's API Key: ")
+        config['Base'] = {'APIKey': keyinput}
+        with open('config.ini', 'w') as file:
+            config.write(file)
+
     config.read('config.ini')
     apikey = config['Base']['APIKey']
-    bot.run(apikey)
+
+    while True:
+        try:
+            bot.run(apikey)
+            break
+        except discord.LoginFailure:
+            print("Invalid API Key")
+            keyinput = input("Input your bot's API Key: ")
+            config['Base']['APIKey'] = keyinput
+            with open('config.ini', 'w') as file:
+                config.write(file)
+            spacecat.py
