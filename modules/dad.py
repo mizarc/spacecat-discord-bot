@@ -6,10 +6,6 @@ import deps.perms as perms
 class Dad:
     def __init__(self, bot):
         self.bot = bot
-        self.webhook = discord.Webhook.from_url(
-            "https://discordapp.com/api/webhooks/503836986956840960/L-Z5eLPoV1"
-            "FC5Q48jaDtM2llapn53-rYQrRvCzQ6X_urzYEmOSBit0dR9PwQEx-DRapQ",
-            adapter=discord.RequestsWebhookAdapter())
         self.channel = 97297058267951104
         self.toggle = True
 
@@ -30,17 +26,17 @@ class Dad:
                     else:
                         return
 
-                self.webhook.send(qualitycontent)
+                ctx.send(qualitycontent)
 
     @commands.command()
     @perms.mod()
     async def toggledad(self, ctx):
         if self.toggle:
             self.toggle = False
-            self.webhook.send("Dad has been disabled")
+            ctx.send("Dad has been disabled")
         elif not self.toggle:
             self.toggle = True
-            self.webhook.send("Dad has been enabled")
+            ctx.send("Dad has been enabled")
 
 
 def setup(bot):
