@@ -96,24 +96,29 @@ if __name__ == "__main__":
 
     config = configparser.ConfigParser()
 
-    # Generate Config
-    if not os.path.isfile('./config.ini'):
-        keyinput = input("Input your bot's API Key: ")
-        config['Base'] = {'APIKey': keyinput}
+    try:
+        # Read Config File for API Key
+        config.read('config.ini')
+        apikey = config['Base']['APIKey']
+        if apikey == "":
+            raise KeyError
+    except KeyError:
+        # Generate Config
+        apikey = input("Input your bot's API Key: ")
+        config['Base'] = {}
+        config['Base']['APIKey'] = apikey
         with open('config.ini', 'w') as file:
             config.write(file)
 
-    config.read('config.ini')
-    apikey = config['Base']['APIKey']
-
-    while True:
-        try:
-            bot.run(apikey)
-            break
-        except discord.LoginFailure:
-            print("Invalid API Key")
-            keyinput = input("Input your bot's API Key: ")
-            config['Base']['APIKey'] = keyinput
-            with open('config.ini', 'w') as file:
-                config.write(file)
-            spacecat.py
+    # Run Bot with API Key
+    try:
+        print(apikey)
+        bot.run(apikey)
+    except discord.LoginFailure:
+        print("""
+            Invalid API Key.
+            Program shutting down.
+            """)
+        config['Base']['APIKey'] = ""
+        with open('config.ini', 'w') as file:
+            config.write(file)
