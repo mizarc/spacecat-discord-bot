@@ -6,8 +6,8 @@ A private discord bot for use in a private discord server
 
 -   Python 3.5.3+
 -   [discord.py Rewrite](https://github.com/Rapptz/discord.py/tree/rewrite)
-    -   `pip install -U https://github.com/Rapptz/discord.py/archive/rewrite.zip#egg=discord.py[voice]`
+    -   `python3 -m pip install -U https://github.com/Rapptz/discord.py/archive/rewrite.zip#egg=discord.py[voice]`
 
-## Warning
+## Running
 
-Due to the usage of webhooks, this bot may only be run through the main server or conflicts may occur.
+Just run the `spacecat.py` script using python and insert your bot's API key.
