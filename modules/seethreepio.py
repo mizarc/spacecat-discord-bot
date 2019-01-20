@@ -9,9 +9,22 @@ class Seethreepio:
     @commands.command()
     async def flip(self, ctx, member: discord.Member):
         if member.id != self.bot.user.id:
-            ctx.send('(╯°□°）╯︵ ' + member.mention)
+            await ctx.send("(╯°□°）╯︵ " + member.mention)
         else:
-            ctx.send("Bitch please. \n'(╯°□°）╯︵ " + ctx.message.author.mention)
+            await ctx.send("Bitch please. \n'(╯°□°）╯︵ "
+                           + ctx.message.author.mention)
+
+    @commands.command()
+    async def throw(self, ctx, member: discord.Member, *, item=None):
+        if item is not None:
+            await ctx.send("(∩⚆ᗝ⚆)⊃ --==(" + item + ")     "
+                           + member.mention)
+        else:
+            if member.id != self.bot.user.id:
+                await ctx.send("(∩⚆ᗝ⚆)⊃ --==(O)     " + member.mention)
+            else:
+                await ctx.send("Bitch please. \n'(∩⚆ᗝ⚆)⊃ --==(O)     "
+                               + ctx.message.author.mention)
 
 
 def setup(bot):
