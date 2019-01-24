@@ -5,13 +5,15 @@ import os
 import glob
 import configparser
 import deps.perms as perms
-
+import os
 
 # Set command prefix
 bot = commands.Bot(command_prefix='!')
 
 
 def main():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
     # Logging
     logger = logging.getLogger('discord')
     logger.setLevel(logging.DEBUG)
@@ -23,14 +25,17 @@ def main():
 
     # Load Modules
     modulelist = getmodules()
+    loadedmodules = []
     for x in modulelist:
         module = 'modules.' + x
         try:
             bot.load_extension(module)
-            print("Successfully loaded " + module)
+            loadedmodules.append(x)
         except Exception as e:
             exc = '{}: {}'.format(type(e).__name__, e)
-            print("Failed to load extension {}\n{}".format(x, exc))
+            print("Failed to load extension {}\n{}\n".format(x, exc))
+
+    print("Successfully loaded module(s): " + ', '.join(loadedmodules))
 
     config = configparser.ConfigParser()
 
@@ -50,7 +55,7 @@ def main():
 
     # Run Bot with API Key
     try:
-        print(apikey)
+        print("Active API Key: " + apikey + "\n")
         bot.run(apikey)
     except discord.LoginFailure:
         print("""
