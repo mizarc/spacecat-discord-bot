@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import discord
 from discord.ext import commands
 import logging
@@ -5,10 +6,19 @@ import os
 import glob
 import configparser
 import deps.perms as perms
-import os
+from argparse import ArgumentParser
+
+# Arguments for inputting API Key
+parser = ArgumentParser()
+parser.add_argument('-apikey', '-a', help='apikey help', type=str)
+args = parser.parse_args()
 
 # Set command prefix
 bot = commands.Bot(command_prefix='!')
+
+# Open Config
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 
 def main():
@@ -37,8 +47,29 @@ def main():
 
     print("Successfully loaded module(s): " + ', '.join(loadedmodules))
 
-    config = configparser.ConfigParser()
+    # Append New APIKey to config
+    if args.apikey is not None:
+        config['Base']['APIKey'] = args.apikey
+        with open('config.ini', 'w') as file:
+            config.write(file)
 
+    # Run Bot with API Key
+    try:
+        apikey = config['Base']['APIKey']
+        print("Active API Key: " + apikey + "\n")
+        bot.run(apikey)
+    except discord.LoginFailure:
+        print("""
+            Invalid API Key.
+            Program shutting down.
+            """)
+        config['Base']['APIKey'] = ""
+        with open('config.ini', 'w') as file:
+            config.write(file)
+
+
+def firstrun():
+    config = configparser.ConfigParser()
     try:
         # Read Config File for API Key
         config.read('config.ini')
@@ -50,19 +81,6 @@ def main():
         apikey = input("Input your bot's API Key: ")
         config['Base'] = {}
         config['Base']['APIKey'] = apikey
-        with open('config.ini', 'w') as file:
-            config.write(file)
-
-    # Run Bot with API Key
-    try:
-        print("Active API Key: " + apikey + "\n")
-        bot.run(apikey)
-    except discord.LoginFailure:
-        print("""
-            Invalid API Key.
-            Program shutting down.
-            """)
-        config['Base']['APIKey'] = ""
         with open('config.ini', 'w') as file:
             config.write(file)
 
