@@ -16,9 +16,7 @@ args = parser.parse_args()
 # Set command prefix
 bot = commands.Bot(command_prefix='!')
 
-# Open Config
 config = configparser.ConfigParser()
-config.read('config.ini')
 
 
 def main():
@@ -47,6 +45,12 @@ def main():
 
     print("Successfully loaded module(s): " + ', '.join(loadedmodules))
 
+    # Run Config Check
+    if not os.path.exists('config.ini'):
+        noconfig()
+    else:
+        config.read('config.ini')
+
     # Append New APIKey to config
     if args.apikey is not None:
         config['Base']['APIKey'] = args.apikey
@@ -60,29 +64,20 @@ def main():
         bot.run(apikey)
     except discord.LoginFailure:
         print("""
-            Invalid API Key.
-            Program shutting down.
-            """)
-        config['Base']['APIKey'] = ""
-        with open('config.ini', 'w') as file:
-            config.write(file)
+        Invalid API key.
+        Specify new key through argument or config file.
+        Bot shutting down.
+        """)
 
 
-def firstrun():
-    config = configparser.ConfigParser()
-    try:
-        # Read Config File for API Key
-        config.read('config.ini')
-        apikey = config['Base']['APIKey']
-        if apikey == "":
-            raise KeyError
-    except KeyError:
-        # Generate Config
-        apikey = input("Input your bot's API Key: ")
-        config['Base'] = {}
-        config['Base']['APIKey'] = apikey
-        with open('config.ini', 'w') as file:
-            config.write(file)
+def noconfig():
+    print("First Run Initiated")
+    # Generate Config
+    keyinput = input("Input your bot's API Key: ")
+    config['Base'] = {}
+    config['Base']['APIKey'] = keyinput
+    with open('configasdf.ini', 'w') as file:
+        config.write(file)
 
 
 def getmodules():
