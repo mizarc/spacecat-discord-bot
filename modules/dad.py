@@ -3,7 +3,7 @@ from discord.ext import commands
 import deps.perms as perms
 
 
-class Dad:
+class Dad(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.channel = 97297058267951104

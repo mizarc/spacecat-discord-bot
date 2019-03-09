@@ -6,7 +6,7 @@ import os
 import deps.perms as perms
 
 
-class PoliteCat:
+class PoliteCat(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
