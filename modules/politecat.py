@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands
 import glob
-import datetime
 import os
 import deps.perms as perms
+from PIL import Image
 
 
 class PoliteCat(commands.Cog):
@@ -11,11 +11,10 @@ class PoliteCat(commands.Cog):
         self.bot = bot
 
     @commands.group()
-    @perms.admin()
     async def reactcfg(self, ctx):
         "Configure available reaction images"
         if ctx.invoked_subcommand is None:
-            ctx.send("I am w o k e")
+            await ctx.send("I am w o k e")
 
     @reactcfg.command()
     async def add(self, ctx, name):
@@ -23,27 +22,29 @@ class PoliteCat(commands.Cog):
         assetlist = []
         os.chdir("assets")
 
-        twomin = datetime.datetime.now() - datetime.timedelta(minutes=2)
-
-        for files in glob.glob("*.png"):
-            assetlist.append(files[:-4])
+        for files in glob.glob("*.webp"):
+            assetlist.append(files[:-5])
 
         for files in glob.glob("*.gif"):
             assetlist.append(files[:-4])
 
         if name not in assetlist:
-            async for message in ctx.history(after=twomin):
-                if message.author == ctx.author and message.attachments:
-                    extension = message.attachments[0].filename[-4:]
-                    print(message.attachments[0].filename[-4:])
-                    if extension == ".png" or extension == ".gif":
-                        await message.attachments[0].save(
-                            name + extension)
-                    else:
-                        ctx.send("Image must be a png or a gif")
-                    os.chdir("../")
-                    ctx.send("Added *" + name + "* to reactions.")
-                    return
+            if ctx.message.attachments is not None:
+
+                ext = ctx.message.attachments[0].filename.split(".")[-1]
+                print(ext)
+                if ext == "webp" or ext == "gif":
+                    await ctx.message.attachments[0].save(
+                        name + ext)
+                elif ext == "jpg" or ext == "jpeg" or ext == "bmp":
+                    image = ctx.message.attachments[0]
+                    await image.save(name + '.webp')
+                else:
+                    await ctx.send("Image must be formatted in " +
+                                   "webp, png, jpg, bmp or gif")
+                os.chdir("../")
+                await ctx.send("Added *" + name + "* to reactions.")
+                return
 
     @reactcfg.command()
     async def remove(self, ctx, name):
@@ -82,13 +83,12 @@ class PoliteCat(commands.Cog):
             assetlist.append(files[:-4])
 
     @commands.command()
-    @perms.admin()
     async def react(self, ctx, image):
         "Use an image/gif as a reaction"
         try:
-            ctx.send(file=discord.File("assets/" + image + ".png"))
+            await ctx.send(file=discord.File("assets/" + image + ".webp"))
         except FileNotFoundError:
-            ctx.send(file=discord.File("assets/" + image + ".gif"))
+            await ctx.send(file=discord.File("assets/" + image + ".gif"))
 
 
 def setup(bot):

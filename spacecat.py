@@ -76,7 +76,7 @@ def noconfig():
     keyinput = input("Input your bot's API Key: ")
     config['Base'] = {}
     config['Base']['APIKey'] = keyinput
-    with open('configasdf.ini', 'w') as file:
+    with open('config.ini', 'w') as file:
         config.write(file)
 
 
