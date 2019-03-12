@@ -15,12 +15,18 @@ An open source self hostable discord bot.
 
 
 ## Inviting Bot to Server
-Simply insert this link into your web browser and replace the placeholder with the client ID from your discord application.
+Simply insert this link into your web browser and replace the placeholder with the **Client ID** from your discord application page.
 
 https://discordapp.com/oauth2/authorize?client_id=PLACEHOLDER&scope=bot
 
-You are able to invite the bot to any server you have admistrator permissions in.
+The bot can be invited to servers you have admistrator permissions in.
 
 ## Running
 
-Just run the `spacecat.py` script using python and insert your bot's API key.
+### Windows
+Open the terminal to the software root folder and type `spacecat.py`.
+
+### MacOS & Linux
+Open the terminal to the software root folder and run the software as a script `./spacecat.py`.
+
+Alternatively, python can be called directly using `python3 spacecat.py` or any other alternative alias
