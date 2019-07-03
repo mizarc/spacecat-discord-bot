@@ -29,7 +29,6 @@ class Dad(commands.Cog):
                 ctx.send(qualitycontent)
 
     @commands.command()
-    @perms.mod()
     async def toggledad(self, ctx):
         if self.toggle:
             self.toggle = False

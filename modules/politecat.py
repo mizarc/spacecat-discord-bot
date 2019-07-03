@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 import glob
 import os
-import deps.perms as perms
 from PIL import Image
 
 
