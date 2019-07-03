@@ -204,7 +204,6 @@ async def ping(ctx):
 
 
 @bot.command()
-@perms.admin()
 async def reload(ctx, module=None):
     """Reloads all or specified module"""
     if module is None:
@@ -232,7 +231,6 @@ async def reload(ctx, module=None):
 
 
 @bot.command()
-@perms.admin()
 async def exit():
     """Shuts down the bot."""
     await bot.logout()
