@@ -123,10 +123,22 @@ async def on_ready():
         print(bot.user.id)
         print("Successfully loaded module(s): " + ', '.join(loadedmodules))
         print('--------------------')
-        game = discord.Streaming(name="The Elder Scrolls VI",
-                                url="https://www.twitch.tv/monstercat",
-                                type=1)
-        await bot.change_presence(activity=game)
+
+        acttype = config['Base']['activity_type']
+
+        if acttype == "playing":
+            acttype = discord.ActivityType.playing
+        elif acttype == "streaming":
+            acttype = discord.ActivityType.streaming
+        elif acttype == "listening":
+            acttype = discord.ActivityType.listening
+        elif acttype == "watching":
+            acttype = discord.ActivityType.watching
+
+        activity = discord.Activity(name=config['Base']['activity_name'],
+                                type=acttype,
+                                url="https://www.twitch.tv/monstercat")
+        await bot.change_presence(activity=activity)
     else:
         while True:
             # Set a bot admin
