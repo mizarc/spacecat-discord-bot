@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 import discord
-from discord.ext import commands
 import logging
 import os
 import glob
 import configparser
 import time
+from discord.ext import commands
 from argparse import ArgumentParser
+from helpers.dataclasses import activity_type_class, status_class
 
 # Arguments for API key input
 parser = ArgumentParser()
@@ -123,21 +124,16 @@ async def on_ready():
         print("Successfully loaded module(s): " + ', '.join(loadedmodules))
         print('--------------------')
 
-        acttype = config['Base']['activity_type']
+        statusname = config['Base']['status']
+        status = status_class(statusname)
 
-        if acttype == "playing":
-            acttype = discord.ActivityType.playing
-        elif acttype == "streaming":
-            acttype = discord.ActivityType.streaming
-        elif acttype == "listening":
-            acttype = discord.ActivityType.listening
-        elif acttype == "watching":
-            acttype = discord.ActivityType.watching
+        acttypename = config['Base']['activity_type']
+        activitytype = activity_type_class(acttypename)
 
-        activity = discord.Activity(name=config['Base']['activity_name'],
-                                type=acttype,
-                                url="https://www.twitch.tv/monstercat")
-        await bot.change_presence(activity=activity)
+        activity = discord.Activity(type=activitytype,
+                                    name=config['Base']['activity_name'],
+                                    url="https://www.twitch.tv/monstercat")
+        await bot.change_presence(status=status, activity=activity)
     else:
         while True:
             # Set a bot admin
@@ -242,7 +238,7 @@ async def reload(ctx, module=None):
 
 
 @bot.command()
-async def exit():
+async def exit(ctx):
     """Shuts down the bot."""
     await bot.logout()
 
