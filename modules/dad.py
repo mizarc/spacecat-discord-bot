@@ -1,7 +1,5 @@
 import discord
 from discord.ext import commands
-import deps.perms as perms
-
 
 class Dad(commands.Cog):
     def __init__(self, bot):
@@ -15,18 +13,15 @@ class Dad(commands.Cog):
             words = message.content.lower().split()
 
             triggers = ["im", "i'm"]
-            print(words)
 
             for x in triggers:
                 if x in words[:1]:
-                    print("yeah")
                     qualitycontent = "Hi " + " ".join(words[1:]) + ", I'm Dad!"
 
                     if "dad" in words[:2]:
                         qualitycontent = "No you're not, I'm dad."
                     break
                 else:
-                    print("nah")
                     return
 
             print(qualitycontent)
