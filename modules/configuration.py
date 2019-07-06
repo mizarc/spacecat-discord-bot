@@ -18,9 +18,10 @@ class Configuration(commands.Cog):
             await ctx.send("That's not a valid status")
             return
 
+        print(status)
         await self.bot.change_presence(status=status, activity=activity)
 
-        self.config['Base']['activity_status'] = statusname
+        self.config['Base']['status'] = statusname
         with open('config.ini', 'w') as file:
             self.config.write(file)
 
@@ -34,7 +35,7 @@ class Configuration(commands.Cog):
             await ctx.send("That's not a valid activity type")
             return
 
-        await self.bot.change_presence(activity=activity, status=self.config['Base']['activity_status'])
+        await self.bot.change_presence(activity=activity, status=self.config['Base']['status'])
 
         self.config['Base']['activity_type'] = acttype
         self.config['Base']['activity_name'] = name
