@@ -6,7 +6,6 @@ import os
 import glob
 import configparser
 import time
-import deps.perms as perms
 from argparse import ArgumentParser
 
 # Arguments for API key input
