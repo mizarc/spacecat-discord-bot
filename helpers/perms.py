@@ -3,10 +3,14 @@ from discord.utils import get
 import configparser
 
 def setup():
+    config = configparser.ConfigParser()
+
     config['PermsPreset']['administrator'] = {}
     config['PermsPreset']['moderator'] = {}
     config['PermsPreset']['user'] = {}
 
+    with open('config.ini', 'w') as file:
+            config.write(file)
 
 def new(guild):
     config = configparser.ConfigParser()
@@ -21,6 +25,8 @@ def new(guild):
     config.read('servers/' + guild.id + '.ini')
     config['PermsGroups'][guild.default_role] = userperms
 
+    with open('servers/' + guild.id + '.ini', 'w') as file:
+            config.write(file)
 
 def check():
     def predicate(ctx):
