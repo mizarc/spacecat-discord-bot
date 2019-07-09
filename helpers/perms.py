@@ -1,6 +1,7 @@
 from discord.ext import commands
 from discord.utils import get
 import configparser
+import os
 
 def setup():
     config = configparser.ConfigParser()
@@ -13,31 +14,31 @@ def setup():
             config.write(file)
 
 def new(guild):
-    config = configparser.ConfigParser()
+    if not os.path.exists('servers/' + str(guild.id) + '.ini'):
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+        userperms = config['PermsPreset']['user']
 
-    if not os.path.exists('servers/' + guild.id + '.ini'):
+        config = configparser.ConfigParser()
+
         config['PermsGroups'] = {}
+        config['PermsGroups'][str(guild.default_role.id)] = userperms
+        
         config['PermsUsers'] = {}
 
-    config.read('config.ini')
-    userperms = config['PermsPreset']['user']
-
-    config.read('servers/' + guild.id + '.ini')
-    config['PermsGroups'][guild.default_role] = userperms
-
-    with open('servers/' + guild.id + '.ini', 'w') as file:
-            config.write(file)
+        with open('servers/' + str(guild.id) + '.ini', 'w') as file:
+                config.write(file)
 
 def check():
     def predicate(ctx):
         config = configparser.ConfigParser()
-        config.read('servers/' + guild.id + '.ini')
+        config.read('servers/' + str(guild.id) + '.ini')
             
         if discord.Permissions.administrator in ctx.author.guild_permissions:
             return True
 
         for role in ctx.author.roles:
-            roleid = role.id
+            roleid = str(role.id)
             permroles = ['Perms'][method.__name__].split(',')
             if role in permroles:
                 return True
