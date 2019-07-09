@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import configparser
 from helpers.dataclasses import activity_type_class, status_class
+import helpers.perms as perms
 
 class Configuration(commands.Cog):
     def __init__(self, bot):
@@ -9,6 +10,7 @@ class Configuration(commands.Cog):
         self.config = configparser.ConfigParser()
 
     @commands.command()
+    @perms.exclusive()
     async def status(self, ctx, statusname):
         self.config.read('config.ini')
         activity = discord.Activity(type=activity_type_class(self.config['Base']['activity_type']), name=self.config['Base']['activity_name'])
@@ -26,6 +28,7 @@ class Configuration(commands.Cog):
             self.config.write(file)
 
     @commands.command()
+    @perms.exclusive()
     async def activity(self, ctx, acttype, *, name):
         self.config.read('config.ini')
         activitytype = activity_type_class(acttype)

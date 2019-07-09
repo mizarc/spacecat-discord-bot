@@ -13,7 +13,7 @@ class TrashPanda(commands.Cog):
 
     @commands.command()
     async def test(self, ctx):
-        await ctx.send(ctx.guild.default_role)
+        await ctx.send(ctx.guild.default_role.id)
 
 
 def setup(bot):

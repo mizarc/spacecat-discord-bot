@@ -2,42 +2,49 @@ from discord.ext import commands
 from discord.utils import get
 import configparser
 
-
-config = configparser.ConfigParser()
-config.read('config.ini')
-roles = ['admin', 'mod']
-
-
-def init():
-    for x in roles:
-        try:
-            # Read Config File for API Key
-            perm = config['Perms'][x]
-            return perm
-        except KeyError:
-            config['Perms'] = {}
-            config['Perms'][x] = ''
-    with open('config.ini', 'w') as file:
-        config.write(file)
+def setup():
+    config['PermsPreset']['administrator'] = {}
+    config['PermsPreset']['moderator'] = {}
+    config['PermsPreset']['user'] = {}
 
 
-def admin():
+def new(guild):
+    config = configparser.ConfigParser()
+
+    if not os.path.exists('servers/' + guild.id + '.ini'):
+        config['PermsGroups'] = {}
+        config['PermsUsers'] = {}
+
+    config.read('config.ini')
+    userperms = config['PermsPreset']['user']
+
+    config.read('servers/' + guild.id + '.ini')
+    config['PermsGroups'][guild.default_role] = userperms
+
+
+def check():
     def predicate(ctx):
-        role = "admin"
-        admin_roles = config['Perms'][role].split(',')
-        for x in admin_roles:
-            roles = ctx.author.roles.name
-            if get(roles, name=admin_roles):
+        config = configparser.ConfigParser()
+        config.read('servers/' + guild.id + '.ini')
+            
+        if discord.Permissions.administrator in ctx.author.guild_permissions:
+            return True
+
+        for role in ctx.author.roles:
+            roleid = role.id
+            permroles = ['Perms'][method.__name__].split(',')
+            if role in permroles:
                 return True
+    
     return commands.check(predicate)
 
-
-def mod():
+        
+def exclusive():
     def predicate(ctx):
-        role = "mod"
-        mod_roles = config['Perms'][role].split(',')
-        for x in mod_roles:
-            roles = ctx.author.roles.name
-            if get(roles, name=mod_roles):
-                return True
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+
+        if ctx.author.id == int(config['Base']['adminuser']):
+            return True
+
     return commands.check(predicate)

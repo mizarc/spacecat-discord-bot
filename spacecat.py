@@ -5,6 +5,7 @@ import os
 import glob
 import configparser
 import time
+import helpers.perms as perms
 from discord.ext import commands
 from argparse import ArgumentParser
 from helpers.dataclasses import activity_type_class, status_class
@@ -193,7 +194,9 @@ async def on_ready():
 
 @bot.event
 async def on_guild_join(guild):
-    if not os.path.exists('config.ini'):
+    if os.path.exists('config.ini'):
+        perms.new(guild)
+    else:
         print("Congrats! I have now had my core functions set up")
         print("You may now use me, or continue to configure me through Discord.")
         print("Type !help for more info")
@@ -205,12 +208,14 @@ async def on_guild_join(guild):
 
 # Commands
 @bot.command()
+@perms.check()
 async def ping(ctx):
     """A simple command to check if the bot is working."""
     await ctx.send(bot.user.name + " is responding")
 
 
 @bot.command()
+@perms.exclusive()
 async def reload(ctx, module=None):
     """Reloads all or specified module"""
     if module is None:
@@ -238,6 +243,7 @@ async def reload(ctx, module=None):
 
 
 @bot.command()
+@perms.exclusive()
 async def exit(ctx):
     """Shuts down the bot."""
     await bot.logout()
