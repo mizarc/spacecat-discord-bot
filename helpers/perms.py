@@ -2,6 +2,7 @@ from discord.ext import commands
 from discord.utils import get
 import configparser
 import os
+import discord
 
 def setup():
     config = configparser.ConfigParser()
@@ -32,17 +33,27 @@ def new(guild):
 def check():
     def predicate(ctx):
         config = configparser.ConfigParser()
-        config.read('servers/' + str(guild.id) + '.ini')
-            
-        if discord.Permissions.administrator in ctx.author.guild_permissions:
+        config.read('servers/' + str(ctx.guild.id) + '.ini')
+        
+        if ctx.author.guild_permissions.administrator:
             return True
 
-        for role in ctx.author.roles:
-            roleid = str(role.id)
-            permroles = ['Perms'][method.__name__].split(',')
-            if role in permroles:
+        try:
+            userperms = config['UserPerms'][str(ctx.author.id)].split(',')
+            if ctx.command.name in userperms:
                 return True
-    
+        except KeyError:
+            pass
+
+        for role in ctx.author.roles:
+            try:
+                groupperms = config['GroupPerms'][str(role.id)].split(',')
+                if ctx.command.name in groupperms:
+                    return True
+            except KeyError:
+                pass
+        
+
     return commands.check(predicate)
 
         
