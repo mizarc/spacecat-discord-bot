@@ -7,11 +7,13 @@ class TrashPanda(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    @perms.exclusive()
     async def echo(self, ctx, channel, *, message):
         ch = self.bot.get_channel(int(channel))
         await ch.send(message)
 
     @commands.command()
+    @perms.exclusive()
     async def test(self, ctx):
         await ctx.send(ctx.guild.default_role.id)
 

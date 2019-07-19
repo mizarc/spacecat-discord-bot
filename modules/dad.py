@@ -16,10 +16,10 @@ class Dad(commands.Cog):
 
             for x in triggers:
                 if x in words[:1]:
-                    qualitycontent = "Hi " + " ".join(words[1:]) + ", I'm Dad!"
+                    qualitycontent = "Hi " + " ".join(words[1:]) + ", I'm a Cat!"
 
-                    if "dad" in words[:2]:
-                        qualitycontent = "No you're not, I'm dad."
+                    if "a cat" in words[:2]:
+                        qualitycontent = "No you're not, I'm a cat."
                     break
                 else:
                     return
@@ -28,6 +28,7 @@ class Dad(commands.Cog):
             await message.channel.send(qualitycontent)
 
     @commands.command()
+    @perms.check()
     async def toggledad(self, ctx):
         if self.toggle:
             self.toggle = False

@@ -7,6 +7,7 @@ class Seethreepio(commands.Cog):
         self.bot = bot
 
     @commands.command()
+    @perms.check()
     async def flip(self, ctx, member: discord.Member):
         if member.id != self.bot.user.id:
             await ctx.send("(╯°□°）╯︵ " + member.mention)
@@ -15,6 +16,7 @@ class Seethreepio(commands.Cog):
                            + ctx.message.author.mention)
 
     @commands.command()
+    @perms.check()
     async def throw(self, ctx, member: discord.Member, *, item=None):
         if item is not None:
             await ctx.send("(∩⚆ᗝ⚆)⊃ --==(" + item + ")     "
