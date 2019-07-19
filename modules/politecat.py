@@ -10,12 +10,14 @@ class PoliteCat(commands.Cog):
         self.bot = bot
 
     @commands.group()
+    @perms.check()
     async def reactcfg(self, ctx):
         "Configure available reaction images"
         if ctx.invoked_subcommand is None:
             await ctx.send("I am w o k e")
 
     @reactcfg.command()
+    @perms.check()
     async def add(self, ctx, name):
         "Add a reaction image"
         assetlist = []
@@ -46,6 +48,7 @@ class PoliteCat(commands.Cog):
                 return
 
     @reactcfg.command()
+    @perms.check()
     async def remove(self, ctx, name):
         "Remove a reaction image"
         assetlist = []
@@ -70,6 +73,7 @@ class PoliteCat(commands.Cog):
         return
 
     @commands.command()
+    @perms.check()
     async def reactlist(self, ctx):
         "List all reaction images"
         assetlist = []
@@ -82,6 +86,7 @@ class PoliteCat(commands.Cog):
             assetlist.append(files[:-4])
 
     @commands.command()
+    @perms.check()
     async def react(self, ctx, image):
         "Use an image/gif as a reaction"
         try:
