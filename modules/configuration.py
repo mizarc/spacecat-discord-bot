@@ -47,27 +47,27 @@ class Configuration(commands.Cog):
 
     @commands.group()
     @perms.exclusive()
-    async def permpreset(self, ctx)
+    async def permpreset(self, ctx):
         print('nah')
 
     @permpreset.command()
     @perms.exclusive()
-    async def create(self, ctx)
+    async def create(self, ctx):
         print('nah')
 
     @permpreset.command()
     @perms.exclusive()
-    async def remove(self, ctx)
+    async def remove(self, ctx):
         print('nah')
 
     @permpreset.command()
     @perms.exclusive()
-    async def append(self, ctx)
+    async def append(self, ctx):
         print('nah')
 
     @permpreset.command()
     @perms.exclusive()
-    async def truncate(self, ctx)
+    async def truncate(self, ctx):
         print('nah')
 
 
