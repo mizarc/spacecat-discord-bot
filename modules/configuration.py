@@ -45,6 +45,32 @@ class Configuration(commands.Cog):
         with open('config.ini', 'w') as file:
             self.config.write(file)
 
+    @commands.group()
+    @perms.exclusive()
+    async def permpreset(self, ctx)
+        print('nah')
+
+    @permpreset.command()
+    @perms.exclusive()
+    async def create(self, ctx)
+        print('nah')
+
+    @permpreset.command()
+    @perms.exclusive()
+    async def remove(self, ctx)
+        print('nah')
+
+    @permpreset.command()
+    @perms.exclusive()
+    async def append(self, ctx)
+        print('nah')
+
+    @permpreset.command()
+    @perms.exclusive()
+    async def truncate(self, ctx)
+        print('nah')
+
+
 
 def setup(bot):
     bot.add_cog(Configuration(bot))
