@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-
+import helpers.perms as perms
 
 class Seethreepio(commands.Cog):
     def __init__(self, bot):
@@ -27,6 +27,10 @@ class Seethreepio(commands.Cog):
             else:
                 await ctx.send("Bitch please. \n'(∩⚆ᗝ⚆)⊃ --==(O)     "
                                + ctx.message.author.mention)
+
+    @commands.command()
+    async def stealuserpic(self, ctx, user: discord.User):
+        await ctx.send(user.avatar_url)
 
 
 def setup(bot):
