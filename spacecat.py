@@ -128,13 +128,16 @@ async def on_ready():
         statusname = config['Base']['status']
         status = status_class(statusname)
 
-        acttypename = config['Base']['activity_type']
-        activitytype = activity_type_class(acttypename)
+        try:
+            acttypename = config['Base']['activity_type']
+            activitytype = activity_type_class(acttypename)
 
-        activity = discord.Activity(type=activitytype,
-                                    name=config['Base']['activity_name'],
-                                    url="https://www.twitch.tv/monstercat")
-        await bot.change_presence(status=status, activity=activity)
+            activity = discord.Activity(type=activitytype,
+                                        name=config['Base']['activity_name'],
+                                        url="https://www.twitch.tv/monstercat")
+            await bot.change_presence(status=status, activity=activity)
+        except (KeyError, TypeError):
+            await bot.change_presence(status=status)
     else:
         while True:
             # Set a bot admin
@@ -167,9 +170,8 @@ async def on_ready():
                 time.sleep(2)
                 continue
 
-            
             time.sleep(2)
-
+            
             print("You should've recieved a message from me through Discord.")
             confirminput = input("Type 'yes' if you have, or 'no' to set a new ID: ")
             print('--------------------\n')
@@ -178,6 +180,11 @@ async def on_ready():
                 break
             continue
 
+        config['Base']['status'] = 'online'
+        config['Base']['activity_type'] = ''
+        config['Base']['activity_name'] = ''
+        with open('config.ini', 'w') as file:
+                config.write(file)
         time.sleep(2)
 
         # Join a server
