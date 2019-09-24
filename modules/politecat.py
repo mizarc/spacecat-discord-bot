@@ -14,12 +14,18 @@ class PoliteCat(commands.Cog):
     async def reactcfg(self, ctx):
         "Configure available reaction images"
         if ctx.invoked_subcommand is None:
-            await ctx.send("I am w o k e")
+            await ctx.send("Please specify a subcommand. Add/Remove")
 
     @reactcfg.command()
     @perms.check()
     async def add(self, ctx, name):
         "Add a reaction image"
+        try:
+            ctx.message.attachments[0]
+        except IndexError:
+            await ctx.send("There are no attachments in the message")
+            return
+
         assetlist = []
         os.chdir("assets")
 
@@ -30,22 +36,23 @@ class PoliteCat(commands.Cog):
             assetlist.append(files[:-4])
 
         if name not in assetlist:
-            if ctx.message.attachments is not None:
+            ext = ctx.message.attachments[0].filename.split(".")[-1]
 
-                ext = ctx.message.attachments[0].filename.split(".")[-1]
-                print(ext)
-                if ext == "webp" or ext == "gif":
-                    await ctx.message.attachments[0].save(
-                        name + ext)
-                elif ext == "jpg" or ext == "jpeg" or ext == "bmp":
-                    image = ctx.message.attachments[0]
-                    await image.save(name + '.webp')
-                else:
-                    await ctx.send("Image must be formatted in " +
-                                   "webp, png, jpg, bmp or gif")
-                os.chdir("../")
-                await ctx.send("Added *" + name + "* to reactions.")
+            if ext == "webp" or ext == "gif":
+                await ctx.message.attachments[0].save(
+                    name + "." + ext)
+            elif ext == "jpg" or ext == "jpeg" or ext == "bmp" or ext == "png":
+                image = ctx.message.attachments[0]
+                await image.save(name + '.webp')
+            else:
+                await ctx.send("Image must be formatted in " +
+                                "webp, png, jpg, bmp or gif")
                 return
+            
+            await ctx.send("Added *" + name + "* to reactions.")
+
+        os.chdir("../")
+        return
 
     @reactcfg.command()
     @perms.check()
@@ -54,23 +61,25 @@ class PoliteCat(commands.Cog):
         assetlist = []
         os.chdir("assets")
 
-        for files in glob.glob("*.png"):
-            assetlist.append(files[:-4])
+        for files in glob.glob("*.webp"):
+            assetlist.append(files[:-5])
 
         for files in glob.glob("*.gif"):
             assetlist.append(files[:-4])
 
         if name in assetlist:
             try:
-                os.remove(name + ".png")
+                os.remove(name + ".webp")
             except FileNotFoundError:
                 os.remove(name + ".gif")
+            finally:
+                os.chdir("../")
+                await ctx.send("Removed *" + name + "* from reactions.")
+                return
         else:
-            ctx.send("Reaction image does not exist")
-
-        os.chdir("../")
-        ctx.send("Removed *" + name + "* from reactions.")
-        return
+            os.chdir("../")
+            await ctx.send("Reaction image does not exist")
+            return
 
     @commands.command()
     @perms.check()
