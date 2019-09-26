@@ -79,6 +79,18 @@ class Alexa(commands.Cog):
         return
 
     @commands.command()
+    async def leave(self, ctx):
+        """Stops and leaves the voice channel"""
+        # Check if in a voice channel
+        if ctx.voice_client is None:
+            await ctx.send("I can't leave if i'm not even in a voice channel")
+            return
+
+        # Disconnect from voice channel
+        await ctx.voice_client.disconnect()
+        return
+
+    @commands.command()
     async def play(self, ctx, *, url):
         """Plays from a url (almost anything youtube_dl supports)"""
 
@@ -87,12 +99,6 @@ class Alexa(commands.Cog):
             ctx.voice_client.play(player, after=lambda e: print('Player error: %s' % e) if e else None)
 
         await ctx.send('Now playing: {}'.format(player.title))
-
-    @commands.command()
-    async def stop(self, ctx):
-        """Stops and disconnects the bot from voice"""
-
-        await ctx.voice_client.disconnect()
 
 
 def setup(bot):
