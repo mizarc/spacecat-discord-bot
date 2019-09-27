@@ -1,3 +1,4 @@
+import asyncio
 import discord
 import youtube_dl
 from discord.ext import commands
@@ -53,13 +54,29 @@ class Alexa(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def join(self, ctx, *, channel: discord.VoiceChannel):
+    async def join(self, ctx, *, channel: discord.VoiceChannel = None):
         """Joins a voice channel"""
+        # Get user's current channel if no channel is specified
+        if channel == None:
+            try:
+                channel = ctx.author.voice.channel
+            except AttributeError:
+                await ctx.send("You must specify or be in a channel")
+                return
 
-        if ctx.voice_client is not None:
-            return await ctx.voice_client.move_to(channel)
+        # Connect if not in a voice channel
+        if ctx.voice_client is None:
+            await channel.connect()
+            return
 
-        await channel.connect()
+        # Check if the specified voice channel is the same as the current channel
+        if channel == ctx.voice_client.channel:
+            await ctx.send("I'm already in that voice channel")
+            return
+
+        # Move to specified channel
+        await ctx.voice_client.move_to(channel)
+        return
 
     @commands.command()
     async def play(self, ctx, *, url):
