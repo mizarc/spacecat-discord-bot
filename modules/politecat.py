@@ -20,37 +20,47 @@ class PoliteCat(commands.Cog):
     @perms.check()
     async def add(self, ctx, name):
         "Add a reaction image"
+        # Check if attachment exists in message
         try:
-            ctx.message.attachments[0]
+            image = ctx.message.attachments[0]
         except IndexError:
             await ctx.send("There are no attachments in the message")
             return
 
-        assetlist = []
-        os.chdir("assets")
+        # Open assets directory
+        try:
+            os.chdir("assets")
+        except FileNotFoundError:
+            os.mkdir("assets")
+            os.chdir("assets")
 
+        # Get all images in directory and add to list
+        assetlist = []
         for files in glob.glob("*.webp"):
             assetlist.append(files[:-5])
 
         for files in glob.glob("*.gif"):
             assetlist.append(files[:-4])
 
-        if name not in assetlist:
-            ext = ctx.message.attachments[0].filename.split(".")[-1]
+        # Check if name already exists
+        if name in assetlist:
+            await ctx.send("Reaction name already exists.")
+            os.chdir("../")
+            return
 
-            if ext == "webp" or ext == "gif":
-                await ctx.message.attachments[0].save(
-                    name + "." + ext)
-            elif ext == "jpg" or ext == "jpeg" or ext == "bmp" or ext == "png":
-                image = ctx.message.attachments[0]
-                await image.save(name + '.webp')
-            else:
-                await ctx.send("Image must be formatted in " +
-                                "webp, png, jpg, bmp or gif")
-                return
-            
-            await ctx.send("Added *" + name + "* to reactions.")
-
+        # Check if file extention is valid and convert to webp when possible
+        ext = image.filename.split(".")[-1]
+        if ext == "webp" or ext == "gif":
+            await image.save(name + "." + ext)
+        elif ext == "jpg" or ext == "jpeg" or ext == "bmp" or ext == "png":
+            await image.save(name + '.webp')
+        else:
+            await ctx.send("Image must be formatted in " +
+                            "webp, png, jpg, bmp or gif")
+            os.chdir("../")
+            return
+        
+        await ctx.send("Added *" + name + "* to reactions.")
         os.chdir("../")
         return
 
@@ -58,28 +68,33 @@ class PoliteCat(commands.Cog):
     @perms.check()
     async def remove(self, ctx, name):
         "Remove a reaction image"
-        assetlist = []
+        
         os.chdir("assets")
 
+        # Get all images from directoy and add to list
+        assetlist = []
         for files in glob.glob("*.webp"):
             assetlist.append(files[:-5])
 
         for files in glob.glob("*.gif"):
             assetlist.append(files[:-4])
 
-        if name in assetlist:
-            try:
-                os.remove(name + ".webp")
-            except FileNotFoundError:
-                os.remove(name + ".gif")
-            finally:
-                os.chdir("../")
-                await ctx.send("Removed *" + name + "* from reactions.")
-                return
-        else:
-            os.chdir("../")
+        # Check if image name exists
+        if name not in assetlist:
             await ctx.send("Reaction image does not exist")
+            os.chdir("../")
             return
+
+        # Remove specified image
+        try:
+            os.remove(name + ".webp")
+        except FileNotFoundError:
+            os.remove(name + ".gif")
+        finally:
+            os.chdir("../")
+            await ctx.send("Removed *" + name + "* from reactions.")
+            return
+            
 
     @commands.command()
     @perms.check()
