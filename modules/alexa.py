@@ -52,6 +52,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 class Alexa(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.queue = []
 
     @commands.command()
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
@@ -87,18 +88,30 @@ class Alexa(commands.Cog):
             return
 
         # Disconnect from voice channel
+        self.queue.clear()
         await ctx.voice_client.disconnect()
         return
 
     @commands.command()
     async def play(self, ctx, *, url):
         """Plays from a url (almost anything youtube_dl supports)"""
+        # Join user's voice channel if not in one already
+        if ctx.voice_client is None:
+            await ctx.invoke(self.join)
 
-        async with ctx.typing():
-            player = await YTDLSource.from_url(url, loop=self.bot.loop)
-            ctx.voice_client.play(player, after=lambda e: print('Player error: %s' % e) if e else None)
+        # Grab audio source from youtube_dl
+        source = await YTDLSource.from_url(url, loop=self.bot.loop)
 
-        await ctx.send('Now playing: {}'.format(player.title))
+        # Play specified song if queue is empty
+        if not self.queue:
+            self.queue.append(source)
+            ctx.voice_client.play(source)
+            await ctx.send(f'Now playing: `{source.title}`')
+            return
+
+        # Add to queue if song is currently playing
+        self.queue.append(source)
+        await ctx.send(f"Added `{source.title}` to queue")
 
 
 def setup(bot):
