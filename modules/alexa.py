@@ -105,7 +105,7 @@ class Alexa(commands.Cog):
         # Play specified song if queue is empty
         if not self.queue:
             self.queue.append(source)
-            ctx.voice_client.play(source)
+            ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             await ctx.send(f'Now playing: `{source.title}`')
             return
 
@@ -149,6 +149,29 @@ class Alexa(commands.Cog):
         # Pauses music playback
         ctx.voice_client.pause()
         await ctx.send("Music has been paused")
+
+    @commands.command()
+    async def skip(self, ctx):
+        """Skip the current song and play the next song"""
+        # Check if there's queue is empty
+        if len(self.queue) <= 1:
+            await ctx.send("There's nothing in the queue after this")
+            return
+
+        # Run next function to handle next in queue
+        ctx.voice_client.stop()
+        self._next(ctx)
+    
+    def _next(self, ctx):
+        # Remove first in queue and play the current first in list
+        if len(self.queue) > 1:
+            self.queue.pop(0)
+            ctx.voice_client.play(self.queue[0], after=lambda e: self._next(ctx))
+            return
+
+        # Remove last song from queue if there are no other songs        
+        self.queue.pop(0)
+        return
 
 
 def setup(bot):
