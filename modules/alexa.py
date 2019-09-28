@@ -113,6 +113,43 @@ class Alexa(commands.Cog):
         self.queue.append(source)
         await ctx.send(f"Added `{source.title}` to queue")
 
+    @commands.command()
+    async def stop(self, ctx):
+        """Stops and clears the queue"""
+        # Check if in a voice channel
+        if ctx.voice_client is None:
+            await ctx.send("I can't stop playing if i'm not even in a voice channel")
+            return
+
+        # Stops and clears the queue
+        self.queue.clear()
+        await ctx.voice_client.stop()
+        await ctx.send("Music has been stopped & queue has been cleared")
+
+    @commands.command()
+    async def resume(self, ctx):
+        """Resumes music if paused"""
+        # Check if music is paused
+        if ctx.voice_client is None or not ctx.voice_client.is_paused():
+            await ctx.send("Music isn't paused")
+            return
+
+        # Resumes music playback
+        ctx.voice_client.resume()
+        await ctx.send("Music has been resumed")
+
+    @commands.command()
+    async def pause(self, ctx):
+        """Pauses the music"""
+        # Check if music is paused
+        if ctx.voice_client is None or ctx.voice_client.is_paused():
+            await ctx.send("Music is already paused")
+            return
+
+        # Pauses music playback
+        ctx.voice_client.pause()
+        await ctx.send("Music has been paused")
+
 
 def setup(bot):
     bot.add_cog(Alexa(bot))
