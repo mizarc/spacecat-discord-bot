@@ -3,11 +3,11 @@
 A magical, open source, self hostable, easy to use, general purpose, fully extensible discord bot running on Python.
 
 ## Requirements
-
--   Python 3.5.3+
--   [discord.py](https://github.com/Rapptz/discord.py)
-    -   Windows: `py -3 -m pip install -U discord.py[voice]`
-    -   MacOS/Linux: `python3 -m pip install -U discord.py[voice]`
+For MacOS/Linux, substitute `py -3` with `sudo python3`
+-   [Python 3.6+](https://www.python.org/)
+-   [discord.py](https://github.com/Rapptz/discord.py) (`py -3 -m pip install -U discord.py[voice]`)
+-   [Youtube_dl](https://ytdl-org.github.io/youtube-dl/index.html) (`py -3 -m pip install -U youtube_dl`)
+-   [Pillow](https://pillow.readthedocs.io/en/stable/) (`py -3 -m pip install -U Pillow`)
 
 
 ## Running
