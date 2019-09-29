@@ -1,5 +1,6 @@
 import asyncio
 import discord
+import time
 import youtube_dl
 from discord.ext import commands
 
@@ -53,6 +54,7 @@ class Alexa(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.queue = []
+        self.loop = False
 
     @commands.command()
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
@@ -158,20 +160,39 @@ class Alexa(commands.Cog):
             await ctx.send("There's nothing in the queue after this")
             return
 
+        # Remove current song if currently looping
+        if self.loop:
+            self.queue.pop(0)
+
         # Run next function to handle next in queue
         ctx.voice_client.stop()
         self._next(ctx)
-    
+
+    @commands.command()
+    async def loop(self, ctx):
+        """Loop the currently playing song"""
+        if self.loop:
+            self.loop = False
+            await ctx.send("Loop disabled")
+            return
+
+        self.loop = True
+        await ctx.send("Loop enabled")
+        return
+        
     def _next(self, ctx):
-        # Remove first in queue and play the current first in list
-        if len(self.queue) > 1:
+        time.sleep(1)
+        # If looping, grab cached file and play it again from the start
+        if self.loop:
+            source = discord.FFmpegPCMAudio(ytdl.prepare_filename(self.queue[0].data))
+            ctx.voice_client.play(source, after=lambda e: self._next(ctx))
+            return
+
+        # Remove first in queue and play the new first in list
+        if self.queue:
             self.queue.pop(0)
             ctx.voice_client.play(self.queue[0], after=lambda e: self._next(ctx))
             return
-
-        # Remove last song from queue if there are no other songs        
-        self.queue.pop(0)
-        return
 
 
 def setup(bot):
