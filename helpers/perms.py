@@ -35,14 +35,14 @@ def new(guild):
 
 def check():
     def predicate(ctx):
+        # If user is the server administrator, always allow
+        if ctx.author.guild_permissions.administrator:
+            return True
+
         # Open server's config file
         config = configparser.ConfigParser()
         config.read('servers/' + str(ctx.guild.id) + '.ini')
         
-        # If user is the bot administrator, always allow
-        if ctx.author.guild_permissions.administrator:
-            return True
-
         # Check if specific user has a permission
         try:
             userperms = config['UserPerms'][str(ctx.author.id)].split(',')
