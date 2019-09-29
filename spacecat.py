@@ -4,6 +4,7 @@ import logging
 import os
 import glob
 import configparser
+import shutil
 import time
 import helpers.perms as perms
 from discord.ext import commands
@@ -253,6 +254,7 @@ async def reload(ctx, module=None):
 @perms.exclusive()
 async def exit(ctx):
     """Shuts down the bot."""
+    shutil.rmtree('cache')
     await bot.logout()
 
 
