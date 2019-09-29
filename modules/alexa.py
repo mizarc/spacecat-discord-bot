@@ -1,5 +1,7 @@
 import asyncio
 import discord
+import os
+import shutil
 import time
 import youtube_dl
 from discord.ext import commands
@@ -9,7 +11,7 @@ youtube_dl.utils.bug_reports_message = lambda: ''
 
 ytdl_format_options = {
     'format': 'bestaudio/best',
-    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
+    'outtmpl': 'cache/%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
@@ -55,6 +57,7 @@ class Alexa(commands.Cog):
         self.bot = bot
         self.queue = []
         self.loop = False
+        self.keep_cache = False
 
     @commands.command()
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
@@ -91,6 +94,7 @@ class Alexa(commands.Cog):
 
         # Disconnect from voice channel
         self.queue.clear()
+        shutil.rmtree('cache')
         await ctx.voice_client.disconnect()
         return
 
@@ -125,6 +129,7 @@ class Alexa(commands.Cog):
 
         # Stops and clears the queue
         self.queue.clear()
+        shutil.rmtree('cache')
         await ctx.voice_client.stop()
         await ctx.send("Music has been stopped & queue has been cleared")
 
@@ -163,6 +168,7 @@ class Alexa(commands.Cog):
         # Remove current song if currently looping
         if self.loop:
             self.queue.pop(0)
+            os.remove(ytdl.prepare_filename(self.queue[0].data))
 
         # Run next function to handle next in queue
         ctx.voice_client.stop()
@@ -179,6 +185,7 @@ class Alexa(commands.Cog):
         self.loop = True
         await ctx.send("Loop enabled")
         return
+
         
     def _next(self, ctx):
         time.sleep(1)
@@ -187,6 +194,9 @@ class Alexa(commands.Cog):
             source = discord.FFmpegPCMAudio(ytdl.prepare_filename(self.queue[0].data))
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
+
+        # Remove already played songs from cache
+        os.remove(ytdl.prepare_filename(self.queue[0].data))
 
         # Remove first in queue and play the new first in list
         if self.queue:
