@@ -82,7 +82,7 @@ class Configuration(commands.Cog):
         try:
             # Check group's existing perms
             group_perms = config['GroupPerms'][str(group.id)].split(',')
-            if ctx.command.name in group_perms:
+            if command in group_perms:
                 await ctx.send("That group already has that permission")
                 return
 
@@ -98,10 +98,48 @@ class Configuration(commands.Cog):
         with open('servers/' + str(ctx.guild.id) + '.ini', 'w') as file:
                 config.write(file)
 
-    @perm.command()
+    @group.command()
     @perms.check()
-    async def remove(self, ctx, id, command):
-        await ctx.send("keke")
+    async def remove(self, ctx, group: discord.Role, command):
+        # Loop through command list and check if command exists
+        command_exists = False
+        for bot_command in ctx.bot.commands:
+            if command == bot_command.name:
+                command_exists = True
+                break
+
+        # Send message if command does not exist
+        if not command_exists:
+            await ctx.send("That command does not exist")
+            return
+
+        # Open server's config file
+        config = configparser.ConfigParser()
+        config.read('servers/' + str(ctx.guild.id) + '.ini')
+
+        # Add permission to group if they don't already have the perm
+        try:
+            # Check group's existing perms
+            group_perms = config['GroupPerms'][str(group.id)].split(',')
+            if command in group_perms:
+                group_perms.remove(command)
+                config['GroupPerms'][str(group.id)] = ','.join(group_perms)
+            else:
+                raise KeyError
+        except KeyError:
+            # Notify user if group doesn't have permission
+            await ctx.send("That group doesn't have that permission")
+            return
+
+        # Write to file and notify user of change
+        await ctx.send(f"Command `{command}` removed from group `{group.name}`")
+        with open('servers/' + str(ctx.guild.id) + '.ini', 'w') as file:
+                config.write(file)
+
+    @group.command()
+    @perms.check()
+    async def parent(self, ctx, group: discord.Role, command):
+        await ctx.send("kek")
 
     @commands.group()
     @perms.exclusive()
@@ -115,7 +153,7 @@ class Configuration(commands.Cog):
 
     @permpreset.command()
     @perms.exclusive()
-    async def remove(self, ctx):
+    async def removed(self, ctx):
         print('nah')
 
     @permpreset.command()
