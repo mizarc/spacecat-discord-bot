@@ -5,6 +5,7 @@ import shutil
 import time
 import youtube_dl
 from discord.ext import commands
+import helpers.perms as perms
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -60,6 +61,7 @@ class Alexa(commands.Cog):
         self.keep_cache = False
 
     @commands.command()
+    @perms.check()
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
         """Joins a voice channel"""
         # Get user's current channel if no channel is specified
@@ -85,6 +87,7 @@ class Alexa(commands.Cog):
         return
 
     @commands.command()
+    @perms.check()
     async def leave(self, ctx):
         """Stops and leaves the voice channel"""
         # Check if in a voice channel
@@ -99,6 +102,7 @@ class Alexa(commands.Cog):
         return
 
     @commands.command()
+    @perms.check()
     async def play(self, ctx, *, url):
         """Plays from a url (almost anything youtube_dl supports)"""
         # Join user's voice channel if not in one already
@@ -120,6 +124,7 @@ class Alexa(commands.Cog):
         await ctx.send(f"Added `{source.title}` to queue")
 
     @commands.command()
+    @perms.check()
     async def stop(self, ctx):
         """Stops and clears the queue"""
         # Check if in a voice channel
@@ -134,6 +139,7 @@ class Alexa(commands.Cog):
         await ctx.send("Music has been stopped & queue has been cleared")
 
     @commands.command()
+    @perms.check()
     async def resume(self, ctx):
         """Resumes music if paused"""
         # Check if music is paused
@@ -146,6 +152,7 @@ class Alexa(commands.Cog):
         await ctx.send("Music has been resumed")
 
     @commands.command()
+    @perms.check()
     async def pause(self, ctx):
         """Pauses the music"""
         # Check if music is paused
@@ -158,6 +165,7 @@ class Alexa(commands.Cog):
         await ctx.send("Music has been paused")
 
     @commands.command()
+    @perms.check()
     async def skip(self, ctx):
         """Skip the current song and play the next song"""
         # Check if there's queue is empty
@@ -175,6 +183,7 @@ class Alexa(commands.Cog):
         self._next(ctx)
 
     @commands.command()
+    @perms.check()
     async def loop(self, ctx):
         """Loop the currently playing song"""
         if self.loop:
