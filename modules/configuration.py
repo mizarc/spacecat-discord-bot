@@ -97,9 +97,9 @@ class Configuration(commands.Cog):
         db.commit()
         db.close()
 
-    @group.command()
+    @group.command(name='remove')
     @perms.check()
-    async def remove(self, ctx, group: discord.Role, command):
+    async def removegroup(self, ctx, group: discord.Role, command):
         # Loop through command list and check if command exists
         command_exists = False
         for bot_command in ctx.bot.commands:
@@ -112,28 +112,25 @@ class Configuration(commands.Cog):
             await ctx.send("That command does not exist")
             return
 
-        # Open server's config file
-        config = configparser.ConfigParser()
-        config.read('servers/' + str(ctx.guild.id) + '.ini')
+        # Open server's database file
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
 
+        # Query 
+        cursor.execute(
+            "SELECT perm FROM group_permissions WHERE groupid=" + str(group.id) + " AND perm='" + command + "'")
+        group_perms = cursor.fetchall()
+        
         # Add permission to group if they don't already have the perm
-        try:
-            # Check group's existing perms
-            group_perms = config['GroupPerms'][str(group.id)].split(',')
-            if command in group_perms:
-                group_perms.remove(command)
-                config['GroupPerms'][str(group.id)] = ','.join(group_perms)
-            else:
-                raise KeyError
-        except KeyError:
-            # Notify user if group doesn't have permission
+        if not group_perms:
             await ctx.send("That group doesn't have that permission")
             return
-
+        
         # Write to file and notify user of change
-        await ctx.send(f"Command `{command}` removed from group `{group.name}`")
-        with open('servers/' + str(ctx.guild.id) + '.ini', 'w') as file:
-                config.write(file)
+        cursor.execute("DELETE FROM group_permissions WHERE groupid=" + str(group.id) + " AND perm='" + command + "'")
+        await ctx.send(f"Command `{command}` added to group `{group.name}`")
+        db.commit()
+        db.close()
 
     @group.command()
     @perms.check()
