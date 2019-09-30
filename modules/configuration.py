@@ -63,7 +63,7 @@ class Configuration(commands.Cog):
             await ctx.send("Please specify a subcommand. Add/Remove/Parent/Unparent")
 
     @group.command(name='add')
-    #@perms.check()
+    @perms.check()
     async def addgroup(self, ctx, group: discord.Role, command):
         # Loop through command list and check if command exists
         command_exists = False
