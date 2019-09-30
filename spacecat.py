@@ -258,7 +258,11 @@ async def reload(ctx, module=None):
 @perms.exclusive()
 async def exit(ctx):
     """Shuts down the bot."""
-    shutil.rmtree('cache')
+    try:
+        shutil.rmtree('cache')
+    except:
+        pass
+    
     await bot.logout()
 
 
