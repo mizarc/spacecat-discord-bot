@@ -62,9 +62,9 @@ class Configuration(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send("Please specify a subcommand. Add/Remove/Parent/Unparent")
 
-    @group.command()
-    @perms.check()
-    async def add(self, ctx, group: discord.Role, command):
+    @group.command(name='add')
+    #@perms.check()
+    async def addgroup(self, ctx, group: discord.Role, command):
         # Loop through command list and check if command exists
         command_exists = False
         for bot_command in ctx.bot.commands:
@@ -141,6 +141,47 @@ class Configuration(commands.Cog):
         # Open server's config file
         config = configparser.ConfigParser()
         config.read('servers/' + str(ctx.guild.id) + '.ini')
+
+    @perm.group()
+    @perms.check()
+    async def user(self, ctx):
+        """Configure server permissions"""
+        if ctx.invoked_subcommand is None:
+            await ctx.send("Please specify a subcommand. Add/Remove/Parent/Unparent")
+
+    @user.command(name='add')
+    @perms.check()
+    async def adduser(self, ctx, user: discord.User, command):
+        # Loop through command list and check if command exists
+        command_exists = False
+        for bot_command in ctx.bot.commands:
+            if command == bot_command.name:
+                command_exists = True
+                break
+
+        # Send message if command does not exist
+        if not command_exists:
+            await ctx.send("That command does not exist")
+            return
+
+        # Open server's database file
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+
+        # Query 
+        user_perms = cursor.execute(
+            'SELECT perm FROM user_permissions WHERE userid=' + str(user.id))
+
+        # Add permission to group if they don't already have the perm
+        if command in user_perms:
+            await ctx.send("That user already has that permission")
+            return
+        cursor.execute("INSERT INTO user_permissions VALUES (" + str(ctx.guild.id) + ',' + str(user.id) + ", '" + command + "')")
+        
+        # Write to file and notify user of change
+        await ctx.send(f"Command `{command}` added to group `{user.name}`")
+        db.commit()
+        db.close()
 
     @commands.group()
     @perms.exclusive()
