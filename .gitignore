@@ -1,6 +1,11 @@
-*.pyc
-*.pyo
-*.log
-*.ini
 assets/
 cache/
+
+*.db
+*.ini
+*.log
+*.pyc
+*.pyo
+
+
+

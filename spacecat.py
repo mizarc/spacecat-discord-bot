@@ -7,6 +7,7 @@ import configparser
 import shutil
 import time
 import helpers.perms as perms
+import helpers.perms
 from discord.ext import commands
 from argparse import ArgumentParser
 from helpers.dataclasses import activity_type_class, status_class
@@ -125,6 +126,9 @@ async def on_ready():
         print(bot.user.id)
         print("Successfully loaded module(s): " + ', '.join(loadedmodules))
         print('--------------------')
+
+        if not os.path.exists("spacecat.db"):
+            perms.setup()
 
         statusname = config['Base']['status']
         status = status_class(statusname)
