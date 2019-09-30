@@ -55,17 +55,17 @@ def check():
         config = configparser.ConfigParser()
         config.read('servers/' + str(ctx.guild.id) + '.ini')
 
-        # Check if specific user has a permission
+        # Check if specific user has a permission in server
         user_perms = cursor.execute(
-            'SELECT perm FROM user_permissions WHERE userid=' + str(ctx.author.id))
+            'SELECT perm FROM user_permissions WHERE serverid=' + str(ctx.guild.id) + ' AND userid=' + str(ctx.author.id))
         for perm in user_perms:
-                if ctx.command.name == perm[0]:    
+                if ctx.command.name == perm[0]:
                     return True
 
-        # Check if user's group has a permission
+        # Check if user's group has a permission in server
         for role in ctx.author.roles:
             group_perms = cursor.execute(
-                'SELECT perm FROM group_permissions WHERE groupid=' + str(role.id))
+                'SELECT perm FROM group_permissions WHERE serverid=' + str(ctx.guild.id) + ' AND groupid=' + str(role.id))
             for perm in group_perms:
                 if ctx.command.name == perm[0]:    
                     return True
