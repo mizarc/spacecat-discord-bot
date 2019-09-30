@@ -72,19 +72,16 @@ class Configuration(commands.Cog):
                 command_exists = True
                 break
 
-        # Send message if command does not exist
+        # Notify user if command does not exist
         if not command_exists:
             await ctx.send("That command does not exist")
             return
 
-        # Open server's database file
+        # Query database for 
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-
-        # Query 
         group_perms = cursor.execute(
             'SELECT perm FROM group_permissions WHERE groupid=' + str(group.id))
-        print(group_perms)
 
         # Add permission to group if they don't already have the perm
         if command in group_perms:
@@ -112,21 +109,19 @@ class Configuration(commands.Cog):
             await ctx.send("That command does not exist")
             return
 
-        # Open server's database file
+        # Query database for group permissions
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-
-        # Query 
         cursor.execute(
             "SELECT perm FROM group_permissions WHERE groupid=" + str(group.id) + " AND perm='" + command + "'")
         group_perms = cursor.fetchall()
         
-        # Add permission to group if they don't already have the perm
+        # Notify user if group doesn't have the permission
         if not group_perms:
             await ctx.send("That group doesn't have that permission")
             return
         
-        # Write to file and notify user of change
+        # Remove permission from database and notify user
         cursor.execute("DELETE FROM group_permissions WHERE groupid=" + str(group.id) + " AND perm='" + command + "'")
         await ctx.send(f"Command `{command}` added to group `{group.name}`")
         db.commit()
