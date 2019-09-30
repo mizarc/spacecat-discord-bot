@@ -97,14 +97,14 @@ class Configuration(commands.Cog):
     @group.command(name='remove')
     @perms.check()
     async def removegroup(self, ctx, group: discord.Role, command):
-        # Loop through command list and check if command exists
+        # Check if command exists
         command_exists = False
         for bot_command in ctx.bot.commands:
             if command == bot_command.name:
                 command_exists = True
                 break
 
-        # Send message if command does not exist
+        # Notify user if command doesn't exist
         if not command_exists:
             await ctx.send("That command does not exist")
             return
