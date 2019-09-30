@@ -1,19 +1,27 @@
-from discord.ext import commands
-from discord.utils import get
 import configparser
 import os
+import sqlite3
+
 import discord
+from discord.ext import commands
+from discord.utils import get
 
 def setup():
-    # Create blank permission headers
-    config = configparser.ConfigParser()
-    config['PermsPreset']['administrator'] = {}
-    config['PermsPreset']['moderator'] = {}
-    config['PermsPreset']['user'] = {}
+    # Open server's database file
+    db = sqlite3.connect('spacecat.db')
+    cursor = db.cursor()
 
-    # Write to global config file
-    with open('config.ini', 'w') as file:
-            config.write(file)
+    # Create group permission table
+    cursor.execute('''CREATE TABLE group_permissions
+        (serverid integer, groupid integer, perm text)''')
+
+    # Create user permission table
+    cursor.execute('''CREATE TABLE user_permissions
+        (serverid integer, userid integer, perm text)''')
+
+    # Save and exit
+    db.commit()
+    db.close()
 
 def new(guild):
     # Check if server doesn't have a config file
@@ -39,28 +47,29 @@ def check():
         if ctx.author.guild_permissions.administrator:
             return True
 
+        # Open server's database file
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+
         # Open server's config file
         config = configparser.ConfigParser()
         config.read('servers/' + str(ctx.guild.id) + '.ini')
-        
+
         # Check if specific user has a permission
-        try:
-            userperms = config['UserPerms'][str(ctx.author.id)].split(',')
-            if ctx.command.name in userperms:
-                return True
-        except KeyError:
-            pass
+        user_perms = cursor.execute(
+            'SELECT perm FROM user_permissions WHERE userid=' + str(ctx.author.id))
+        for perm in user_perms:
+                if ctx.command.name == perm[0]:    
+                    return True
 
         # Check if user's group has a permission
         for role in ctx.author.roles:
-            try:
-                groupperms = config['GroupPerms'][str(role.id)].split(',')
-                if ctx.command.name in groupperms:
+            group_perms = cursor.execute(
+                'SELECT perm FROM group_permissions WHERE groupid=' + str(role.id))
+            for perm in group_perms:
+                if ctx.command.name == perm[0]:    
                     return True
-            except KeyError:
-                pass
         
-
     return commands.check(predicate)
 
         

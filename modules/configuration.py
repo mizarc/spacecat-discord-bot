@@ -1,6 +1,9 @@
+import configparser
+import sqlite3
+
 import discord
 from discord.ext import commands
-import configparser
+
 from helpers.dataclasses import activity_type_class, status_class
 import helpers.perms as perms
 
@@ -74,29 +77,25 @@ class Configuration(commands.Cog):
             await ctx.send("That command does not exist")
             return
 
-        # Open server's config file
-        config = configparser.ConfigParser()
-        config.read('servers/' + str(ctx.guild.id) + '.ini')
+        # Open server's database file
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+
+        # Query 
+        group_perms = cursor.execute(
+            'SELECT perm FROM group_permissions WHERE groupid=' + str(group.id))
+        print(group_perms)
 
         # Add permission to group if they don't already have the perm
-        try:
-            # Check group's existing perms
-            group_perms = config['GroupPerms'][str(group.id)].split(',')
-            if command in group_perms:
-                await ctx.send("That group already has that permission")
-                return
-
-            # Add command to existing command list
-            group_perms.append(command)
-            config['GroupPerms'][str(group.id)] = ','.join(group_perms)
-        except KeyError:
-            # Add first command if group doesn't have existing perms
-            config['GroupPerms'][str(group.id)] = command
-
+        if command in group_perms:
+            await ctx.send("That group already has that permission")
+            return
+        cursor.execute("INSERT INTO group_permissions VALUES (" + str(ctx.guild.id) + ',' + str(group.id) + ", '" + command + "')")
+        
         # Write to file and notify user of change
         await ctx.send(f"Command `{command}` added to group `{group.name}`")
-        with open('servers/' + str(ctx.guild.id) + '.ini', 'w') as file:
-                config.write(file)
+        db.commit()
+        db.close()
 
     @group.command()
     @perms.check()
@@ -138,8 +137,10 @@ class Configuration(commands.Cog):
 
     @group.command()
     @perms.check()
-    async def parent(self, ctx, group: discord.Role, command):
-        await ctx.send("kek")
+    async def parent(self, ctx, child_group: discord.Role, parent_group: discord.Role):
+        # Open server's config file
+        config = configparser.ConfigParser()
+        config.read('servers/' + str(ctx.guild.id) + '.ini')
 
     @commands.group()
     @perms.exclusive()
