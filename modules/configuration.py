@@ -67,9 +67,11 @@ class Configuration(commands.Cog):
     async def addgroup(self, ctx, group: discord.Role, command):
         # Query database to check if the group has the permission already
         perm = await self._perm_query(ctx, 'group', group.id, command)
-        if perm:
-            await ctx.send("That group already has that permission")
+        if perm is None:
             return
+        elif perm is True:
+            await ctx.send("That group already has that permission")
+            return 
         
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
@@ -84,7 +86,9 @@ class Configuration(commands.Cog):
     async def removegroup(self, ctx, group: discord.Role, command):
         # Query database to check if the group has the permission already
         perm = await self._perm_query(ctx, 'group', group.id, command)
-        if not perm:
+        if perm is None:
+            return
+        elif perm is False:
             await ctx.send("That group doesn't have that permission")
             return
         
@@ -115,9 +119,11 @@ class Configuration(commands.Cog):
     async def adduser(self, ctx, user: discord.User, command):
         # Query database to check if the user has the permission already
         perm = await self._perm_query(ctx, 'user', user.id, command)
-        if perm:
-            await ctx.send("That user already has that permission")
+        if perm is None:
             return
+        elif perm is True:
+            await ctx.send("That user already has that permission")
+            return 
 
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
@@ -163,7 +169,7 @@ class Configuration(commands.Cog):
         # Send message if command does not exist
         if not command_exists:
             await ctx.send("That command does not exist")
-            return
+            return None
 
         # Query database for group permissions
         db = sqlite3.connect('spacecat.db')
@@ -172,7 +178,9 @@ class Configuration(commands.Cog):
         cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
         result = cursor.fetchall()
         db.close()
-        return result
+        if result:
+            return True
+        return False
 
 
 
