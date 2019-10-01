@@ -19,6 +19,10 @@ def setup():
     cursor.execute('''CREATE TABLE user_permissions
         (serverid integer, userid integer, perm text)''')
 
+    # Create group parent table
+    cursor.execute('''CREATE TABLE group_parents
+        (serverid integer, child_group, parent_group)''')
+
     # Save and exit
     db.commit()
     db.close()

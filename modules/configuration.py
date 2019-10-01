@@ -106,8 +106,26 @@ class Configuration(commands.Cog):
     @perms.check()
     async def parent(self, ctx, child_group: discord.Role, parent_group: discord.Role):
         # Open server's config file
+        check = await self._parent_query(ctx, child_group.id, parent_group.id)
+        if not check:
+            return
+
+        # Remove permission from database and notify user
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        values = (ctx.guild.id, child_group.id, parent_group.id)
+        cursor.execute("INSERT INTO group_parents VALUES (?,?,?)", values)
+        await ctx.send(f"`{child_group.name}` now inherents permissions from `{parent_group.name}`")
+        db.commit()
+        db.close()
+
+    @group.command()
+    @perms.check()
+    async def unparent(self, ctx, child_group: discord.Role, parent_group: discord.Role):
+        # Open server's config file
         config = configparser.ConfigParser()
         config.read('servers/' + str(ctx.guild.id) + '.ini')
+
 
     @perm.group()
     @perms.check()
@@ -204,6 +222,30 @@ class Configuration(commands.Cog):
         if result:
             return True
         return False
+
+    async def _parent_query(self, ctx, child, parent):
+        # Query database to check if group already has the parent
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (child, parent)
+        cursor.execute("SELECT parent_group FROM group_parents WHERE child_group=? AND parent_group=?", query)
+        result = cursor.fetchall()
+        if result:
+            db.close()
+            await ctx.send("Cannot add parent to group as selected parent is already a parent of group")
+            return
+
+        # Query database to check if parent is a child of group
+        query = (parent, child)
+        cursor.execute("SELECT child_group FROM group_parents WHERE child_group=? AND parent_group=?", query)
+        check = cursor.fetchall()
+        if check:
+            db.close()
+            await ctx.send("Cannot add parent to group as selected parent is a child of group")        
+            return
+        db.close()
+
+        return True
 
 
 
