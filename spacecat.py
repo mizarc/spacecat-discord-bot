@@ -223,7 +223,7 @@ async def on_guild_join(guild):
 @perms.check()
 async def ping(ctx):
     """A simple command to check if the bot is working."""
-    await ctx.send(bot.user.name + " is responding")
+    await ctx.send(f"{bot.user.name} is operational at {int(bot.latency * 1000)}ms")
 
 
 @bot.command()
