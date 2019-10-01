@@ -114,7 +114,7 @@ class Configuration(commands.Cog):
         # Query database to check if parent is a child of group
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        query = (parent_group, child_group)
+        query = (parent_group.id, child_group.id)
         cursor.execute("SELECT child_group FROM group_parents WHERE child_group=? AND parent_group=?", query)
         check = cursor.fetchall()
         if check:
@@ -188,9 +188,9 @@ class Configuration(commands.Cog):
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        query = (ctx.guild.id, group.id, command)
+        query = (ctx.guild.id, user.id, command)
         cursor.execute("DELETE FROM user_permissions WHERE serverid=? AND userid=? AND perm=?", query)
-        await ctx.send(f"Command `{command}` added to group `{user.name}`")
+        await ctx.send(f"Command `{command}` removed from user `{user.name}`")
         db.commit()
         db.close()
 
