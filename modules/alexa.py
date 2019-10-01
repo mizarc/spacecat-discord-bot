@@ -108,18 +108,17 @@ class Alexa(commands.Cog):
         if ctx.voice_client is None:
             await ctx.invoke(self.join)
 
-        # Grab audio source from youtube_dl
+        # Grab audio source from youtube_dl and add to queue
         source = await YTDLSource.from_url(url, loop=self.bot.loop)
+        self.queue.append(source)
 
-        # Play specified song if queue is empty
-        if not self.queue:
-            self.queue.append(source)
+        # Play specified song if only one song in queue
+        if len(self.queue) == 1:
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             await ctx.send(f'Now playing: `{source.title}`')
             return
 
-        # Add to queue if song is currently playing
-        self.queue.append(source)
+        # Notify user of song being added to queue
         await ctx.send(f"Added `{source.title}` to queue")
 
     @commands.command()
@@ -177,9 +176,8 @@ class Alexa(commands.Cog):
             self.queue.pop(0)
             os.remove(ytdl.prepare_filename(self.queue[0].data))
 
-        # Run next function to handle next in queue
+        # Stop current song
         ctx.voice_client.stop()
-        self._next(ctx)
 
     @commands.command()
     @perms.check()
