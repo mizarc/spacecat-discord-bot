@@ -73,8 +73,34 @@ def check():
             cursor.execute(
                 'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?', query)
             check = cursor.fetchall()
-            if check:
+
+            query = (ctx.guild.id, role.id)
+            parent_check = parent_perms(ctx, cursor, query)
+
+            if check or parent_check:
                 return True
+
+    def parent_perms(ctx, cursor, query):
+        # Check if group has parents
+        cursor.execute(
+                'SELECT parent_group FROM group_parents WHERE serverid=? AND child_group=?', query)
+        parents = cursor.fetchall()
+
+        # Check parent groups for permission
+        if parents:
+            for parent in parents:
+                query = (ctx.guild.id, parent[0], ctx.command.name)
+                cursor.execute(
+                    'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?', query)
+                check = cursor.fetchall()
+                if check:
+                    return True
+
+                query = (ctx.guild.id, parent[0])
+                parent_check = parent_perms(ctx, cursor, query)
+                if parent_check:
+                    return True
+
         
     return commands.check(predicate)
 
