@@ -8,6 +8,39 @@ import helpers.perms as perms
 class PoliteCat(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if not message.attachments:
+            return
+
+        if not message.attachments[0].filename[-4:] == 'webp':
+            return
+
+        # Open cache directory
+        try:
+            os.chdir("cache")
+        except FileNotFoundError:
+            os.mkdir("cache")
+            os.chdir("cache")
+
+        await message.attachments[0].save(str(message.id) + '.webp')
+        image = Image.open(str(message.id) + '.webp')
+        try:
+            image.seek(1)
+            image.info.pop('background', None)
+            image.save(str(message.id) + '.gif', 'gif', save_all=True)
+            await message.channel.send(file=discord.File(str(message.id) + '.gif'))
+            os.remove(str(message.id) + '.gif')
+            await message.delete()
+            
+        except:
+            pass
+        
+        os.remove(str(message.id) + '.webp')
+        os.chdir("../")
+        return
 
     @commands.group()
     @perms.check()
