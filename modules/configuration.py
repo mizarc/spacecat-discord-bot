@@ -76,7 +76,8 @@ class Configuration(commands.Cog):
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        cursor.execute("INSERT INTO group_permissions VALUES (" + str(ctx.guild.id) + ',' + str(group.id) + ", '" + command + "')")
+        values = (ctx.guild.id, group.id, command)
+        cursor.execute("INSERT INTO group_permissions VALUES (?,?,?)", values)
         await ctx.send(f"Command `{command}` added to group `{group.name}`")
         db.commit()
         db.close()
@@ -95,7 +96,8 @@ class Configuration(commands.Cog):
         # Remove permission from database and notify user
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        cursor.execute("DELETE FROM group_permissions WHERE groupid=" + str(group.id) + " AND perm='" + command + "'")
+        query = (ctx.guild.id, group.id, command)
+        cursor.execute("DELETE FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?", query)
         await ctx.send(f"Command `{command}` removed from group `{group.name}`")
         db.commit()
         db.close()
@@ -128,7 +130,8 @@ class Configuration(commands.Cog):
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        cursor.execute("INSERT INTO user_permissions VALUES (" + str(ctx.guild.id) + ',' + str(user.id) + ", '" + command + "')")
+        values = (ctx.guild.id, group.id, command)
+        cursor.execute("INSERT INTO user_permissions VALUES (?,?,?)", values)
         await ctx.send(f"Command `{command}` added to group `{user.name}`")
         db.commit()
         db.close()
@@ -147,7 +150,8 @@ class Configuration(commands.Cog):
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        cursor.execute("DELETE FROM user_permissions WHERE userid=" + str(group.id) + " AND perm='" + command + "'")
+        query = (ctx.guild.id, group.id, command)
+        cursor.execute("DELETE FROM user_permissions WHERE serverid=? AND userid=? AND perm=?", query)
         await ctx.send(f"Command `{command}` added to group `{user.name}`")
         db.commit()
         db.close()
