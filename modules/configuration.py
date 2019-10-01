@@ -147,6 +147,39 @@ class Configuration(commands.Cog):
         db.commit()
         db.close()
 
+    @group.command(name='list')
+    @perms.check()
+    async def listgroup(self, ctx, group: discord.Role):
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+
+        # Output group name
+        await ctx.send(f"Group: `{group.name}`")
+
+        # Query group's parents
+        query = (ctx.guild.id, group.id)
+        cursor.execute(
+                'SELECT parent_group FROM group_parents WHERE serverid=? AND child_group=?', query)
+        parents = cursor.fetchall()
+
+        # Output formatted parents list
+        parents_output = []
+        for parent in parents:
+            group = discord.utils.get(ctx.guild.roles, id=parent[0])
+            parents_output.append("`" + group.name + " (" + str(parent[0]) + ")`")
+        await ctx.send("Parents: " + ', '.join(parents_output))
+
+        # Query group's perms
+        cursor.execute(
+                'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=?', query)
+        perms = cursor.fetchall()
+
+        # Output formatted perms list
+        perms_output = []
+        for perm in perms:
+            perms_output.append("`" + perm[0] + "`")
+        await ctx.send("Permissions: " + ', '.join(perms_output))
+
     @perm.group()
     @perms.check()
     async def user(self, ctx):
@@ -193,6 +226,7 @@ class Configuration(commands.Cog):
         await ctx.send(f"Command `{command}` removed from user `{user.name}`")
         db.commit()
         db.close()
+        
 
     @commands.group()
     @perms.exclusive()
