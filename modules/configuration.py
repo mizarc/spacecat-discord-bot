@@ -133,6 +133,25 @@ class Configuration(commands.Cog):
         db.commit()
         db.close()
 
+    @user.command(name='remove')
+    @perms.check()
+    async def removeuser(self, ctx, user: discord.User, command):
+        # Query database to check if the user has the permission already
+        perm = await self._perm_query(ctx, 'user', user.id, command)
+        if perm is None:
+            return
+        elif perm is False:
+            await ctx.send("That user doesn't have that permission")
+            return 
+
+        # Append permission to database and notify user
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM user_permissions WHERE userid=" + str(group.id) + " AND perm='" + command + "'")
+        await ctx.send(f"Command `{command}` added to group `{user.name}`")
+        db.commit()
+        db.close()
+
     @commands.group()
     @perms.exclusive()
     async def permpreset(self, ctx):
