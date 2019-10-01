@@ -254,6 +254,27 @@ class Configuration(commands.Cog):
             perms_output.append("`" + perm[0] + "`")
         await ctx.send("Permissions: " + ', '.join(perms_output))
 
+    @user.command(name='purge')
+    @perms.check()
+    async def purgeuser(self, ctx, user: discord.User):
+        # Query database to get all user permissions
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (ctx.guild.id, user.id)
+        cursor.execute(
+                'SELECT perm FROM user_permissions WHERE serverid=? AND userid=?', query)
+        perms = cursor.fetchall()
+
+        # Notify if specified user doesn't have any perms to clear
+        if not perms:
+            await ctx.send("That user doesn't have any permissions")
+
+        # Clear all permissions
+        cursor.execute("DELETE FROM user_permissions WHERE serverid=? AND userid=?", query)
+        await ctx.send(f"All permissions cleared from `{user.name}`")
+        db.commit()
+        db.close()
+
     @commands.group()
     @perms.exclusive()
     async def permpreset(self, ctx):
