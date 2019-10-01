@@ -2,7 +2,6 @@ import asyncio
 import discord
 import os
 import shutil
-import time
 import youtube_dl
 from discord.ext import commands
 import helpers.perms as perms
@@ -197,7 +196,6 @@ class Alexa(commands.Cog):
 
         
     def _next(self, ctx):
-        time.sleep(1)
         # If looping, grab cached file and play it again from the start
         if self.loop:
             source = discord.FFmpegPCMAudio(ytdl.prepare_filename(self.queue[0].data))
