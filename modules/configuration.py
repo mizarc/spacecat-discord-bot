@@ -65,31 +65,16 @@ class Configuration(commands.Cog):
     @group.command(name='add')
     @perms.check()
     async def addgroup(self, ctx, group: discord.Role, command):
-        # Loop through command list and check if command exists
-        command_exists = False
-        for bot_command in ctx.bot.commands:
-            if command == bot_command.name:
-                command_exists = True
-                break
-
-        # Notify user if command does not exist
-        if not command_exists:
-            await ctx.send("That command does not exist")
-            return
-
-        # Query database for 
-        db = sqlite3.connect('spacecat.db')
-        cursor = db.cursor()
-        group_perms = cursor.execute(
-            'SELECT perm FROM group_permissions WHERE groupid=' + str(group.id))
-
-        # Add permission to group if they don't already have the perm
-        if command in group_perms:
+        # Query database to check if the group has the permission already
+        perm = await self._perm_query(ctx, 'group', group.id, command)
+        if perm:
             await ctx.send("That group already has that permission")
             return
-        cursor.execute("INSERT INTO group_permissions VALUES (" + str(ctx.guild.id) + ',' + str(group.id) + ", '" + command + "')")
         
-        # Write to file and notify user of change
+        # Append permission to database and notify user
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO group_permissions VALUES (" + str(ctx.guild.id) + ',' + str(group.id) + ", '" + command + "')")
         await ctx.send(f"Command `{command}` added to group `{group.name}`")
         db.commit()
         db.close()
@@ -97,33 +82,17 @@ class Configuration(commands.Cog):
     @group.command(name='remove')
     @perms.check()
     async def removegroup(self, ctx, group: discord.Role, command):
-        # Check if command exists
-        command_exists = False
-        for bot_command in ctx.bot.commands:
-            if command == bot_command.name:
-                command_exists = True
-                break
-
-        # Notify user if command doesn't exist
-        if not command_exists:
-            await ctx.send("That command does not exist")
-            return
-
-        # Query database for group permissions
-        db = sqlite3.connect('spacecat.db')
-        cursor = db.cursor()
-        cursor.execute(
-            "SELECT perm FROM group_permissions WHERE groupid=" + str(group.id) + " AND perm='" + command + "'")
-        group_perms = cursor.fetchall()
-        
-        # Notify user if group doesn't have the permission
-        if not group_perms:
+        # Query database to check if the group has the permission already
+        perm = await self._perm_query(ctx, 'group', group.id, command)
+        if not perm:
             await ctx.send("That group doesn't have that permission")
             return
         
         # Remove permission from database and notify user
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
         cursor.execute("DELETE FROM group_permissions WHERE groupid=" + str(group.id) + " AND perm='" + command + "'")
-        await ctx.send(f"Command `{command}` added to group `{group.name}`")
+        await ctx.send(f"Command `{command}` removed from group `{group.name}`")
         db.commit()
         db.close()
 
@@ -144,33 +113,16 @@ class Configuration(commands.Cog):
     @user.command(name='add')
     @perms.check()
     async def adduser(self, ctx, user: discord.User, command):
-        # Loop through command list and check if command exists
-        command_exists = False
-        for bot_command in ctx.bot.commands:
-            if command == bot_command.name:
-                command_exists = True
-                break
-
-        # Send message if command does not exist
-        if not command_exists:
-            await ctx.send("That command does not exist")
-            return
-
-        # Open server's database file
-        db = sqlite3.connect('spacecat.db')
-        cursor = db.cursor()
-
-        # Query 
-        user_perms = cursor.execute(
-            'SELECT perm FROM user_permissions WHERE userid=' + str(user.id))
-
-        # Add permission to group if they don't already have the perm
-        if command in user_perms:
+        # Query database to check if the user has the permission already
+        perm = await self._perm_query(ctx, 'user', user.id, command)
+        if perm:
             await ctx.send("That user already has that permission")
             return
+
+        # Append permission to database and notify user
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
         cursor.execute("INSERT INTO user_permissions VALUES (" + str(ctx.guild.id) + ',' + str(user.id) + ", '" + command + "')")
-        
-        # Write to file and notify user of change
         await ctx.send(f"Command `{command}` added to group `{user.name}`")
         db.commit()
         db.close()
@@ -199,6 +151,28 @@ class Configuration(commands.Cog):
     @perms.exclusive()
     async def truncate(self, ctx):
         print('nah')
+
+    async def _perm_query(self, ctx, type_, id_, command):
+        # Loop through command list and check if command exists
+        command_exists = False
+        for bot_command in ctx.bot.commands:
+            if command == bot_command.name:
+                command_exists = True
+                break
+
+        # Send message if command does not exist
+        if not command_exists:
+            await ctx.send("That command does not exist")
+            return
+
+        # Query database for group permissions
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (id_, command)
+        cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
+        result = cursor.fetchall()
+        db.close()
+        return result
 
 
 
