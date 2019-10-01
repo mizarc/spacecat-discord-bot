@@ -227,6 +227,32 @@ class Configuration(commands.Cog):
         db.commit()
         db.close()
         
+    @user.command(name='list')
+    @perms.check()
+    async def listuser(self, ctx, user: discord.Member):
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+
+        # Output group name
+        await ctx.send(f"User: `{user.name}`")
+
+        # Output formatted groups list
+        groups_output = []
+        for role in user.roles:
+            groups_output.append("`" + role.name + " (" + str(role.id) + ")`")
+        await ctx.send("Groups: " + ', '.join(groups_output))
+
+        # Query group's perms
+        query = (ctx.guild.id, user.id)
+        cursor.execute(
+                'SELECT perm FROM user_permissions WHERE serverid=? AND userid=?', query)
+        perms = cursor.fetchall()
+
+        # Output formatted perms list
+        perms_output = []
+        for perm in perms:
+            perms_output.append("`" + perm[0] + "`")
+        await ctx.send("Permissions: " + ', '.join(perms_output))
 
     @commands.group()
     @perms.exclusive()
