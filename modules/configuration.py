@@ -147,9 +147,9 @@ class Configuration(commands.Cog):
         db.commit()
         db.close()
 
-    @group.command(name='list')
+    @group.command(name='info')
     @perms.check()
-    async def listgroup(self, ctx, group: discord.Role):
+    async def infogroup(self, ctx, group: discord.Role):
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
 
@@ -249,9 +249,9 @@ class Configuration(commands.Cog):
         db.commit()
         db.close()
         
-    @user.command(name='list')
+    @user.command(name='info')
     @perms.check()
-    async def listuser(self, ctx, user: discord.Member):
+    async def infouser(self, ctx, user: discord.Member):
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
 
