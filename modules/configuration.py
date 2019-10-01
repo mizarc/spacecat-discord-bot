@@ -107,15 +107,25 @@ class Configuration(commands.Cog):
     async def parent(self, ctx, child_group: discord.Role, parent_group: discord.Role):
         # Open server's config file
         check = await self._parent_query(ctx, child_group.id, parent_group.id)
-        if not check:
+        if check:
+            await ctx.send("Cannot add parent to group as selected parent is already a parent of group")
+            return
+
+        # Query database to check if parent is a child of group
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (parent_group, child_group)
+        cursor.execute("SELECT child_group FROM group_parents WHERE child_group=? AND parent_group=?", query)
+        check = cursor.fetchall()
+        if check:
+            db.close()
+            await ctx.send("Cannot add parent to group as selected parent is a child of group")        
             return
 
         # Remove permission from database and notify user
-        db = sqlite3.connect('spacecat.db')
-        cursor = db.cursor()
         values = (ctx.guild.id, child_group.id, parent_group.id)
         cursor.execute("INSERT INTO group_parents VALUES (?,?,?)", values)
-        await ctx.send(f"`{child_group.name}` now inherents permissions from `{parent_group.name}`")
+        await ctx.send(f"`{child_group.name}` now inherits permissions from `{parent_group.name}`")
         db.commit()
         db.close()
 
@@ -123,9 +133,19 @@ class Configuration(commands.Cog):
     @perms.check()
     async def unparent(self, ctx, child_group: discord.Role, parent_group: discord.Role):
         # Open server's config file
-        config = configparser.ConfigParser()
-        config.read('servers/' + str(ctx.guild.id) + '.ini')
+        check = await self._parent_query(ctx, child_group.id, parent_group.id)
+        if not check:
+            await ctx.send("Cannot remove parent from group as selected parent isn't a parent of group")
+            return
 
+        # Remove permission from database and notify user
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        values = (ctx.guild.id, child_group.id, parent_group.id)
+        cursor.execute("DELETE FROM group_parents WHERE serverid=? AND child_group=? AND parent_group=?", values)
+        await ctx.send(f"`{child_group.name}` is no longer inheriting permissions from `{parent_group.name}`")
+        db.commit()
+        db.close()
 
     @perm.group()
     @perms.check()
@@ -232,20 +252,10 @@ class Configuration(commands.Cog):
         result = cursor.fetchall()
         if result:
             db.close()
-            await ctx.send("Cannot add parent to group as selected parent is already a parent of group")
-            return
+            return True
 
-        # Query database to check if parent is a child of group
-        query = (parent, child)
-        cursor.execute("SELECT child_group FROM group_parents WHERE child_group=? AND parent_group=?", query)
-        check = cursor.fetchall()
-        if check:
-            db.close()
-            await ctx.send("Cannot add parent to group as selected parent is a child of group")        
-            return
         db.close()
-
-        return True
+        return False
 
 
 
