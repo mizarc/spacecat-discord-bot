@@ -168,7 +168,7 @@ class Configuration(commands.Cog):
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        values = (ctx.guild.id, group.id, command)
+        values = (ctx.guild.id, user.id, command)
         cursor.execute("INSERT INTO user_permissions VALUES (?,?,?)", values)
         await ctx.send(f"Command `{command}` added to group `{user.name}`")
         db.commit()
