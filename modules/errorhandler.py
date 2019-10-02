@@ -11,7 +11,7 @@ class ErrorHandler(commands.Cog):
         if isinstance(error, commands.CommandNotFound):
             return
 
-        if isinstance(error, commands.MissingPermissions):
+        if isinstance(error, commands.CheckFailure):
             await ctx.send("You don't have permission to use that command")
             return
 
