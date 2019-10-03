@@ -113,8 +113,10 @@ def run(key = None):
 def getmodules():
     modulelist = []
     os.chdir('modules')
-    for files in glob.glob('*.py'):
-        modulelist.append(files[:-3])
+    for module in glob.glob('*.py'):
+        if module == "__init__.py":
+            continue
+        modulelist.append(module[:-3])
     os.chdir('../')
     return modulelist
 
