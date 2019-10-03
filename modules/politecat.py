@@ -64,10 +64,10 @@ class PoliteCat(commands.Cog):
 
         # Open assets directory
         try:
-            os.chdir("assets")
+            os.chdir("assets/reactions")
         except FileNotFoundError:
-            os.mkdir("assets")
-            os.chdir("assets")
+            os.mkdir("assets/reactions")
+            os.chdir("assets/reactions")
 
         # Get all images in directory and add to list
         assetlist = []
@@ -104,7 +104,7 @@ class PoliteCat(commands.Cog):
     async def remove(self, ctx, name):
         "Remove a reaction image"
         
-        os.chdir("assets")
+        os.chdir("assets/reactions")
 
         # Get all images from directoy and add to list
         assetlist = []
@@ -136,7 +136,7 @@ class PoliteCat(commands.Cog):
     async def reactlist(self, ctx):
         "List all reaction images"
         assetlist = []
-        os.chdir("assets")
+        os.chdir("assets/reactions")
 
         for files in glob.glob("*.png"):
             assetlist.append(files[:-4])
@@ -149,9 +149,18 @@ class PoliteCat(commands.Cog):
     async def react(self, ctx, image):
         "Use an image/gif as a reaction"
         try:
-            await ctx.send(file=discord.File("assets/" + image + ".webp"))
+            os.chdir("cache")
+        except:
+            await ctx.send("No reactions are available")
+            os.chdir("../")
+            return
+
+        try:
+            await ctx.send(file=discord.File(image + ".webp"))
         except FileNotFoundError:
-            await ctx.send(file=discord.File("assets/" + image + ".gif"))
+            await ctx.send(file=discord.File(image + ".gif"))
+
+        os.chdir("../")
 
 
 def setup(bot):
