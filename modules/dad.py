@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
-import helpers.perms as perms
+
+from helpers import perms
 
 class Dad(commands.Cog):
     def __init__(self, bot):

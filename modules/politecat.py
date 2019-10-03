@@ -1,9 +1,11 @@
-import discord
-from discord.ext import commands
 import glob
 import os
+
+import discord
+from discord.ext import commands
 from PIL import Image
-import helpers.perms as perms
+
+from helpers import perms
 
 class PoliteCat(commands.Cog):
     def __init__(self, bot):
