@@ -30,11 +30,11 @@ def status_class(statusname):
     return status
 
 def embed_type(name):
-    if name == "warning":
+    if name == "warn":
         colour = discord.Color.from_rgb(211, 47, 47)
-    elif name == "accepted":
+    elif name == "accept":
         colour = discord.Color.from_rgb(67, 160, 71)  
-    elif name == "information":
+    elif name == "info":
         colour = discord.Color.from_rgb(3, 169, 244)
     elif name == "special":
         colour = discord.Color.from_rgb(103, 58, 183)

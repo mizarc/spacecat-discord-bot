@@ -201,7 +201,7 @@ class Alexa(commands.Cog):
             return
         
         # Output first in queue as currently playing
-        embed = discord.Embed(colour=embed_type('information'))
+        embed = discord.Embed(colour=embed_type('info'))
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
         embed.add_field(name="Currently Playing", value=self.song_queue[0].title)
