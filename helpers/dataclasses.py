@@ -40,3 +40,9 @@ def embed_type(name):
         colour = discord.Color.from_rgb(103, 58, 183)
 
     return colour
+
+def embed_icons(name):
+    if name == "music":
+        icon = "assets/icons/music_disc.jpg"
+
+    return icon

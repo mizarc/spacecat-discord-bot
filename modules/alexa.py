@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 import youtube_dl
 
+from helpers.dataclasses import embed_type, embed_icons
 from helpers import perms
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -200,15 +201,20 @@ class Alexa(commands.Cog):
             return
         
         # Output first in queue as currently playing
-        await ctx.send(f"Currently Playing: `{self.song_queue[0].title}`")
-
+        embed = discord.Embed(colour=embed_type('information'))
+        image = discord.File(embed_icons("music"), filename="image.png")
+        embed.set_author(name="Music Queue", icon_url="attachment://image.png")
+        embed.add_field(name="Currently Playing", value=self.song_queue[0].title)
+        
         # List remaining songs in queue
         if len(self.song_queue) > 1:
             queue_formatted = []
             for index, song in enumerate(self.song_queue[1:]):
-                queue_formatted.append(f"{index + 1}. `{song.title}`")
+                queue_formatted.append(f"{index + 1}. {song.title}")
             queue_output = '\n'.join(queue_formatted)
-            await ctx.send(f"Next Up:\n {queue_output}")
+            embed.add_field(name="Queue", value=queue_output, inline=False)
+
+        await ctx.send(file=image, embed=embed)
         
     def _next(self, ctx):
         # If looping, grab cached file and play it again from the start
