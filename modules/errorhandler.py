@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from helpers.dataclasses import embed_type
+
 class ErrorHandler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -11,7 +13,8 @@ class ErrorHandler(commands.Cog):
             return
 
         if isinstance(error, commands.CheckFailure):
-            await ctx.send("You don't have permission to use that command")
+            embed = discord.Embed(colour=embed_type('warn'), description="You don't have permission to use that command")
+            await ctx.send(embed=embed)
             return
 
         if isinstance(error, commands.CommandInvokeError):
