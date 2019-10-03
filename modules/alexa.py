@@ -56,7 +56,7 @@ class Alexa(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.queue = []
-        self.loop = False
+        self.loop_toggle = False
         self.keep_cache = False
 
     @commands.command()
@@ -171,41 +171,41 @@ class Alexa(commands.Cog):
             await ctx.send("There's nothing in the queue after this")
             return
 
-        # Remove current song if currently looping
-        if self.loop:
-            self.queue.pop(0)
-            os.remove(ytdl.prepare_filename(self.queue[0].data))
-
-        # Stop current song
+        # Stop current song and flag that it has been skipped
+        self.skip_toggle = True
         ctx.voice_client.stop()
 
     @commands.command()
     @perms.check()
     async def loop(self, ctx):
         """Loop the currently playing song"""
-        if self.loop:
-            self.loop = False
+        if self.loop_toggle:
+            self.loop_toggle = False
             await ctx.send("Loop disabled")
             return
 
-        self.loop = True
+        self.loop_toggle = True
         await ctx.send("Loop enabled")
         return
 
         
     def _next(self, ctx):
         # If looping, grab cached file and play it again from the start
-        if self.loop:
+        if self.loop_toggle and not self.skip_toggle:
             source = discord.FFmpegPCMAudio(ytdl.prepare_filename(self.queue[0].data))
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
 
-        # Remove already played songs from cache
+        # Remove already played songs from cache & queue
         os.remove(ytdl.prepare_filename(self.queue[0].data))
+        self.queue.pop(0)
+
+        # Disable skip toggle to indicate that a skip has been completed
+        if self.skip_toggle:
+            self.skip_toggle = False
 
         # Remove first in queue and play the new first in list
         if self.queue:
-            self.queue.pop(0)
             ctx.voice_client.play(self.queue[0], after=lambda e: self._next(ctx))
             return
 
