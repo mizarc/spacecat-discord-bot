@@ -16,8 +16,7 @@ class TrashPanda(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def test(self, ctx):
-        ree = beautify.simple(ctx, "Test Header", "Some lorem ipsum stuff", "special")
-        await ctx.send(embed=ree)
+        await beautify.send(ctx, body="Some lorem ipsum stuff", type="special")
 
 
 def setup(bot):
