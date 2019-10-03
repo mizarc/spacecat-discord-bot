@@ -55,7 +55,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 class Alexa(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.queue = []
+        self.song_queue = []
         self.loop_toggle = False
         self.keep_cache = False
 
@@ -95,7 +95,7 @@ class Alexa(commands.Cog):
             return
 
         # Disconnect from voice channel
-        self.queue.clear()
+        self.song_queue.clear()
         shutil.rmtree('cache')
         await ctx.voice_client.disconnect()
         return
@@ -110,10 +110,10 @@ class Alexa(commands.Cog):
 
         # Grab audio source from youtube_dl and add to queue
         source = await YTDLSource.from_url(url, loop=self.bot.loop)
-        self.queue.append(source)
+        self.song_queue.append(source)
 
         # Play specified song if only one song in queue
-        if len(self.queue) == 1:
+        if len(self.song_queue) == 1:
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             await ctx.send(f'Now playing: `{source.title}`')
             return
@@ -131,7 +131,7 @@ class Alexa(commands.Cog):
             return
 
         # Stops and clears the queue
-        self.queue.clear()
+        self.song_queue.clear()
         shutil.rmtree('cache')
         await ctx.voice_client.stop()
         await ctx.send("Music has been stopped & queue has been cleared")
@@ -167,7 +167,7 @@ class Alexa(commands.Cog):
     async def skip(self, ctx):
         """Skip the current song and play the next song"""
         # Check if there's queue is empty
-        if len(self.queue) <= 1:
+        if len(self.song_queue) <= 1:
             await ctx.send("There's nothing in the queue after this")
             return
 
@@ -188,25 +188,44 @@ class Alexa(commands.Cog):
         await ctx.send("Loop enabled")
         return
 
+    @commands.command()
+    @perms.check()
+    async def queue(self, ctx):
+        """List the current song queue"""
+        # Notify user if nothing is in the queue
+        if not self.song_queue:
+            await ctx.send("There's nothing in the queue right now")
+            return
+        
+        # Output first in queue as currently playing
+        await ctx.send(f"Currently Playing: `{self.song_queue[0].title}`")
+
+        # List remaining songs in queue
+        if len(self.song_queue) > 1:
+            queue_formatted = []
+            for index, song in enumerate(self.song_queue[1:]):
+                queue_formatted.append(f"{index + 1}. `{song.title}`")
+            queue_output = '\n'.join(queue_formatted)
+            await ctx.send(f"Next Up:\n {queue_output}")
         
     def _next(self, ctx):
         # If looping, grab cached file and play it again from the start
         if self.loop_toggle and not self.skip_toggle:
-            source = discord.FFmpegPCMAudio(ytdl.prepare_filename(self.queue[0].data))
+            source = discord.FFmpegPCMAudio(ytdl.prepare_filename(self.song_queue[0].data))
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
 
         # Remove already played songs from cache & queue
-        os.remove(ytdl.prepare_filename(self.queue[0].data))
-        self.queue.pop(0)
+        os.remove(ytdl.prepare_filename(self.song_queue[0].data))
+        self.song_queue.pop(0)
 
         # Disable skip toggle to indicate that a skip has been completed
         if self.skip_toggle:
             self.skip_toggle = False
 
         # Remove first in queue and play the new first in list
-        if self.queue:
-            ctx.voice_client.play(self.queue[0], after=lambda e: self._next(ctx))
+        if self.song_queue:
+            ctx.voice_client.play(self.song_queue[0], after=lambda e: self._next(ctx))
             return
 
 
