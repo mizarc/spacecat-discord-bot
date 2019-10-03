@@ -94,9 +94,8 @@ class Alexa(commands.Cog):
             await ctx.send("I can't leave if i'm not even in a voice channel")
             return
 
-        # Disconnect from voice channel
-        self.song_queue.clear()
-        shutil.rmtree('cache')
+        # Stop and Disconnect from voice channel
+        await ctx.invoke(self.stop)
         await ctx.voice_client.disconnect()
         return
 
@@ -131,9 +130,10 @@ class Alexa(commands.Cog):
             return
 
         # Stops and clears the queue
+        ctx.voice_client.stop()
+        await asyncio.sleep(0.1)
         self.song_queue.clear()
         shutil.rmtree('cache')
-        await ctx.voice_client.stop()
         await ctx.send("Music has been stopped & queue has been cleared")
 
     @commands.command()
