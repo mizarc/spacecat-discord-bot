@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import helpers.perms as perms
+from helpers import beautify, perms
 
 class TrashPanda(commands.Cog):
     def __init__(self, bot):
@@ -16,7 +16,8 @@ class TrashPanda(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def test(self, ctx):
-        await ctx.send(ctx.guild.default_role.id)
+        ree = beautify.simple(ctx, "Test Header", "Some lorem ipsum stuff", "special")
+        await ctx.send(embed=ree)
 
 
 def setup(bot):
