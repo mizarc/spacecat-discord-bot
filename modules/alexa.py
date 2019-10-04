@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import os
 import shutil
 
@@ -41,6 +42,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         self.title = data.get('title')
         self.url = data.get('url')
+        self.duration = data.get('duration')
+        self.webpage_url = data.get('webpage_url')
 
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False):
@@ -116,17 +119,18 @@ class Alexa(commands.Cog):
 
         # Grab audio source from youtube_dl and add to queue
         source = await YTDLSource.from_url(url, loop=self.bot.loop)
+        song_name = f"[{source.title}]({source.webpage_url}) `{str(datetime.timedelta(seconds=source.duration))[2:]}`"
         self.song_queue.append(source)
 
         # Play specified song if only one song in queue
         if len(self.song_queue) == 1:
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-            embed = discord.Embed(colour=embed_type('accept'), description=f"Now playing `{source.title}`")
+            embed = discord.Embed(colour=embed_type('info'), description=f"Now playing {song_name}")
             await ctx.send(embed=embed)
             return
 
         # Notify user of song being added to queue
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Added `{source.title}` to queue")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Added {song_name} to #{len(self.song_queue) - 1} in queue")
         await ctx.send(embed=embed)
 
     @commands.command()
