@@ -60,6 +60,7 @@ class Alexa(commands.Cog):
         self.bot = bot
         self.song_queue = []
         self.loop_toggle = False
+        self.skip_toggle = False
         self.keep_cache = False
 
     @commands.command()
@@ -120,12 +121,12 @@ class Alexa(commands.Cog):
         # Play specified song if only one song in queue
         if len(self.song_queue) == 1:
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-            embed = discord.Embed(colour=embed_type('accept'), description=f"Now playing {source.title}")
+            embed = discord.Embed(colour=embed_type('accept'), description=f"Now playing `{source.title}`")
             await ctx.send(embed=embed)
             return
 
         # Notify user of song being added to queue
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Added {source.title} to queue")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Added `{source.title}` to queue")
         await ctx.send(embed=embed)
 
     @commands.command()
