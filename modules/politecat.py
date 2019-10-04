@@ -6,6 +6,7 @@ from discord.ext import commands
 from PIL import Image
 
 from helpers import perms
+from helpers.dataclasses import embed_icons, embed_type
 
 class PoliteCat(commands.Cog):
     def __init__(self, bot):
@@ -49,7 +50,8 @@ class PoliteCat(commands.Cog):
     async def reactcfg(self, ctx):
         "Configure available reaction images"
         if ctx.invoked_subcommand is None:
-            await ctx.send("Please specify a subcommand. Add/Remove")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"Please specify a valid subcommand: `add/remove`")
+            await ctx.send(embed=embed) 
 
     @reactcfg.command()
     @perms.check()
@@ -59,7 +61,8 @@ class PoliteCat(commands.Cog):
         try:
             image = ctx.message.attachments[0]
         except IndexError:
-            await ctx.send("There are no attachments in the message")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"There are no attachments in that message")
+            await ctx.send(embed=embed) 
             return
 
         # Open assets directory
@@ -79,7 +82,8 @@ class PoliteCat(commands.Cog):
 
         # Check if name already exists
         if name in assetlist:
-            await ctx.send("Reaction name already exists.")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"Reaction name already in use")
+            await ctx.send(embed=embed) 
             os.chdir("../")
             return
 
@@ -95,7 +99,8 @@ class PoliteCat(commands.Cog):
             os.chdir("../")
             return
         
-        await ctx.send("Added *" + name + "* to reactions.")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Added {name} to reactions")
+        await ctx.send(embed=embed) 
         os.chdir("../")
         return
 
@@ -116,7 +121,8 @@ class PoliteCat(commands.Cog):
 
         # Check if image name exists
         if name not in assetlist:
-            await ctx.send("Reaction image does not exist")
+            embed = discord.Embed(colour=embed_type('warn'), description="Reaction image does not exist")
+            await ctx.send(embed=embed) 
             os.chdir("../")
             return
 
@@ -127,7 +133,8 @@ class PoliteCat(commands.Cog):
             os.remove(name + ".gif")
         finally:
             os.chdir("../")
-            await ctx.send("Removed *" + name + "* from reactions.")
+            embed = discord.Embed(colour=embed_type('accept'), description=f"Removed {name} from reactions")
+            await ctx.send(embed=embed) 
             return
             
 
@@ -151,7 +158,8 @@ class PoliteCat(commands.Cog):
         try:
             os.chdir("cache")
         except:
-            await ctx.send("No reactions are available")
+            embed = discord.Embed(colour=embed_type('warn'), description="No reactions are available")
+            await ctx.send(embed=embed) 
             os.chdir("../")
             return
 
