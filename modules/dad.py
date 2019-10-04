@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 from helpers import perms
+from helpers.dataclasses import embed_type
 
 class Dad(commands.Cog):
     def __init__(self, bot):
@@ -34,10 +35,12 @@ class Dad(commands.Cog):
     async def toggledad(self, ctx):
         if self.toggle:
             self.toggle = False
-            await ctx.send("Dad has been disabled")
+            embed = discord.Embed(colour=embed_type('accept'), description="Dad has been disabled")
+            await ctx.send(embed=embed) 
         elif not self.toggle:
             self.toggle = True
-            await ctx.send("Dad has been enabled")
+            embed = discord.Embed(colour=embed_type('accept'), description="Dad has been enabled")
+            await ctx.send(embed=embed) 
 
 
 def setup(bot):

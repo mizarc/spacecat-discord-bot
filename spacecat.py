@@ -10,7 +10,7 @@ import helpers.perms as perms
 import helpers.perms
 from discord.ext import commands
 from argparse import ArgumentParser
-from helpers.dataclasses import activity_type_class, status_class
+from helpers.dataclasses import activity_type_class, status_class, embed_type, embed_icons
 
 # Arguments for API key input
 parser = ArgumentParser()
@@ -225,7 +225,8 @@ async def on_guild_join(guild):
 @perms.check()
 async def ping(ctx):
     """A simple command to check if the bot is working."""
-    await ctx.send(f"{bot.user.name} is operational at {int(bot.latency * 1000)}ms")
+    embed = discord.Embed(colour=embed_type('accept'), description=f"{bot.user.name} is operational at {int(bot.latency * 1000)}ms")
+    await ctx.send(embed=embed)
 
 
 @bot.command()
@@ -240,20 +241,22 @@ async def reload(ctx, module=None):
                 bot.unload_extension(z)
                 bot.load_extension(z)
             except Exception:
-                await ctx.send("Failed to load module '" + y
-                               + "'. Reloading has stopped.")
+                embed = discord.Embed(colour=embed_type('warn'), description=f"Failed to reload module {module}. Reloading has stopped.")
+                await ctx.send(embed=embed)
                 return
-        await ctx.send("Reloaded all modules")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Reloaded all modules successfully")
+        await ctx.send(embed=embed)
         return
     try:
         z = 'modules.' + module
         bot.unload_extension(z)
         bot.load_extension(z)
-        await ctx.send("Reloaded module '" + module + "'")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Reloaded module {module} successfully")
     except ModuleNotFoundError:
-        await ctx.send("'" + module + "' is not a valid module")
+        embed = discord.Embed(colour=embed_type('warn'), description=f"{module} is not a valid module")
     except Exception:
-        await ctx.send("Failed to load module '" + module + "'")
+        embed = discord.Embed(colour=embed_type('warn'), description=f"Failed to load module {module}")
+    await ctx.send(embed=embed)
 
 
 @bot.command()

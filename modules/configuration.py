@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 
 from helpers import perms
-from helpers.dataclasses import activity_type_class, status_class
+from helpers.dataclasses import activity_type_class, status_class, embed_type, embed_icons
 
 class Configuration(commands.Cog):
     def __init__(self, bot):
@@ -20,7 +20,8 @@ class Configuration(commands.Cog):
         status = status_class(statusname)
 
         if status == None:
-            await ctx.send("That's not a valid status")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"That's not a valid status")
+            await ctx.send(embed=embed)
             return
 
         print(status)
@@ -38,7 +39,8 @@ class Configuration(commands.Cog):
         activity = discord.Activity(type=activitytype, name=name, url="https://www.twitch.tv/yeet")
 
         if activitytype == None:
-            await ctx.send("That's not a valid activity type")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"That's not a valid activity type")
+            await ctx.send(embed=embed)
             return
 
         await self.bot.change_presence(activity=activity, status=self.config['Base']['status'])
@@ -53,14 +55,16 @@ class Configuration(commands.Cog):
     async def perm(self, ctx):
         """Configure server permissions"""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Please specify a subcommand. Group/User")
+            embed = discord.Embed(colour=embed_type('warn'), description="Please specify a valid subcommand: `group/user`")
+            await ctx.send(embed=embed)
     
     @perm.group()
     @perms.check()
     async def group(self, ctx):
         """Configure server permissions"""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Please specify a subcommand. Add/Remove/Parent/Unparent")
+            embed = discord.Embed(colour=embed_type('warn'), description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
+            await ctx.send(embed=embed)
 
     @group.command(name='add')
     @perms.check()
@@ -70,15 +74,17 @@ class Configuration(commands.Cog):
         if perm is None:
             return
         elif perm is True:
-            await ctx.send("That group already has that permission")
-            return 
+            embed = discord.Embed(colour=embed_type('warn'), description=f"`{group.name}` already has that permission")
+            await ctx.send(embed=embed)
+            return
         
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
         values = (ctx.guild.id, group.id, command)
         cursor.execute("INSERT INTO group_permissions VALUES (?,?,?)", values)
-        await ctx.send(f"Command `{command}` added to group `{group.name}`")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command}` added to group `{group.name}`")
+        await ctx.send(embed=embed)
         db.commit()
         db.close()
 
@@ -90,7 +96,8 @@ class Configuration(commands.Cog):
         if perm is None:
             return
         elif perm is False:
-            await ctx.send("That group doesn't have that permission")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"`{group.name}` doesn't have that permission")
+            await ctx.send(embed=embed)
             return
         
         # Remove permission from database and notify user
@@ -98,7 +105,8 @@ class Configuration(commands.Cog):
         cursor = db.cursor()
         query = (ctx.guild.id, group.id, command)
         cursor.execute("DELETE FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?", query)
-        await ctx.send(f"Command `{command}` removed from group `{group.name}`")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command}` removed from group `{group.name}`")
+        await ctx.send(embed=embed)
         db.commit()
         db.close()
 
@@ -108,7 +116,8 @@ class Configuration(commands.Cog):
         # Open server's config file
         check = await self._parent_query(ctx, child_group.id, parent_group.id)
         if check:
-            await ctx.send("Cannot add parent to group as selected parent is already a parent of group")
+            embed = discord.Embed(colour=embed_type('warn'), description="Cannot add parent to group as selected parent is already a parent of group")
+            await ctx.send(embed=embed)
             return
 
         # Query database to check if parent is a child of group
@@ -119,13 +128,15 @@ class Configuration(commands.Cog):
         check = cursor.fetchall()
         if check:
             db.close()
-            await ctx.send("Cannot add parent to group as selected parent is a child of group")        
+            embed = discord.Embed(colour=embed_type('warn'), description="Cannot add parent to group as selected parent is a child of group")
+            await ctx.send(embed=embed)  
             return
 
         # Remove permission from database and notify user
         values = (ctx.guild.id, child_group.id, parent_group.id)
         cursor.execute("INSERT INTO group_parents VALUES (?,?,?)", values)
-        await ctx.send(f"`{child_group.name}` now inherits permissions from `{parent_group.name}`")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"`{child_group.name}` now inherits permissions from `{parent_group.name}`")
+        await ctx.send(embed=embed)  
         db.commit()
         db.close()
 
@@ -135,7 +146,8 @@ class Configuration(commands.Cog):
         # Open server's config file
         check = await self._parent_query(ctx, child_group.id, parent_group.id)
         if not check:
-            await ctx.send("Cannot remove parent from group as selected parent isn't a parent of group")
+            embed = discord.Embed(colour=embed_type('warn'), description="Cannot remove parent from group as selected parent isn't a parent of group")
+            await ctx.send(embed=embed) 
             return
 
         # Remove permission from database and notify user
@@ -143,7 +155,8 @@ class Configuration(commands.Cog):
         cursor = db.cursor()
         values = (ctx.guild.id, child_group.id, parent_group.id)
         cursor.execute("DELETE FROM group_parents WHERE serverid=? AND child_group=? AND parent_group=?", values)
-        await ctx.send(f"`{child_group.name}` is no longer inheriting permissions from `{parent_group.name}`")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"`{child_group.name}` is no longer inheriting permissions from `{parent_group.name}`")
+        await ctx.send(embed=embed) 
         db.commit()
         db.close()
 
@@ -153,8 +166,10 @@ class Configuration(commands.Cog):
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
 
-        # Output group name
-        await ctx.send(f"Group: `{group.name}`")
+        # Add user's name to embed
+        embed = discord.Embed(colour=embed_type('info'))
+        image = discord.File(embed_icons("database"), filename="image.png")
+        embed.set_author(name=f"Group Perms of {group.name}", icon_url="attachment://image.png")
 
         # Query group's parents
         query = (ctx.guild.id, group.id)
@@ -163,11 +178,12 @@ class Configuration(commands.Cog):
         parents = cursor.fetchall()
 
         # Output formatted parents list
-        parents_output = []
-        for parent in parents:
-            group = discord.utils.get(ctx.guild.roles, id=parent[0])
-            parents_output.append("`" + group.name + " (" + str(parent[0]) + ")`")
-        await ctx.send("Parents: " + ', '.join(parents_output))
+        if parents:
+            parents_output = []
+            for parent in parents:
+                group = discord.utils.get(ctx.guild.roles, id=parent[0])
+                parents_output.append("`" + group.name + " (" + str(parent[0]) + ")`")
+            embed.add_field(name="Parents", value=', '.join(parents_output), inline=False)
 
         # Query group's perms
         cursor.execute(
@@ -175,10 +191,13 @@ class Configuration(commands.Cog):
         perms = cursor.fetchall()
 
         # Output formatted perms list
-        perms_output = []
-        for perm in perms:
-            perms_output.append("`" + perm[0] + "`")
-        await ctx.send("Permissions: " + ', '.join(perms_output))
+        if perms:
+            perms_output = []
+            for perm in perms:
+                perms_output.append("`" + perm[0] + "`")
+            embed.add_field(name="Permissions", value=', '.join(perms_output), inline=False)
+
+        await ctx.send(file=image, embed=embed)
 
     @group.command(name='purge')
     @perms.check()
@@ -193,12 +212,14 @@ class Configuration(commands.Cog):
 
         # Notify if specified user doesn't have any perms to clear
         if not perms:
-            await ctx.send("That group doesn't have any permissions")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"{role.name} doesn't have any permissions")
+            await ctx.send(embed=embed) 
             return
 
         # Clear all permissions
         cursor.execute("DELETE FROM group_permissions WHERE serverid=? AND groupid=?", query)
-        await ctx.send(f"All permissions cleared from `{role.name}`")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"All permissions cleared from `{role.name}`")
+        await ctx.send(embed=embed) 
         db.commit()
         db.close()
 
@@ -207,7 +228,8 @@ class Configuration(commands.Cog):
     async def user(self, ctx):
         """Configure server permissions"""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Please specify a subcommand. Add/Remove/Parent/Unparent")
+            embed = discord.Embed(colour=embed_type('warn'), description="Please enter a valid subcommand: `add/remove/info`")
+            await ctx.send(embed=embed) 
 
     @user.command(name='add')
     @perms.check()
@@ -217,7 +239,8 @@ class Configuration(commands.Cog):
         if perm is None:
             return
         elif perm is True:
-            await ctx.send("That user already has that permission")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"{user.name} already has that permission")
+            await ctx.send(embed=embed) 
             return 
 
         # Append permission to database and notify user
@@ -225,7 +248,8 @@ class Configuration(commands.Cog):
         cursor = db.cursor()
         values = (ctx.guild.id, user.id, command)
         cursor.execute("INSERT INTO user_permissions VALUES (?,?,?)", values)
-        await ctx.send(f"Command `{command}` added to group `{user.name}`")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command}` added to group `{user.name}`")
+        await ctx.send(embed=embed) 
         db.commit()
         db.close()
 
@@ -237,7 +261,8 @@ class Configuration(commands.Cog):
         if perm is None:
             return
         elif perm is False:
-            await ctx.send("That user doesn't have that permission")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"{user.name} doesn't have that permission")
+            await ctx.send(embed=embed) 
             return 
 
         # Append permission to database and notify user
@@ -245,7 +270,8 @@ class Configuration(commands.Cog):
         cursor = db.cursor()
         query = (ctx.guild.id, user.id, command)
         cursor.execute("DELETE FROM user_permissions WHERE serverid=? AND userid=? AND perm=?", query)
-        await ctx.send(f"Command `{command}` removed from user `{user.name}`")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command}` removed from user `{user.name}`")
+        await ctx.send(embed=embed) 
         db.commit()
         db.close()
         
@@ -255,14 +281,16 @@ class Configuration(commands.Cog):
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
 
-        # Output group name
-        await ctx.send(f"User: `{user.name}`")
+        # Add user's name to embed
+        embed = discord.Embed(colour=embed_type('info'))
+        image = discord.File(embed_icons("database"), filename="image.png")
+        embed.set_author(name=f"User Perms of {user.name}", icon_url="attachment://image.png")
 
         # Output formatted groups list
         groups_output = []
         for role in user.roles:
             groups_output.append("`" + role.name + " (" + str(role.id) + ")`")
-        await ctx.send("Groups: " + ', '.join(groups_output))
+        embed.add_field(name="Groups", value=', '.join(groups_output), inline=False)
 
         # Query group's perms
         query = (ctx.guild.id, user.id)
@@ -271,10 +299,13 @@ class Configuration(commands.Cog):
         perms = cursor.fetchall()
 
         # Output formatted perms list
-        perms_output = []
-        for perm in perms:
-            perms_output.append("`" + perm[0] + "`")
-        await ctx.send("Permissions: " + ', '.join(perms_output))
+        if perms:
+            perms_output = []
+            for perm in perms:
+                perms_output.append("`" + perm[0] + "`")
+            embed.add_field(name="Permissions", value=', '.join(perms_output), inline=False)
+
+            await ctx.send(file=image, embed=embed)
 
     @user.command(name='purge')
     @perms.check()
@@ -289,12 +320,14 @@ class Configuration(commands.Cog):
 
         # Notify if specified user doesn't have any perms to clear
         if not perms:
-            await ctx.send("That user doesn't have any permissions")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"`{user.name}` doesn't have any permissions")
+            await ctx.send(embed=embed) 
             return
 
         # Clear all permissions
         cursor.execute("DELETE FROM user_permissions WHERE serverid=? AND userid=?", query)
-        await ctx.send(f"All permissions cleared from `{user.name}`")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"All permissions cleared from `{user.name}`")
+        await ctx.send(embed=embed) 
         db.commit()
         db.close()
 

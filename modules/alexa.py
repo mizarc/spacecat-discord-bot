@@ -71,7 +71,8 @@ class Alexa(commands.Cog):
             try:
                 channel = ctx.author.voice.channel
             except AttributeError:
-                await ctx.send("You must specify or be in a channel")
+                embed = discord.Embed(colour=embed_type('warn'), description=f"You must specify or be in a voice channel")
+                await ctx.send(embed=embed)
                 return
 
         # Connect if not in a voice channel
@@ -81,7 +82,8 @@ class Alexa(commands.Cog):
 
         # Check if the specified voice channel is the same as the current channel
         if channel == ctx.voice_client.channel:
-            await ctx.send("I'm already in that voice channel")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"I'm already in that voice channel")
+            await ctx.send(embed=embed)
             return
 
         # Move to specified channel
@@ -94,7 +96,8 @@ class Alexa(commands.Cog):
         """Stops and leaves the voice channel"""
         # Check if in a voice channel
         if ctx.voice_client is None:
-            await ctx.send("I can't leave if i'm not even in a voice channel")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"I can't leave if i'm not in a voice channel")
+            await ctx.send(embed=embed)
             return
 
         # Stop and Disconnect from voice channel
@@ -117,11 +120,13 @@ class Alexa(commands.Cog):
         # Play specified song if only one song in queue
         if len(self.song_queue) == 1:
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-            await ctx.send(f'Now playing: `{source.title}`')
+            embed = discord.Embed(colour=embed_type('accept'), description=f"Now playing {source.title}")
+            await ctx.send(embed=embed)
             return
 
         # Notify user of song being added to queue
-        await ctx.send(f"Added `{source.title}` to queue")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Added {source.title} to queue")
+        await ctx.send(embed=embed)
 
     @commands.command()
     @perms.check()
@@ -129,7 +134,8 @@ class Alexa(commands.Cog):
         """Stops and clears the queue"""
         # Check if in a voice channel
         if ctx.voice_client is None:
-            await ctx.send("I can't stop playing if i'm not even in a voice channel")
+            embed = discord.Embed(colour=embed_type('warn'), description="I can't stop playing if I'm not in a voice channel")
+            await ctx.send(embed=embed)
             return
 
         # Stops and clears the queue
@@ -137,7 +143,8 @@ class Alexa(commands.Cog):
         await asyncio.sleep(0.1)
         self.song_queue.clear()
         shutil.rmtree('cache')
-        await ctx.send("Music has been stopped & queue has been cleared")
+        embed = discord.Embed(colour=embed_type('accept'), description="Music has been stopped & queue has been cleared")
+        await ctx.send(embed=embed)
 
     @commands.command()
     @perms.check()
@@ -145,12 +152,14 @@ class Alexa(commands.Cog):
         """Resumes music if paused"""
         # Check if music is paused
         if ctx.voice_client is None or not ctx.voice_client.is_paused():
-            await ctx.send("Music isn't paused")
+            embed = discord.Embed(colour=embed_type('warn'), description="Music isn't paused")
+            await ctx.send(embed=embed)
             return
 
         # Resumes music playback
         ctx.voice_client.resume()
-        await ctx.send("Music has been resumed")
+        embed = discord.Embed(colour=embed_type('accept'), description="Music has been resumed")
+        await ctx.send(embed=embed)
 
     @commands.command()
     @perms.check()
@@ -158,12 +167,14 @@ class Alexa(commands.Cog):
         """Pauses the music"""
         # Check if music is paused
         if ctx.voice_client is None or ctx.voice_client.is_paused():
-            await ctx.send("Music is already paused")
+            embed = discord.Embed(colour=embed_type('warn'), description="Music is already paused")
+            await ctx.send(embed=embed)
             return
 
         # Pauses music playback
         ctx.voice_client.pause()
-        await ctx.send("Music has been paused")
+        embed = discord.Embed(colour=embed_type('accept'), description="Music has been paused")
+        await ctx.send(embed=embed)
 
     @commands.command()
     @perms.check()
@@ -171,7 +182,8 @@ class Alexa(commands.Cog):
         """Skip the current song and play the next song"""
         # Check if there's queue is empty
         if len(self.song_queue) <= 1:
-            await ctx.send("There's nothing in the queue after this")
+            embed = discord.Embed(colour=embed_type('warn'), description="There's nothing in the queue after this")
+            await ctx.send(embed=embed)
             return
 
         # Stop current song and flag that it has been skipped
@@ -184,11 +196,13 @@ class Alexa(commands.Cog):
         """Loop the currently playing song"""
         if self.loop_toggle:
             self.loop_toggle = False
-            await ctx.send("Loop disabled")
+            embed = discord.Embed(colour=embed_type('accept'), description=f"Loop disabled")
+            await ctx.send(embed=embed)
             return
 
         self.loop_toggle = True
-        await ctx.send("Loop enabled")
+        embed = discord.Embed(colour=embed_type('warn'), description=f"Loop enabled")
+        await ctx.send(embed=embed)
         return
 
     @commands.command()
@@ -197,7 +211,8 @@ class Alexa(commands.Cog):
         """List the current song queue"""
         # Notify user if nothing is in the queue
         if not self.song_queue:
-            await ctx.send("There's nothing in the queue right now")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"There's nothing in the queue right now")
+            await ctx.send(embed=embed)
             return
         
         # Output first in queue as currently playing
