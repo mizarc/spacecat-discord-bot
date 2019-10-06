@@ -156,7 +156,7 @@ class PoliteCat(commands.Cog):
     async def react(self, ctx, image):
         "Use an image/gif as a reaction"
         try:
-            os.chdir("cache")
+            os.chdir("assets/reactions")
         except:
             embed = discord.Embed(colour=embed_type('warn'), description="No reactions are available")
             await ctx.send(embed=embed) 
