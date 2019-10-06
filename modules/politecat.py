@@ -160,7 +160,7 @@ class PoliteCat(commands.Cog):
         except:
             embed = discord.Embed(colour=embed_type('warn'), description="No reactions are available")
             await ctx.send(embed=embed) 
-            os.chdir("../")
+            os.chdir("../../")
             return
 
         try:
@@ -168,7 +168,7 @@ class PoliteCat(commands.Cog):
         except FileNotFoundError:
             await ctx.send(file=discord.File(image + ".gif"))
 
-        os.chdir("../")
+        os.chdir("../../")
 
 
 def setup(bot):
