@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 import youtube_dl
 
-from helpers.dataclasses import embed_type, embed_icons
+from helpers.appearance import embed_type, embed_icons
 from helpers import perms
 
 youtube_dl.utils.bug_reports_message = lambda: ''

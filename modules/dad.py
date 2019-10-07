@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from helpers import perms
-from helpers.dataclasses import embed_type
+from helpers.appearance import embed_type
 
 class Dad(commands.Cog):
     def __init__(self, bot):
