@@ -10,7 +10,7 @@ import helpers.perms as perms
 import helpers.perms
 from discord.ext import commands
 from argparse import ArgumentParser
-from helpers.dataclasses import activity_type_class, status_class, embed_type, embed_icons
+from helpers.appearance import activity_type_class, status_class, embed_type, embed_icons
 
 # Arguments for API key input
 parser = ArgumentParser()

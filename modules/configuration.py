@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 
 from helpers import perms
-from helpers.dataclasses import activity_type_class, status_class, embed_type, embed_icons
+from helpers.appearance import activity_type_class, status_class, embed_type, embed_icons
 
 class Configuration(commands.Cog):
     def __init__(self, bot):

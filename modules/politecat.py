@@ -6,7 +6,7 @@ from discord.ext import commands
 from PIL import Image
 
 from helpers import perms
-from helpers.dataclasses import embed_icons, embed_type
+from helpers.appearance import embed_icons, embed_type
 
 class PoliteCat(commands.Cog):
     def __init__(self, bot):
