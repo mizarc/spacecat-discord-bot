@@ -1,5 +1,7 @@
 assets/reactions
 cache/
+.vscode/
+env/
 
 *.db
 *.ini
