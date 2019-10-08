@@ -68,7 +68,7 @@ def createconfig():
 
     input("Press Enter to continue...")
     print('--------------------\n')
-    time.sleep(2)
+    time.sleep(1)
 
     # Generate Config
     print("[Step 1]")
@@ -88,7 +88,7 @@ def createconfig():
     config['Base']['APIKey'] = keyinput
     run(keyinput)
 
-# Run Bot with API Key
+
 def run(key = None):
     # Run with key input on first run
     if key:
@@ -174,10 +174,10 @@ async def on_ready():
                 print("Lets try this again.")
                 input("Press Enter to continue...")
                 print('--------------------\n')
-                time.sleep(2)
+                time.sleep(1)
                 continue
 
-            time.sleep(2)
+            time.sleep(1)
             
             print("You should've recieved a message from me through Discord.")
             confirminput = input("Type 'yes' if you have, or 'no' to set a new ID: ")
@@ -192,7 +192,7 @@ async def on_ready():
         config['Base']['activity_name'] = ''
         with open('config.ini', 'w') as file:
                 config.write(file)
-        time.sleep(2)
+        time.sleep(1)
 
         # Join a server
         print("[Step 3]")
