@@ -84,7 +84,7 @@ class PoliteCat(commands.Cog):
         if name in assetlist:
             embed = discord.Embed(colour=embed_type('warn'), description=f"Reaction name already in use")
             await ctx.send(embed=embed) 
-            os.chdir("../")
+            os.chdir("../../")
             return
 
         # Check if file extention is valid and convert to webp when possible
@@ -96,12 +96,12 @@ class PoliteCat(commands.Cog):
         else:
             await ctx.send("Image must be formatted in " +
                             "webp, png, jpg, bmp or gif")
-            os.chdir("../")
+            os.chdir("../../")
             return
         
         embed = discord.Embed(colour=embed_type('accept'), description=f"Added {name} to reactions")
         await ctx.send(embed=embed) 
-        os.chdir("../")
+        os.chdir("../../")
         return
 
     @reactcfg.command()
@@ -123,7 +123,7 @@ class PoliteCat(commands.Cog):
         if name not in assetlist:
             embed = discord.Embed(colour=embed_type('warn'), description="Reaction image does not exist")
             await ctx.send(embed=embed) 
-            os.chdir("../")
+            os.chdir("../../")
             return
 
         # Remove specified image
@@ -132,7 +132,7 @@ class PoliteCat(commands.Cog):
         except FileNotFoundError:
             os.remove(name + ".gif")
         finally:
-            os.chdir("../")
+            os.chdir("../../")
             embed = discord.Embed(colour=embed_type('accept'), description=f"Removed {name} from reactions")
             await ctx.send(embed=embed) 
             return
