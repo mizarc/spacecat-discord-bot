@@ -21,13 +21,6 @@ class PoliteCat(commands.Cog):
         if not message.attachments[0].filename[-4:] == 'webp':
             return
 
-        # Open cache directory
-        try:
-            os.chdir("cache")
-        except FileNotFoundError:
-            os.mkdir("cache")
-            os.chdir("cache")
-
         await message.attachments[0].save(str(message.id) + '.webp')
         image = Image.open(str(message.id) + '.webp')
         try:
