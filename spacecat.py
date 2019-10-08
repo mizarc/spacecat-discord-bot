@@ -1,16 +1,18 @@
-#!/usr/bin/env python
-import discord
+#!/usr/bin/env python3
+from argparse import ArgumentParser
+import configparser
+import glob
 import logging
 import os
-import glob
-import configparser
 import shutil
 import time
+
+import discord
+from discord.ext import commands
+
 import helpers.perms as perms
 import helpers.perms
-from discord.ext import commands
-from argparse import ArgumentParser
-from helpers.appearance import activity_type_class, status_class, embed_type, embed_icons
+import helpers.appearance as appearance
 
 # Arguments for API key input
 parser = ArgumentParser()
@@ -133,11 +135,11 @@ async def on_ready():
             perms.setup()
 
         statusname = config['Base']['status']
-        status = status_class(statusname)
+        status = appearance.status_class(statusname)
 
         try:
             acttypename = config['Base']['activity_type']
-            activitytype = activity_type_class(acttypename)
+            activitytype = appearance.activity_type_class(acttypename)
 
             activity = discord.Activity(type=activitytype,
                                         name=config['Base']['activity_name'],
@@ -225,7 +227,7 @@ async def on_guild_join(guild):
 @perms.check()
 async def ping(ctx):
     """A simple command to check if the bot is working."""
-    embed = discord.Embed(colour=embed_type('accept'), description=f"{bot.user.name} is operational at {int(bot.latency * 1000)}ms")
+    embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"{bot.user.name} is operational at {int(bot.latency * 1000)}ms")
     await ctx.send(embed=embed)
 
 
@@ -241,21 +243,21 @@ async def reload(ctx, module=None):
                 bot.unload_extension(z)
                 bot.load_extension(z)
             except Exception:
-                embed = discord.Embed(colour=embed_type('warn'), description=f"Failed to reload module {module}. Reloading has stopped.")
+                embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Failed to reload module {module}. Reloading has stopped.")
                 await ctx.send(embed=embed)
                 return
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Reloaded all modules successfully")
+        embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"Reloaded all modules successfully")
         await ctx.send(embed=embed)
         return
     try:
         z = 'modules.' + module
         bot.unload_extension(z)
         bot.load_extension(z)
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Reloaded module {module} successfully")
+        embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"Reloaded module {module} successfully")
     except ModuleNotFoundError:
-        embed = discord.Embed(colour=embed_type('warn'), description=f"{module} is not a valid module")
+        embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"{module} is not a valid module")
     except Exception:
-        embed = discord.Embed(colour=embed_type('warn'), description=f"Failed to load module {module}")
+        embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Failed to load module {module}")
     await ctx.send(embed=embed)
 
 
