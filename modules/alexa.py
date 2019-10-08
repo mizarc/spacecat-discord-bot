@@ -147,7 +147,13 @@ class Alexa(commands.Cog):
         ctx.voice_client.stop()
         await asyncio.sleep(0.1)
         self.song_queue.clear()
-        shutil.rmtree('cache')
+
+        # Remove cache folder if it exists
+        try:
+            shutil.rmtree('cache')
+        except FileNotFoundError:
+            pass
+
         embed = discord.Embed(colour=embed_type('accept'), description="Music has been stopped & queue has been cleared")
         await ctx.send(embed=embed)
 
