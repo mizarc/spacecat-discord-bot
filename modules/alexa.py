@@ -117,6 +117,10 @@ class Alexa(commands.Cog):
         if ctx.voice_client is None:
             await ctx.invoke(self.join)
 
+            # End function if bot failed to join a voice channel.
+            if ctx.voice_client is None:
+                return
+
         # Grab audio source from youtube_dl and add to queue
         source = await YTDLSource.from_url(url, loop=self.bot.loop)
         song_name = f"[{source.title}]({source.webpage_url}) `{str(datetime.timedelta(seconds=source.duration))[2:]}`"
