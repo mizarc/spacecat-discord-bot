@@ -29,7 +29,7 @@ class PoliteCat(commands.Cog):
             image.seek(1)
             image.info.pop('background', None)
             image.save(str(message.id) + '.gif', 'gif', save_all=True)
-            await message.channel.send(f"{message.author.name} sent:", file=discord.File(str(message.id) + '.gif'))
+            await message.channel.send(f"{message.author.display_name} sent:", file=discord.File(str(message.id) + '.gif'))
             os.remove(str(message.id) + '.gif')
             await message.delete()
             
