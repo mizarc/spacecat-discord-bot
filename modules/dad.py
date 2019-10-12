@@ -7,28 +7,27 @@ from helpers.appearance import embed_type
 class Dad(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.channel = 97297058267951104
         self.toggle = True
 
     @commands.Cog.listener()
     async def on_message(self, message):
         if self.toggle:
             words = message.content.lower().split()
-
             triggers = ["im", "i'm"]
 
+            # Compare first word to each trigger word
             for x in triggers:
+
+                # Reply if first word starts with trigger word
                 if x in words[:1]:
-                    qualitycontent = "Hi " + " ".join(words[1:]) + ", I'm a Cat!"
+                    qualitycontent = f"Hi {' '.join(words[1:])}, I'm a Cat!"
 
-                    if "a cat" in words[:2]:
+                    # Different reply if next words start with "a cat"
+                    if "a cat" in ' '.join(words[1:3]):
                         qualitycontent = "No you're not, I'm a cat."
-                    break
-                else:
-                    return
 
-            print(qualitycontent)
-            await message.channel.send(qualitycontent)
+                    await message.channel.send(qualitycontent)
+                    return
 
     @commands.command()
     @perms.check()
