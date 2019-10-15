@@ -103,7 +103,7 @@ def exclusive():
         config = toml.load('config.toml')
 
         # If user is the bot administrator
-        if ctx.author.id == int(config['Base']['adminuser']):
+        if ctx.author.id == int(config['base']['adminuser']):
             return True
 
     return commands.check(predicate)
