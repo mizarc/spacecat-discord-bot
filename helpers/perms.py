@@ -5,6 +5,7 @@ import sqlite3
 import discord
 from discord.ext import commands
 from discord.utils import get
+import toml
 
 def setup():
     # Open server's database file
@@ -31,19 +32,15 @@ def new(guild):
     # Check if server doesn't have a config file
     if not os.path.exists('servers/' + str(guild.id) + '.ini'):
         # Get default perms from global config
-        config = configparser.ConfigParser()
+        config = toml.load('config.ini')
         config.read('config.ini')
         userperms = config['PermsPreset']['user']
 
         # Assign @everyone role the global user perms
-        config = configparser.ConfigParser()
+        config = toml.load('config.ini')
         config['PermsGroups'] = {}
         config['PermsGroups'][str(guild.default_role.id)] = userperms
         config['PermsUsers'] = {}
-
-        # Write to server config file
-        with open('servers/' + str(guild.id) + '.ini', 'w') as file:
-                config.write(file)
 
 def check():
     def predicate(ctx):
@@ -54,10 +51,6 @@ def check():
         # Open server's database file
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-
-        # Open server's config file
-        config = configparser.ConfigParser()
-        config.read('servers/' + str(ctx.guild.id) + '.ini')
 
         # Check if specific user has a permission in server
         query = (ctx.guild.id, ctx.author.id, ctx.command.name)
@@ -108,8 +101,7 @@ def check():
 def exclusive():
     def predicate(ctx):
         # Open global config file
-        config = configparser.ConfigParser()
-        config.read('config.ini')
+        config = toml.load('config.ini')
 
         # If user is the bot administrator
         if ctx.author.id == int(config['Base']['adminuser']):
