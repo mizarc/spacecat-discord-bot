@@ -8,6 +8,7 @@ For MacOS/Linux, substitute `py -3` with `sudo python3`
 -   [discord.py](https://github.com/Rapptz/discord.py) (`py -3 -m pip install -U discord.py[voice]`)
 -   [Youtube_dl](https://ytdl-org.github.io/youtube-dl/index.html) (`py -3 -m pip install -U youtube_dl`)
 -   [Pillow](https://pillow.readthedocs.io/en/stable/) (`py -3 -m pip install -U Pillow`)
+-   [TOML](https://pypi.org/project/toml/) (`py -3 -m pip install -U toml`)
 
 
 ## Running
