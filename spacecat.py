@@ -9,6 +9,7 @@ import time
 
 import discord
 from discord.ext import commands
+import toml
 
 import helpers.perms as perms
 import helpers.perms
@@ -23,7 +24,6 @@ args = parser.parse_args()
 # Set command prefix
 bot = commands.Bot(command_prefix='!')
 
-config = configparser.ConfigParser()
 loadedmodules = []
 firstrun = False
 
@@ -49,17 +49,16 @@ def main():
             print("Failed to load extension {}\n{}\n".format(x, exc))
 
     # Run Config Check
-    if not os.path.exists('config.ini'):
+    if not os.path.exists('config.toml'):
         createconfig()
     else:
-        config.read('config.ini')
+        config = toml.load('config.toml')
         run()
 
     # Append New APIKey to config
     if args.apikey is not None:
-        config['Base']['APIKey'] = args.apikey
-        with open('config.ini', 'w') as file:
-            config.write(file)
+        config['base']['apikey'] = args.apikey
+        toml.dump(config, 'config.toml')
 
 
 def createconfig():
@@ -86,8 +85,8 @@ def createconfig():
     keyinput = input("Paste your token right here: ")
     print('--------------------\n')
 
-    config['Base'] = {}
-    config['Base']['APIKey'] = keyinput
+    config['base'] = {}
+    config['base']['apikey'] = keyinput
     run(keyinput)
 
 
@@ -102,8 +101,9 @@ def run(key = None):
         Run the program again and use the correct key.""")
     # Run with key in the config
     else:
+        config = toml.load('config.toml')
         try:
-            apikey = config['Base']['APIKey']
+            apikey = config['base']['apikey']
             print("Active API Key: " + apikey + "\n")
             bot.run(apikey)
         except discord.LoginFailure:
@@ -125,7 +125,7 @@ def getmodules():
 
 @bot.event
 async def on_ready():
-    if os.path.exists('config.ini'):
+    if os.path.exists('config.toml'):
         print(bot.user.name + " has successfully launched")
         print(bot.user.id)
         print("Successfully loaded module(s): " + ', '.join(loadedmodules))
@@ -134,15 +134,16 @@ async def on_ready():
         if not os.path.exists("spacecat.db"):
             perms.setup()
 
-        statusname = config['Base']['status']
+        config = toml.load('config.toml')
+        statusname = config['base']['status']
         status = appearance.status_class(statusname)
 
         try:
-            acttypename = config['Base']['activity_type']
+            acttypename = config['base']['activity_type']
             activitytype = appearance.activity_type_class(acttypename)
 
             activity = discord.Activity(type=activitytype,
-                                        name=config['Base']['activity_name'],
+                                        name=config['base']['activity_name'],
                                         url="https://www.twitch.tv/monstercat")
             await bot.change_presence(status=status, activity=activity)
         except (KeyError, TypeError):
@@ -185,15 +186,14 @@ async def on_ready():
             confirminput = input("Type 'yes' if you have, or 'no' to set a new ID: ")
             print('--------------------\n')
             if confirminput == "yes":
-                config['Base']['AdminUser'] = idinput
+                config['Base']['adminuser'] = idinput
                 break
             continue
 
-        config['Base']['status'] = 'online'
-        config['Base']['activity_type'] = ''
-        config['Base']['activity_name'] = ''
-        with open('config.ini', 'w') as file:
-                config.write(file)
+        config['base']['status'] = 'online'
+        config['base']['activity_type'] = None
+        config['base']['activity_name'] = None
+        toml.dump(config, 'config.toml')
         time.sleep(1)
 
         # Join a server
@@ -217,9 +217,6 @@ async def on_guild_join(guild):
         print("You may now use me, or continue to configure me through Discord.")
         print("Type !help for more info")
         print('--------------------\n')
-
-        with open('config.ini', 'w') as file:
-            config.write(file)
 
 
 # Commands
@@ -260,6 +257,39 @@ async def reload(ctx, module=None):
         embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Failed to load module {module}")
     await ctx.send(embed=embed)
 
+
+@bot.command()
+@perms.exclusive()
+async def enable(ctx, module):
+    """Enables a module"""
+    try:
+        os.rename(f'modules/{module}.py.disabled', f'modules/{module}.py')
+        bot.load_extension(f'modules.{module}')
+        embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"Module `{module}` has been enabled")
+    except FileNotFoundError:
+        if os.path.isfile(f'modules/{module}.py'):
+            embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Module `{module}` is already enabled")
+        else:
+            embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Module `{module}` does not exist")
+    
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@perms.exclusive()
+async def disable(ctx, module):
+    """Disables a module"""
+    modules = list(bot.cogs.keys())
+    if module.lower() not in modules:
+        embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"Module `{module}` does not exist")
+
+    bot.unload_extension(f'modules.{module}')
+    config = toml.load('config.ini')
+    print(config)
+
+    os.rename(f'modules/{module}.py', f'modules/{module}.py.disabled')
+    
+    await ctx.send(embed=embed)
 
 @bot.command()
 @perms.exclusive()

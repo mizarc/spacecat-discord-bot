@@ -3,6 +3,7 @@ import sqlite3
 
 import discord
 from discord.ext import commands
+import toml
 
 from helpers import perms
 from helpers.appearance import activity_type_class, status_class, embed_type, embed_icons
@@ -10,13 +11,12 @@ from helpers.appearance import activity_type_class, status_class, embed_type, em
 class Configuration(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config = configparser.ConfigParser()
 
     @commands.command()
     @perms.exclusive()
     async def status(self, ctx, statusname):
-        self.config.read('config.ini')
-        activity = discord.Activity(type=activity_type_class(self.config['Base']['activity_type']), name=self.config['Base']['activity_name'])
+        config = toml.load('config.toml')
+        activity = discord.Activity(type=activity_type_class(config['base']['activity_type']), name=config['base']['activity_name'])
         status = status_class(statusname)
 
         if status == None:
@@ -28,13 +28,12 @@ class Configuration(commands.Cog):
         await self.bot.change_presence(status=status, activity=activity)
 
         self.config['Base']['status'] = statusname
-        with open('config.ini', 'w') as file:
-            self.config.write(file)
+        toml.dump(config, 'config.toml')
 
     @commands.command()
     @perms.exclusive()
     async def activity(self, ctx, acttype, *, name):
-        self.config.read('config.ini')
+        config = toml.load('config.toml')
         activitytype = activity_type_class(acttype)
         activity = discord.Activity(type=activitytype, name=name, url="https://www.twitch.tv/yeet")
 
@@ -43,12 +42,11 @@ class Configuration(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        await self.bot.change_presence(activity=activity, status=self.config['Base']['status'])
+        await self.bot.change_presence(activity=activity, status=config['base']['status'])
 
-        self.config['Base']['activity_type'] = acttype
-        self.config['Base']['activity_name'] = name
-        with open('config.ini', 'w') as file:
-            self.config.write(file)
+        config['Base']['activity_type'] = acttype
+        config['Base']['activity_name'] = name
+        toml.dump(config, 'config.toml')
 
     @commands.group()
     @perms.check()
