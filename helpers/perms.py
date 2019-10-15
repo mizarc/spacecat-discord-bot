@@ -30,14 +30,13 @@ def setup():
 
 def new(guild):
     # Check if server doesn't have a config file
-    if not os.path.exists('servers/' + str(guild.id) + '.ini'):
+    if not os.path.exists('servers/' + str(guild.id) + '.toml'):
         # Get default perms from global config
-        config = toml.load('config.ini')
-        config.read('config.ini')
+        config = toml.load('config.toml')
         userperms = config['PermsPreset']['user']
 
         # Assign @everyone role the global user perms
-        config = toml.load('config.ini')
+        config = toml.load('config.toml')
         config['PermsGroups'] = {}
         config['PermsGroups'][str(guild.default_role.id)] = userperms
         config['PermsUsers'] = {}
@@ -101,7 +100,7 @@ def check():
 def exclusive():
     def predicate(ctx):
         # Open global config file
-        config = toml.load('config.ini')
+        config = toml.load('config.toml')
 
         # If user is the bot administrator
         if ctx.author.id == int(config['Base']['adminuser']):
