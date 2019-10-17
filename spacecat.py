@@ -25,29 +25,6 @@ args = parser.parse_args()
 # Set command prefix
 bot = commands.Bot(command_prefix='!')
 
-firstrun = False
-modules = []
-disabled_modules = []
-
-
-def main():
-    startup = Startup()
-    startup.logging()
-
-    # Check if config exists and run config creator if it doesn't
-    try:
-        config = toml.load('config.toml')
-    except FileNotFoundError:
-        startup.create_config()
-
-    # Append New APIKey to config if specified by argument
-    if args.apikey is not None:
-        config['base']['apikey'] = args.apikey
-        toml.dump(config, 'config.toml')
-    
-    startup.load_modules()
-    startup.run()
-
 
 class Startup():
     def logging(self):
@@ -393,6 +370,25 @@ class SpaceCat(commands.Cog):
             pass
         
         await bot.logout()
+    
+
+def main():
+    startup = Startup()
+    startup.logging()
+
+    # Check if config exists and run config creator if it doesn't
+    try:
+        config = toml.load('config.toml')
+    except FileNotFoundError:
+        startup.create_config()
+
+    # Append New APIKey to config if specified by argument
+    if args.apikey is not None:
+        config['base']['apikey'] = args.apikey
+        toml.dump(config, 'config.toml')
+    
+    startup.load_modules()
+    startup.run()
     
 
 if __name__ == "__main__":
