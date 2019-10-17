@@ -66,47 +66,58 @@ class Configuration(commands.Cog):
 
     @group.command(name='add')
     @perms.check()
-    async def addgroup(self, ctx, group: discord.Role, command):
-        # Query database to check if the group has the permission already
-        perm = await self._perm_query(ctx, 'group', group.id, command)
-        if perm is None:
+    async def addgroup(self, ctx, group: discord.Role, command_name):
+        # Check if command and permission exists
+        command = await _check(ctx, command_name)
+        if command:
+            perm = await self._perm_query(ctx, 'group', group.id, command)
+        else:
             return
-        elif perm is True:
+
+        # Notify if permission does not exist
+        if perm:
             embed = discord.Embed(colour=embed_type('warn'), description=f"`{group.name}` already has that permission")
             await ctx.send(embed=embed)
             return
         
-        # Append permission to database and notify user
+        # Append permission to database
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        values = (ctx.guild.id, group.id, command)
+        values = (ctx.guild.id, group.id, f"{command.cog.qualified_name}.{command.name}")
         cursor.execute("INSERT INTO group_permissions VALUES (?,?,?)", values)
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command}` added to group `{group.name}`")
-        await ctx.send(embed=embed)
         db.commit()
         db.close()
 
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command.name}` added to group `{group.name}`")
+        await ctx.send(embed=embed)
+
     @group.command(name='remove')
     @perms.check()
-    async def removegroup(self, ctx, group: discord.Role, command):
-        # Query database to check if the group has the permission already
-        perm = await self._perm_query(ctx, 'group', group.id, command)
-        if perm is None:
+    async def removegroup(self, ctx, group: discord.Role, command_name):
+        # Check if command and permission exists
+        command = await self._command_check(ctx, command_name)
+        if command:
+            perm = await self._perm_query(ctx, 'group', group.id, command)
+        else:
             return
-        elif perm is False:
+
+        # Notify if permission does not exist
+        if perm is False:
             embed = discord.Embed(colour=embed_type('warn'), description=f"`{group.name}` doesn't have that permission")
             await ctx.send(embed=embed)
             return
         
-        # Remove permission from database and notify user
+        # Remove permission from database
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        query = (ctx.guild.id, group.id, command)
+        query = (ctx.guild.id, group.id, f"{command.cog.qualified_name}.{command.name}")
         cursor.execute("DELETE FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?", query)
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command}` removed from group `{group.name}`")
-        await ctx.send(embed=embed)
         db.commit()
         db.close()
+
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command.name}` removed from group `{group.name}`")
+        await ctx.send(embed=embed)
+        
 
     @group.command()
     @perms.check()
@@ -231,12 +242,16 @@ class Configuration(commands.Cog):
 
     @user.command(name='add')
     @perms.check()
-    async def adduser(self, ctx, user: discord.User, command):
-        # Query database to check if the user has the permission already
-        perm = await self._perm_query(ctx, 'user', user.id, command)
-        if perm is None:
+    async def adduser(self, ctx, user: discord.User, command_name):
+        # Check if command and permission exists
+        command = await self._command_check(ctx, command_name)
+        if command:
+            perm = await self._perm_query(ctx, 'user', user.id, command)
+        else:
             return
-        elif perm is True:
+
+        # Notify if permission does not exist
+        if perm:
             embed = discord.Embed(colour=embed_type('warn'), description=f"{user.name} already has that permission")
             await ctx.send(embed=embed) 
             return 
@@ -244,21 +259,25 @@ class Configuration(commands.Cog):
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        values = (ctx.guild.id, user.id, command)
+        values = (ctx.guild.id, user.id, f"{command.cog.qualified_name}.{command.name}")
         cursor.execute("INSERT INTO user_permissions VALUES (?,?,?)", values)
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command}` added to group `{user.name}`")
-        await ctx.send(embed=embed) 
         db.commit()
         db.close()
 
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command.name}` added to group `{user.name}`")
+        await ctx.send(embed=embed) 
+
     @user.command(name='remove')
     @perms.check()
-    async def removeuser(self, ctx, user: discord.User, command):
-        # Query database to check if the user has the permission already
-        perm = await self._perm_query(ctx, 'user', user.id, command)
-        if perm is None:
+    async def removeuser(self, ctx, user: discord.User, command_name):
+        # Check if command and permission exists
+        command = await self._command_check(ctx, command_name)
+        if command:
+            perm = await self._perm_query(ctx, 'user', user.id, command)
+        else:
             return
-        elif perm is False:
+
+        if perm is False:
             embed = discord.Embed(colour=embed_type('warn'), description=f"{user.name} doesn't have that permission")
             await ctx.send(embed=embed) 
             return 
@@ -266,12 +285,13 @@ class Configuration(commands.Cog):
         # Append permission to database and notify user
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        query = (ctx.guild.id, user.id, command)
+        query = (ctx.guild.id, user.id, f"{command.cog.qualified_name}.{command.name}")
         cursor.execute("DELETE FROM user_permissions WHERE serverid=? AND userid=? AND perm=?", query)
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command}` removed from user `{user.name}`")
-        await ctx.send(embed=embed) 
         db.commit()
         db.close()
+
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command.name}` removed from user `{user.name}`")
+        await ctx.send(embed=embed) 
         
     @user.command(name='info')
     @perms.check()
@@ -354,23 +374,21 @@ class Configuration(commands.Cog):
     async def truncate(self, ctx):
         print('nah')
 
-    async def _perm_query(self, ctx, type_, id_, command):
-        # Loop through command list and check if command exists
-        command_exists = False
-        for bot_command in ctx.bot.commands:
-            if command == bot_command.name:
-                command_exists = True
-                break
-
-        # Send message if command does not exist
-        if not command_exists:
+    async def _command_check(self, ctx, command):
+        # Check if command exists by trying to get command object
+        try:
+            command = self.bot.get_command(command)
+            return command
+        except AttributeError:
+            embed = discord.Embed(colour=embed_type('warn'), description=f"Command does not exist")
             await ctx.send("That command does not exist")
-            return None
+            return False
 
+    async def _perm_query(self, ctx, type_, id_, command):
         # Query database for group permissions
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        query = (id_, command)
+        query = (id_, f"{command.cog.qualified_name}.{command.name}")
         cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
         result = cursor.fetchall()
         db.close()
