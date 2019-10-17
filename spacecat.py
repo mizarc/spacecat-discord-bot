@@ -148,9 +148,13 @@ class SpaceCat(commands.Cog):
             print(bot.user.name + " has successfully launched")
             print(f"Bot ID: {bot.user.id}")
             if module_handler.get_enabled():
-                print(f"Enabled Module(s): {', '.join(module_handler.get_enabled())}")
+                print(
+                    "Enabled Module(s): "
+                    f"{', '.join(module_handler.get_enabled())}")
             if module_handler.get_disabled():
-                print(f"Disabled Module(s): {', '.join(module_handler.get_disabled())}")
+                print(
+                    "Disabled Module(s): "
+                    f"{', '.join(module_handler.get_disabled())}")
             print("--------------------")
 
             if not os.path.exists("spacecat.db"):
@@ -163,10 +167,13 @@ class SpaceCat(commands.Cog):
                 acttypename = config['base']['activity_type']
                 activitytype = appearance.activity_type_class(acttypename)
 
-                activity = discord.Activity(type=activitytype,
-                                            name=config['base']['activity_name'],
-                                            url="https://www.twitch.tv/monstercat")
-                await bot.change_presence(status=status, activity=activity)
+                activity = discord.Activity(
+                    type=activitytype,
+                    name=config['base']['activity_name'],
+                    url="https://www.twitch.tv/monstercat")
+                await bot.change_presence(
+                    status=status,
+                    activity=activity)
             except (KeyError, TypeError):
                 await bot.change_presence(status=status)
         else:
@@ -176,7 +183,7 @@ class SpaceCat(commands.Cog):
                 print("[Step 2]")
                 print(f"Alright, {botname} is now operational.")
                 print("Now I'll need to get your discord user ID.")
-                print("This will give you admin access to the bot through discord.")
+                print("This will give you admin access to the bot.")
                 print("You can set more users later.\n")
 
                 print("Here's what you need to do:")
@@ -203,8 +210,9 @@ class SpaceCat(commands.Cog):
 
                 time.sleep(1)
                 
-                print("You should've recieved a message from me through Discord.")
-                confirminput = input("Type 'yes' if you have, or 'no' to set a new ID: ")
+                print("You should've recieved a pm from me through Discord.")
+                confirminput = input(
+                    "Type 'yes' if you have, or 'no' to set a new ID: ")
                 print('--------------------\n')
                 if confirminput == "yes":
                     config['Base']['adminuser'] = idinput
@@ -225,7 +233,9 @@ class SpaceCat(commands.Cog):
             print("Click the link below or copy it into your web browser.")
 
             botid = bot.user.id
-            print(f"https://discordapp.com/oauth2/authorize?client_id={botid}&scope=bot&permissions=8")
+            print(
+                f"https://discordapp.com/oauth2/authorize? \
+                client_id={botid}&scope=bot&permissions=8")
             print('--------------------\n')
 
 
@@ -235,7 +245,7 @@ class SpaceCat(commands.Cog):
             perms.new(guild)
         else:
             print("Congrats! I have now had my core functions set up")
-            print("You may now use me, or continue to configure me through Discord.")
+            print("You may now continue to configure me through discord.")
             print("Type !help for more info")
             print('--------------------\n')
 
@@ -245,7 +255,10 @@ class SpaceCat(commands.Cog):
     @perms.check()
     async def ping(self, ctx):
         """A simple command to check if the bot is working."""
-        embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"{bot.user.name} is operational at {int(bot.latency * 1000)}ms")
+        embed = discord.Embed(
+            colour=appearance.embed_type('accept'), 
+            description=f"{bot.user.name} is operational at \
+            {int(bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
 
 
@@ -261,21 +274,32 @@ class SpaceCat(commands.Cog):
                     bot.unload_extension(z)
                     bot.load_extension(z)
                 except Exception:
-                    embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Failed to reload module {module}. Reloading has stopped.")
+                    embed = discord.Embed(
+                        colour=appearance.embed_type('warn'),
+                        description=f"Failed to reload module {module}. \
+                        Reloading has stopped.")
                     await ctx.send(embed=embed)
                     return
-            embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"Reloaded all modules successfully")
+            embed = discord.Embed(
+                colour=appearance.embed_type('accept'),
+                description=f"Reloaded all modules successfully")
             await ctx.send(embed=embed)
             return
         try:
             z = 'modules.' + module
             bot.unload_extension(z)
             bot.load_extension(z)
-            embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"Reloaded module {module} successfully")
+            embed = discord.Embed(
+                colour=appearance.embed_type('accept'),
+                description=f"Reloaded module {module} successfully")
         except ModuleNotFoundError:
-            embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"{module} is not a valid module")
+            embed = discord.Embed(
+                colour=appearance.embed_type('warn'),
+                description=f"{module} is not a valid module")
         except Exception:
-            embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Failed to load module {module}")
+            embed = discord.Embed(
+                colour=appearance.embed_type('warn'),
+                description=f"Failed to load module {module}")
         await ctx.send(embed=embed)
 
 
@@ -286,7 +310,9 @@ class SpaceCat(commands.Cog):
         # Check if module exists by taking the list of extensions from the bot
         modules = module_handler.get()
         if module not in modules:
-            embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Module `{module}` does not exist")
+            embed = discord.Embed(
+                colour=appearance.embed_type('warn'),
+                description=f"Module `{module}` does not exist")
             await ctx.send(embed=embed)
             return
 
@@ -303,9 +329,13 @@ class SpaceCat(commands.Cog):
                 toml.dump(config, config_file)
 
             # Set message depending on result
-            embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"Module `{module}` enabled")
+            embed = discord.Embed(
+            colour=appearance.embed_type('accept'),
+            description=f"Module `{module}` enabled")
         except KeyError:
-            embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Module `{module}` is already enabled")
+            embed = discord.Embed(
+                colour=appearance.embed_type('warn'),
+                description=f"Module `{module}` is already enabled")
 
         await ctx.send(embed=embed)
 
@@ -317,7 +347,9 @@ class SpaceCat(commands.Cog):
         # Check if module exists by taking the list of extensions from the bot
         modules = module_handler.get()
         if module not in modules:
-            embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Module `{module}` does not exist")
+            embed = discord.Embed(
+            colour=appearance.embed_type('warn'),
+            description=f"Module `{module}` does not exist")
             await ctx.send(embed=embed)
             return
 
@@ -325,7 +357,9 @@ class SpaceCat(commands.Cog):
         config = toml.load('config.toml')
         try:
             if module in config['base']['disabled_modules']:
-                embed = discord.Embed(colour=appearance.embed_type('warn'), description=f"Module `{module}` is already disabled")
+                embed = discord.Embed(
+                colour=appearance.embed_type('warn'),
+                description=f"Module `{module}` is already disabled")
                 await ctx.send(embed=embed)
                 return
             
@@ -340,7 +374,9 @@ class SpaceCat(commands.Cog):
             toml.dump(config, config_file)
 
         # Notify user of change
-        embed = discord.Embed(colour=appearance.embed_type('accept'), description=f"Module `{module}` disabled")
+        embed = discord.Embed(
+            colour=appearance.embed_type('accept'),
+            description=f"Module `{module}` disabled")
         await ctx.send(embed=embed)
 
 
