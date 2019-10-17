@@ -31,21 +31,10 @@ disabled_modules = []
 
 
 def main():
-    # Setup logging
-    logger = logging.getLogger('discord')
-    logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(
-        filename='spacecat.log',
-        encoding='utf-8',
-        mode='w'
-    )
-    handler.setFormatter(logging.Formatter(
-        '%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-    )
-    logger.addHandler(handler)
-    
-    # Check if config exists and run config creator if it doesn't
     startup = Startup()
+    startup.logging()
+
+    # Check if config exists and run config creator if it doesn't
     try:
         config = toml.load('config.toml')
     except FileNotFoundError:
@@ -61,6 +50,20 @@ def main():
 
 
 class Startup():
+    def logging(self):
+        # Setup file logging
+        logger = logging.getLogger('discord')
+        logger.setLevel(logging.DEBUG)
+        handler = logging.FileHandler(
+            filename='spacecat.log',
+            encoding='utf-8',
+            mode='w'
+        )
+        handler.setFormatter(logging.Formatter(
+            '%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+        )
+        logger.addHandler(handler)
+
     def create_config(self):
         # Just some info
         print("Hey there,")
