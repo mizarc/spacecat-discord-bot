@@ -65,8 +65,9 @@ def check():
                 return True
 
         # Check if user's group has a permission in server
+        queries = []
         for role in ctx.author.roles:
-            queries = []
+            queries.append((ctx.guild.id, ctx.author.id, "*"))
             queries.append((ctx.guild.id, role.id, f"{ctx.command.cog.qualified_name}.*"))
             queries.append((ctx.guild.id, role.id, f"{ctx.command.cog.qualified_name}.{ctx.command.name}"))
 
