@@ -52,23 +52,30 @@ def check():
         cursor = db.cursor()
 
         # Check if specific user has a permission in server
-        query = (ctx.guild.id, ctx.author.id, f"{ctx.command.cog.qualified_name}.{ctx.command.name}")
-        cursor.execute(
-            'SELECT perm FROM user_permissions WHERE serverid=? AND userid=? AND perm=?', query)
-        check = cursor.fetchall()
-        if check:
-            return True
+        queries = []
+        queries.append((ctx.guild.id, ctx.author.id, "*"))
+        queries.append((ctx.guild.id, ctx.author.id, f"{ctx.command.cog.qualified_name}.*"))
+        queries.append((ctx.guild.id, ctx.author.id, f"{ctx.command.cog.qualified_name}.{ctx.command.name}"))
+
+        for query in queries:
+            cursor.execute(
+                'SELECT perm FROM user_permissions WHERE serverid=? AND userid=? AND perm=?', query)
+            check = cursor.fetchall()
+            if check:
+                return True
 
         # Check if user's group has a permission in server
         for role in ctx.author.roles:
-            query = (ctx.guild.id, role.id, f"{ctx.command.cog.qualified_name}.{ctx.command.name}")
+            queries = []
+            queries.append((ctx.guild.id, role.id, f"{ctx.command.cog.qualified_name}.*"))
+            queries.append((ctx.guild.id, role.id, f"{ctx.command.cog.qualified_name}.{ctx.command.name}"))
+
+        for query in queries:
             cursor.execute(
                 'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?', query)
             check = cursor.fetchall()
-
             query = (ctx.guild.id, role.id)
             parent_check = parent_perms(ctx, cursor, query)
-
             if check or parent_check:
                 return True
 
