@@ -477,7 +477,7 @@ class Configuration(commands.Cog):
                 perms_output.append("`" + perm[0] + "`")
             embed.add_field(name="Permissions", value=', '.join(perms_output), inline=False)
 
-            await ctx.send(file=image, embed=embed)
+        await ctx.send(file=image, embed=embed)
 
     @user.command(name='purge')
     @perms.check()
