@@ -74,9 +74,9 @@ class Startup():
         modules = module_handler.get()
         try:
             config = toml.load('config.toml')
-            disabled_modules = config['base']['disabled_modules']
+            self.disabled_modules = config['base']['disabled_modules']
             for module in modules:
-                if module in disabled_modules:
+                if module in self.disabled_modules:
                     modules.remove(module)
         except KeyError:
             pass
@@ -92,7 +92,6 @@ class Startup():
                 print("Failed to load extension {}\n{}\n".format(x, exc))
 
         self.modules = modules
-        self.disabled_modules = disabled_modules
 
     def run(self, key = None):
         # Run with key input on first run

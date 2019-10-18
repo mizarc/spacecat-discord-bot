@@ -20,14 +20,20 @@ def get_enabled():
     enabled_modules = []
 
     # Compare with disabled modules list to determine which ones are enabled
-    for module in modules:
-        if module not in disabled_modules:
-            enabled_modules.append(module)
+    try:
+        for module in modules:
+            if module not in disabled_modules:
+                enabled_modules.append(module)
+    except TypeError:
+        enabled_modules = modules
     return enabled_modules
 
 def get_disabled():
     # Fetch disabled modules from config file
     config = toml.load('config.toml')
-    disabled_modules = config['base']['disabled_modules']
-    return disabled_modules
+    try:
+        disabled_modules = config['base']['disabled_modules']
+        return disabled_modules
+    except KeyError:
+        return
 
