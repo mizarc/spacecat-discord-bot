@@ -102,10 +102,11 @@ class Configuration(commands.Cog):
 
         # Check if permission is a command and if command permission exists
         if not skip:
-            command, exists = await self._command_check(ctx, 'group', group.id, perm_values[0], cog)
+            perm = '.'.join(perm_values)
+            command, exists = await self._command_check(ctx, 'group', group.id, perm, cog)
             if command and not exists:
-                value = (ctx.guild.id, group.id, f"{command.cog.qualified_name}.{command.name}")
-                embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command.name}` added to group `{group.name}`")
+                value = (ctx.guild.id, group.id, f"{command.cog.qualified_name}.{perm}")
+                embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{perm}` added to group `{group.name}`")
                 skip = True
             elif command and exists:
                 embed = discord.Embed(colour=embed_type('warn'), description=f"{group.name} already has that permission")
@@ -164,10 +165,11 @@ class Configuration(commands.Cog):
 
         # Check if permission is a command and if command permission exists
         if not skip:
-            command, exists = await self._command_check(ctx, 'group', group.id, perm_values[0], cog)
+            perm = '.'.join(perm_values)
+            command, exists = await self._command_check(ctx, 'group', group.id, perm, cog)
             if command and exists:
-                query = (ctx.guild.id, group.id, f"{command.cog.qualified_name}.{command.name}")
-                embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command.name}` removed from group `{group.name}`")
+                query = (ctx.guild.id, group.id, f"{command.cog.qualified_name}.{perm}")
+                embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{perm}` removed from group `{group.name}`")
                 skip = True
             elif command and not exists:
                 embed = discord.Embed(colour=embed_type('warn'), description=f"{group.name} doesn't have that permission")
@@ -332,14 +334,17 @@ class Configuration(commands.Cog):
         # Check if permission starts with a cog
         if not skip and len(perm_values) > 1:
             cog, exists = await self._module_check(ctx, 'user', user.id, perm_values[0])
+
             # Add a cog wildcard permission to give users all cog permissions
             if cog and perm_values[1] != '*':
                 perm_values.pop(0)
+
             # Check if non-wildcard permission has been chosen
             elif cog and not exists and perm_values[1] == '*':
                 value = (ctx.guild.id, user.id, f"{cog.qualified_name}.*")
                 embed = discord.Embed(colour=embed_type('accept'), description=f"Permission group `{cog.qualified_name}` added to user `{user.name}`")
                 skip = True
+
             # Already existing wildcard permission
             elif cog and exists:
                 embed = discord.Embed(colour=embed_type('warn'), description=f"{user.name} already has the `{cog.qualified_name}` permission group")
@@ -348,16 +353,22 @@ class Configuration(commands.Cog):
 
         # Check if permission is a command and if command permission exists
         if not skip:
-            command, exists = await self._command_check(ctx, 'user', user.id, perm_values[0], cog)
+            perm = '.'.join(perm_values)
+            command, exists = await self._command_check(ctx, 'user', user.id, perm, cog)
+
+            # Add if user doesn't have command permission
             if command and not exists:
-                value = (ctx.guild.id, user.id, f"{command.cog.qualified_name}.{command.name}")
-                embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command.name}` added to user `{user.name}`")
+                value = (ctx.guild.id, user.id, f"{command.cog.qualified_name}.{perm}")
+                embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{perm}` added to user `{user.name}`")
                 skip = True
+
+            # Notify if user already has permission
             elif command and exists:
                 embed = discord.Embed(colour=embed_type('warn'), description=f"`{user.name}` already has that permission")
                 await ctx.send(embed=embed) 
                 return
 
+        # Notify if permission doesn't exist
         if not skip:
             embed = discord.Embed(colour=embed_type('warn'), description=f"Permission does not exist. Please enter a valid permission")
             await ctx.send(embed=embed) 
@@ -410,10 +421,11 @@ class Configuration(commands.Cog):
 
         # Check if permission is a command and if command permission exists
         if not skip:
-            command, exists = await self._command_check(ctx, 'user', user.id, perm_values[0], cog)
+            perm = '.'.join(perm_values)
+            command, exists = await self._command_check(ctx, 'user', user.id, perm, cog)
             if command and exists:
-                query = (ctx.guild.id, user.id, f"{command.cog.qualified_name}.{command.name}")
-                embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{command.name}` removed from user `{user.name}`")
+                query = (ctx.guild.id, user.id, f"{command.cog.qualified_name}.{perm}")
+                embed = discord.Embed(colour=embed_type('accept'), description=f"Command `{perm}` removed from user `{user.name}`")
                 skip = True
             elif command and not exists:
                 embed = discord.Embed(colour=embed_type('warn'), description=f"{user.name} doesn't have that permission")
@@ -542,26 +554,26 @@ class Configuration(commands.Cog):
         cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
         result = cursor.fetchall()
         db.close()
-        print(result)
 
         if result:
             return cog, True
         return cog, False
 
-    async def _command_check(self, ctx, type_, id_, command, cog=None):
-        command = self.bot.get_command(command)
-        try:
-            command.cog
-            if cog and not cog == command.cog:
-                return None, None
-        except AttributeError:
-            if not command:
+    async def _command_check(self, ctx, type_, id_, perm, cog=None):
+        command_parents = perm.split('.')
+
+        if command_parents[-1] == '*':
+            command = self.bot.get_command(perm[:-2].replace('.', ' '))
+        else:
+            command = self.bot.get_command(perm.replace('.', ' '))
+
+        if command is None:
                 return None, None
 
         # Query database for group permissions
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        query = (id_, f"{command.cog.qualified_name}.{command.name}")
+        query = (id_, f"{command.cog.qualified_name}.{perm}")
         cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
         result = cursor.fetchall()
         db.close()
