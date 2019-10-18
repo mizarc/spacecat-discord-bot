@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
+import asyncio
 import configparser
 import glob
 import logging
@@ -73,7 +74,7 @@ class Startup():
         with open("config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
-        self.run(keyinput)
+        self.run(firstrun=True)
 
     def load_modules(self):
         # Fetch modules and remove disabled modules from enable list
@@ -99,30 +100,27 @@ class Startup():
 
         self.modules = modules
 
-    def run(self, key = None):
-        # Run with key input on first run
-        if key:
-            apikey = key
-            try:
-                bot.run(apikey)
-            except discord.LoginFailure:
+    def run(self, firstrun=False):
+        config = toml.load('config.toml')
+        apikey = config['base']['apikey']
+
+        try:
+            print("Active API Key: " + apikey + "\n")
+            bot.run(apikey)
+        except discord.LoginFailure:
+            if firstrun:
                 print(
                     "Looks like that API key didn't work.\n"
                     "Run the program again and use the correct key.")
-        # Run with key in the config
-        else:
-            config = toml.load('config.toml')
-            try:
-                apikey = config['base']['apikey']
-                print("Active API Key: " + apikey + "\n")
-                bot.run(apikey)
-            except discord.LoginFailure:
-                print(
-                    "[Error]\n"
-                    "The API key doesn't work.\n"
-                    "Set a new key by running the bot again"
-                    "with the --apikey argument.\n"
-                    "Eg. ./spacecat --apikey <insert_key>")
+                os.remove("config.toml")
+                return
+            print(
+                "[Error]\n"
+                "The API key doesn't work.\n"
+                "Set a new key by running the bot again"
+                "with the --apikey argument.\n"
+                "Eg. ./spacecat --apikey <insert_key>")
+            return
 
 
 class SpaceCat(commands.Cog):
@@ -380,11 +378,12 @@ class SpaceCat(commands.Cog):
         print("This is the easiest step.")
         print("Click the link below or copy it into your web browser.")
 
-        botid = bot.user.id
         print(
             "https://discordapp.com/oauth2/authorize?"
-            f"client_id={botid}&scope=bot&permissions=8")
+            f"client_id={bot.user.id}&scope=bot&permissions=8")
         print('--------------------\n')
+
+        await asyncio.sleep(1)
     
 
 def main():
@@ -396,7 +395,9 @@ def main():
     try:
         config = toml.load('config.toml')
     except FileNotFoundError:
-        startup.create_config()
+        setup = startup.create_config()
+        if not setup:
+            return
 
     # Append New APIKey to config if specified by argument
     if args.apikey is not None:
