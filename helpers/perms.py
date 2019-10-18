@@ -85,9 +85,9 @@ def check():
                 group_queries.append(query_conversion)
 
         # Execute all group perm queries
-        for query in queries:
+        for query in group_queries:
             cursor.execute(
-                'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?', query)
+                'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm LIKE ?', query)
             check = cursor.fetchall()
             query = (ctx.guild.id, role.id)
             parent_check = parent_perms(ctx, cursor, query)
@@ -105,7 +105,7 @@ def check():
             for parent in parents:
                 query = (ctx.guild.id, parent[0], f"{ctx.command.cog.qualified_name}.{ctx.command.name}")
                 cursor.execute(
-                    'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?', query)
+                    'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm LIKE ?', query)
                 check = cursor.fetchall()
                 if check:
                     return True
