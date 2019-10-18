@@ -44,6 +44,8 @@ def new(guild):
 def check():
     def predicate(ctx):
         # If user is the server administrator, always allow
+        command_parents = ctx.command.qualified_name.split(' ')
+
         if ctx.author.guild_permissions.administrator:
             return True
 
@@ -55,22 +57,34 @@ def check():
         queries = []
         queries.append((ctx.guild.id, ctx.author.id, "*"))
         queries.append((ctx.guild.id, ctx.author.id, f"{ctx.command.cog.qualified_name}.*"))
-        queries.append((ctx.guild.id, ctx.author.id, f"{ctx.command.cog.qualified_name}.{ctx.command.name}"))
 
+        # Check subcommand parents for permission
+        perm = ''
+        for index, command in enumerate(command_parents):
+            if index == 0:
+                perm = command
+            else:
+                perm = f"{perm}.{command}"
+            queries.append((ctx.guild.id, ctx.author.id, f"{ctx.command.cog.qualified_name}.{perm}.*"))
+        queries.append((ctx.guild.id, ctx.author.id, f"{ctx.command.cog.qualified_name}.{perm}%"))
+        
+        # Execute user perm queries
         for query in queries:
             cursor.execute(
-                'SELECT perm FROM user_permissions WHERE serverid=? AND userid=? AND perm=?', query)
+                'SELECT perm FROM user_permissions WHERE serverid=? AND userid=? AND perm LIKE ?', query)
             check = cursor.fetchall()
             if check:
                 return True
 
-        # Check if user's group has a permission in server
-        queries = []
+        # Convert query from user ID to every group ID that a user has
+        group_queries = []
         for role in ctx.author.roles:
-            queries.append((ctx.guild.id, ctx.author.id, "*"))
-            queries.append((ctx.guild.id, role.id, f"{ctx.command.cog.qualified_name}.*"))
-            queries.append((ctx.guild.id, role.id, f"{ctx.command.cog.qualified_name}.{ctx.command.name}"))
+            for index, query in enumerate(queries):
+                query_conversion = list(query)
+                query_conversion[1] = role.id
+                group_queries.append(query_conversion)
 
+        # Execute all group perm queries
         for query in queries:
             cursor.execute(
                 'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?', query)
