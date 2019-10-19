@@ -131,6 +131,7 @@ class SpaceCat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        os.mkdir('cache')
         config = toml.load('config.toml')
         
         # Continue running config creator as long as there is no administrator
