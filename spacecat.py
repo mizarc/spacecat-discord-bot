@@ -200,6 +200,17 @@ class SpaceCat(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
+    @perms.check()
+    async def version(self, ctx):
+        """Check the current bot version."""
+        embed = discord.Embed(
+            colour=appearance.embed_type('info'), 
+            description="**Bot is currently using version:**\n"
+            "[SpaceCat Discord Bot `v0.1.0`]"
+            "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
+        await ctx.send(embed=embed)
+
+    @commands.command()
     @perms.exclusive()
     async def modules(self, ctx):
         enabled = module_handler.get_enabled()
