@@ -46,5 +46,7 @@ def embed_icons(name):
         icon = "assets/icons/music_disc.jpg"
     elif name == "database":
         icon = "assets/icons/database.png"
+    elif name == "information":
+        icon = "assets/icons/information.png"
 
     return icon

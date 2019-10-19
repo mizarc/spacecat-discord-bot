@@ -193,6 +193,37 @@ class SpaceCat(commands.Cog):
 
     @commands.command()
     @perms.exclusive()
+    async def modules(self, ctx):
+        enabled = module_handler.get_enabled()
+        disabled = module_handler.get_disabled()
+
+        # Create embed with enabled modules
+        image = discord.File(
+            appearance.embed_icons("information"),
+            filename="image.png")
+        embed = discord.Embed(
+            colour=appearance.embed_type('info'))
+        embed.set_author(
+            name=f"{bot.user.name} Modules",
+            icon_url="attachment://image.png")
+        embed.add_field(
+            name="Enabled",
+            value=', '.join(enabled),
+            inline=False)
+
+        # Add disabled modules if there are any
+        try:
+            embed.add_field(
+                name="Disabled",
+                value=', '.join(disabled),
+                inline=False)
+        except TypeError:
+            pass
+
+        await ctx.send(file=image, embed=embed)
+
+    @commands.command()
+    @perms.exclusive()
     async def reload(self, ctx, module=None):
         """Reloads all or specified module"""
         if module is None:
