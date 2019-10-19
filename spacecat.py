@@ -17,6 +17,7 @@ import helpers.module_handler as module_handler
 import helpers.perms as perms
 import helpers.perms
 
+
 # Arguments for API key input
 parser = ArgumentParser()
 parser.add_argument('--apikey', '-a', help='apikey help', type=str)
@@ -43,7 +44,7 @@ class Startup():
         logger.addHandler(handler)
 
     def create_config(self):
-        # Just some info
+        # Output introduction
         print(
             "Hey there,\n"
             "It appears that you don't have a configuration file.\n"
@@ -53,7 +54,7 @@ class Startup():
         print('--------------------\n')
         time.sleep(1)
 
-        # Generate Config
+        # Ask users to provide an API key for the bot
         print(
             "[Step 1]\n"
             "I'll need to get an API Key from your bot.\n"
@@ -104,6 +105,7 @@ class Startup():
         config = toml.load('config.toml')
         apikey = config['base']['apikey']
 
+        # Attempt to use API key from config and output error if unable to run
         try:
             print("Active API Key: " + apikey + "\n")
             bot.run(apikey)
@@ -131,12 +133,15 @@ class SpaceCat(commands.Cog):
     async def on_ready(self):
         config = toml.load('config.toml')
         
+        # Continue running config creator as long as there is no administrator
         if 'adminuser' not in config['base']:
             await self._create_config_cont()
 
+        # Create database tables
         if not os.path.exists("spacecat.db"):
             perms.setup()
 
+        # Output launch completion message
         print(bot.user.name + " has successfully launched")
         print(f"Bot ID: {bot.user.id}")
         if module_handler.get_enabled():
@@ -149,6 +154,7 @@ class SpaceCat(commands.Cog):
                 f"{', '.join(module_handler.get_disabled())}")
         print("--------------------")
 
+        # Change status if specified in config
         try:
             statusname = config['base']['status']
             status = appearance.status_class(statusname)
@@ -156,6 +162,7 @@ class SpaceCat(commands.Cog):
         except KeyError:
             pass
 
+        # Change activity if specified in config
         try:
             acttypename = config['base']['activity_type']
             activitytype = appearance.activity_type_class(acttypename)
@@ -168,23 +175,18 @@ class SpaceCat(commands.Cog):
         except (KeyError, TypeError):
             pass
             
-
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
+        # Run automatic permission assignment based on presets
+        # Not implemented yet, just here as a placeholder
         if os.path.exists('config.ini'):
             perms.new(guild)
-        else:
-            print(
-                "Congrats! I have now had my core functions set up.\n"
-                "You may now continue to configure me through discord.\n"
-                "Type !help for more info\n"
-                "--------------------\n")
 
     # Commands
     @commands.command()
     @perms.check()
     async def ping(self, ctx):
-        """A simple command to check if the bot is working."""
+        """A simple ping to check if the bot is responding."""
         embed = discord.Embed(
             colour=appearance.embed_type('accept'), 
             description=f"{bot.user.name} is operational at \
@@ -230,18 +232,19 @@ class SpaceCat(commands.Cog):
         modules_to_load = []
         failed_modules = []
 
+        # Set modules to load depending on if a specific module is selected
         if module:
             if module not in module_list:
                 embed = discord.Embed(
-                        colour=appearance.embed_type('warn'),
-                        description=f"{module} is not a valid or \
-                        enabled module")
+                    colour=appearance.embed_type('warn'),
+                    description=f"{module} is not a valid or enabled module")
                 await ctx.send(embed=embed)
                 return
             modules_to_load = [module]
         else:
             modules_to_load = module_list
 
+        # Reload modules in list
         for module in modules_to_load:
             try:
                 module = 'modules.' + module
@@ -249,6 +252,7 @@ class SpaceCat(commands.Cog):
             except:
                 failed_modules.append(module[8:])
 
+        # Ouput error messages depending on if only one or multiple modules
         if failed_modules and len(modules_to_load) == 1:
             embed = discord.Embed(
                     colour=appearance.embed_type('warn'),
@@ -265,7 +269,7 @@ class SpaceCat(commands.Cog):
             await ctx.send(embed=embed)
             return
         
-        
+        # Notify user of successful module reloading
         if len(modules_to_load) == 1:
             embed = discord.Embed(
             colour=appearance.embed_type('accept'),
@@ -356,6 +360,7 @@ class SpaceCat(commands.Cog):
     @perms.exclusive()
     async def exit(self, ctx):
         """Shuts down the bot."""
+        # Clear the cache folder if it exists
         try:
             shutil.rmtree('cache')
         except:
@@ -365,12 +370,13 @@ class SpaceCat(commands.Cog):
 
     async def _create_config_cont(self):
         config = toml.load('config.toml')
-        while True:
-            # Set a bot admin
-            botname = bot.user.name
+        confirm = None
+
+        while confirm != "yes":
+            # Set a bot administrator
             print(
                 "[Step 2]\n"
-                f"Alright, {botname} is now operational.\n"
+                f"Alright, {bot.user.name} is now operational.\n"
                 "Now I'll need to get your discord user ID.\n"
                 "This will give you admin access to the bot in Discord.\n"
                 "You can set more users later.\n\n"
@@ -386,6 +392,7 @@ class SpaceCat(commands.Cog):
             idinput = input("Paste your ID right here: ")
             print('--------------------\n')
             
+            # Check to see if the user ID is valid
             try:
                 user = bot.get_user(int(idinput))
                 await user.send("Hello there!")
@@ -397,37 +404,44 @@ class SpaceCat(commands.Cog):
                 print('--------------------\n')
                 time.sleep(1)
                 continue
-
             time.sleep(1)
             
-            print("You should've recieved a pm from me through Discord.")
-            confirminput = input(
-                "Type 'yes' if you have, or 'no' to set a new ID: ")
-            print('--------------------\n')
-            if confirminput == "yes":
-                config['base']['adminuser'] = idinput
-                break
-            continue
+            # Ask for confirmation
+            while True:
+                print(
+                    f"Verify that {user} is you.\n"
+                    "If your user settings allow it, you should've also "
+                    "recieved a private message from me.\n")
+                confirm = input(
+                    "Type 'yes' to confirm, or 'no' to set a new ID: ")
+                print('--------------------\n')
+                if confirm == "yes":
+                    config['base']['adminuser'] = idinput
+                    break
+                elif confirm == "no":
+                    break
+                else:
+                    continue
 
+        # Set default status and activity values
         config['base']['status'] = 'online'
         config['base']['activity_type'] = None
         config['base']['activity_name'] = None
         with open("config.toml", "w") as config_file:
             toml.dump(config, config_file)
-
         time.sleep(1)
 
-        # Join a server
-        print("[Step 3]")
-        
-        print("Finally, I need to join your Discord server.")
-        print("This is the easiest step.")
-        print("Click the link below or copy it into your web browser.")
-
+        # Provide a link to join the server
         print(
+            "[Step 3]\n"
+            "Finally, I need to join your Discord server.\n"
+            "Click the link below or copy it into your web browser.\n"
+            "You can give this link to other users to help "
+            "spread your bot around.\n\n"
+
             "https://discordapp.com/oauth2/authorize?"
-            f"client_id={bot.user.id}&scope=bot&permissions=8")
-        print('--------------------\n')
+            f"client_id={bot.user.id}&scope=bot&permissions=8\n"
+            "--------------------\n")
 
         await asyncio.sleep(1)
     
