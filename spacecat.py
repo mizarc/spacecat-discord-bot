@@ -226,40 +226,55 @@ class SpaceCat(commands.Cog):
     @perms.exclusive()
     async def reload(self, ctx, module=None):
         """Reloads all or specified module"""
-        if module is None:
-            modulelist = module_handler.get()
-            for y in modulelist:
-                try:
-                    z = 'modules.' + y
-                    bot.unload_extension(z)
-                    bot.load_extension(z)
-                except Exception:
-                    embed = discord.Embed(
+        module_list = module_handler.get_enabled()
+        modules_to_load = []
+        failed_modules = []
+
+        if module:
+            if module not in module_list:
+                embed = discord.Embed(
                         colour=appearance.embed_type('warn'),
-                        description=f"Failed to reload module {module}. \
-                        Reloading has stopped.")
-                    await ctx.send(embed=embed)
-                    return
+                        description=f"{module} is not a valid or \
+                        enabled module")
+                await ctx.send(embed=embed)
+                return
+            modules_to_load = [module]
+        else:
+            modules_to_load = module_list
+
+        for module in modules_to_load:
+            try:
+                module = 'modules.' + module
+                bot.reload_extension(module)
+            except:
+                failed_modules.append(module[8:])
+
+        if failed_modules and len(modules_to_load) == 1:
             embed = discord.Embed(
-                colour=appearance.embed_type('accept'),
-                description=f"Reloaded all modules successfully")
+                    colour=appearance.embed_type('warn'),
+                    description=f"Failed to reload module \
+                    `{module[8:]}`")
             await ctx.send(embed=embed)
             return
-        try:
-            z = 'modules.' + module
-            bot.unload_extension(z)
-            bot.load_extension(z)
+        elif failed_modules:
             embed = discord.Embed(
-                colour=appearance.embed_type('accept'),
-                description=f"Reloaded module {module} successfully")
-        except ModuleNotFoundError:
+                    colour=appearance.embed_type('warn'),
+                    description=f"Failed to reload module(s): \
+                    `{', '.join(failed_modules)}`. \
+                    Other modules have successfully reloaded")
+            await ctx.send(embed=embed)
+            return
+        
+        
+        if len(modules_to_load) == 1:
             embed = discord.Embed(
-                colour=appearance.embed_type('warn'),
-                description=f"{module} is not a valid module")
-        except Exception:
+            colour=appearance.embed_type('accept'),
+            description=f"Reloaded module `{module[8:]}` successfully")
+        else:
             embed = discord.Embed(
-                colour=appearance.embed_type('warn'),
-                description=f"Failed to load module {module}")
+            colour=appearance.embed_type('accept'),
+            description=f"All modules reloaded successfully")
+        
         await ctx.send(embed=embed)
 
     @commands.command()
