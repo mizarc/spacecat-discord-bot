@@ -131,8 +131,13 @@ class SpaceCat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        os.mkdir('cache')
         config = toml.load('config.toml')
+
+        # Create cache folder if it doesn't exist
+        try:
+            os.mkdir('cache')
+        except FileExistsError:
+            pass
         
         # Continue running config creator as long as there is no administrator
         if 'adminuser' not in config['base']:
