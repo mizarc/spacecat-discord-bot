@@ -17,7 +17,6 @@ youtube_dl.utils.bug_reports_message = lambda: ''
 
 ytdl_format_options = {
     'format': 'bestaudio/best',
-    'outtmpl': 'cache/%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
@@ -48,16 +47,15 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.webpage_url = data.get('webpage_url')
 
     @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
+    async def from_url(cls, url):
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
 
         if 'entries' in data:
             # take first item from a playlist
             data = data['entries'][0]
 
-        filename = data['url'] if stream else ytdl.prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+        return cls(discord.FFmpegPCMAudio(data['url'], **ffmpeg_options), data=data)
 
 
 class Alexa(commands.Cog):
@@ -124,17 +122,22 @@ class Alexa(commands.Cog):
                 return
 
         # Grab audio source from youtube_dl and add to queue
-        source = await YTDLSource.from_url(url, loop=self.bot.loop)
-        song_name = f"[{source.title}]({source.webpage_url}) `{str(datetime.timedelta(seconds=source.duration))[2:]}`"
+        
+        
         
         # Play specified song if only one song in queue
         if len(self.song_queue) > 30:
             embed = discord.Embed(colour=embed_type('warn'), description="Too many songs in queue. Calm down.")
-        elif len(self.song_queue) > 0:
+
+        source = await YTDLSource.from_url(url, loop=self.bot.loop)
+        song_name = f"[{source.title}]({source.webpage_url}) `{str(datetime.timedelta(seconds=source.duration))[2:]}`"
+
+        if len(self.song_queue) > 0:
             # Notify user of song being added to queue
             self.song_queue.append(source)
             embed = discord.Embed(colour=embed_type('accept'), description=f"Added {song_name} to #{len(self.song_queue) - 1} in queue")
         else:
+            
             self.song_queue.append(source)
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(colour=embed_type('info'), description=f"Now playing {song_name}")
@@ -261,7 +264,7 @@ class Alexa(commands.Cog):
             return
 
         # Remove already played songs from cache & queue
-        os.remove(ytdl.prepare_filename(self.song_queue[0].data))
+        #os.remove(ytdl.prepare_filename(self.song_queue[0].data))
         self.song_queue.pop(0)
 
         # Disable skip toggle to indicate that a skip has been completed
