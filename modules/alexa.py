@@ -3,6 +3,7 @@ import datetime
 from itertools import islice
 import os
 import shutil
+from time import gmtime, strftime
 
 import discord
 from discord.ext import commands
@@ -228,14 +229,22 @@ class Alexa(commands.Cog):
         embed = discord.Embed(colour=embed_type('info'))
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
-        embed.add_field(name="Currently Playing", value=self.song_queue[0].title)
+        duration = strftime("%M:%S", gmtime(self.song_queue[0].duration))
+        embed.add_field(
+            name="Currently Playing",
+            value=f"{self.song_queue[0].title} `{duration}`")
         
         # List remaining songs in queue
         if len(self.song_queue) > 1:
-            queue_formatted = []
+            queue_info = []
             for index, song in enumerate(islice(self.song_queue, 1, 11)):
-                queue_formatted.append(f"{index + 1}. {song.title}")
-            queue_output = '\n'.join(queue_formatted)
+                duration = strftime("%M:%S", gmtime(song.duration))
+                queue_info.append(f"{index + 1}. {song.title} `{duration}`")
+            
+            if len(self.song_queue) > 11:
+                queue_info.append(f"`+{len(self.song_queue) - 11} more in queue`")
+
+            queue_output = '\n'.join(queue_info)
             embed.add_field(name="Queue", value=queue_output, inline=False)
 
         await ctx.send(file=image, embed=embed)
