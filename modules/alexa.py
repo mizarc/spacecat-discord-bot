@@ -120,24 +120,26 @@ class Alexa(commands.Cog):
             # End function if bot failed to join a voice channel.
             if ctx.voice_client is None:
                 return
-
-        # Grab audio source from youtube_dl and add to queue
         
-        
-        
-        # Play specified song if only one song in queue
+        # Check if too many songs in queue
         if len(self.song_queue) > 30:
             embed = discord.Embed(colour=embed_type('warn'), description="Too many songs in queue. Calm down.")
 
+        # Grab audio source from youtube_dl and check if longer than 1 hour
         source = await YTDLSource.from_url(url)
+        if source.duration >= 3600:
+            embed = discord.Embed(colour=embed_type('warn'), description="Video must be shorter than 1 hour")
+            await ctx.send(embed=embed)
+            return
         song_name = f"[{source.title}]({source.webpage_url}) `{str(datetime.timedelta(seconds=source.duration))[2:]}`"
 
+        # Notify user of song being added to queue
         if len(self.song_queue) > 0:
-            # Notify user of song being added to queue
             self.song_queue.append(source)
             embed = discord.Embed(colour=embed_type('accept'), description=f"Added {song_name} to #{len(self.song_queue) - 1} in queue")
+
+        # Play song instantly and notify user
         else:
-            
             self.song_queue.append(source)
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(colour=embed_type('info'), description=f"Now playing {song_name}")
