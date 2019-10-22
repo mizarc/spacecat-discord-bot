@@ -244,12 +244,13 @@ class Alexa(commands.Cog):
                 duration = strftime("%M:%S", gmtime(song.duration))
                 queue_info.append(f"{index + 1}. {song.title} `{duration}`")
             
+            # Omit songs past 10 and just display amount instead
             if len(self.song_queue) > 11:
                 queue_info.append(f"`+{len(self.song_queue) - 11} more in queue`")
 
+            # Output results to chat
             queue_output = '\n'.join(queue_info)
             embed.add_field(name="Queue", value=queue_output, inline=False)
-
         await ctx.send(file=image, embed=embed)
         
     def _next(self, ctx):
