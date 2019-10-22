@@ -129,7 +129,7 @@ class Alexa(commands.Cog):
         if len(self.song_queue) > 30:
             embed = discord.Embed(colour=embed_type('warn'), description="Too many songs in queue. Calm down.")
 
-        source = await YTDLSource.from_url(url, loop=self.bot.loop)
+        source = await YTDLSource.from_url(url)
         song_name = f"[{source.title}]({source.webpage_url}) `{str(datetime.timedelta(seconds=source.duration))[2:]}`"
 
         if len(self.song_queue) > 0:
