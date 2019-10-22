@@ -214,7 +214,7 @@ class Alexa(commands.Cog):
             return
 
         self.loop_toggle = True
-        embed = discord.Embed(colour=embed_type('warn'), description=f"Loop enabled")
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Loop enabled")
         await ctx.send(embed=embed)
         return
 
