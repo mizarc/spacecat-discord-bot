@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+from itertools import islice
 import os
 import shutil
 
@@ -232,7 +233,7 @@ class Alexa(commands.Cog):
         # List remaining songs in queue
         if len(self.song_queue) > 1:
             queue_formatted = []
-            for index, song in enumerate(self.song_queue[1:]):
+            for index, song in enumerate(islice(self.song_queue, 1, 11)):
                 queue_formatted.append(f"{index + 1}. {song.title}")
             queue_output = '\n'.join(queue_formatted)
             embed.add_field(name="Queue", value=queue_output, inline=False)
