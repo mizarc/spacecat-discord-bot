@@ -126,18 +126,21 @@ class Alexa(commands.Cog):
         # Grab audio source from youtube_dl and add to queue
         source = await YTDLSource.from_url(url, loop=self.bot.loop)
         song_name = f"[{source.title}]({source.webpage_url}) `{str(datetime.timedelta(seconds=source.duration))[2:]}`"
-        self.song_queue.append(source)
-
+        
         # Play specified song if only one song in queue
-        if len(self.song_queue) == 1:
+        if len(self.song_queue) > 30:
+            embed = discord.Embed(colour=embed_type('warn'), description="Too many songs in queue. Calm down.")
+        elif len(self.song_queue) > 0:
+            # Notify user of song being added to queue
+            self.song_queue.append(source)
+            embed = discord.Embed(colour=embed_type('accept'), description=f"Added {song_name} to #{len(self.song_queue) - 1} in queue")
+        else:
+            self.song_queue.append(source)
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(colour=embed_type('info'), description=f"Now playing {song_name}")
-            await ctx.send(embed=embed)
-            return
 
-        # Notify user of song being added to queue
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Added {song_name} to #{len(self.song_queue) - 1} in queue")
         await ctx.send(embed=embed)
+        return
 
     @commands.command()
     @perms.check()
