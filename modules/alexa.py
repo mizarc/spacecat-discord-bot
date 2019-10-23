@@ -29,7 +29,7 @@ ytdl_format_options = {
 }
 
 ffmpeg_options = {
-    'options': '-vn'
+    'options': '-vn -loglevel quiet'
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
@@ -50,12 +50,13 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def from_url(cls, url):
         loop = asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+        before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5" 
 
         if 'entries' in data:
             # take first item from a playlist
             data = data['entries'][0]
 
-        return cls(discord.FFmpegPCMAudio(data['url'], **ffmpeg_options), data=data)
+        return cls(discord.FFmpegPCMAudio(data['url'], **ffmpeg_options, before_options=before_args), data=data)
 
 
 class Alexa(commands.Cog):
