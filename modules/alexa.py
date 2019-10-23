@@ -65,7 +65,6 @@ class Alexa(commands.Cog):
         self.song_queue = []
         self.loop_toggle = False
         self.skip_toggle = False
-        self.keep_cache = False
 
     @commands.command()
     @perms.check()
@@ -128,11 +127,12 @@ class Alexa(commands.Cog):
 
         # Grab audio source from youtube_dl and check if longer than 1 hour
         source = await YTDLSource.from_url(url)
-        if source.duration >= 3600:
+        if source.duration >= 10800:
             embed = discord.Embed(colour=embed_type('warn'), description="Video must be shorter than 1 hour")
             await ctx.send(embed=embed)
             return
-        song_name = f"[{source.title}]({source.webpage_url}) `{str(datetime.timedelta(seconds=source.duration))[2:]}`"
+        duration = strftime("%H:%M:%S", gmtime(source.duration)).lstrip("0:")
+        song_name = f"[{source.title}]({source.webpage_url}) `{duration}`"
 
         # Notify user of song being added to queue
         if len(self.song_queue) > 0:
@@ -238,7 +238,7 @@ class Alexa(commands.Cog):
         embed = discord.Embed(colour=embed_type('info'))
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
-        duration = strftime("%M:%S", gmtime(self.song_queue[0].duration))
+        duration = strftime("%H:%M:%S", gmtime(self.song_queue[0].duration)).lstrip("0:")
         # Set header depending on if looping or not
         if self.loop_toggle:
             header = "Currently Playing (Looping)"
@@ -252,7 +252,7 @@ class Alexa(commands.Cog):
         if len(self.song_queue) > 1:
             queue_info = []
             for index, song in enumerate(islice(self.song_queue, 1, 11)):
-                duration = strftime("%M:%S", gmtime(song.duration))
+                duration = strftime("%H:%M:%S", gmtime(self.song_queue[0].duration)).lstrip("0:")
                 queue_info.append(f"{index + 1}. {song.title} `{duration}`")
             
             # Omit songs past 10 and just display amount instead
