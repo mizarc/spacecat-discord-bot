@@ -239,8 +239,13 @@ class Alexa(commands.Cog):
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
         duration = strftime("%M:%S", gmtime(self.song_queue[0].duration))
+        # Set header depending on if looping or not
+        if self.loop_toggle:
+            header = "Currently Playing (Looping)"
+        else:
+            header = "Currently Playing"
         embed.add_field(
-            name="Currently Playing",
+            name=header,
             value=f"{self.song_queue[0].title} `{duration}`")
         
         # List remaining songs in queue
