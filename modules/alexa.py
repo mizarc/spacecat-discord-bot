@@ -131,7 +131,7 @@ class Alexa(commands.Cog):
             embed = discord.Embed(colour=embed_type('warn'), description="Video must be shorter than 1 hour")
             await ctx.send(embed=embed)
             return
-        duration = strftime("%H:%M:%S", gmtime(source.duration)).lstrip("0:")
+        duration = await self._get_duration(source)
         song_name = f"[{source.title}]({source.webpage_url}) `{duration}`"
 
         # Notify user of song being added to queue
@@ -238,7 +238,7 @@ class Alexa(commands.Cog):
         embed = discord.Embed(colour=embed_type('info'))
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
-        duration = strftime("%H:%M:%S", gmtime(self.song_queue[0].duration)).lstrip("0:")
+        duration = await self._get_duration(self.song_queue[0])
         # Set header depending on if looping or not
         if self.loop_toggle:
             header = "Currently Playing (Looping)"
@@ -252,7 +252,7 @@ class Alexa(commands.Cog):
         if len(self.song_queue) > 1:
             queue_info = []
             for index, song in enumerate(islice(self.song_queue, 1, 11)):
-                duration = strftime("%H:%M:%S", gmtime(self.song_queue[0].duration)).lstrip("0:")
+                duration = await self._get_duration(song)
                 queue_info.append(f"{index + 1}. {song.title} `{duration}`")
             
             # Omit songs past 10 and just display amount instead
@@ -282,6 +282,18 @@ class Alexa(commands.Cog):
         if self.song_queue:
             ctx.voice_client.play(self.song_queue[0], after=lambda e: self._next(ctx))
             return
+
+    # Format duration based on what values there are
+    async def _get_duration(self, source):
+        try:
+            duration = strftime("%H:%M:%S", gmtime(source.duration)).lstrip("0:")
+            if len(duration) < 2:
+                duration = f"0:0{duration}"
+            elif len(duration) < 3:
+                duration = f"0:{duration}"
+            return duration
+        except:
+            return "N/A"
 
 
 def setup(bot):
