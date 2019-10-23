@@ -262,12 +262,11 @@ class Alexa(commands.Cog):
     def _next(self, ctx):
         # If looping, grab cached file and play it again from the start
         if self.loop_toggle and not self.skip_toggle:
-            source = discord.FFmpegPCMAudio(ytdl.prepare_filename(self.song_queue[0].data))
+            source = discord.FFmpegPCMAudio(self.song_queue[0].url)
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
 
-        # Remove already played songs from cache & queue
-        #os.remove(ytdl.prepare_filename(self.song_queue[0].data))
+        # Remove already played songs from queue
         self.song_queue.pop(0)
 
         # Disable skip toggle to indicate that a skip has been completed
