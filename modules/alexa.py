@@ -16,7 +16,7 @@ youtube_dl.utils.bug_reports_message = lambda: ''
 
 
 ytdl_format_options = {
-    'format': 'bestaudio/best',
+    'format': 'bestaudio',
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
@@ -25,7 +25,8 @@ ytdl_format_options = {
     'quiet': True,
     'no_warnings': True,
     'default_search': 'auto',
-    'source_address': '0.0.0.0'
+    'source_address': '0.0.0.0',
+    'youtube_include_dash_manifest': False
 }
 
 ffmpeg_options = {
@@ -144,6 +145,7 @@ class Alexa(commands.Cog):
             self.song_queue.append(source)
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(colour=embed_type('info'), description=f"Now playing {song_name}")
+            print(source.url)
 
         await ctx.send(embed=embed)
         return
