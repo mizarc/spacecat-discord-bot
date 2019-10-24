@@ -11,7 +11,6 @@ from helpers.appearance import embed_icons, embed_type
 class PoliteCat(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -21,23 +20,20 @@ class PoliteCat(commands.Cog):
         if not message.attachments[0].filename[-4:] == 'webp':
             return
 
-        os.chdir("cache")
-
-        await message.attachments[0].save(str(message.id) + '.webp')
-        image = Image.open(str(message.id) + '.webp')
+        await message.attachments[0].save(f'cache/{str(message.id)}.webp')
+        image = Image.open(f'cache/{str(message.id)}.webp')
         try:
             image.seek(1)
             image.info.pop('background', None)
-            image.save(str(message.id) + '.gif', 'gif', save_all=True)
-            await message.channel.send(f"{message.author.display_name} sent:", file=discord.File(str(message.id) + '.gif'))
-            os.remove(str(message.id) + '.gif')
+            image.save(f'cache/{str(message.id)}.gif', 'gif', save_all=True)
+            await message.channel.send(f"{message.author.display_name} sent:",
+            file=discord.File(f'cache/{str(message.id)}.gif'))
+            os.remove(f'cache/{str(message.id)}.gif')
             await message.delete()
-            
         except:
             pass
         
-        os.remove(str(message.id) + '.webp')
-        os.chdir("../")
+        os.remove(f'cache/{str(message.id)}.webp')
         return
 
     @commands.group()
