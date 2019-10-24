@@ -63,9 +63,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
 class Alexa(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.song_queue = []
-        self.loop_toggle = False
-        self.skip_toggle = False
+        self.song_queue = {}
+        self.loop_toggle = {}
+        self.skip_toggle = {}
 
     @commands.command()
     @perms.check()
@@ -81,6 +81,7 @@ class Alexa(commands.Cog):
                 return
 
         # Connect if not in a voice channel
+        await self._add_server_keys(ctx.guild)
         if ctx.voice_client is None:
             await channel.connect()
             return
@@ -108,6 +109,7 @@ class Alexa(commands.Cog):
         # Stop and Disconnect from voice channel
         await ctx.invoke(self.stop)
         await ctx.voice_client.disconnect()
+        await self._remove_server_keys(ctx.guild)
         return
 
     @commands.command()
@@ -123,29 +125,28 @@ class Alexa(commands.Cog):
                 return
         
         # Check if too many songs in queue
-        if len(self.song_queue) > 30:
+        if len(self.song_queue[ctx.guild.id]) > 30:
             embed = discord.Embed(colour=embed_type('warn'), description="Too many songs in queue. Calm down.")
 
-        # Grab audio source from youtube_dl and check if longer than 1 hour
+        # Grab audio source from youtube_dl and check if longer than 3 hours
         source = await YTDLSource.from_url(url)
         if source.duration >= 10800:
-            embed = discord.Embed(colour=embed_type('warn'), description="Video must be shorter than 1 hour")
+            embed = discord.Embed(colour=embed_type('warn'), description="Video must be shorter than 3 hours")
             await ctx.send(embed=embed)
             return
         duration = await self._get_duration(source)
         song_name = f"[{source.title}]({source.webpage_url}) `{duration}`"
 
         # Notify user of song being added to queue
-        if len(self.song_queue) > 0:
-            self.song_queue.append(source)
+        if len(self.song_queue[ctx.guild.id]) > 0:
+            self.song_queue[ctx.guild.id].append(source)
             embed = discord.Embed(colour=embed_type('accept'), description=f"Added {song_name} to #{len(self.song_queue) - 1} in queue")
 
         # Play song instantly and notify user
         else:
-            self.song_queue.append(source)
+            self.song_queue[ctx.guild.id].append(source)
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(colour=embed_type('info'), description=f"Now playing {song_name}")
-            print(source.url)
 
         await ctx.send(embed=embed)
         return
@@ -163,7 +164,7 @@ class Alexa(commands.Cog):
         # Stops and clears the queue
         ctx.voice_client.stop()
         await asyncio.sleep(0.1)
-        self.song_queue.clear()
+        self.song_queue[ctx.guild.id].clear()
         embed = discord.Embed(colour=embed_type('accept'), description="Music has been stopped & queue has been cleared")
         await ctx.send(embed=embed)
 
@@ -201,27 +202,37 @@ class Alexa(commands.Cog):
     @perms.check()
     async def skip(self, ctx):
         """Skip the current song and play the next song"""
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
         # Check if there's queue is empty
-        if len(self.song_queue) <= 1:
+        if len(self.song_queue[ctx.guild.id]) <= 1:
             embed = discord.Embed(colour=embed_type('warn'), description="There's nothing in the queue after this")
             await ctx.send(embed=embed)
             return
 
         # Stop current song and flag that it has been skipped
-        self.skip_toggle = True
+        self.skip_toggle[ctx.guild.id] = True
         ctx.voice_client.stop()
 
     @commands.command()
     @perms.check()
     async def loop(self, ctx):
         """Loop the currently playing song"""
-        if self.loop_toggle:
-            self.loop_toggle = False
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
+        # Disable loop if enabled
+        if self.loop_toggle[ctx.guild.id]:
+            self.loop_toggle[ctx.guild.id] = False
             embed = discord.Embed(colour=embed_type('accept'), description=f"Loop disabled")
             await ctx.send(embed=embed)
             return
 
-        self.loop_toggle = True
+        # Enable loop if disabled
+        self.loop_toggle[ctx.guild.id] = True
         embed = discord.Embed(colour=embed_type('accept'), description=f"Loop enabled")
         await ctx.send(embed=embed)
         return
@@ -230,8 +241,12 @@ class Alexa(commands.Cog):
     @perms.check()
     async def queue(self, ctx):
         """List the current song queue"""
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
         # Notify user if nothing is in the queue
-        if not self.song_queue:
+        if not self.song_queue[ctx.guild.id]:
             embed = discord.Embed(colour=embed_type('warn'), description=f"There's nothing in the queue right now")
             await ctx.send(embed=embed)
             return
@@ -240,26 +255,26 @@ class Alexa(commands.Cog):
         embed = discord.Embed(colour=embed_type('info'))
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
-        duration = await self._get_duration(self.song_queue[0])
+        duration = await self._get_duration(self.song_queue[ctx.guild.id][0])
         # Set header depending on if looping or not
-        if self.loop_toggle:
+        if self.loop_toggle[ctx.guild.id]:
             header = "Currently Playing (Looping)"
         else:
             header = "Currently Playing"
         embed.add_field(
             name=header,
-            value=f"{self.song_queue[0].title} `{duration}`")
+            value=f"{self.song_queue[ctx.guild.id][0].title} `{duration}`")
         
         # List remaining songs in queue
-        if len(self.song_queue) > 1:
+        if len(self.song_queue[ctx.guild.id]) > 1:
             queue_info = []
-            for index, song in enumerate(islice(self.song_queue, 1, 11)):
+            for index, song in enumerate(islice(self.song_queue[ctx.guild.id], 1, 11)):
                 duration = await self._get_duration(song)
                 queue_info.append(f"{index + 1}. {song.title} `{duration}`")
             
             # Omit songs past 10 and just display amount instead
-            if len(self.song_queue) > 11:
-                queue_info.append(f"`+{len(self.song_queue) - 11} more in queue`")
+            if len(self.song_queue[ctx.guild.id]) > 11:
+                queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11} more in queue`")
 
             # Output results to chat
             queue_output = '\n'.join(queue_info)
@@ -268,21 +283,21 @@ class Alexa(commands.Cog):
         
     def _next(self, ctx):
         # If looping, grab cached file and play it again from the start
-        if self.loop_toggle and not self.skip_toggle:
-            source = discord.FFmpegPCMAudio(self.song_queue[0].url)
+        if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
+            source = discord.FFmpegPCMAudio(self.song_queue[ctx.guild.id][0].url)
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
 
         # Remove already played songs from queue
-        self.song_queue.pop(0)
+        self.song_queue[ctx.guild.id].pop(0)
 
         # Disable skip toggle to indicate that a skip has been completed
-        if self.skip_toggle:
-            self.skip_toggle = False
+        if self.skip_toggle[ctx.guild.id]:
+            self.skip_toggle[ctx.guild.id] = False
 
         # Remove first in queue and play the new first in list
-        if self.song_queue:
-            ctx.voice_client.play(self.song_queue[0], after=lambda e: self._next(ctx))
+        if self.song_queue[ctx.guild.id]:
+            ctx.voice_client.play(self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
             return
 
     # Format duration based on what values there are
@@ -296,6 +311,28 @@ class Alexa(commands.Cog):
             return duration
         except:
             return "N/A"
+
+    async def _add_server_keys(self, server):
+        self.song_queue = {server.id: []}
+        self.loop_toggle = {server.id: False}
+        self.skip_toggle = {server.id: False}
+
+    async def _remove_server_keys(self, server):
+        self.song_queue.pop(server.id, None)
+        self.loop_toggle.pop(server.id, None)
+        self.skip_toggle.pop(server.id, None)
+
+    async def _check_music_status(self, ctx, server):
+        try:
+            self.song_queue[server.id]
+            return True
+        except KeyError:
+            embed = discord.Embed(
+                colour=embed_type('warn'),
+                description="I need to be in a voice channel to execute music "
+                "commands. \nUse **!join** or **!play** to connect me to a channel")
+            await ctx.send(embed=embed)
+            return False
 
 
 def setup(bot):
