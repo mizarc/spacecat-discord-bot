@@ -33,20 +33,20 @@ class PoliteCat(commands.Cog):
             image.save(gif, 'gif', save_all=True)
             await message.channel.send(f"{message.author.display_name} sent:",
             file=discord.File(gif))
-            os.remove(gif)
             await message.delete()
 
         # Notify if conversion failed
         except:
-            os.remove(gif)
             embed = discord.Embed(
                 colour=embed_type('warn'),
                 description=f"Failed to convert webp to gif. "
                 "Image may be too large")
             await message.channel.send(embed=embed) 
             return
-            
-        os.remove(f'cache/{str(message.id)}.webp')
+        finally:
+            os.remove(gif)
+            os.remove(webp)
+        
         return
 
     @commands.group()
