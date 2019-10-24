@@ -14,25 +14,29 @@ class PoliteCat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        # Check for valid webp attachment
         if not message.attachments:
             return
-
-        if not message.attachments[0].filename[-4:] == 'webp':
+        elif not message.attachments[0].filename[-4:] == 'webp':
             return
 
-        await message.attachments[0].save(f'cache/{str(message.id)}.webp')
-        image = Image.open(f'cache/{str(message.id)}.webp')
+        # Set gif and webp naming variables
+        gif = f'cache/{str(message.id)}.gif'
+        webp = f'cache/{str(message.id)}.webp'
+
+        # Convert webp to gif
+        await message.attachments[0].save(webp)
+        image = Image.open(webp)
         try:
             image.seek(1)
             image.info.pop('background', None)
-            image.save(f'cache/{str(message.id)}.gif', 'gif', save_all=True)
+            image.save(gif, 'gif', save_all=True)
             await message.channel.send(f"{message.author.display_name} sent:",
-            file=discord.File(f'cache/{str(message.id)}.gif'))
-            os.remove(f'cache/{str(message.id)}.gif')
+            file=discord.File(gif))
+            os.remove(gif)
             await message.delete()
         except:
             pass
-        
         os.remove(f'cache/{str(message.id)}.webp')
         return
 
