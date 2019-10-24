@@ -283,14 +283,17 @@ class Alexa(commands.Cog):
         name=header,
         value=f"{self.song_queue[ctx.guild.id][0].title} `{current_time}/{duration}` \n{spacer}")
         
-        # List remaining songs in queue
+        # List remaining songs in queue plus total duration
         if queue_status:
             queue_info = []
-            total_duration = 0
+
+            total_duration = -self.song_queue[ctx.guild.id][0].duration
+            for song in self.song_queue[ctx.guild.id]:
+                total_duration += song.duration
+
             for index, song in enumerate(islice(self.song_queue[ctx.guild.id], 1, 11)):
                 duration = await self._get_duration(song.duration)
                 queue_info.append(f"{index + 1}. {song.title} `{duration}`")
-                total_duration += song.duration
             
             # Omit songs past 10 and just display amount instead
             if len(self.song_queue[ctx.guild.id]) > 11:
@@ -305,13 +308,14 @@ class Alexa(commands.Cog):
         await ctx.send(file=image, embed=embed)
         
     def _next(self, ctx):
-        # If looping, grab cached file and play it again from the start
+        # If looping, grab url again
         if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
             source = discord.FFmpegPCMAudio(self.song_queue[ctx.guild.id][0].url)
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
 
         # Remove already played songs from queue
+        self.song_queue[ctx.guild.id]
         self.song_queue[ctx.guild.id].pop(0)
 
         # Disable skip toggle to indicate that a skip has been completed
