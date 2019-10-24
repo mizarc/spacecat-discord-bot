@@ -133,13 +133,15 @@ class Alexa(commands.Cog):
             embed = discord.Embed(colour=embed_type('warn'), description="Video must be shorter than 3 hours")
             await ctx.send(embed=embed)
             return
-        duration = await self._get_duration(source)
+        duration = await self._get_duration(source.duration)
         song_name = f"[{source.title}]({source.webpage_url}) `{duration}`"
 
         # Notify user of song being added to queue
         if len(self.song_queue[ctx.guild.id]) > 0:
             self.song_queue[ctx.guild.id].append(source)
-            embed = discord.Embed(colour=embed_type('accept'), description=f"Added {song_name} to #{len(self.song_queue) - 1} in queue")
+            embed = discord.Embed(
+                colour=embed_type('accept'),
+                description=f"Added {song_name} to #{len(self.song_queue[ctx.guild.id]) - 1} in queue")
 
         # Play song instantly and notify user
         else:
@@ -261,30 +263,43 @@ class Alexa(commands.Cog):
         embed = discord.Embed(colour=embed_type('info'))
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
-        duration = await self._get_duration(self.song_queue[ctx.guild.id][0])
-        # Set header depending on if looping or not
+        duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
+
+        # Set header depending on if looping or not, and whether to add a spacer
+        queue_status = False
         if self.loop_toggle[ctx.guild.id]:
             header = "Currently Playing (Looping)"
         else:
             header = "Currently Playing"
+        if len(self.song_queue[ctx.guild.id]) > 1:
+            queue_status = True
+            spacer = "\u200B"
+        else:
+            spacer = ""
         embed.add_field(
-            name=header,
-            value=f"{self.song_queue[ctx.guild.id][0].title} `{duration}`")
+        name=header,
+        value=f"{self.song_queue[ctx.guild.id][0].title} `{duration}` \n{spacer}")
         
         # List remaining songs in queue
-        if len(self.song_queue[ctx.guild.id]) > 1:
+        if queue_status:
             queue_info = []
+            total_duration = 0
             for index, song in enumerate(islice(self.song_queue[ctx.guild.id], 1, 11)):
-                duration = await self._get_duration(song)
+                duration = await self._get_duration(song.duration)
                 queue_info.append(f"{index + 1}. {song.title} `{duration}`")
+                total_duration += song.duration
             
             # Omit songs past 10 and just display amount instead
             if len(self.song_queue[ctx.guild.id]) > 11:
                 queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11} more in queue`")
 
             # Output results to chat
+            duration = await self._get_duration(total_duration)
             queue_output = '\n'.join(queue_info)
-            embed.add_field(name="Queue", value=queue_output, inline=False)
+        
+            embed.add_field(
+                name=f"Queue  `{duration}`",
+                value=queue_output, inline=False)
         await ctx.send(file=image, embed=embed)
         
     def _next(self, ctx):
@@ -307,9 +322,9 @@ class Alexa(commands.Cog):
             return
 
     # Format duration based on what values there are
-    async def _get_duration(self, source):
+    async def _get_duration(self, seconds):
         try:
-            duration = strftime("%H:%M:%S", gmtime(source.duration)).lstrip("0:")
+            duration = strftime("%H:%M:%S", gmtime(seconds)).lstrip("0:")
             if len(duration) < 2:
                 duration = f"0:0{duration}"
             elif len(duration) < 3:
