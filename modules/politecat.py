@@ -11,33 +11,43 @@ from helpers.appearance import embed_icons, embed_type
 class PoliteCat(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        # Check for valid webp attachment
         if not message.attachments:
             return
-
-        if not message.attachments[0].filename[-4:] == 'webp':
+        elif not message.attachments[0].filename[-4:] == 'webp':
             return
 
-        os.chdir("cache")
+        # Set gif and webp naming variables
+        gif = f'cache/{str(message.id)}.gif'
+        webp = f'cache/{str(message.id)}.webp'
 
-        await message.attachments[0].save(str(message.id) + '.webp')
-        image = Image.open(str(message.id) + '.webp')
+        # Convert animated webp to gif
+        await message.attachments[0].save(webp)
+        image = Image.open(webp)
         try:
             image.seek(1)
             image.info.pop('background', None)
-            image.save(str(message.id) + '.gif', 'gif', save_all=True)
-            await message.channel.send(f"{message.author.display_name} sent:", file=discord.File(str(message.id) + '.gif'))
-            os.remove(str(message.id) + '.gif')
+            image.save(gif, 'gif', save_all=True)
+            await message.channel.send(
+            f"**{message.author.display_name} sent:**\n{message.content}",
+            file=discord.File(gif))
             await message.delete()
-            
+
+        # Notify if conversion failed
         except:
-            pass
+            embed = discord.Embed(
+                colour=embed_type('warn'),
+                description=f"Failed to convert webp to gif. "
+                "Image may be too large")
+            await message.channel.send(embed=embed) 
+            return
+        finally:
+            os.remove(gif)
+            os.remove(webp)
         
-        os.remove(str(message.id) + '.webp')
-        os.chdir("../")
         return
 
     @commands.group()
