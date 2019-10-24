@@ -1,0 +1,33 @@
+# Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.1] - 2019-10-24
+### Changed
+- Music player now streams rather than downloading music before playing
+- Queue now shows additional time information such as song duration, current time in song, and total queue time
+- Queue shows how many songs there are past 10 songs
+- Song limit set to 3 hours
+
+### Fixed
+- Proper conversion error message
+- Directory not changing properly when spamming webps
+- Gifs not being removed properly when message sending fails
+- Text message being removed on image conversion
+- Queue not showing when too many songs are added by setting a limit
+- Queue now works across multiple servers without conflicting
+
+
+## [0.1.0] - 2019-10-19
+### Added
+- First pre-release version 🎉
+- Discord.py API to create a modular Python bot system
+- Simple user editable TOML based config
+- SQLite database for persistent data storage
+- **SpaceCat** module for basic bot tools (disable, enable, exit, modules, ping, reload, version)
+- **Alexa** module for music playback (join, leave, loop, pause, play, queue, resume, skip, stop)
+- **Configuration** module for configuring the bot (activity, perm, permpreset, status)
+- **PoliteCat** module for image based functions (react, reactcfg, reactlist)
+- **Seethreepio** module for fun text based functions (flip, stealuserpic, throw)
