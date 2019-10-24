@@ -101,9 +101,8 @@ class Alexa(commands.Cog):
     async def leave(self, ctx):
         """Stops and leaves the voice channel"""
         # Check if in a voice channel
-        if ctx.voice_client is None:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"I can't leave if i'm not in a voice channel")
-            await ctx.send(embed=embed)
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
             return
 
         # Stop and Disconnect from voice channel
@@ -156,9 +155,8 @@ class Alexa(commands.Cog):
     async def stop(self, ctx):
         """Stops and clears the queue"""
         # Check if in a voice channel
-        if ctx.voice_client is None:
-            embed = discord.Embed(colour=embed_type('warn'), description="I can't stop playing if I'm not in a voice channel")
-            await ctx.send(embed=embed)
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
             return
 
         # Stops and clears the queue
@@ -172,8 +170,12 @@ class Alexa(commands.Cog):
     @perms.check()
     async def resume(self, ctx):
         """Resumes music if paused"""
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
         # Check if music is paused
-        if ctx.voice_client is None or not ctx.voice_client.is_paused():
+        if not ctx.voice_client.is_paused():
             embed = discord.Embed(colour=embed_type('warn'), description="Music isn't paused")
             await ctx.send(embed=embed)
             return
@@ -187,8 +189,12 @@ class Alexa(commands.Cog):
     @perms.check()
     async def pause(self, ctx):
         """Pauses the music"""
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
         # Check if music is paused
-        if ctx.voice_client is None or ctx.voice_client.is_paused():
+        if ctx.voice_client.is_paused():
             embed = discord.Embed(colour=embed_type('warn'), description="Music is already paused")
             await ctx.send(embed=embed)
             return
@@ -324,7 +330,7 @@ class Alexa(commands.Cog):
 
     async def _check_music_status(self, ctx, server):
         try:
-            self.song_queue[server.id]
+            self.loop_toggle[server.id]
             return True
         except KeyError:
             embed = discord.Embed(
