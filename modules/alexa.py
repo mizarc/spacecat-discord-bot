@@ -1,9 +1,8 @@
 import asyncio
-import datetime
 from itertools import islice
 import os
 import shutil
-from time import gmtime, strftime
+from time import gmtime, strftime, time
 
 import discord
 from discord.ext import commands
@@ -64,6 +63,7 @@ class Alexa(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.song_queue = {}
+        self.start_time = {}
         self.loop_toggle = {}
         self.skip_toggle = {}
 
@@ -146,6 +146,7 @@ class Alexa(commands.Cog):
         # Play song instantly and notify user
         else:
             self.song_queue[ctx.guild.id].append(source)
+            self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(colour=embed_type('info'), description=f"Now playing {song_name}")
 
@@ -264,6 +265,8 @@ class Alexa(commands.Cog):
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
         duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
+        current_time = int(time() - self.start_time[ctx.guild.id])
+        current_time = await self._get_duration(current_time)
 
         # Set header depending on if looping or not, and whether to add a spacer
         queue_status = False
@@ -278,7 +281,7 @@ class Alexa(commands.Cog):
             spacer = ""
         embed.add_field(
         name=header,
-        value=f"{self.song_queue[ctx.guild.id][0].title} `{duration}` \n{spacer}")
+        value=f"{self.song_queue[ctx.guild.id][0].title} `{current_time}/{duration}` \n{spacer}")
         
         # List remaining songs in queue
         if queue_status:
@@ -296,7 +299,6 @@ class Alexa(commands.Cog):
             # Output results to chat
             duration = await self._get_duration(total_duration)
             queue_output = '\n'.join(queue_info)
-        
             embed.add_field(
                 name=f"Queue  `{duration}`",
                 value=queue_output, inline=False)
@@ -318,6 +320,7 @@ class Alexa(commands.Cog):
 
         # Remove first in queue and play the new first in list
         if self.song_queue[ctx.guild.id]:
+            self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
             return
 
