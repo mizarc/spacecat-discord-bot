@@ -310,7 +310,9 @@ class Alexa(commands.Cog):
     def _next(self, ctx):
         # If looping, grab url again
         if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
-            source = discord.FFmpegPCMAudio(self.song_queue[ctx.guild.id][0].url)
+            get_source = YTDLSource.from_url(self.song_queue[ctx.guild.id][0].url)
+            coroutine = asyncio.run_coroutine_threadsafe(get_source, self.bot.loop)
+            source = coroutine.result()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
 
