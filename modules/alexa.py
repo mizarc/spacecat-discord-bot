@@ -163,9 +163,9 @@ class Alexa(commands.Cog):
             return
 
         # Stops and clears the queue
-        ctx.voice_client.stop()
-        await asyncio.sleep(0.1)
+        self.skip_toggle[ctx.guild.id] = True
         self.song_queue[ctx.guild.id].clear()
+        ctx.voice_client.stop()
         embed = discord.Embed(colour=embed_type('accept'), description="Music has been stopped & queue has been cleared")
         await ctx.send(embed=embed)
 
@@ -308,21 +308,26 @@ class Alexa(commands.Cog):
         await ctx.send(file=image, embed=embed)
         
     def _next(self, ctx):
-        # If looping, grab url again
+        # If looping, grab source from url again
         if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
-            source = discord.FFmpegPCMAudio(self.song_queue[ctx.guild.id][0].url)
+            get_source = YTDLSource.from_url(self.song_queue[ctx.guild.id][0].url)
+            coroutine = asyncio.run_coroutine_threadsafe(get_source, self.bot.loop)
+            source = coroutine.result()
+            self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
-
-        # Remove already played songs from queue
-        self.song_queue[ctx.guild.id]
-        self.song_queue[ctx.guild.id].pop(0)
 
         # Disable skip toggle to indicate that a skip has been completed
         if self.skip_toggle[ctx.guild.id]:
             self.skip_toggle[ctx.guild.id] = False
 
-        # Remove first in queue and play the new first in list
+        # Remove first in queue. Exception used for stop command clearing queue.
+        try:
+            self.song_queue[ctx.guild.id].pop(0)
+        except IndexError:
+            return
+
+        # Play the new first song in list
         if self.song_queue[ctx.guild.id]:
             self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
