@@ -303,35 +303,30 @@ class SpaceCat(commands.Cog):
     async def enable(self, ctx, module):
         """Enables a module"""
         # Check if module exists by taking the list of extensions from the bot
-        modules = module_handler.get()
-        if module not in modules:
+        if module not in module_handler.get():
             embed = discord.Embed(
                 colour=appearance.embed_type('warn'),
                 description=f"Module `{module}` does not exist")
             await ctx.send(embed=embed)
             return
 
-        # Check config to see if module is disabled
-        config = toml.load('config.toml')
-        try:
-            if module not in config['base']['disabled_modules']:
-                raise ValueError('Module not found in list')
-
-            # Enable module and write to config`
-            bot.load_extension(f'modules.{module}')
-            config['base']['disabled_modules'].remove(module)
-            with open("config.toml", "w") as config_file:
-                toml.dump(config, config_file)
-
-            # Set message depending on result
-            embed = discord.Embed(
-            colour=appearance.embed_type('accept'),
-            description=f"Module `{module}` enabled")
-        except KeyError:
+        # Check config to see if module is already enabled
+        elif module not in module_handler.get_disabled():
             embed = discord.Embed(
                 colour=appearance.embed_type('warn'),
                 description=f"Module `{module}` is already enabled")
+            await ctx.send(embed=embed)
+            return
 
+        # Enable module and write to config
+        bot.load_extension(f'modules.{module}')
+        config = toml.load('config.toml')
+        config['base']['disabled_modules'].remove(module)
+        with open("config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+        embed = discord.Embed(
+            colour=appearance.embed_type('accept'),
+            description=f"Module `{module}` enabled")
         await ctx.send(embed=embed)
 
     @commands.command()
