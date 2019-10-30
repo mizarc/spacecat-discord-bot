@@ -35,5 +35,5 @@ def get_disabled():
         disabled_modules = config['base']['disabled_modules']
         return disabled_modules
     except KeyError:
-        return
+        return None
 

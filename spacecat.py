@@ -311,7 +311,8 @@ class SpaceCat(commands.Cog):
             return
 
         # Check config to see if module is already enabled
-        elif module not in module_handler.get_disabled():
+        disabled_modules = module_handler.get_disabled()
+        if disabled_modules is None or module not in disabled_modules:
             embed = discord.Embed(
                 colour=appearance.embed_type('warn'),
                 description=f"Module `{module}` is already enabled")
@@ -334,35 +335,34 @@ class SpaceCat(commands.Cog):
     async def disable(self, ctx, module):
         """Disables a module"""
         # Check if module exists by taking the list of extensions from the bot
-        modules = module_handler.get()
-        if module not in modules:
+        if module not in module_handler.get():
             embed = discord.Embed(
-            colour=appearance.embed_type('warn'),
-            description=f"Module `{module}` does not exist")
+                colour=appearance.embed_type('warn'),
+                description=f"Module `{module}` does not exist")
             await ctx.send(embed=embed)
             return
 
         # Check config to see if module is already disabled
-        config = toml.load('config.toml')
+        disabled_modules = module_handler.get_disabled()   
         try:
-            if module in config['base']['disabled_modules']:
+            if module in disabled_modules:
                 embed = discord.Embed(
-                colour=appearance.embed_type('warn'),
-                description=f"Module `{module}` is already disabled")
+                    colour=appearance.embed_type('warn'),
+                    description=f"Module `{module}` is already disabled")
                 await ctx.send(embed=embed)
                 return
-            
-            # Create or append to list depend on if list exists
+
+        # Add to list if list exists or create list if it doesn't
+            config = toml.load('config.toml')
             config['base']['disabled_modules'].append(module)
-        except KeyError:
-            config['base']['disabled_modules'] = [module]
+        except TypeError:
+            config = toml.load('config.toml')
+            config['base']['disabled_modules'] = [module]   
 
         # Disable module and write to config
         bot.unload_extension(f'modules.{module}')
         with open("config.toml", "w") as config_file:
             toml.dump(config, config_file)
-
-        # Notify user of change
         embed = discord.Embed(
             colour=appearance.embed_type('accept'),
             description=f"Module `{module}` disabled")
