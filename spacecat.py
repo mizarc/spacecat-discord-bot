@@ -24,11 +24,12 @@ parser.add_argument('--apikey', '-a', help='apikey help', type=str)
 parser.add_argument('--user', '-u', help='user help', type=str)
 args = parser.parse_args()
 
-# Set command prefix
-bot = commands.Bot(command_prefix='!')
-
 
 class Startup():
+    def __init__(self):
+        config = toml.load('config.toml')
+        self.bot = commands.Bot(command_prefix=config['base']['prefix'])
+
     def logging(self):
         # Setup file logging
         logger = logging.getLogger('discord')
@@ -79,12 +80,12 @@ class Startup():
 
     def load_modules(self):
         # Enable enabled modules from list
-        bot.add_cog(SpaceCat(bot))
+        self.bot.add_cog(SpaceCat(self.bot))
         modules = module_handler.get_enabled()
         for module in modules:
             module = 'modules.' + module
             try:
-                bot.load_extension(module)
+                self.bot.load_extension(module)
             except Exception as exception:
                 print(
                     f"Failed to load extension {module}\n"
@@ -99,7 +100,7 @@ class Startup():
         # Attempt to use API key from config and output error if unable to run
         try:
             print("Active API Key: " + apikey + "\n")
-            bot.run(apikey)
+            self.bot.run(apikey)
         except discord.LoginFailure:
             if firstrun:
                 print(
@@ -139,8 +140,8 @@ class SpaceCat(commands.Cog):
             perms.setup()
 
         # Output launch completion message
-        print(bot.user.name + " has successfully launched")
-        print(f"Bot ID: {bot.user.id}")
+        print(self.bot.user.name + " has successfully launched")
+        print(f"Bot ID: {self.bot.user.id}")
         if module_handler.get_enabled():
             print(
                 "Enabled Module(s): "
@@ -155,7 +156,7 @@ class SpaceCat(commands.Cog):
         try:
             statusname = config['base']['status']
             status = appearance.status_class(statusname)
-            await bot.change_presence(status=status)
+            await self.bot.change_presence(status=status)
         except KeyError:
             pass
 
@@ -168,7 +169,7 @@ class SpaceCat(commands.Cog):
                 type=activitytype,
                 name=config['base']['activity_name'],
                 url="https://www.twitch.tv/monstercat")
-            await bot.change_presence(activity=activity)
+            await self.bot.change_presence(activity=activity)
         except (KeyError, TypeError):
             pass
             
@@ -186,8 +187,8 @@ class SpaceCat(commands.Cog):
         """A simple ping to check if the bot is responding."""
         embed = discord.Embed(
             colour=appearance.embed_type('accept'), 
-            description=f"{bot.user.name} is operational at \
-            {int(bot.latency * 1000)}ms")
+            description=f"{self.bot.user.name} is operational at \
+            {int(self.bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -214,7 +215,7 @@ class SpaceCat(commands.Cog):
         embed = discord.Embed(
             colour=appearance.embed_type('info'))
         embed.set_author(
-            name=f"{bot.user.name} Modules",
+            name=f"{self.bot.user.name} Modules",
             icon_url="attachment://image.png")
         embed.add_field(
             name="Enabled",
@@ -256,7 +257,7 @@ class SpaceCat(commands.Cog):
         for module in modules_to_load:
             try:
                 module = 'modules.' + module
-                bot.reload_extension(module)
+                self.bot.reload_extension(module)
             except:
                 failed_modules.append(module[8:])
 
@@ -311,7 +312,7 @@ class SpaceCat(commands.Cog):
             return
 
         # Enable module and write to config
-        bot.load_extension(f'modules.{module}')
+        self.bot.load_extension(f'modules.{module}')
         config = toml.load('config.toml')
         config['base']['disabled_modules'].remove(module)
         with open("config.toml", "w") as config_file:
@@ -351,7 +352,7 @@ class SpaceCat(commands.Cog):
             config['base']['disabled_modules'] = [module]   
 
         # Disable module and write to config
-        bot.unload_extension(f'modules.{module}')
+        self.bot.unload_extension(f'modules.{module}')
         with open("config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
@@ -369,7 +370,7 @@ class SpaceCat(commands.Cog):
         except:
             pass
         
-        await bot.logout()
+        await self.bot.logout()
 
     async def _create_config_cont(self):
         config = toml.load('config.toml')
@@ -379,7 +380,7 @@ class SpaceCat(commands.Cog):
             # Set a bot administrator
             print(
                 "[Step 2]\n"
-                f"Alright, {bot.user.name} is now operational.\n"
+                f"Alright, {self.bot.user.name} is now operational.\n"
                 "Now I'll need to get your discord user ID.\n"
                 "This will give you admin access to the bot in Discord.\n"
                 "You can set more users later.\n\n"
@@ -397,7 +398,7 @@ class SpaceCat(commands.Cog):
             
             # Check to see if the user ID is valid
             try:
-                user = bot.get_user(int(idinput))
+                user = self.bot.get_user(int(idinput))
                 await user.send("Hello there!")
             except (ValueError, AttributeError):
                 print(
@@ -418,6 +419,7 @@ class SpaceCat(commands.Cog):
                 confirm = input(
                     "Type 'yes' to confirm, or 'no' to set a new ID: ")
                 print('--------------------\n')
+
                 if confirm == "yes":
                     config['base']['adminuser'] = idinput
                     break
@@ -425,27 +427,38 @@ class SpaceCat(commands.Cog):
                     break
                 else:
                     continue
+        time.sleep(1)
 
-        # Set default status and activity values
-        config['base']['status'] = 'online'
-        config['base']['activity_type'] = None
-        config['base']['activity_name'] = None
-        with open("config.toml", "w") as config_file:
-            toml.dump(config, config_file)
+        # Ask to set a command prefix
+        print(
+            "[Step 3]\n"
+            "Your bot will need a prefix in order to run commands.\n"
+            "You can set it to be whatever you want,\n"
+            "though I recommend you keep it short\n\n")
+
+        prefix_input = input("Enter your bot prefix here: ")
+        print('--------------------\n')
+        config['base']['prefix'] = prefix_input
         time.sleep(1)
 
         # Provide a link to join the server
         print(
-            "[Step 3]\n"
+            "[Step 4]\n"
             "Finally, I need to join your Discord server.\n"
             "Click the link below or copy it into your web browser.\n"
             "You can give this link to other users to help "
             "spread your bot around.\n\n"
 
             "https://discordapp.com/oauth2/authorize?"
-            f"client_id={bot.user.id}&scope=bot&permissions=8\n"
+            f"client_id={self.bot.user.id}&scope=bot&permissions=8\n"
             "--------------------\n")
 
+        # Set default values and save config
+        config['base']['status'] = 'online'
+        config['base']['activity_type'] = None
+        config['base']['activity_name'] = None
+        with open("config.toml", "w") as config_file:
+            toml.dump(config, config_file)
         await asyncio.sleep(1)
     
 
