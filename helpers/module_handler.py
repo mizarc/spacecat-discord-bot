@@ -14,7 +14,7 @@ def get():
     return modulelist
 
 def get_enabled():
-    # Fetch all modules and disable modules
+    # Fetch all modules and disabled modules
     modules = get()
     disabled_modules = get_disabled()
     enabled_modules = []
@@ -26,6 +26,7 @@ def get_enabled():
                 enabled_modules.append(module)
     except TypeError:
         enabled_modules = modules
+        
     return enabled_modules
 
 def get_disabled():

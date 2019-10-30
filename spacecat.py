@@ -78,26 +78,17 @@ class Startup():
         self.run(firstrun=True)
 
     def load_modules(self):
-        # Fetch modules and remove disabled modules from enable list
-        modules = module_handler.get()
-        try:
-            config = toml.load('config.toml')
-            self.disabled_modules = config['base']['disabled_modules']
-            for module in modules:
-                if module in self.disabled_modules:
-                    modules.remove(module)
-        except (KeyError, FileNotFoundError):
-            pass
-
-        # Enable modules from list
+        # Enable enabled modules from list
         bot.add_cog(SpaceCat(bot))
-        for x in modules:
-            module = 'modules.' + x
+        modules = module_handler.get_enabled()
+        for module in modules:
+            module = 'modules.' + module
             try:
                 bot.load_extension(module)
-            except Exception as e:
-                exc = '{}: {}'.format(type(e).__name__, e)
-                print("Failed to load extension {}\n{}\n".format(x, exc))
+            except Exception as exception:
+                print(
+                    f"Failed to load extension {module}\n"
+                    f"{type(exception).__name__}: {exception}\n")
 
         self.modules = modules
 
