@@ -139,10 +139,6 @@ class SpaceCat(commands.Cog):
         if 'adminuser' not in config['base']:
             await self._create_config_cont()
 
-        # Create database tables
-        if not os.path.exists("spacecat.db"):
-            perms.setup()
-
         # Output launch completion message
         print(self.bot.user.name + " has successfully launched")
         print(f"Bot ID: {self.bot.user.id}")

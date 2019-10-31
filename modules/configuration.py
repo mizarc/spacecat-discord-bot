@@ -1,4 +1,5 @@
 import configparser
+import os
 import sqlite3
 
 import discord
@@ -11,6 +12,22 @@ from helpers.appearance import activity_type_class, status_class, embed_type, em
 class Configuration(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        # Create database if not yet created
+        if not os.path.exists("spacecat.db"):
+            db = sqlite3.connect('spacecat.db')
+            cursor = db.cursor()
+
+            # Create server settings table
+            cursor.execute('''CREATE TABLE server_settings
+                (serverid integer, prefix text, perm text)''')
+            db.commit()
+            db.close()
+
+            # Setup perms
+            perms.setup()
 
     @commands.command()
     @perms.exclusive()
