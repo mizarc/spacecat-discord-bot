@@ -204,6 +204,21 @@ class SpaceCat(commands.Cog):
 
     @commands.command()
     @perms.exclusive()
+    async def globalprefix(self, ctx, prefix):
+        """Changes the global command prefix"""
+        # Changes the prefix entry in the config
+        config = toml.load('config.toml')
+        config['base']['prefix'] = prefix
+        with open("config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+        embed = discord.Embed(
+                colour=appearance.embed_type('accept'),
+                description=f"Global command prefix changed to: `{prefix}`.\n\
+                Servers with prefix override will not be affected.")
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    @perms.exclusive()
     async def modules(self, ctx):
         enabled = module_handler.get_enabled()
         disabled = module_handler.get_disabled()
