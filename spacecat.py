@@ -27,8 +27,7 @@ args = parser.parse_args()
 
 class Startup():
     def __init__(self):
-        config = toml.load('config.toml')
-        self.bot = commands.Bot(command_prefix=config['base']['prefix'])
+        self.bot = commands.Bot(command_prefix=self.get_prefix)
 
     def logging(self):
         # Setup file logging
@@ -115,6 +114,11 @@ class Startup():
                 "with the --apikey argument.\n"
                 "Eg. ./spacecat --apikey <insert_key>")
             return
+
+    def get_prefix(self, bot, message):
+        config = toml.load('config.toml')
+        prefix = config['base']['prefix']
+        return prefix
 
 
 class SpaceCat(commands.Cog):
