@@ -32,17 +32,18 @@ class Configuration(commands.Cog):
             '''CREATE TABLE IF NOT EXISTS group_parents
             (serverid INTEGER, child_group INTEGER, parent_group INTEGER)''')
 
-        # Add server to db if the bot was added to a new server while offline
+        # Compare bot servers and database servers to check if the bot was 
+        # added to servers while the bot was offline
+        cursor.execute("SELECT server_id FROM server_settings")
         servers = self.bot.guilds
-        for server in servers:
-            query = (str(server.id),)
-            cursor.execute(
-                "SELECT server_id FROM server_settings WHERE server_id=?",
-                query)
-            check = cursor.fetchall()
+        server_ids = {server.id for server in servers}
+        db_servers = cursor.fetchall()
+        db_server_ids = {server for server, in db_servers}
+        missing_servers = list(server_ids - db_server_ids)
 
-            if not check:
-                await self._add_server_entry(str(server.id))
+        # Add missing servers to database
+        for server in missing_servers:
+            await self._add_server_entry(str(server))
 
         db.commit()
         db.close()
@@ -650,7 +651,9 @@ class Configuration(commands.Cog):
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
         value = (guild, "NULL")
-        cursor.execute("INSERT INTO server_settings VALUES (?,?)", value)
+        cursor.execute(
+            "INSERT OR IGNORE INTO server_settings VALUES (?,?)",
+            value)
         db.commit()
         db.close()
 
