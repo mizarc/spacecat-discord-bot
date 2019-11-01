@@ -15,19 +15,41 @@ class Configuration(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        # Create database if not yet created
-        if not os.path.exists("spacecat.db"):
-            db = sqlite3.connect('spacecat.db')
-            cursor = db.cursor()
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
 
-            # Create server settings table
-            cursor.execute('''CREATE TABLE server_settings
-                (serverid integer, prefix text, perm text)''')
-            db.commit()
-            db.close()
+        # Create tables if they don't exist
+        cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS server_settings 
+            (server_id integer, prefix text)''')
+        cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS group_permissions
+            (serverid integer, groupid integer, perm text)''')
+        cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS user_permissions
+            (serverid integer, userid integer, perm text)''')
+        cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS group_parents
+            (serverid integer, child_group, parent_group)''')
 
-            # Setup perms
-            perms.setup()
+        # Add server to db if the bot was added to a new server while offline
+        servers = self.bot.guilds
+        for server in servers:
+            query = (str(server.id),)
+            cursor.execute(
+                "SELECT server_id FROM server_settings WHERE server_id=?",
+                query)
+            check = cursor.fetchall()
+
+            if not check:
+                await self._add_server_entry(str(server.id))
+
+        db.commit()
+        db.close()
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        await self._add_server_entry(str(guild.id))
 
     @commands.command()
     @perms.exclusive()
@@ -545,6 +567,17 @@ class Configuration(commands.Cog):
     async def truncate(self, ctx):
         print('nah')
 
+    @permpreset.command()
+    async def prefix(self, ctx, prefix):
+        """Sets the server specific prefix for commands"""
+        # Query database for wildcard permission
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (id_, "*")
+        cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
+        result = cursor.fetchall()
+        db.close()
+
     async def _wildcard_check(self, ctx, type_, id_):
         # Query database for wildcard permission
         db = sqlite3.connect('spacecat.db')
@@ -612,6 +645,14 @@ class Configuration(commands.Cog):
 
         db.close()
         return False
+
+    async def _add_server_entry(self, guild):
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        value = (guild, "NULL")
+        cursor.execute("INSERT INTO server_settings VALUES (?,?)", value)
+        db.commit()
+        db.close()
 
 
 def setup(bot):
