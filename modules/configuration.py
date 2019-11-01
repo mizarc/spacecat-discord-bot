@@ -21,16 +21,16 @@ class Configuration(commands.Cog):
         # Create tables if they don't exist
         cursor.execute(
             '''CREATE TABLE IF NOT EXISTS server_settings 
-            (server_id integer, prefix text)''')
+            (server_id INTEGER PRIMARY KEY, prefix TEXT)''')
         cursor.execute(
             '''CREATE TABLE IF NOT EXISTS group_permissions
-            (serverid integer, groupid integer, perm text)''')
+            (serverid INTEGER, groupid INTEGER, perm TEXT)''')
         cursor.execute(
             '''CREATE TABLE IF NOT EXISTS user_permissions
-            (serverid integer, userid integer, perm text)''')
+            (serverid INTEGER, userid INTEGER, perm TEXT)''')
         cursor.execute(
             '''CREATE TABLE IF NOT EXISTS group_parents
-            (serverid integer, child_group, parent_group)''')
+            (serverid INTEGER, child_group INTEGER, parent_group INTEGER)''')
 
         # Add server to db if the bot was added to a new server while offline
         servers = self.bot.guilds
