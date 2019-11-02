@@ -575,7 +575,7 @@ class Configuration(commands.Cog):
         # Set the prefix for the current server
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        query = (prefix, str(ctx.guild.id))
+        query = (prefix, ctx.guild.id)
         cursor.execute(
             "UPDATE server_settings SET prefix=? WHERE server_id=?", query)
         db.commit()
