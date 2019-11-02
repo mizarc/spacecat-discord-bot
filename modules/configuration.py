@@ -572,7 +572,15 @@ class Configuration(commands.Cog):
     @perms.check()
     async def prefix(self, ctx, prefix):
         """Sets the server specific prefix for commands"""
-        # Set the prefix for the current server
+        # Deny if specified prefix is too long
+        if len(prefix) > 30:
+            embed = discord.Embed(
+                colour=embed_type('warn'),
+                description=f"Specified prefix is too long")
+            await ctx.send(embed=embed)
+            return
+
+        # Set the prefix for the current server in database
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
         query = (prefix, ctx.guild.id)
@@ -585,6 +593,9 @@ class Configuration(commands.Cog):
             colour=embed_type('accept'),
             description=f"Command prefix has been set to: `{prefix}`")
         await ctx.send(embed=embed)
+        return
+
+
 
     @commands.command()
     @perms.check()
