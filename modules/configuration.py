@@ -586,6 +586,28 @@ class Configuration(commands.Cog):
             description=f"Command prefix has been set to: `{prefix}`")
         await ctx.send(embed=embed)
 
+    @commands.command()
+    @perms.check()
+    async def resetprefix(self, ctx):
+        """Sets the prefix back to the config specified prefix"""
+        # Set the prefix for the current server
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (None, ctx.guild.id)
+        cursor.execute(
+            "UPDATE server_settings SET prefix=? WHERE server_id=?", query)
+        db.commit()
+        db.close()
+
+        # Get original prefix
+        config = toml.load('config.toml')
+        prefix = config['base']['prefix']
+
+        embed = discord.Embed(
+            colour=embed_type('accept'),
+            description=f"Command prefix has been reset back to: `{prefix}`")
+        await ctx.send(embed=embed)
+
     async def _wildcard_check(self, ctx, type_, id_):
         # Query database for wildcard permission
         db = sqlite3.connect('spacecat.db')
