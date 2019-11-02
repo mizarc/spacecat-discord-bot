@@ -1,4 +1,5 @@
 import configparser
+import os
 import sqlite3
 
 import discord
@@ -11,6 +12,45 @@ from helpers.appearance import activity_type_class, status_class, embed_type, em
 class Configuration(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+
+        # Create tables if they don't exist
+        cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS server_settings 
+            (server_id INTEGER PRIMARY KEY, prefix TEXT)''')
+        cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS group_permissions
+            (serverid INTEGER, groupid INTEGER, perm TEXT)''')
+        cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS user_permissions
+            (serverid INTEGER, userid INTEGER, perm TEXT)''')
+        cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS group_parents
+            (serverid INTEGER, child_group INTEGER, parent_group INTEGER)''')
+
+        # Compare bot servers and database servers to check if the bot was 
+        # added to servers while the bot was offline
+        cursor.execute("SELECT server_id FROM server_settings")
+        servers = self.bot.guilds
+        server_ids = {server.id for server in servers}
+        db_servers = cursor.fetchall()
+        db_server_ids = {server for server, in db_servers}
+        missing_servers = list(server_ids - db_server_ids)
+
+        # Add missing servers to database
+        for server in missing_servers:
+            await self._add_server_entry(server)
+
+        db.commit()
+        db.close()
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        await self._add_server_entry(guild.id)
 
     @commands.command()
     @perms.exclusive()
@@ -528,6 +568,57 @@ class Configuration(commands.Cog):
     async def truncate(self, ctx):
         print('nah')
 
+    @commands.command()
+    @perms.check()
+    async def prefix(self, ctx, prefix):
+        """Sets the server specific prefix for commands"""
+        # Deny if specified prefix is too long
+        if len(prefix) > 30:
+            embed = discord.Embed(
+                colour=embed_type('warn'),
+                description=f"Specified prefix is too long")
+            await ctx.send(embed=embed)
+            return
+
+        # Set the prefix for the current server in database
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (prefix, ctx.guild.id)
+        cursor.execute(
+            "UPDATE server_settings SET prefix=? WHERE server_id=?", query)
+        db.commit()
+        db.close()
+
+        embed = discord.Embed(
+            colour=embed_type('accept'),
+            description=f"Command prefix has been set to: `{prefix}`")
+        await ctx.send(embed=embed)
+        return
+
+
+
+    @commands.command()
+    @perms.check()
+    async def resetprefix(self, ctx):
+        """Sets the prefix back to the config specified prefix"""
+        # Set the prefix for the current server
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (None, ctx.guild.id)
+        cursor.execute(
+            "UPDATE server_settings SET prefix=? WHERE server_id=?", query)
+        db.commit()
+        db.close()
+
+        # Get original prefix
+        config = toml.load('config.toml')
+        prefix = config['base']['prefix']
+
+        embed = discord.Embed(
+            colour=embed_type('accept'),
+            description=f"Command prefix has been reset back to: `{prefix}`")
+        await ctx.send(embed=embed)
+
     async def _wildcard_check(self, ctx, type_, id_):
         # Query database for wildcard permission
         db = sqlite3.connect('spacecat.db')
@@ -595,6 +686,16 @@ class Configuration(commands.Cog):
 
         db.close()
         return False
+
+    async def _add_server_entry(self, guild):
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        value = (guild, None)
+        cursor.execute(
+            "INSERT OR IGNORE INTO server_settings VALUES (?,?)",
+            value)
+        db.commit()
+        db.close()
 
 
 def setup(bot):

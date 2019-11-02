@@ -7,27 +7,6 @@ from discord.ext import commands
 from discord.utils import get
 import toml
 
-def setup():
-    # Open server's database file
-    db = sqlite3.connect('spacecat.db')
-    cursor = db.cursor()
-
-    # Create group permission table
-    cursor.execute('''CREATE TABLE group_permissions
-        (serverid integer, groupid integer, perm text)''')
-
-    # Create user permission table
-    cursor.execute('''CREATE TABLE user_permissions
-        (serverid integer, userid integer, perm text)''')
-
-    # Create group parent table
-    cursor.execute('''CREATE TABLE group_parents
-        (serverid integer, child_group, parent_group)''')
-
-    # Save and exit
-    db.commit()
-    db.close()
-
 def new(guild):
     # Check if server doesn't have a config file
     if not os.path.exists('servers/' + str(guild.id) + '.toml'):
