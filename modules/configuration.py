@@ -568,16 +568,23 @@ class Configuration(commands.Cog):
     async def truncate(self, ctx):
         print('nah')
 
-    @permpreset.command()
+    @commands.command()
+    @perms.check()
     async def prefix(self, ctx, prefix):
         """Sets the server specific prefix for commands"""
-        # Query database for wildcard permission
+        # Set the prefix for the current server
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
-        query = (id_, "*")
-        cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
-        result = cursor.fetchall()
+        query = (prefix, str(ctx.guild.id))
+        cursor.execute(
+            "UPDATE server_settings SET prefix=? WHERE server_id=?", query)
+        db.commit()
         db.close()
+
+        embed = discord.Embed(
+            colour=embed_type('accept'),
+            description=f"Command prefix has been set to: `{prefix}`")
+        await ctx.send(embed=embed)
 
     async def _wildcard_check(self, ctx, type_, id_):
         # Query database for wildcard permission
