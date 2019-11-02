@@ -127,7 +127,7 @@ class Startup():
             db.close()
 
             if prefix:
-                return prefix
+                return commands.when_mentioned_or(prefix)(bot, message)
         except sqlite3.OperationalError:
             pass
 
