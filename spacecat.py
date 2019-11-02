@@ -134,7 +134,7 @@ class Startup():
         # Use the prefix set in config if no custom server prefix is set
         config = toml.load('config.toml')
         prefix = config['base']['prefix']
-        return prefix
+        return commands.when_mentioned_or(prefix)(bot, message)
 
 
 class SpaceCat(commands.Cog):
