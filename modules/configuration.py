@@ -43,14 +43,14 @@ class Configuration(commands.Cog):
 
         # Add missing servers to database
         for server in missing_servers:
-            await self._add_server_entry(str(server))
+            await self._add_server_entry(server)
 
         db.commit()
         db.close()
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        await self._add_server_entry(str(guild.id))
+        await self._add_server_entry(guild.id)
 
     @commands.command()
     @perms.exclusive()

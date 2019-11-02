@@ -6,6 +6,7 @@ import glob
 import logging
 import os
 import shutil
+import sqlite3
 import time
 
 import discord
@@ -15,7 +16,6 @@ import toml
 import helpers.appearance as appearance
 import helpers.module_handler as module_handler
 import helpers.perms as perms
-import helpers.perms
 
 
 # Arguments for API key input
@@ -116,6 +116,22 @@ class Startup():
             return
 
     def get_prefix(self, bot, message):
+        # Access database if it exists and fetch server's custom prefix if set
+        try:
+            db = sqlite3.connect('file:spacecat.db?mode=ro', uri=True)
+            cursor = db.cursor()
+            query = (message.guild.id,)
+            cursor.execute(
+                "SELECT prefix FROM server_settings WHERE server_id=?", query)
+            prefix = cursor.fetchone()[0]
+            db.close()
+
+            if prefix:
+                return prefix
+        except sqlite3.OperationalError:
+            pass
+
+        # Use the prefix set in config if no custom server prefix is set
         config = toml.load('config.toml')
         prefix = config['base']['prefix']
         return prefix
