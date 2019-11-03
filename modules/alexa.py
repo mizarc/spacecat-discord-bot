@@ -167,7 +167,7 @@ class Alexa(commands.Cog):
             # End function if bot failed to join a voice channel.
             if ctx.voice_client is None:
                 return
-                
+
         # Create embed
         embed = discord.Embed(colour=embed_type('info'))
         image = discord.File(embed_icons("music"), filename="image.png")
@@ -219,7 +219,9 @@ class Alexa(commands.Cog):
             embed = discord.Embed(
                     colour=embed_type('warn'),
                     description=f"Song selection timed out.")
-            await msg.edit(embed=embed)
+            embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
+            await msg.clear_reactions()
+            await msg.edit(file=None, embed=embed)
             return
 
         # Play selected song
