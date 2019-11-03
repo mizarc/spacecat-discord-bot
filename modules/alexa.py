@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 import youtube_dl
 
-from helpers.appearance import embed_type, embed_icons
+from helpers.appearance import embed_type, embed_icons, emoji_number
 from helpers import perms
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -174,7 +174,28 @@ class Alexa(commands.Cog):
         embed.add_field(
             name=f"Results for '{search}'",
             value=results_output, inline=False)
-        await ctx.send(file=image, embed=embed)
+        msg = await ctx.send(file=image, embed=embed)
+
+        # Add reaction button for every result
+        reactions = []
+        for index, result in enumerate(results_format):
+            emoji = emoji_number(index + 1)
+            await msg.add_reaction(emoji)
+            reactions.append(emoji)
+
+        # Check if the requester selects a valid reaction
+        def reaction_check(reaction, user):
+            if user == ctx.author and str(reaction) in reactions:
+                print('e')
+
+        # Request reaction within timeframe
+        try:
+            reaction, user = await self.bot.wait_for(
+                'reaction_add', timeout=10.0, check=reaction_check)
+        except asyncio.TimeoutError:
+            await ctx.send("Timed Out")
+            return
+        
         
 
     @commands.command()
