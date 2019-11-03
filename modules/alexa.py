@@ -20,7 +20,7 @@ ytdl_format_options = {
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
-    'ignoreerrors': False,
+    'ignoreerrors': True,
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
@@ -163,13 +163,23 @@ class Alexa(commands.Cog):
         embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
 
         # Get results from query and append to embed list
+        index = 0
+        results_url = []
         results_format = []
-        results = ytdl.extract_info(f"ytsearch5:{search}", download=False)
-        for index, result in enumerate(results['entries']):
-            title = result.get('title')
-            url = result.get('webpage_url')
-            results_format.append(f"{index + 1}. [{title}]({url})")
-
+        results = ytdl.extract_info(f"ytsearch8:{search}", download=False)
+        for result in results['entries']:
+            if index < 5:
+                try:
+                    title = result.get('title')
+                    url = result.get('webpage_url')
+                    index += 1
+                    results_url.append(url)
+                    results_format.append(f"{index}. [{title}]({url})")
+                except AttributeError:
+                    pass
+            else:
+                break
+            
         # Output results to chat
         results_output = '\n'.join(results_format)
         embed.add_field(
@@ -202,9 +212,8 @@ class Alexa(commands.Cog):
 
         # Play selected song
         number = appearance.emoji_to_number(str(reaction))
-        selected_song = results['entries'][number - 1]
-        url = selected_song.get('webpage_url')
-        await ctx.invoke(self.play, url=url)
+        selected_song = results_url[number - 1]
+        await ctx.invoke(self.play, url=selected_song)
         
 
     @commands.command()
