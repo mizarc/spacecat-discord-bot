@@ -188,9 +188,17 @@ class Alexa(commands.Cog):
             urls.append(f"{base_url}{title.attrs['href']}")
         
         # Format the data to be in a usable list
+        index = 0
         results_format = []
-        for index, title, duration, url in zip(range(5), titles, durations, urls):
-            results_format.append(f"{index + 1}. [{title.get_text()}]({url}) `{duration.get_text()}`")
+        for title, duration, url in zip(titles, durations, urls):
+            # Stop at 5 songs
+            if index == 5:
+                break
+            # Skip playlists
+            if '&list=' in url:
+                continue
+            index += 1
+            results_format.append(f"{index}. [{title.get_text()}]({url}) `{duration.get_text()}`")
             
         # Output results to chat
         results_output = '\n'.join(results_format)
