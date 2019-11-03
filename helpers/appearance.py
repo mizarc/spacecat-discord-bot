@@ -50,3 +50,13 @@ def embed_icons(name):
         icon = "assets/icons/information.png"
 
     return icon
+
+def emoji_number(number):
+    emojis = {
+        1: "1\u20e3",
+        2: "2\u20e3",
+        3: "3\u20e3",
+        4: "4\u20e3",
+        5: "5\u20e3"
+    }
+    return emojis.get(number)
