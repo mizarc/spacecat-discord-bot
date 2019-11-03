@@ -51,7 +51,7 @@ def embed_icons(name):
 
     return icon
 
-def emoji_number(number):
+def number_to_emoji(number):
     emojis = {
         1: "1\u20e3",
         2: "2\u20e3",
@@ -59,4 +59,18 @@ def emoji_number(number):
         4: "4\u20e3",
         5: "5\u20e3"
     }
+
     return emojis.get(number)
+
+def emoji_to_number(emoji):
+    numbers = {
+        "1\u20e3": 1,
+        "2\u20e3": 2,
+        "3\u20e3": 3,
+        "4\u20e3": 4,
+        "5\u20e3": 5
+    }
+
+    return numbers.get(emoji)
+
+    
