@@ -48,7 +48,7 @@ class Startup():
         print(
             "Hey there,\n"
             "It appears that you don't have a configuration file.\n"
-            "Don't worry, I'll help you set one up in only 3 steps.\n")
+            "Don't worry, I'll help you set one up in only 4 steps.\n")
 
         input("Press Enter to continue...")
         print('--------------------\n')
@@ -56,7 +56,7 @@ class Startup():
 
         # Ask users to provide an API key for the bot
         print(
-            "[Step 1]\n"
+            "[API Key]\n"
             "I'll need to get an API Key from your bot.\n"
             "https://discordapp.com/developers/applications/\n\n"
             "Open that link and follow these instructions:\n"
@@ -151,9 +151,12 @@ class SpaceCat(commands.Cog):
         except FileExistsError:
             pass
         
-        # Continue running config creator as long as there is no administrator
+        # Run initial configurator as long as values are missing
         if 'adminuser' not in config['base']:
-            await self._create_config_cont()
+            await self._set_admin()
+        if 'prefix' not in config['base']:
+            await self._set_prefix()
+            await self._send_invite()
 
         # Output launch completion message
         print(self.bot.user.name + " has successfully launched")
@@ -434,14 +437,14 @@ class SpaceCat(commands.Cog):
         
         await self.bot.logout()
 
-    async def _create_config_cont(self):
+    async def _set_admin(self):
         config = toml.load('config.toml')
         confirm = None
 
         while confirm != "yes":
             # Set a bot administrator
             print(
-                "[Step 2]\n"
+                "[Bot Administrator]\n"
                 f"Alright, {self.bot.user.name} is now operational.\n"
                 "Now I'll need to get your discord user ID.\n"
                 "This will give you admin access to the bot in Discord.\n"
@@ -489,24 +492,34 @@ class SpaceCat(commands.Cog):
                     break
                 else:
                     continue
+
+        with open("config.toml", "w") as config_file:
+            toml.dump(config, config_file)
         time.sleep(1)
 
+    async def _set_prefix(self):
         # Ask to set a command prefix
         print(
-            "[Step 3]\n"
+            "[Prefix]\n"
             "Your bot will need a prefix in order to run commands.\n"
             "You can set it to be whatever you want,\n"
-            "though I recommend you keep it short\n\n")
+            "though I recommend you keep it short\n")
 
         prefix_input = input("Enter your bot prefix here: ")
         print('--------------------\n')
+
+        # Save prefix to config
+        config = toml.load('config.toml')
         config['base']['prefix'] = prefix_input
+        with open("config.toml", "w") as config_file:
+            toml.dump(config, config_file)
         time.sleep(1)
 
+    async def _send_invite(self):
         # Provide a link to join the server
         print(
-            "[Step 4]\n"
-            "Finally, I need to join your Discord server.\n"
+            "[Invite]\n"
+            "I need to join your Discord server if i'm not in it already.\n"
             "Click the link below or copy it into your web browser.\n"
             "You can give this link to other users to help "
             "spread your bot around.\n\n"
@@ -516,13 +529,14 @@ class SpaceCat(commands.Cog):
             "--------------------\n")
 
         # Set default values and save config
+        config = toml.load('config.toml')
         config['base']['status'] = 'online'
         config['base']['activity_type'] = None
         config['base']['activity_name'] = None
         with open("config.toml", "w") as config_file:
             toml.dump(config, config_file)
         await asyncio.sleep(1)
-    
+
 
 def main():
     startup = Startup()
