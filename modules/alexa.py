@@ -155,6 +155,30 @@ class Alexa(commands.Cog):
 
     @commands.command()
     @perms.check()
+    async def playsearch(self, ctx, *, search):
+        # Create embed
+        embed = discord.Embed(colour=embed_type('info'))
+        image = discord.File(embed_icons("music"), filename="image.png")
+        embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
+
+        # Get results from query and append to embed list
+        results_format = []
+        results = ytdl.extract_info(f"ytsearch5:{search}", download=False)
+        for index, result in enumerate(results['entries']):
+            title = result.get('title')
+            url = result.get('webpage_url')
+            results_format.append(f"{index + 1}. [{title}]({url})")
+
+        # Output results to chat
+        results_output = '\n'.join(results_format)
+        embed.add_field(
+            name=f"Results for '{search}'",
+            value=results_output, inline=False)
+        await ctx.send(file=image, embed=embed)
+        
+
+    @commands.command()
+    @perms.check()
     async def stop(self, ctx):
         """Stops and clears the queue"""
         # Check if in a voice channel
