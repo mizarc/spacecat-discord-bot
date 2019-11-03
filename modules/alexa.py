@@ -8,7 +8,8 @@ import discord
 from discord.ext import commands
 import youtube_dl
 
-from helpers.appearance import embed_type, embed_icons, emoji_number
+import helpers.appearance as appearance
+from helpers.appearance import embed_type, embed_icons
 from helpers import perms
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -179,23 +180,31 @@ class Alexa(commands.Cog):
         # Add reaction button for every result
         reactions = []
         for index, result in enumerate(results_format):
-            emoji = emoji_number(index + 1)
+            emoji = appearance.number_to_emoji(index + 1)
             await msg.add_reaction(emoji)
             reactions.append(emoji)
 
         # Check if the requester selects a valid reaction
         def reaction_check(reaction, user):
             if user == ctx.author and str(reaction) in reactions:
-                print('e')
+                return reaction
 
         # Request reaction within timeframe
         try:
             reaction, user = await self.bot.wait_for(
-                'reaction_add', timeout=10.0, check=reaction_check)
+                'reaction_add', timeout=30.0, check=reaction_check)
         except asyncio.TimeoutError:
-            await ctx.send("Timed Out")
+            embed = discord.Embed(
+                    colour=embed_type('warn'),
+                    description=f"Song selection timed out.")
+            await msg.edit(embed=embed)
             return
-        
+
+        # Play selected song
+        number = appearance.emoji_to_number(str(reaction))
+        selected_song = results['entries'][number - 1]
+        url = selected_song.get('webpage_url')
+        await ctx.invoke(self.play, url=url)
         
 
     @commands.command()
