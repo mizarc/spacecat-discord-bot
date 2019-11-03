@@ -168,11 +168,6 @@ class Alexa(commands.Cog):
             if ctx.voice_client is None:
                 return
 
-        # Create embed
-        embed = discord.Embed(colour=embed_type('info'))
-        image = discord.File(embed_icons("music"), filename="image.png")
-        embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
-
         # Set urls to be used by the searcher
         base_url = "https://www.youtube.com"
         search_url = f"https://www.youtube.com/results?search_query={search}"
@@ -186,6 +181,14 @@ class Alexa(commands.Cog):
         urls = []
         for title in titles:
             urls.append(f"{base_url}{title.attrs['href']}")
+
+        # Alert user if search term returns no results
+        if not titles:
+            embed = discord.Embed(
+                colour=appearance.embed_type('warn'),
+                description="Search query returned no results")
+            await ctx.send(embed=embed)
+            return
         
         # Format the data to be in a usable list
         index = 0
@@ -199,8 +202,11 @@ class Alexa(commands.Cog):
                 continue
             index += 1
             results_format.append(f"{index}. [{title.get_text()}]({url}) `{duration.get_text()}`")
-            
+
         # Output results to chat
+        embed = discord.Embed(colour=embed_type('info'))
+        image = discord.File(embed_icons("music"), filename="image.png")
+        embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
         results_output = '\n'.join(results_format)
         embed.add_field(
             name=f"Results for '{search}'",
