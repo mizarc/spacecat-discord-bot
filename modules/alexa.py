@@ -1,12 +1,15 @@
 import asyncio
 from itertools import islice
 import os
+import re
 import shutil
 from time import gmtime, strftime, time
 
 import discord
 from discord.ext import commands
 import youtube_dl
+from bs4 import BeautifulSoup as bs
+import requests
 
 import helpers.appearance as appearance
 from helpers.appearance import embed_type, embed_icons
@@ -162,7 +165,24 @@ class Alexa(commands.Cog):
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
 
+        base_url = "https://www.youtube.com/"
+        search_url = f"https://www.youtube.com/results?search_query={search}"
+
+        source = requests.get(search_url).text
+        soup = bs(source, 'html.parser')
+        titles = soup.find_all('a', attrs={'class':'yt-uix-tile-link'})
+        durations = soup.find_all('span', attrs={'class':'video-time'})
+        urls = []
+        for title in titles:
+            urls.append(f"{base_url}{title.attrs['href']}")
+        
+        results_format = []
+        for index, title, duration, url in zip(range(5), titles, durations, urls):
+            results_format.append(f"{index + 1}. [{title.get_text()}]({url}) `{duration.get_text()}`")
+        print(results_format)
+
         # Get results from query and append to embed list
+        """
         index = 0
         results_url = []
         results_format = []
@@ -214,7 +234,7 @@ class Alexa(commands.Cog):
         number = appearance.emoji_to_number(str(reaction))
         selected_song = results_url[number - 1]
         await ctx.invoke(self.play, url=selected_song)
-        
+        """
 
     @commands.command()
     @perms.check()
