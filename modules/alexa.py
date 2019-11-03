@@ -165,9 +165,12 @@ class Alexa(commands.Cog):
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
 
-        base_url = "https://www.youtube.com/"
+        # Set urls to be used by the searcher
+        base_url = "https://www.youtube.com"
         search_url = f"https://www.youtube.com/results?search_query={search}"
 
+        # Query youtube with a search term and grab the title, duration and url
+        # of all videos on the page
         source = requests.get(search_url).text
         soup = bs(source, 'html.parser')
         titles = soup.find_all('a', attrs={'class':'yt-uix-tile-link'})
@@ -176,29 +179,10 @@ class Alexa(commands.Cog):
         for title in titles:
             urls.append(f"{base_url}{title.attrs['href']}")
         
+        # Format the data to be in a usable list
         results_format = []
         for index, title, duration, url in zip(range(5), titles, durations, urls):
             results_format.append(f"{index + 1}. [{title.get_text()}]({url}) `{duration.get_text()}`")
-        print(results_format)
-
-        # Get results from query and append to embed list
-        """
-        index = 0
-        results_url = []
-        results_format = []
-        results = ytdl.extract_info(f"ytsearch8:{search}", download=False)
-        for result in results['entries']:
-            if index < 5:
-                try:
-                    title = result.get('title')
-                    url = result.get('webpage_url')
-                    index += 1
-                    results_url.append(url)
-                    results_format.append(f"{index}. [{title}]({url})")
-                except AttributeError:
-                    pass
-            else:
-                break
             
         # Output results to chat
         results_output = '\n'.join(results_format)
@@ -232,9 +216,8 @@ class Alexa(commands.Cog):
 
         # Play selected song
         number = appearance.emoji_to_number(str(reaction))
-        selected_song = results_url[number - 1]
+        selected_song = urls[number - 1]
         await ctx.invoke(self.play, url=selected_song)
-        """
 
     @commands.command()
     @perms.check()
