@@ -1,13 +1,17 @@
 import asyncio
 from itertools import islice
 import os
+import re
 import shutil
 from time import gmtime, strftime, time
 
 import discord
 from discord.ext import commands
 import youtube_dl
+from bs4 import BeautifulSoup as bs
+import requests
 
+import helpers.appearance as appearance
 from helpers.appearance import embed_type, embed_icons
 from helpers import perms
 
@@ -19,7 +23,7 @@ ytdl_format_options = {
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
-    'ignoreerrors': False,
+    'ignoreerrors': True,
     'logtostderr': False,
     'quiet': True,
     'no_warnings': True,
@@ -148,10 +152,96 @@ class Alexa(commands.Cog):
             self.song_queue[ctx.guild.id].append(source)
             self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-            embed = discord.Embed(colour=embed_type('info'), description=f"Now playing {song_name}")
+            embed = discord.Embed(colour=embed_type('accept'), description=f"Now playing {song_name}")
 
         await ctx.send(embed=embed)
         return
+
+    @commands.command()
+    @perms.check()
+    async def playsearch(self, ctx, *, search):
+        # Join user's voice channel if not in one already
+        if ctx.voice_client is None:
+            await ctx.invoke(self.join)
+
+            # End function if bot failed to join a voice channel.
+            if ctx.voice_client is None:
+                return
+
+        # Set urls to be used by the searcher
+        base_url = "https://www.youtube.com"
+        search_url = f"https://www.youtube.com/results?search_query={search}"
+
+        # Query youtube with a search term and grab the title, duration and url
+        # of all videos on the page
+        source = requests.get(search_url).text
+        soup = bs(source, 'html.parser')
+        titles = soup.find_all('a', attrs={'class':'yt-uix-tile-link'})
+        durations = soup.find_all('span', attrs={'class':'video-time'})
+        urls = []
+        for title in titles:
+            urls.append(f"{base_url}{title.attrs['href']}")
+
+        # Alert user if search term returns no results
+        if not titles:
+            embed = discord.Embed(
+                colour=appearance.embed_type('warn'),
+                description="Search query returned no results")
+            await ctx.send(embed=embed)
+            return
+        
+        # Format the data to be in a usable list
+        index = 0
+        results_format = []
+        for title, duration, url in zip(titles, durations, urls):
+            # Stop at 5 songs
+            if index == 5:
+                break
+            # Skip playlists
+            if '&list=' in url:
+                continue
+            index += 1
+            results_format.append(f"{index}. [{title.get_text()}]({url}) `{duration.get_text()}`")
+
+        # Output results to chat
+        embed = discord.Embed(colour=embed_type('info'))
+        image = discord.File(embed_icons("music"), filename="image.png")
+        embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
+        results_output = '\n'.join(results_format)
+        embed.add_field(
+            name=f"Results for '{search}'",
+            value=results_output, inline=False)
+        msg = await ctx.send(file=image, embed=embed)
+
+        # Add reaction button for every result
+        reactions = []
+        for index, result in enumerate(results_format):
+            emoji = appearance.number_to_emoji(index + 1)
+            await msg.add_reaction(emoji)
+            reactions.append(emoji)
+
+        # Check if the requester selects a valid reaction
+        def reaction_check(reaction, user):
+            if user == ctx.author and str(reaction) in reactions:
+                return reaction
+
+        # Request reaction within timeframe
+        try:
+            reaction, user = await self.bot.wait_for(
+                'reaction_add', timeout=30.0, check=reaction_check)
+        except asyncio.TimeoutError:
+            embed = discord.Embed(
+                    colour=embed_type('warn'),
+                    description=f"Song selection timed out.")
+            embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
+            await msg.clear_reactions()
+            await msg.edit(file=None, embed=embed)
+            return
+
+        # Play selected song
+        number = appearance.emoji_to_number(str(reaction))
+        selected_song = urls[number - 1]
+        await ctx.invoke(self.play, url=selected_song)
 
     @commands.command()
     @perms.check()
