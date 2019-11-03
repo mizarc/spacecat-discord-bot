@@ -160,6 +160,14 @@ class Alexa(commands.Cog):
     @commands.command()
     @perms.check()
     async def playsearch(self, ctx, *, search):
+        # Join user's voice channel if not in one already
+        if ctx.voice_client is None:
+            await ctx.invoke(self.join)
+
+            # End function if bot failed to join a voice channel.
+            if ctx.voice_client is None:
+                return
+                
         # Create embed
         embed = discord.Embed(colour=embed_type('info'))
         image = discord.File(embed_icons("music"), filename="image.png")
