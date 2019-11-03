@@ -198,27 +198,34 @@ class SpaceCat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if self.bot.user.mention == message.content:
-            prefix = await self.bot.get_prefix(message)
+        # Check for both nickname and non nickname mentions
+        mentions = [f'<@{self.bot.user.id}>', f'<@!{self.bot.user.id}>']
+        for mention in mentions:
+            if mention == message.content:
+                prefix = await self.bot.get_prefix(message)
 
-            # Info on how to use the bot
-            embed = discord.Embed(
-                colour=appearance.embed_type('info'),
-                description="I'm here to provide a useful set a features")
-            image = discord.File(
-                appearance.embed_icons("information"), filename="image.png")
-            embed.set_author(
-                name="Hello There!", icon_url="attachment://image.png")
-            embed.add_field(
-                name=f"Current Prefix",
-                value=f"`{prefix[2]}`", inline=False)
-            embed.add_field(
-                name=f"Need Help?",
-                value=f"Type `{prefix[2]}help` to get a list of commands", inline=False) 
-            embed.add_field(
-                name=f"Want more features added?",
-                value=f"[Request them here](https://gitlab.com/Mizarc/spacecat-discord-bot/issues)", inline=False) 
-            await message.channel.send(file=image, embed=embed)
+                # Info on how to use the bot
+                embed = discord.Embed(
+                    colour=appearance.embed_type('info'),
+                    description="I'm here to provide a useful set a features")
+                image = discord.File(
+                    appearance.embed_icons("information"), filename="image.png")
+                embed.set_author(
+                    name="Hello There!", icon_url="attachment://image.png")
+                embed.add_field(
+                    name=f"Current Prefix",
+                    value=f"`{prefix[2]}`", inline=False)
+                embed.add_field(
+                    name=f"Need Help?",
+                    value=f"Type `{prefix[2]}help` to get a list of commands",
+                    inline=False) 
+                embed.add_field(
+                    name=f"Want more features added?",
+                    value=f"[Request them here]"
+                    "(https://gitlab.com/Mizarc/spacecat-discord-bot/issues)",
+                    inline=False) 
+                await message.channel.send(file=image, embed=embed)
+                return
 
     # Commands
     @commands.command()
