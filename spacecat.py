@@ -156,6 +156,8 @@ class SpaceCat(commands.Cog):
             await self._set_admin()
         if 'prefix' not in config['base']:
             await self._set_prefix()
+        servers = self.bot.guilds
+        if not servers:
             await self._send_invite()
 
         # Output launch completion message
