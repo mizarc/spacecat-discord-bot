@@ -152,7 +152,7 @@ class Alexa(commands.Cog):
             self.song_queue[ctx.guild.id].append(source)
             self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-            embed = discord.Embed(colour=embed_type('info'), description=f"Now playing {song_name}")
+            embed = discord.Embed(colour=embed_type('accept'), description=f"Now playing {song_name}")
 
         await ctx.send(embed=embed)
         return
