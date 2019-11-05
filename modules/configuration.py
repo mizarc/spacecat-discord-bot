@@ -52,6 +52,18 @@ class Configuration(commands.Cog):
     async def on_guild_join(self, guild):
         await self._add_server_entry(guild.id)
 
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        if isinstance(error, commands.CommandNotFound):
+            command = ctx.message
+            command_name = command.content.split()[0]
+            command_args = command.content.split()[1:]
+            print(command_name)
+            print(command_args)
+            if command.content == "!test":
+                command.content = "!ping"
+                await self.bot.process_commands(command)
+
     @commands.command()
     @perms.exclusive()
     async def status(self, ctx, statusname):
