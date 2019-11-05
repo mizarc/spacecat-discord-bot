@@ -60,8 +60,10 @@ class Configuration(commands.Cog):
             command_args = command.content.split()[1:]
             print(command_name)
             print(command_args)
-            if command.content == "!test":
-                command.content = "!ping"
+
+            if command_name == "!test":
+                command.content = f"!throw {' '.join(command_args)}"
+                print(command.content)
                 await self.bot.process_commands(command)
 
     @commands.command()
