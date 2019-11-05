@@ -55,15 +55,13 @@ class Configuration(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandNotFound):
+            prefix = ctx.prefix
             command = ctx.message
             command_name = command.content.split()[0]
             command_args = command.content.split()[1:]
-            print(command_name)
-            print(command_args)
 
-            if command_name == "!test":
-                command.content = f"!throw {' '.join(command_args)}"
-                print(command.content)
+            if command_name == f"{prefix}test":
+                command.content = f"{prefix}throw {' '.join(command_args)}"
                 await self.bot.process_commands(command)
 
     @commands.command()
