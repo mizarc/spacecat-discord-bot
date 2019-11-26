@@ -1,14 +1,13 @@
+# Python Bytecode
+*.py[cdo]
+
+# Local Environment/Settings
+.venv/
+.vscode/
+
+# Generated files
 assets/reactions
 cache/
-.vscode/
-env/
-
 *.db
-*.ini
 *.log
-*.pyc
-*.pyo
 *.toml
-
-
-
