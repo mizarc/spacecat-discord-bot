@@ -4,9 +4,6 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-with open("LICENSE", "r") as fh:
-    license = fh.read()
-
 setuptools.setup(
     name="SpaceCat-Discord-Bot",
     version="0.2.0",
@@ -16,7 +13,7 @@ setuptools.setup(
     url="https://gitlab.com/Mizarc/spacecat-discord-bot",
     author="Kevin Rahardjo",
     author_email="mizarc@protonmail.com",
-    license=license,
+    license="Apache License 2.0",
     packages=setuptools.find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
