@@ -2,8 +2,10 @@
 *.py[cdo]
 
 # Local Environment/Settings
+*.egg
 .venv/
 .vscode/
+*.egg-info/
 
 # Generated files
 assets/reactions
