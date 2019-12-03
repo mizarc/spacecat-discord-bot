@@ -4,6 +4,9 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+with open("requirements.txt", "r") as fh:
+    install_requires = fh.read().splitlines()
+
 setuptools.setup(
     name="SpaceCat-Discord-Bot",
     version="0.2.0",
@@ -28,10 +31,5 @@ setuptools.setup(
         "Topic :: Communications :: Chat"
     ],
     python_requires='>=3.6',
-    install_requires=[
-        'discord.py[voice]',
-        'youtube_dl',
-        'toml',
-        'pillow'
-    ]
+    install_requires=install_requires
 )
