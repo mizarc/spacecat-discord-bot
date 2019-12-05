@@ -20,7 +20,7 @@ clean: ## Cleans up all build and environment files
 run: setup ## Runs the program
 	${PYTHON} spacecat/spacecat.py
 
-run-daemon: setup ## Uses screen to run the program as a daemon
+run-daemon: setup ## Uses screen to run the program as a daemon (Linux only)
 	screen -dmS ${DAEMON} ${PYTHON} spacecat/spacecat.py
 
 dist: setup ## Packages the software in a distributable format
