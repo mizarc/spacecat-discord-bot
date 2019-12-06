@@ -31,10 +31,10 @@ def get_enabled():
 
 def get_disabled():
     # Fetch disabled modules from config file
-    config = toml.load('config.toml')
     try:
+        config = toml.load('config.toml')
         disabled_modules = config['base']['disabled_modules']
         return disabled_modules
-    except KeyError:
+    except (KeyError, FileNotFoundError):
         return None
 
