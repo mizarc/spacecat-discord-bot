@@ -11,7 +11,7 @@ A magical, open source, self hostable, easy to use, general purpose, fully exten
 
 How to install all other requirements after installing python:
 
-`py -3 -m pip install -U discord.py[voice] youtube_dl pillow toml`
+`py -3 -m pip install -U discord.py[voice] youtube_dl pillow toml requests bs4`
 
 Note: For MacOS/Linux, substitute `py -3` with `sudo python3`
 
