@@ -1,14 +1,16 @@
+# Python Bytecode
+*.py[cdo]
+
+# Local Environment/Settings
+*.egg
+.venv/
+.vscode/
+*.egg-info/
+
+# Generated files
+dist/
 assets/reactions
 cache/
-.vscode/
-env/
-
 *.db
-*.ini
 *.log
-*.pyc
-*.pyo
 *.toml
-
-
-
