@@ -1,9 +1,9 @@
 echo Creating virtual environment...
-python3 -m venv .venv > /dev/null
+py -3 -m venv .venv
 
 echo Including Requirements...
-SET PYTHON=.venv/bin/python3
-%PYTHON% -m pip install -e . > /dev/null
+SET PYTHON=.venv\Scripts\python.exe
+%PYTHON% -m pip install -e .
 
 cd spacecat
-../%PYTHON% spacecat.py
+..\%PYTHON% spacecat.py
