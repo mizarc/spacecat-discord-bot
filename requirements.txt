@@ -1,6 +1,7 @@
 beautifulsoup4==4.8.1
-discord.py==1.2.5
+discord.py[voice]==1.2.5
 Pillow==6.2.1
 requests==2.22.0
 toml==0.10.0
 youtube-dl==2019.11.28
+
