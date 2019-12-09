@@ -1,2 +1,4 @@
 include LICENSE
 recursive-include spacecat/assets *
+include run.bat
+include run.sh
