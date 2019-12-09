@@ -8,7 +8,7 @@ def get():
     # Get all modules that are present in the folder
     modulelist = []
     for module in glob.glob('modules/*.py'):
-        if module == "modules/__init__.py":
+        if module[8:] == "__init__.py":
             continue
         modulelist.append(module[8:-3])
     return modulelist
