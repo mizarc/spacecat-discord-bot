@@ -4,31 +4,20 @@ A magical, open source, self hostable, easy to use, general purpose, fully exten
 
 ## Requirements
 -   [Python 3.6+](https://www.python.org/)
--   [discord.py](https://github.com/Rapptz/discord.py)
--   [youtube_dl](https://ytdl-org.github.io/youtube-dl/index.html)
--   [Pillow](https://pillow.readthedocs.io/en/stable/)
--   [toml](https://pypi.org/project/toml/)
--   [requests](https://2.python-requests.org/en/master/)
--   [bs4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)
-
-How to install all other requirements after installing python:
-
-`py -3 -m pip install -U discord.py[voice] youtube_dl pillow toml requests bs4`
-
-Note: For MacOS/Linux, substitute `py -3` with `sudo python3`
-
+-   [Opus](https://www.opus-codec.org/)
+-   [FFmpeg](https://www.ffmpeg.org/)
 
 ## Running
 
 ### Windows
-Open the terminal to the software root folder and type `spacecat.py`.
+Open the software root folder and run `run.bat`.
 
-Alternatively, python can be called directly using `py -3 spacecat.py` or any other alternative alias
+Alternatively, python can be called directly using `py -3 spacecat.py` in the spacecat directory
 
 ### MacOS & Linux
-Open the terminal to the software root folder and run the software as a script `./spacecat.py`.
+Open the software root folder and run `run.sh`.
 
-Alternatively, python can be called directly using `python3 spacecat.py` or any other alternative alias
+Alternatively, python can be called directly using `python3 spacecat.py` in the spacecat directory
 
 ## Installation
 You'll go through this stuff when you run the program, don't worry.
