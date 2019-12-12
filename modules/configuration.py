@@ -29,19 +29,27 @@ class Configuration(commands.Cog):
     @perms.exclusive()
     async def status(self, ctx, statusname):
         config = toml.load('config.toml')
-        activity = discord.Activity(type=activity_type_class(config['base']['activity_type']), name=config['base']['activity_name'])
         status = status_class(statusname)
+        try:
+            activity = discord.Activity(type=activity_type_class(config['base']['activity_type']), name=config['base']['activity_name'])
+        except KeyError:
+            activity = None
+        
 
+        # Check if valid status name was used
         if status == None:
             embed = discord.Embed(colour=embed_type('warn'), description=f"That's not a valid status")
             await ctx.send(embed=embed)
             return
 
-        print(status)
-        await self.bot.change_presence(status=status, activity=activity)
+        if activity:
+            await self.bot.change_presence(status=status, activity=activity)
+        else:
+            await self.bot.change_presence(status=status)
 
-        self.config['Base']['status'] = statusname
-        toml.dump(config, 'config.toml')
+        config['base']['status'] = statusname
+        with open("config.toml", "w") as config_file:
+            toml.dump(config, config_file)
 
     @commands.command()
     @perms.exclusive()
@@ -49,17 +57,26 @@ class Configuration(commands.Cog):
         config = toml.load('config.toml')
         activitytype = activity_type_class(acttype)
         activity = discord.Activity(type=activitytype, name=name, url="https://www.twitch.tv/yeet")
+        try:
+            status = config['base']['status']
+        except KeyError:
+            status = None
 
         if activitytype == None:
             embed = discord.Embed(colour=embed_type('warn'), description=f"That's not a valid activity type")
             await ctx.send(embed=embed)
             return
 
-        await self.bot.change_presence(activity=activity, status=config['base']['status'])
+        if status:
+            await self.bot.change_presence(activity=activity, status=status)
+        else:
+            await self.bot.change_presence(activity=activity)
 
-        config['Base']['activity_type'] = acttype
-        config['Base']['activity_name'] = name
-        toml.dump(config, 'config.toml')
+
+        config['base']['activity_type'] = acttype
+        config['base']['activity_name'] = name
+        with open("config.toml", "w") as config_file:
+            toml.dump(config, config_file)
 
     @commands.group()
     @perms.exclusive()
