@@ -23,6 +23,9 @@ class Administration(commands.Cog):
             '''CREATE TABLE IF NOT EXISTS server_settings 
             (server_id INTEGER PRIMARY KEY, prefix TEXT)''')
         cursor.execute(
+            '''CREATE TABLE IF NOT EXISTS command_aliases
+            (server_id INTEGER, alias TEXT, command TEXT)''')
+        cursor.execute(
             '''CREATE TABLE IF NOT EXISTS group_permissions
             (serverid INTEGER, groupid INTEGER, perm TEXT)''')
         cursor.execute(
@@ -51,6 +54,43 @@ class Administration(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         await self._add_server_entry(guild.id)
+
+    @commands.group()
+    @perms.check()
+    async def alias(self, ctx):
+        """Configure command aliases"""
+        if ctx.invoked_subcommand is None:
+            embed = discord.Embed(colour=embed_type('warn'), description="Please specify a valid subcommand: `add/remove`")
+            await ctx.send(embed=embed)
+
+    @alias.command(name='add')
+    @perms.check()
+    async def addalias(self, ctx, alias, *, command):
+        """Allows a command to be executed with an alias"""
+        # Check if alias already exists in server
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (ctx.guild.id, alias)
+        cursor.execute(f"SELECT command FROM command_aliases WHERE server_id=? AND alias=?", query)
+        result = cursor.fetchall()
+        db.close()
+
+        # Alert user if alias is already in use
+        if result:
+            embed = discord.Embed(colour=embed_type('warn'), description=f"Alias `{alias}` is already assigned to `{command}`")
+            await ctx.send(embed=embed)
+            return
+
+        # Add alias to database
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        value = (ctx.guild.id, alias, command)
+        cursor.execute("INSERT INTO command_aliases VALUES (?,?,?)", value)
+        db.commit()
+        db.close()
+
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Alias `{alias}` has been assigned to `{command}`")
+        await ctx.send(embed=embed)
 
     @commands.group()
     @perms.check()
