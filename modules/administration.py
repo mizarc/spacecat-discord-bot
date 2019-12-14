@@ -67,17 +67,10 @@ class Administration(commands.Cog):
     @perms.check()
     async def addalias(self, ctx, alias, *, command):
         """Allows a command to be executed with an alias"""
-        # Check if alias already exists in server
-        db = sqlite3.connect('spacecat.db')
-        cursor = db.cursor()
-        query = (ctx.guild.id, alias)
-        cursor.execute(f"SELECT command FROM command_aliases WHERE server_id=? AND alias=?", query)
-        result = cursor.fetchall()
-        db.close()
-
         # Alert user if alias is already in use
-        if result:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"Alias `{alias}` is already assigned to `{command}`")
+        check = await self._alias_check(ctx, alias)
+        if check:
+            embed = discord.Embed(colour=embed_type('warn'), description=f"Alias `{alias}` is already assigned to `{check}`")
             await ctx.send(embed=embed)
             return
 
@@ -90,6 +83,28 @@ class Administration(commands.Cog):
         db.close()
 
         embed = discord.Embed(colour=embed_type('accept'), description=f"Alias `{alias}` has been assigned to `{command}`")
+        await ctx.send(embed=embed)
+
+    @alias.command(name='remove')
+    @perms.check()
+    async def removealias(self, ctx, alias):
+        """Removes an existing alias"""
+        # Alert user if alias is not in use
+        check = await self._alias_check(ctx, alias)
+        if not check:
+            embed = discord.Embed(colour=embed_type('warn'), description=f"Alias `{alias}` hasn't been assigned to anything")
+            await ctx.send(embed=embed)
+            return
+
+        # Remove alias from database
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        value = (ctx.guild.id, alias)
+        cursor.execute("DELETE FROM command_aliases WHERE server_id=? AND alias=?", value)
+        db.commit()
+        db.close()
+
+        embed = discord.Embed(colour=embed_type('accept'), description=f"Alias `{alias}` has been removed`")
         await ctx.send(embed=embed)
 
     @commands.group()
@@ -556,6 +571,19 @@ class Administration(commands.Cog):
             value)
         db.commit()
         db.close()
+
+    async def _alias_check(self, ctx, alias):
+        # Query database for specified alias
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        query = (ctx.guild.id, alias)
+        cursor.execute(f"SELECT command FROM command_aliases WHERE server_id=? AND alias=?", query)
+        result = cursor.fetchall()
+        db.close()
+
+        if result:
+            return result[0][0]
+        return False
 
     async def _wildcard_check(self, ctx, type_, id_):
         # Query database for wildcard permission
