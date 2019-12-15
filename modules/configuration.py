@@ -17,13 +17,22 @@ class Configuration(commands.Cog):
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandNotFound):
             prefix = ctx.prefix
-            command = ctx.message
-            command_name = command.content.split()[0]
-            command_args = command.content.split()[1:]
+            cmd = ctx.message
+            cmd_name = cmd.content.split()[0][len(prefix):]
+            cmd_args = cmd.content.split()[1:]
 
-            if command_name == f"{prefix}test":
-                command.content = f"{prefix}throw {' '.join(command_args)}"
-                await self.bot.process_commands(command)
+            # Query if command exists as an alias in database
+            db = sqlite3.connect('spacecat.db')
+            cursor = db.cursor()
+            query = (ctx.guild.id, cmd_name)
+            cursor.execute(f"SELECT command FROM command_aliases WHERE server_id=? AND alias=?", query)
+            result = cursor.fetchall()
+            db.close()
+
+            # Use command linked to alias to replace command process
+            if result:
+                cmd.content = f"{prefix}{result[0][0]} {' '.join(cmd_args)}"
+                await self.bot.process_commands(cmd)
 
     @commands.command()
     @perms.exclusive()
