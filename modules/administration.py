@@ -1,3 +1,4 @@
+from itertools import islice
 import configparser
 import os
 import sqlite3
@@ -106,6 +107,34 @@ class Administration(commands.Cog):
 
         embed = discord.Embed(colour=embed_type('accept'), description=f"Alias `{alias}` has been removed`")
         await ctx.send(embed=embed)
+
+    @alias.command(name='list')
+    @perms.check()
+    async def listalias(self, ctx):
+        # Get all aliases from database
+        db = sqlite3.connect('spacecat.db')
+        cursor = db.cursor()
+        value = (ctx.guild.id,)
+        cursor.execute("SELECT alias, command FROM command_aliases WHERE server_id=?", value)
+        result = cursor.fetchall()
+        db.close()
+
+        # Tell user if no aliases exist
+        if not result:
+            embed = discord.Embed(colour=embed_type('warn'), description=f"No aliases currently exist")
+            await ctx.send(embed=embed)
+            return
+
+        embed = discord.Embed(colour=embed_type('info'))
+        image = discord.File(embed_icons("database"), filename="image.png")
+        embed.set_author(name="Command Aliases", icon_url="attachment://image.png")
+
+        aliases = []
+        for index, alias in enumerate(islice(result, 10)):
+            aliases.append(f"{index + 1}. `{alias[0]}`: {alias[1]}")
+        embed.add_field(name="Aliases", value='\n'.join(aliases))
+
+        await ctx.send(embed=embed, file=image)
 
     @commands.group()
     @perms.check()
