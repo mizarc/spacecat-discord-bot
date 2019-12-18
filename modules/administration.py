@@ -125,9 +125,7 @@ class Administration(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        embed = discord.Embed(colour=embed_type('info'))
-        image = discord.File(embed_icons("database"), filename="image.png")
-        embed.set_author(name="Command Aliases", icon_url="attachment://image.png")
+        
 
         # Modify page variable to get every ten results
         page -= 1
@@ -137,8 +135,19 @@ class Administration(commands.Cog):
         aliases = []
         for index, alias in enumerate(islice(result, page, page + 10)):
             aliases.append(f"{page + index + 1}. `{alias[0]}`: {alias[1]}")
-        embed.add_field(name="Aliases", value='\n'.join(aliases))
 
+        if not aliases:
+            embed = discord.Embed(
+                colour=embed_type('warn'),
+                description=f"There are no aliases on that page")
+            await ctx.send(embed=embed)
+            return
+            
+
+        embed = discord.Embed(colour=embed_type('info'))
+        image = discord.File(embed_icons("database"), filename="image.png")
+        embed.set_author(name="Command Aliases", icon_url="attachment://image.png")
+        embed.add_field(name="Aliases", value='\n'.join(aliases))
         await ctx.send(embed=embed, file=image)
 
     @commands.group()
