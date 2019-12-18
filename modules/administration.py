@@ -125,8 +125,6 @@ class Administration(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        
-
         # Modify page variable to get every ten results
         page -= 1
         if page > 0: page = page * 10
@@ -143,7 +141,6 @@ class Administration(commands.Cog):
             await ctx.send(embed=embed)
             return
             
-
         embed = discord.Embed(colour=embed_type('info'))
         image = discord.File(embed_icons("database"), filename="image.png")
         embed.set_author(name="Command Aliases", icon_url="attachment://image.png")
