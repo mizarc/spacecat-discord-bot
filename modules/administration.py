@@ -110,7 +110,7 @@ class Administration(commands.Cog):
 
     @alias.command(name='list')
     @perms.check()
-    async def listalias(self, ctx):
+    async def listalias(self, ctx, page=1):
         # Get all aliases from database
         db = sqlite3.connect('spacecat.db')
         cursor = db.cursor()
@@ -129,9 +129,14 @@ class Administration(commands.Cog):
         image = discord.File(embed_icons("database"), filename="image.png")
         embed.set_author(name="Command Aliases", icon_url="attachment://image.png")
 
+        # Modify page variable to get every ten results
+        page -= 1
+        if page > 0: page = page * 10
+
+        # Get a list of 10 aliases
         aliases = []
-        for index, alias in enumerate(islice(result, 10)):
-            aliases.append(f"{index + 1}. `{alias[0]}`: {alias[1]}")
+        for index, alias in enumerate(islice(result, page, page + 10)):
+            aliases.append(f"{page + index + 1}. `{alias[0]}`: {alias[1]}")
         embed.add_field(name="Aliases", value='\n'.join(aliases))
 
         await ctx.send(embed=embed, file=image)
