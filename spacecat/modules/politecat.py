@@ -20,15 +20,20 @@ class PoliteCat(commands.Cog):
         elif not message.attachments[0].filename[-4:] == 'webp':
             return
 
-        # Set gif and webp naming variables
+        # Fetch image from attachment
         gif = f'cache/{str(message.id)}.gif'
         webp = f'cache/{str(message.id)}.webp'
-
-        # Convert animated webp to gif
         await message.attachments[0].save(webp)
         image = Image.open(webp)
+
+        # Check if webp is attachment
         try:
             image.seek(1)
+        except EOFError:
+            return
+
+        # Convert webp to gif
+        try:
             image.info.pop('background', None)
             image.save(gif, 'gif', save_all=True)
             await message.channel.send(
@@ -37,7 +42,7 @@ class PoliteCat(commands.Cog):
             await message.delete()
 
         # Notify if conversion failed
-        except:
+        except discord.errors.HTTPException:
             embed = discord.Embed(
                 colour=embed_type('warn'),
                 description=f"Failed to convert webp to gif. "
