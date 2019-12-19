@@ -26,7 +26,7 @@ class PoliteCat(commands.Cog):
         await message.attachments[0].save(webp)
         image = Image.open(webp)
 
-        # Check if webp is attachment
+        # Check if webp is animated
         try:
             image.seek(1)
         except EOFError:
