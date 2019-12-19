@@ -11,9 +11,13 @@ from helpers.appearance import embed_icons, embed_type
 class PoliteCat(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.webp_convert = True
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        if not self.webp_convert:
+            return
+
         # Check for valid webp attachment
         if not message.attachments:
             return
@@ -54,6 +58,23 @@ class PoliteCat(commands.Cog):
             os.remove(webp)
         
         return
+
+    @commands.command()
+    @perms.check()
+    async def togglewebp(self, ctx):
+        if self.webp_convert:
+            self.webp_convert = False
+            embed = discord.Embed(
+                colour=embed_type('accept'),
+                description="Automatic WebP conversion has been disabled")
+            await ctx.send(embed=embed)
+
+        elif not self.webp_convert:
+            self.webp_convert = True
+            embed = discord.Embed(
+                colour=embed_type('accept'),
+                description="Automatic WebP conversion has been enabled")
+            await ctx.send(embed=embed)
 
     @commands.group()
     @perms.check()
