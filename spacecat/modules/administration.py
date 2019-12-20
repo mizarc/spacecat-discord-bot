@@ -70,7 +70,7 @@ class Administration(commands.Cog):
         """Allows a command to be executed with an alias"""        
         # Limit alias to 15 chars
         if len(alias) > 15:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"Alias is too long")
+            embed = discord.Embed(colour=embed_type('warn'), description=f"Alias name is too long")
             await ctx.send(embed=embed)
             return
 
