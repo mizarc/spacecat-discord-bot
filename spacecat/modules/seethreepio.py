@@ -10,6 +10,7 @@ class Seethreepio(commands.Cog):
     @commands.command()
     @perms.check()
     async def echo(self, ctx, *, message):
+        """Repeats a given message"""
         await ctx.send(message)
 
     @commands.command()
