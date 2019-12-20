@@ -132,7 +132,13 @@ class Administration(commands.Cog):
         # Get a list of 10 aliases
         aliases = []
         for index, alias in enumerate(islice(result, page, page + 10)):
-            aliases.append(f"{page + index + 1}. `{alias[0]}`: {alias[1]}")
+            # Cut off the linked command to 70 chars
+            if len(alias[1]) > 70:
+                command = f"{alias[1][:67]}..." 
+            else:
+                command = alias[1]
+                
+            aliases.append(f"{page + index + 1}. `{alias[0]}`: {command}")
 
         if not aliases:
             embed = discord.Embed(
