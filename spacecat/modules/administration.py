@@ -67,7 +67,13 @@ class Administration(commands.Cog):
     @alias.command(name='add')
     @perms.check()
     async def addalias(self, ctx, alias, *, command):
-        """Allows a command to be executed with an alias"""
+        """Allows a command to be executed with an alias"""        
+        # Limit alias to 15 chars
+        if len(alias) > 15:
+            embed = discord.Embed(colour=embed_type('warn'), description=f"Alias is too long")
+            await ctx.send(embed=embed)
+            return
+
         # Alert user if alias is already in use
         check = await self._alias_check(ctx, alias)
         if check:
@@ -137,7 +143,7 @@ class Administration(commands.Cog):
                 command = f"{alias[1][:67]}..." 
             else:
                 command = alias[1]
-                
+
             aliases.append(f"{page + index + 1}. `{alias[0]}`: {command}")
 
         if not aliases:
