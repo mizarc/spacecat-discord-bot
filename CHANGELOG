@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2019-12-21
+### Added
+- Repeat message using echo
+- Bot wide custom prefix using globalprefix
+- Server wide custom prefix using prefix
+- Reset prefix to global prefix using resetprefix
+- Bot commands now callable using bot mention
+- Fetch top 5 YouTube results using playsearch for use in music playback
+- Set server wide dynamic command aliases using alias
+- Script based setup to handle running the program inside of a virtual environment
+- Setup.py for distribution purposes
+- Makefile for easy development environment setup
+
+### Changed
+- First run setup to be more streamlined including prefix setting
+- README to include new instructions and requirements utilising the script based setup and start
+
+### Fixed
+- Automatic WebP conversion trying to convert static images
+- Setup process failing if bot is exited during setup
+
+## [0.1.3] - 2019-12-06
+### Fixed
+- Invalid config check preventing a fresh install of the bot to run
+
+## [0.1.2] - 2019-10-30
+### Fixed
+- Looped songs volume doubling and being invalidated due to incorrect FFmpeg calls
+- Current duration in looped songs
+- Enable command not handling already enabled modules
+- Startup modules function trying to remove disabled modules twice (may have fixed enabling disabled modules)
+
 ## [0.1.1] - 2019-10-24
 ### Changed
 - Music player now streams rather than downloading music before playing
@@ -18,7 +50,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Text message being removed on image conversion
 - Queue not showing when too many songs are added by setting a limit
 - Queue now works across multiple servers without conflicting
-
 
 ## [0.1.0] - 2019-10-19
 ### Added
