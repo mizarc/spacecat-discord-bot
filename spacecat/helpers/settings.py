@@ -1,5 +1,6 @@
 import discord
 
+
 def activity_type_class(acttype):
     if acttype == "playing":
         activity = discord.ActivityType.playing
@@ -11,7 +12,6 @@ def activity_type_class(acttype):
         activity = discord.ActivityType.watching
     else:
         return
-
     return activity
 
 
@@ -26,8 +26,8 @@ def status_class(statusname):
         status = discord.Status.invisible
     else:
         return
-
     return status
+
 
 def embed_type(name):
     if name == "warn":
@@ -38,8 +38,8 @@ def embed_type(name):
         colour = discord.Color.from_rgb(3, 169, 244)
     elif name == "special":
         colour = discord.Color.from_rgb(103, 58, 183)
-
     return colour
+
 
 def embed_icons(name):
     if name == "music":
@@ -48,8 +48,8 @@ def embed_icons(name):
         icon = "assets/icons/database.png"
     elif name == "information":
         icon = "assets/icons/information.png"
-
     return icon
+
 
 def number_to_emoji(number):
     emojis = {
@@ -59,8 +59,8 @@ def number_to_emoji(number):
         4: "4\u20e3",
         5: "5\u20e3"
     }
-
     return emojis.get(number)
+
 
 def emoji_to_number(emoji):
     numbers = {
@@ -70,7 +70,4 @@ def emoji_to_number(emoji):
         "4\u20e3": 4,
         "5\u20e3": 5
     }
-
     return numbers.get(emoji)
-
-    
