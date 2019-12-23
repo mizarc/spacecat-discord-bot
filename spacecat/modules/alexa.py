@@ -185,7 +185,7 @@ class Alexa(commands.Cog):
         # Alert user if search term returns no results
         if not titles:
             embed = discord.Embed(
-                colour=appearance.settings.embed_type('warn'),
+                colour=settings.embed_type('warn'),
                 description="Search query returned no results")
             await ctx.send(embed=embed)
             return
@@ -216,7 +216,7 @@ class Alexa(commands.Cog):
         # Add reaction button for every result
         reactions = []
         for index, result in enumerate(results_format):
-            emoji = appearance.number_to_emoji(index + 1)
+            emoji = settings.number_to_emoji(index + 1)
             await msg.add_reaction(emoji)
             reactions.append(emoji)
 
@@ -239,7 +239,7 @@ class Alexa(commands.Cog):
             return
 
         # Play selected song
-        number = appearance.emoji_to_number(str(reaction))
+        number = settings.emoji_to_number(str(reaction))
         selected_song = urls[number - 1]
         await ctx.invoke(self.play, url=selected_song)
 
