@@ -1,6 +1,10 @@
 import discord
 
 
+# Data folder location
+data = '../data/'
+
+
 def activity_type_class(acttype):
     if acttype == "playing":
         activity = discord.ActivityType.playing

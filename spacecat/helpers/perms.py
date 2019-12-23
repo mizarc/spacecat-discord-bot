@@ -7,15 +7,18 @@ from discord.ext import commands
 from discord.utils import get
 import toml
 
+from helpers import settings
+
+
 def new(guild):
     # Check if server doesn't have a config file
     if not os.path.exists('servers/' + str(guild.id) + '.toml'):
         # Get default perms from global config
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
         userperms = config['PermsPreset']['user']
 
         # Assign @everyone role the global user perms
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
         config['PermsGroups'] = {}
         config['PermsGroups'][str(guild.default_role.id)] = userperms
         config['PermsUsers'] = {}
@@ -29,7 +32,7 @@ def check():
             return True
 
         # Open server's database file
-        db = sqlite3.connect('spacecat.db')
+        db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
 
         # Check if specific user has a permission in server
@@ -101,7 +104,7 @@ def check():
 def exclusive():
     def predicate(ctx):
         # Open global config file
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
 
         # If user is the bot administrator
         if ctx.author.id == int(config['base']['adminuser']):

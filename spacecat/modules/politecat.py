@@ -6,7 +6,8 @@ from discord.ext import commands
 from PIL import Image
 
 from helpers import perms
-from helpers.appearance import embed_icons, embed_type
+from helpers import settings
+
 
 class PoliteCat(commands.Cog):
     def __init__(self, bot):
@@ -48,7 +49,7 @@ class PoliteCat(commands.Cog):
         # Notify if conversion failed
         except discord.errors.HTTPException:
             embed = discord.Embed(
-                colour=embed_type('warn'),
+                colour=settings.embed_type('warn'),
                 description=f"Failed to convert webp to gif. "
                 "Image may be too large")
             await message.channel.send(embed=embed) 
@@ -65,14 +66,14 @@ class PoliteCat(commands.Cog):
         if self.webp_convert:
             self.webp_convert = False
             embed = discord.Embed(
-                colour=embed_type('accept'),
+                colour=settings.embed_type('accept'),
                 description="Automatic WebP conversion has been disabled")
             await ctx.send(embed=embed)
 
         elif not self.webp_convert:
             self.webp_convert = True
             embed = discord.Embed(
-                colour=embed_type('accept'),
+                colour=settings.embed_type('accept'),
                 description="Automatic WebP conversion has been enabled")
             await ctx.send(embed=embed)
 
@@ -81,7 +82,7 @@ class PoliteCat(commands.Cog):
     async def reactcfg(self, ctx):
         "Configure available reaction images"
         if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"Please specify a valid subcommand: `add/remove`")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"Please specify a valid subcommand: `add/remove`")
             await ctx.send(embed=embed) 
 
     @reactcfg.command()
@@ -92,7 +93,7 @@ class PoliteCat(commands.Cog):
         try:
             image = ctx.message.attachments[0]
         except IndexError:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"There are no attachments in that message")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"There are no attachments in that message")
             await ctx.send(embed=embed) 
             return
 
@@ -113,7 +114,7 @@ class PoliteCat(commands.Cog):
 
         # Check if name already exists
         if name in assetlist:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"Reaction name already in use")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"Reaction name already in use")
             await ctx.send(embed=embed) 
             os.chdir("../../")
             return
@@ -130,7 +131,7 @@ class PoliteCat(commands.Cog):
             os.chdir("../../")
             return
         
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Added {name} to reactions")
+        embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Added {name} to reactions")
         await ctx.send(embed=embed) 
         os.chdir("../../")
         return
@@ -152,7 +153,7 @@ class PoliteCat(commands.Cog):
 
         # Check if image name exists
         if name not in assetlist:
-            embed = discord.Embed(colour=embed_type('warn'), description="Reaction image does not exist")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="Reaction image does not exist")
             await ctx.send(embed=embed) 
             os.chdir("../../")
             return
@@ -164,7 +165,7 @@ class PoliteCat(commands.Cog):
             os.remove(name + ".gif")
         finally:
             os.chdir("../../")
-            embed = discord.Embed(colour=embed_type('accept'), description=f"Removed {name} from reactions")
+            embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Removed {name} from reactions")
             await ctx.send(embed=embed) 
             return
             
@@ -189,7 +190,7 @@ class PoliteCat(commands.Cog):
         try:
             os.chdir("assets/reactions")
         except:
-            embed = discord.Embed(colour=embed_type('warn'), description="No reactions are available")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="No reactions are available")
             await ctx.send(embed=embed) 
             os.chdir("../../")
             return
