@@ -30,11 +30,15 @@ class Startup():
         self.bot = commands.Bot(command_prefix=self.get_prefix)
 
     def logging(self):
+        # Create log folder if it doesn't exist
+        if not os.path.exists('config.ini'):
+            os.mkdir("../logs")
+
         # Setup file logging
         logger = logging.getLogger('discord')
         logger.setLevel(logging.DEBUG)
         handler = logging.FileHandler(
-            filename='spacecat.log',
+            filename='../logs/latest.log',
             encoding='utf-8',
             mode='w'
         )
