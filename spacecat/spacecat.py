@@ -13,7 +13,7 @@ import discord
 from discord.ext import commands
 import toml
 
-import helpers.appearance as appearance
+from helpers import settings
 import helpers.module_handler as module_handler
 import helpers.perms as perms
 
@@ -72,7 +72,7 @@ class Startup():
         config = {}
         config['base'] = {}
         config['base']['apikey'] = keyinput
-        with open("config.toml", "w") as config_file:
+        with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
         self.run(firstrun=True)
@@ -93,7 +93,7 @@ class Startup():
         self.modules = modules
 
     def run(self, firstrun=False):
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
         apikey = config['base']['apikey']
 
         # Attempt to use API key from config and output error if unable to run
@@ -105,7 +105,7 @@ class Startup():
                 print(
                     "Looks like that API key didn't work.\n"
                     "Run the program again and use the correct key.")
-                os.remove("config.toml")
+                os.remove(settings.data + "config.toml")
                 return
             print(
                 "[Error]\n"
@@ -118,7 +118,7 @@ class Startup():
     def get_prefix(self, bot, message):
         # Access database if it exists and fetch server's custom prefix if set
         try:
-            db = sqlite3.connect('file:spacecat.db?mode=ro', uri=True)
+            db = sqlite3.connect(f'file:{settings.data}spacecat.db?mode=ro', uri=True)
             cursor = db.cursor()
             query = (message.guild.id,)
             cursor.execute(
@@ -132,7 +132,7 @@ class Startup():
             pass
 
         # Use the prefix set in config if no custom server prefix is set
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
         prefix = config['base']['prefix']
         return commands.when_mentioned_or(prefix)(bot, message)
 
@@ -143,7 +143,7 @@ class SpaceCat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
 
         # Create cache folder if it doesn't exist
         try:
@@ -176,7 +176,7 @@ class SpaceCat(commands.Cog):
         # Change status if specified in config
         try:
             statusname = config['base']['status']
-            status = appearance.status_class(statusname)
+            status = settings.status_class(statusname)
             await self.bot.change_presence(status=status)
         except KeyError:
             pass
@@ -184,7 +184,7 @@ class SpaceCat(commands.Cog):
         # Change activity if specified in config
         try:
             acttypename = config['base']['activity_type']
-            activitytype = appearance.activity_type_class(acttypename)
+            activitytype = settings.activity_type_class(acttypename)
 
             activity = discord.Activity(
                 type=activitytype,
@@ -211,10 +211,10 @@ class SpaceCat(commands.Cog):
 
                 # Info on how to use the bot
                 embed = discord.Embed(
-                    colour=appearance.embed_type('info'),
+                    colour=settings.embed_type('info'),
                     description="I'm here to provide a useful set a features")
                 image = discord.File(
-                    appearance.embed_icons("information"), filename="image.png")
+                    settings.embed_icons("information"), filename="image.png")
                 embed.set_author(
                     name="Hello There!", icon_url="attachment://image.png")
                 embed.add_field(
@@ -238,7 +238,7 @@ class SpaceCat(commands.Cog):
     async def ping(self, ctx):
         """A simple ping to check if the bot is responding."""
         embed = discord.Embed(
-            colour=appearance.embed_type('accept'), 
+            colour=settings.embed_type('accept'), 
             description=f"{self.bot.user.name} is operational at \
             {int(self.bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
@@ -248,7 +248,7 @@ class SpaceCat(commands.Cog):
     async def version(self, ctx):
         """Check the current bot version."""
         embed = discord.Embed(
-            colour=appearance.embed_type('info'), 
+            colour=settings.embed_type('info'), 
             description="**Bot is currently using version:**\n"
             "[SpaceCat Discord Bot `v0.2.0`]"
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
@@ -259,12 +259,12 @@ class SpaceCat(commands.Cog):
     async def globalprefix(self, ctx, prefix):
         """Changes the global command prefix"""
         # Changes the prefix entry in the config
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
         config['base']['prefix'] = prefix
-        with open("config.toml", "w") as config_file:
+        with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-                colour=appearance.embed_type('accept'),
+                colour=settings.embed_type('accept'),
                 description=f"Global command prefix changed to: `{prefix}`.\n\
                 Servers with prefix override will not be affected.")
         await ctx.send(embed=embed)
@@ -277,10 +277,10 @@ class SpaceCat(commands.Cog):
 
         # Create embed with enabled modules
         image = discord.File(
-            appearance.embed_icons("information"),
+            settings.embed_icons("information"),
             filename="image.png")
         embed = discord.Embed(
-            colour=appearance.embed_type('info'))
+            colour=settings.embed_type('info'))
         embed.set_author(
             name=f"{self.bot.user.name} Modules",
             icon_url="attachment://image.png")
@@ -312,7 +312,7 @@ class SpaceCat(commands.Cog):
         if module:
             if module not in module_list:
                 embed = discord.Embed(
-                    colour=appearance.embed_type('warn'),
+                    colour=settings.embed_type('warn'),
                     description=f"{module} is not a valid or enabled module")
                 await ctx.send(embed=embed)
                 return
@@ -331,14 +331,14 @@ class SpaceCat(commands.Cog):
         # Ouput error messages depending on if only one or multiple modules
         if failed_modules and len(modules_to_load) == 1:
             embed = discord.Embed(
-                    colour=appearance.embed_type('warn'),
+                    colour=settings.embed_type('warn'),
                     description=f"Failed to reload module \
                     `{module[8:]}`")
             await ctx.send(embed=embed)
             return
         elif failed_modules:
             embed = discord.Embed(
-                    colour=appearance.embed_type('warn'),
+                    colour=settings.embed_type('warn'),
                     description=f"Failed to reload module(s): \
                     `{', '.join(failed_modules)}`. \
                     Other modules have successfully reloaded")
@@ -348,11 +348,11 @@ class SpaceCat(commands.Cog):
         # Notify user of successful module reloading
         if len(modules_to_load) == 1:
             embed = discord.Embed(
-            colour=appearance.embed_type('accept'),
+            colour=settings.embed_type('accept'),
             description=f"Reloaded module `{module[8:]}` successfully")
         else:
             embed = discord.Embed(
-            colour=appearance.embed_type('accept'),
+            colour=settings.embed_type('accept'),
             description=f"All modules reloaded successfully")
         
         await ctx.send(embed=embed)
@@ -364,7 +364,7 @@ class SpaceCat(commands.Cog):
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
-                colour=appearance.embed_type('warn'),
+                colour=settings.embed_type('warn'),
                 description=f"Module `{module}` does not exist")
             await ctx.send(embed=embed)
             return
@@ -373,19 +373,19 @@ class SpaceCat(commands.Cog):
         disabled_modules = module_handler.get_disabled()
         if disabled_modules is None or module not in disabled_modules:
             embed = discord.Embed(
-                colour=appearance.embed_type('warn'),
+                colour=settings.embed_type('warn'),
                 description=f"Module `{module}` is already enabled")
             await ctx.send(embed=embed)
             return
 
         # Enable module and write to config
         self.bot.load_extension(f'modules.{module}')
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
         config['base']['disabled_modules'].remove(module)
-        with open("config.toml", "w") as config_file:
+        with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-            colour=appearance.embed_type('accept'),
+            colour=settings.embed_type('accept'),
             description=f"Module `{module}` enabled")
         await ctx.send(embed=embed)
 
@@ -396,7 +396,7 @@ class SpaceCat(commands.Cog):
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
-                colour=appearance.embed_type('warn'),
+                colour=settings.embed_type('warn'),
                 description=f"Module `{module}` does not exist")
             await ctx.send(embed=embed)
             return
@@ -406,24 +406,24 @@ class SpaceCat(commands.Cog):
         try:
             if module in disabled_modules:
                 embed = discord.Embed(
-                    colour=appearance.embed_type('warn'),
+                    colour=settings.embed_type('warn'),
                     description=f"Module `{module}` is already disabled")
                 await ctx.send(embed=embed)
                 return
 
         # Add to list if list exists or create list if it doesn't
-            config = toml.load('config.toml')
+            config = toml.load(settings.data + 'config.toml')
             config['base']['disabled_modules'].append(module)
         except TypeError:
-            config = toml.load('config.toml')
+            config = toml.load(settings.data + 'config.toml')
             config['base']['disabled_modules'] = [module]   
 
         # Disable module and write to config
         self.bot.unload_extension(f'modules.{module}')
-        with open("config.toml", "w") as config_file:
+        with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-            colour=appearance.embed_type('accept'),
+            colour=settings.embed_type('accept'),
             description=f"Module `{module}` disabled")
         await ctx.send(embed=embed)
 
@@ -440,7 +440,7 @@ class SpaceCat(commands.Cog):
         await self.bot.logout()
 
     async def _set_admin(self):
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
         confirm = None
 
         while confirm != "yes":
@@ -455,7 +455,7 @@ class SpaceCat(commands.Cog):
                 "Here's what you need to do:\n"
                 "1. Open Discord.\n"
                 "2. Open your user settings.\n"
-                "3. Open the appearance tab.\n"
+                "3. Open the settings tab.\n"
                 "4. Enable 'Developer Mode' under Advanced.\n"
                 "5. Exit user settings\n"
                 "6. Right click on your user and click 'Copy ID'\n")
@@ -495,7 +495,7 @@ class SpaceCat(commands.Cog):
                 else:
                     continue
 
-        with open("config.toml", "w") as config_file:
+        with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         time.sleep(1)
 
@@ -511,9 +511,9 @@ class SpaceCat(commands.Cog):
         print('--------------------\n')
 
         # Save prefix to config
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
         config['base']['prefix'] = prefix_input
-        with open("config.toml", "w") as config_file:
+        with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         time.sleep(1)
 
@@ -531,11 +531,11 @@ class SpaceCat(commands.Cog):
             "--------------------\n")
 
         # Set default values and save config
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
         config['base']['status'] = 'online'
         config['base']['activity_type'] = None
         config['base']['activity_name'] = None
-        with open("config.toml", "w") as config_file:
+        with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         await asyncio.sleep(1)
 
@@ -547,7 +547,7 @@ def main():
 
     # Check if config exists and run config creator if it doesn't
     try:
-        config = toml.load('config.toml')
+        config = toml.load(settings.data + 'config.toml')
     except FileNotFoundError:
         setup = startup.create_config()
         if not setup:
@@ -556,7 +556,7 @@ def main():
     # Append New APIKey to config if specified by argument
     if args.apikey is not None:
         config['base']['apikey'] = args.apikey
-        toml.dump(config, 'config.toml')
+        toml.dump(config, settings.data + 'config.toml')
     
     startup.run()
     
