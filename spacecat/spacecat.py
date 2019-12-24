@@ -73,6 +73,11 @@ class Startup():
         keyinput = input("Paste your token right here: ")
         print('--------------------\n')
 
+        # Create data folder if it doesn't exist
+        if not os.path.exists('../data'):
+            os.mkdir("../data")
+
+        # Create new config file with API key
         config = {}
         config['base'] = {}
         config['base']['apikey'] = keyinput
