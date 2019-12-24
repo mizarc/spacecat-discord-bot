@@ -31,7 +31,7 @@ class Startup():
 
     def logging(self):
         # Create log folder if it doesn't exist
-        if not os.path.exists('config.ini'):
+        if not os.path.exists('../logs'):
             os.mkdir("../logs")
 
         # Setup file logging
