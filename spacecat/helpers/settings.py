@@ -2,6 +2,7 @@ import discord
 
 
 # Data folder location
+assets = '../assets/'
 data = '../data/'
 
 
@@ -47,11 +48,11 @@ def embed_type(name):
 
 def embed_icons(name):
     if name == "music":
-        icon = "assets/icons/music_disc.jpg"
+        icon = assets + "music_disc.jpg"
     elif name == "database":
-        icon = "assets/icons/database.png"
+        icon = assets + "database.png"
     elif name == "information":
-        icon = "assets/icons/information.png"
+        icon = assets + "information.png"
     return icon
 
 
