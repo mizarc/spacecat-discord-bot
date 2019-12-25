@@ -103,43 +103,35 @@ class PoliteCat(commands.Cog):
             await ctx.send(embed=embed) 
             return
 
-        # Open assets directory
-        try:
-            os.chdir("assets/reactions")
-        except FileNotFoundError:
-            os.mkdir("assets/reactions")
-            os.chdir("assets/reactions")
+        # Create reactions folder if it doesn't exist
+        if not os.path.exists(settings.data + 'reactions/'):
+            os.mkdir(settings.data + 'reactions/')
 
         # Get all images in directory and add to list
         assetlist = []
-        for files in glob.glob("*.webp"):
-            assetlist.append(files[:-5])
+        for files in glob.glob(settings.data + "reactions/*"):
+            existing_image = os.path.basename(os.path.splitext(files)[0])
+            assetlist.append(existing_image)
 
-        for files in glob.glob("*.gif"):
-            assetlist.append(files[:-4])
-
-        # Check if name already exists
+        # Cancel if name already exists
         if name in assetlist:
             embed = discord.Embed(colour=settings.embed_type('warn'), description=f"Reaction name already in use")
-            await ctx.send(embed=embed) 
-            os.chdir("../../")
+            await ctx.send(embed=embed)
             return
 
         # Check if file extention is valid and convert to webp when possible
         ext = image.filename.split(".")[-1]
         if ext == "webp" or ext == "gif":
-            await image.save(name + "." + ext)
+            await image.save(f'{settings.data}reactions/{name}.{ext}')
         elif ext == "jpg" or ext == "jpeg" or ext == "bmp" or ext == "png":
-            await image.save(name + '.webp')
+            await image.save(f'{settings.data}reactions/{name}.webp')
         else:
             await ctx.send("Image must be formatted in " +
                             "webp, png, jpg, bmp or gif")
-            os.chdir("../../")
             return
         
         embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Added {name} to reactions")
-        await ctx.send(embed=embed) 
-        os.chdir("../../")
+        await ctx.send(embed=embed)
         return
 
     @reactcfg.command()
