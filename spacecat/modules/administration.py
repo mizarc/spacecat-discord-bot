@@ -17,7 +17,7 @@ class Administration(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        db = sqlite3.connect(settings.data + settings.data + 'spacecat.db')
+        db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
 
         # Create tables if they don't exist
@@ -83,7 +83,7 @@ class Administration(commands.Cog):
             return
 
         # Add alias to database
-        db = sqlite3.connect(settings.data + settings.data + 'spacecat.db')
+        db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id, alias, command)
         cursor.execute("INSERT INTO command_aliases VALUES (?,?,?)", value)
