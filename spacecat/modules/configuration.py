@@ -7,7 +7,7 @@ from discord.ext import commands
 import toml
 
 from helpers import perms
-from helpers.appearance import activity_type_class, status_class, embed_type, embed_icons
+from helpers import settings
 
 class Configuration(commands.Cog):
     def __init__(self, bot):
@@ -22,7 +22,7 @@ class Configuration(commands.Cog):
             cmd_args = cmd.content.split()[1:]
 
             # Query if command exists as an alias in database
-            db = sqlite3.connect('spacecat.db')
+            db = sqlite3.connect(settings.data + 'spacecat.db')
             cursor = db.cursor()
             query = (ctx.guild.id, cmd_name)
             cursor.execute(f"SELECT command FROM command_aliases WHERE server_id=? AND alias=?", query)
@@ -37,17 +37,17 @@ class Configuration(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def status(self, ctx, statusname):
-        config = toml.load('config.toml')
-        status = status_class(statusname)
+        config = toml.load(settings.data + 'config.toml')
+        status = settings.status_class(statusname)
         try:
-            activity = discord.Activity(type=activity_type_class(config['base']['activity_type']), name=config['base']['activity_name'])
+            activity = discord.Activity(type=settings.activity_type_class(config['base']['activity_type']), name=config['base']['activity_name'])
         except KeyError:
             activity = None
         
 
         # Check if valid status name was used
         if status == None:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"That's not a valid status")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"That's not a valid status")
             await ctx.send(embed=embed)
             return
 
@@ -57,14 +57,14 @@ class Configuration(commands.Cog):
             await self.bot.change_presence(status=status)
 
         config['base']['status'] = statusname
-        with open("config.toml", "w") as config_file:
+        with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @commands.command()
     @perms.exclusive()
     async def activity(self, ctx, acttype, *, name):
-        config = toml.load('config.toml')
-        activitytype = activity_type_class(acttype)
+        config = toml.load(settings.data + 'config.toml')
+        activitytype = settings.activity_type_class(acttype)
         activity = discord.Activity(type=activitytype, name=name, url="https://www.twitch.tv/yeet")
         try:
             status = config['base']['status']
@@ -72,7 +72,7 @@ class Configuration(commands.Cog):
             status = None
 
         if activitytype == None:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"That's not a valid activity type")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"That's not a valid activity type")
             await ctx.send(embed=embed)
             return
 
@@ -84,7 +84,7 @@ class Configuration(commands.Cog):
 
         config['base']['activity_type'] = acttype
         config['base']['activity_name'] = name
-        with open("config.toml", "w") as config_file:
+        with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @commands.group()

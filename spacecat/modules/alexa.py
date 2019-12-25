@@ -11,9 +11,9 @@ import youtube_dl
 from bs4 import BeautifulSoup as bs
 import requests
 
-import helpers.appearance as appearance
-from helpers.appearance import embed_type, embed_icons
 from helpers import perms
+from helpers import settings
+
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -80,7 +80,7 @@ class Alexa(commands.Cog):
             try:
                 channel = ctx.author.voice.channel
             except AttributeError:
-                embed = discord.Embed(colour=embed_type('warn'), description=f"You must specify or be in a voice channel")
+                embed = discord.Embed(colour=settings.embed_type('warn'), description=f"You must specify or be in a voice channel")
                 await ctx.send(embed=embed)
                 return
 
@@ -92,7 +92,7 @@ class Alexa(commands.Cog):
 
         # Check if the specified voice channel is the same as the current channel
         if channel == ctx.voice_client.channel:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"I'm already in that voice channel")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"I'm already in that voice channel")
             await ctx.send(embed=embed)
             return
 
@@ -129,12 +129,12 @@ class Alexa(commands.Cog):
         
         # Check if too many songs in queue
         if len(self.song_queue[ctx.guild.id]) > 30:
-            embed = discord.Embed(colour=embed_type('warn'), description="Too many songs in queue. Calm down.")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="Too many songs in queue. Calm down.")
 
         # Grab audio source from youtube_dl and check if longer than 3 hours
         source = await YTDLSource.from_url(url)
         if source.duration >= 10800:
-            embed = discord.Embed(colour=embed_type('warn'), description="Video must be shorter than 3 hours")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="Video must be shorter than 3 hours")
             await ctx.send(embed=embed)
             return
         duration = await self._get_duration(source.duration)
@@ -144,7 +144,7 @@ class Alexa(commands.Cog):
         if len(self.song_queue[ctx.guild.id]) > 0:
             self.song_queue[ctx.guild.id].append(source)
             embed = discord.Embed(
-                colour=embed_type('accept'),
+                colour=settings.embed_type('accept'),
                 description=f"Added {song_name} to #{len(self.song_queue[ctx.guild.id]) - 1} in queue")
 
         # Play song instantly and notify user
@@ -152,7 +152,7 @@ class Alexa(commands.Cog):
             self.song_queue[ctx.guild.id].append(source)
             self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-            embed = discord.Embed(colour=embed_type('accept'), description=f"Now playing {song_name}")
+            embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Now playing {song_name}")
 
         await ctx.send(embed=embed)
         return
@@ -185,7 +185,7 @@ class Alexa(commands.Cog):
         # Alert user if search term returns no results
         if not titles:
             embed = discord.Embed(
-                colour=appearance.embed_type('warn'),
+                colour=settings.embed_type('warn'),
                 description="Search query returned no results")
             await ctx.send(embed=embed)
             return
@@ -204,8 +204,8 @@ class Alexa(commands.Cog):
             results_format.append(f"{index}. [{title.get_text()}]({url}) `{duration.get_text()}`")
 
         # Output results to chat
-        embed = discord.Embed(colour=embed_type('info'))
-        image = discord.File(embed_icons("music"), filename="image.png")
+        embed = discord.Embed(colour=settings.embed_type('info'))
+        image = discord.File(settings.embed_icons("music"), filename="image.png")
         embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
         results_output = '\n'.join(results_format)
         embed.add_field(
@@ -216,7 +216,7 @@ class Alexa(commands.Cog):
         # Add reaction button for every result
         reactions = []
         for index, result in enumerate(results_format):
-            emoji = appearance.number_to_emoji(index + 1)
+            emoji = settings.number_to_emoji(index + 1)
             await msg.add_reaction(emoji)
             reactions.append(emoji)
 
@@ -231,7 +231,7 @@ class Alexa(commands.Cog):
                 'reaction_add', timeout=30.0, check=reaction_check)
         except asyncio.TimeoutError:
             embed = discord.Embed(
-                    colour=embed_type('warn'),
+                    colour=settings.embed_type('warn'),
                     description=f"Song selection timed out.")
             embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
             await msg.clear_reactions()
@@ -239,7 +239,7 @@ class Alexa(commands.Cog):
             return
 
         # Play selected song
-        number = appearance.emoji_to_number(str(reaction))
+        number = settings.emoji_to_number(str(reaction))
         selected_song = urls[number - 1]
         await ctx.invoke(self.play, url=selected_song)
 
@@ -256,7 +256,7 @@ class Alexa(commands.Cog):
         self.skip_toggle[ctx.guild.id] = True
         self.song_queue[ctx.guild.id].clear()
         ctx.voice_client.stop()
-        embed = discord.Embed(colour=embed_type('accept'), description="Music has been stopped & queue has been cleared")
+        embed = discord.Embed(colour=settings.embed_type('accept'), description="Music has been stopped & queue has been cleared")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -269,13 +269,13 @@ class Alexa(commands.Cog):
 
         # Check if music is paused
         if not ctx.voice_client.is_paused():
-            embed = discord.Embed(colour=embed_type('warn'), description="Music isn't paused")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="Music isn't paused")
             await ctx.send(embed=embed)
             return
 
         # Resumes music playback
         ctx.voice_client.resume()
-        embed = discord.Embed(colour=embed_type('accept'), description="Music has been resumed")
+        embed = discord.Embed(colour=settings.embed_type('accept'), description="Music has been resumed")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -288,13 +288,13 @@ class Alexa(commands.Cog):
 
         # Check if music is paused
         if ctx.voice_client.is_paused():
-            embed = discord.Embed(colour=embed_type('warn'), description="Music is already paused")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="Music is already paused")
             await ctx.send(embed=embed)
             return
 
         # Pauses music playback
         ctx.voice_client.pause()
-        embed = discord.Embed(colour=embed_type('accept'), description="Music has been paused")
+        embed = discord.Embed(colour=settings.embed_type('accept'), description="Music has been paused")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -307,7 +307,7 @@ class Alexa(commands.Cog):
 
         # Check if there's queue is empty
         if len(self.song_queue[ctx.guild.id]) <= 1:
-            embed = discord.Embed(colour=embed_type('warn'), description="There's nothing in the queue after this")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="There's nothing in the queue after this")
             await ctx.send(embed=embed)
             return
 
@@ -326,13 +326,13 @@ class Alexa(commands.Cog):
         # Disable loop if enabled
         if self.loop_toggle[ctx.guild.id]:
             self.loop_toggle[ctx.guild.id] = False
-            embed = discord.Embed(colour=embed_type('accept'), description=f"Loop disabled")
+            embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Loop disabled")
             await ctx.send(embed=embed)
             return
 
         # Enable loop if disabled
         self.loop_toggle[ctx.guild.id] = True
-        embed = discord.Embed(colour=embed_type('accept'), description=f"Loop enabled")
+        embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Loop enabled")
         await ctx.send(embed=embed)
         return
 
@@ -346,13 +346,13 @@ class Alexa(commands.Cog):
 
         # Notify user if nothing is in the queue
         if not self.song_queue[ctx.guild.id]:
-            embed = discord.Embed(colour=embed_type('warn'), description=f"There's nothing in the queue right now")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"There's nothing in the queue right now")
             await ctx.send(embed=embed)
             return
         
         # Output first in queue as currently playing
-        embed = discord.Embed(colour=embed_type('info'))
-        image = discord.File(embed_icons("music"), filename="image.png")
+        embed = discord.Embed(colour=settings.embed_type('info'))
+        image = discord.File(settings.embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
         duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
         current_time = int(time() - self.start_time[ctx.guild.id])
@@ -451,7 +451,7 @@ class Alexa(commands.Cog):
             return True
         except KeyError:
             embed = discord.Embed(
-                colour=embed_type('warn'),
+                colour=settings.embed_type('warn'),
                 description="I need to be in a voice channel to execute music "
                 "commands. \nUse **!join** or **!play** to connect me to a channel")
             await ctx.send(embed=embed)
