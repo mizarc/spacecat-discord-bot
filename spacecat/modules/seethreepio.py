@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 
 from helpers import perms
+from helpers import settings
+
 
 class Seethreepio(commands.Cog):
     def __init__(self, bot):

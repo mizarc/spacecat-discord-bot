@@ -8,9 +8,10 @@
 *.egg-info/
 
 # Generated files
-dist/
-assets/reactions
 cache/
+data/
+dist/
+logs/
 *.db
 *.log
 *.toml
