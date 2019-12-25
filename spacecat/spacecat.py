@@ -84,7 +84,7 @@ class Startup():
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
-        self.run(firstrun=True)
+        return True
 
     def load_modules(self):
         # Enable enabled modules from list
@@ -557,16 +557,17 @@ def main():
     # Check if config exists and run config creator if it doesn't
     try:
         config = toml.load(settings.data + 'config.toml')
+        first_run = False
     except FileNotFoundError:
-        setup = startup.create_config()
-        if not setup:
-            return
+        first_run = startup.create_config()
 
     # Append New APIKey to config if specified by argument
     if args.apikey is not None:
         config['base']['apikey'] = args.apikey
         toml.dump(config, settings.data + 'config.toml')
     
+    if first_run:
+        startup.run(firstrun=True)
     startup.run()
     
 
