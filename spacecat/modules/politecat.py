@@ -26,8 +26,8 @@ class PoliteCat(commands.Cog):
             return
 
         # Fetch image from attachment
-        gif = f'cache/{str(message.id)}.gif'
-        webp = f'cache/{str(message.id)}.webp'
+        gif = f'{settings.cache}{str(message.id)}.gif'
+        webp = f'{settings.cache}{str(message.id)}.webp'
         await message.attachments[0].save(webp)
         image = Image.open(webp)
 

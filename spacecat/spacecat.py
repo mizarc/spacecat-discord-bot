@@ -156,7 +156,7 @@ class SpaceCat(commands.Cog):
 
         # Create cache folder if it doesn't exist
         try:
-            os.mkdir('cache')
+            os.mkdir(settings.cache)
         except FileExistsError:
             pass
         
@@ -442,7 +442,7 @@ class SpaceCat(commands.Cog):
         """Shuts down the bot."""
         # Clear the cache folder if it exists
         try:
-            shutil.rmtree('cache')
+            shutil.rmtree(settings.cache)
         except:
             pass
         

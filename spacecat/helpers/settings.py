@@ -3,6 +3,7 @@ import discord
 
 # Data folder location
 assets = '../assets/'
+cache = '../cache/'
 data = '../data/'
 
 
