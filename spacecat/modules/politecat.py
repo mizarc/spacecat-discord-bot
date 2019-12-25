@@ -41,9 +41,15 @@ class PoliteCat(commands.Cog):
         try:
             image.info.pop('background', None)
             image.save(gif, 'gif', save_all=True)
+
+            # Add spoiler tag if original image is tagged as a spoiler
+            spoiler = False
+            if message.attachments[0].is_spoiler():
+                spoiler = True
+
             await message.channel.send(
             f"**{message.author.display_name} sent:**\n{message.content}",
-            file=discord.File(gif))
+            file=discord.File(gif, spoiler=spoiler))
             await message.delete()
 
         # Notify if conversion failed
