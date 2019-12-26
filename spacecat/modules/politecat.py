@@ -165,22 +165,29 @@ class PoliteCat(commands.Cog):
 
     @commands.command()
     @perms.check()
-    async def react(self, ctx, image):
+    async def react(self, ctx, name):
         "Use an image/gif as a reaction"
+        # Try sending WebP
         try:
-            os.chdir("assets/reactions")
-        except:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="No reactions are available")
-            await ctx.send(embed=embed) 
-            os.chdir("../../")
+            await ctx.send(
+                file=discord.File(f"{settings.data}reactions/{name}.webp"))
             return
-
-        try:
-            await ctx.send(file=discord.File(image + ".webp"))
         except FileNotFoundError:
-            await ctx.send(file=discord.File(image + ".gif"))
+            pass
 
-        os.chdir("../../")
+        # Try sending Gif
+        try:
+            await ctx.send(
+                file=discord.File(f"{settings.data}reactions/{name}.gif"))
+            return
+        except FileNotFoundError:
+            pass
+
+        # Warn if reaction name doesn't exist
+        embed = discord.Embed(
+            colour=settings.embed_type('warn'),
+            description=f"Reaction `{name}` does not exist")
+        await ctx.send(embed=embed) 
 
     async def _get_reactions(self):
         # Get all images from directoy and add to list
