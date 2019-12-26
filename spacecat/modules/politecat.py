@@ -107,14 +107,9 @@ class PoliteCat(commands.Cog):
         if not os.path.exists(settings.data + 'reactions/'):
             os.mkdir(settings.data + 'reactions/')
 
-        # Get all images in directory and add to list
-        assetlist = []
-        for files in glob.glob(settings.data + "reactions/*"):
-            existing_image = os.path.basename(os.path.splitext(files)[0])
-            assetlist.append(existing_image)
-
         # Cancel if name already exists
-        if name in assetlist:
+        check = await self._reaction_check(ctx, name)
+        if check:
             embed = discord.Embed(colour=settings.embed_type('warn'), description=f"Reaction name already in use")
             await ctx.send(embed=embed)
             return
@@ -138,34 +133,22 @@ class PoliteCat(commands.Cog):
     @perms.check()
     async def remove(self, ctx, name):
         "Remove a reaction image"
-        
-        os.chdir("assets/reactions")
-
-        # Get all images from directoy and add to list
-        assetlist = []
-        for files in glob.glob("*.webp"):
-            assetlist.append(files[:-5])
-
-        for files in glob.glob("*.gif"):
-            assetlist.append(files[:-4])
-
-        # Check if image name exists
-        if name not in assetlist:
+        # Cancel if image name exists
+        check = await self._reaction_check(ctx, name)
+        if not check:
             embed = discord.Embed(colour=settings.embed_type('warn'), description="Reaction image does not exist")
-            await ctx.send(embed=embed) 
-            os.chdir("../../")
+            await ctx.send(embed=embed)
             return
 
         # Remove specified image
         try:
-            os.remove(name + ".webp")
+            os.remove(f"{settings.data}reactions/{name}.webp")
         except FileNotFoundError:
-            os.remove(name + ".gif")
-        finally:
-            os.chdir("../../")
-            embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Removed {name} from reactions")
-            await ctx.send(embed=embed) 
-            return
+            os.remove(f"{settings.data}reactions/{name}.gif")
+
+        embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Removed {name} from reactions")
+        await ctx.send(embed=embed) 
+        return
             
 
     @commands.command()
@@ -199,6 +182,19 @@ class PoliteCat(commands.Cog):
             await ctx.send(file=discord.File(image + ".gif"))
 
         os.chdir("../../")
+
+    async def _reaction_check(self, ctx, name):
+        # Get all images from directoy and add to list
+        reactions = []
+        for files in glob.glob(settings.data + "reactions/*"):
+            existing_image = os.path.basename(os.path.splitext(files)[0])
+            reactions.append(existing_image)
+
+        # Return depending on if name is already in use
+        if name in reactions:
+            return True
+        return False
+        
 
 
 def setup(bot):
