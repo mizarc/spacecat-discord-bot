@@ -108,8 +108,8 @@ class PoliteCat(commands.Cog):
             os.mkdir(settings.data + 'reactions/')
 
         # Cancel if name already exists
-        check = await self._reaction_check(ctx, name)
-        if check:
+        reactions = await self._get_reactions()
+        if name in reactions:
             embed = discord.Embed(colour=settings.embed_type('warn'), description=f"Reaction name already in use")
             await ctx.send(embed=embed)
             return
@@ -134,8 +134,8 @@ class PoliteCat(commands.Cog):
     async def remove(self, ctx, name):
         "Remove a reaction image"
         # Cancel if image name exists
-        check = await self._reaction_check(ctx, name)
-        if not check:
+        reactions = await self._get_reactions()
+        if name not in reactions:
             embed = discord.Embed(colour=settings.embed_type('warn'), description="Reaction image does not exist")
             await ctx.send(embed=embed)
             return
@@ -155,14 +155,13 @@ class PoliteCat(commands.Cog):
     @perms.check()
     async def reactlist(self, ctx):
         "List all reaction images"
-        assetlist = []
-        os.chdir("assets/reactions")
+        reactions = self._get_reactions()
 
-        for files in glob.glob("*.png"):
-            assetlist.append(files[:-4])
-
-        for files in glob.glob("*.gif"):
-            assetlist.append(files[:-4])
+        # Alert if no reactions exist
+        if not reactions:
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="No reactions are available")
+            await ctx.send(embed=embed)
+            return
 
     @commands.command()
     @perms.check()
@@ -183,18 +182,13 @@ class PoliteCat(commands.Cog):
 
         os.chdir("../../")
 
-    async def _reaction_check(self, ctx, name):
+    async def _get_reactions(self):
         # Get all images from directoy and add to list
         reactions = []
         for files in glob.glob(settings.data + "reactions/*"):
             existing_image = os.path.basename(os.path.splitext(files)[0])
             reactions.append(existing_image)
-
-        # Return depending on if name is already in use
-        if name in reactions:
-            return True
-        return False
-        
+        return reactions
 
 
 def setup(bot):
