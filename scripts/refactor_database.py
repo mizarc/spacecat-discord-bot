@@ -4,19 +4,7 @@ import sqlite3
 def main():
     db = sqlite3.connect('../data/spacecat.db')
     cursor = db.cursor()
-
-    # Command aliases
-    cursor.execute(
-        'ALTER TABLE command_aliases RENAME TO command_aliases_temp')
-    cursor.execute((
-        'CREATE TABLE command_aliases'
-        '(server_id INTEGER, alias TEXT, command TEXT)'))
-    cursor.execute((
-        'INSERT INTO command_aliases(server_id, alias, command)'
-        'SELECT server_id, alias, command FROM command_aliases_temp'))
-    cursor.execute('DROP TABLE command_aliases_temp')
-    print("Command aliases db transfer complete.")
-
+    
     # Group permissions
     cursor.execute(
         'ALTER TABLE group_permissions RENAME TO group_permissions_temp')
