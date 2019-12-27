@@ -29,13 +29,13 @@ class Administration(commands.Cog):
             (server_id INTEGER, alias TEXT, command TEXT)''')
         cursor.execute(
             '''CREATE TABLE IF NOT EXISTS group_permissions
-            (serverid INTEGER, groupid INTEGER, perm TEXT)''')
+            (server_id INTEGER, group_id INTEGER, perm TEXT)''')
         cursor.execute(
             '''CREATE TABLE IF NOT EXISTS user_permissions
-            (serverid INTEGER, userid INTEGER, perm TEXT)''')
+            (server_id INTEGER, user_id INTEGER, perm TEXT)''')
         cursor.execute(
             '''CREATE TABLE IF NOT EXISTS group_parents
-            (serverid INTEGER, child_group INTEGER, parent_group INTEGER)''')
+            (server_id INTEGER, parent_group INTEGER, child_group INTEGER)''')
 
         # Compare bot servers and database servers to check if the bot was 
         # added to servers while the bot was offline
