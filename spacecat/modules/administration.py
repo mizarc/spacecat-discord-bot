@@ -17,25 +17,25 @@ class Administration(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        db = sqlite3.connect(settings.data + settings.data + 'spacecat.db')
+        db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
 
         # Create tables if they don't exist
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS server_settings 
-            (server_id INTEGER PRIMARY KEY, prefix TEXT)''')
+            'CREATE TABLE IF NOT EXISTS server_settings'
+            '(server_id INTEGER PRIMARY KEY, prefix TEXT)')
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS command_aliases
-            (server_id INTEGER, alias TEXT, command TEXT)''')
+            'CREATE TABLE IF NOT EXISTS command_aliases'
+            '(server_id INTEGER, alias TEXT, command TEXT)')
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS group_permissions
-            (serverid INTEGER, groupid INTEGER, perm TEXT)''')
+            'CREATE TABLE IF NOT EXISTS group_permissions'
+            '(server_id INTEGER, group_id INTEGER, perm TEXT)')
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS user_permissions
-            (serverid INTEGER, userid INTEGER, perm TEXT)''')
+            'CREATE TABLE IF NOT EXISTS user_permissions'
+            '(server_id INTEGER, user_id INTEGER, perm TEXT)')
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS group_parents
-            (serverid INTEGER, child_group INTEGER, parent_group INTEGER)''')
+            'CREATE TABLE IF NOT EXISTS group_parents'
+            '(server_id INTEGER, parent_group INTEGER, child_group INTEGER)')
 
         # Compare bot servers and database servers to check if the bot was 
         # added to servers while the bot was offline
@@ -83,7 +83,7 @@ class Administration(commands.Cog):
             return
 
         # Add alias to database
-        db = sqlite3.connect(settings.data + settings.data + 'spacecat.db')
+        db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id, alias, command)
         cursor.execute("INSERT INTO command_aliases VALUES (?,?,?)", value)
