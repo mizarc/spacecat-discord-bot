@@ -22,20 +22,20 @@ class Administration(commands.Cog):
 
         # Create tables if they don't exist
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS server_settings 
-            (server_id INTEGER PRIMARY KEY, prefix TEXT)''')
+            'CREATE TABLE IF NOT EXISTS server_settings'
+            '(server_id INTEGER PRIMARY KEY, prefix TEXT)')
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS command_aliases
-            (server_id INTEGER, alias TEXT, command TEXT)''')
+            'CREATE TABLE IF NOT EXISTS command_aliases'
+            '(server_id INTEGER, alias TEXT, command TEXT)')
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS group_permissions
-            (server_id INTEGER, group_id INTEGER, perm TEXT)''')
+            'CREATE TABLE IF NOT EXISTS group_permissions'
+            '(server_id INTEGER, group_id INTEGER, perm TEXT)')
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS user_permissions
-            (server_id INTEGER, user_id INTEGER, perm TEXT)''')
+            'CREATE TABLE IF NOT EXISTS user_permissions'
+            '(server_id INTEGER, user_id INTEGER, perm TEXT)')
         cursor.execute(
-            '''CREATE TABLE IF NOT EXISTS group_parents
-            (server_id INTEGER, parent_group INTEGER, child_group INTEGER)''')
+            'CREATE TABLE IF NOT EXISTS group_parents'
+            '(server_id INTEGER, parent_group INTEGER, child_group INTEGER)')
 
         # Compare bot servers and database servers to check if the bot was 
         # added to servers while the bot was offline
