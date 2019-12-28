@@ -86,7 +86,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id, alias, command)
-        cursor.execute("INSERT INTO command_aliases VALUES (?,?,?)", value)
+        cursor.execute("INSERT INTO command_alias VALUES (?,?,?)", value)
         db.commit()
         db.close()
 
@@ -108,7 +108,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id, alias)
-        cursor.execute("DELETE FROM command_aliases WHERE server_id=? AND alias=?", value)
+        cursor.execute("DELETE FROM command_alias WHERE server_id=? AND alias=?", value)
         db.commit()
         db.close()
 
@@ -122,7 +122,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id,)
-        cursor.execute("SELECT alias, command FROM command_aliases WHERE server_id=?", value)
+        cursor.execute("SELECT alias, command FROM command_alias WHERE server_id=?", value)
         result = cursor.fetchall()
         db.close()
 
@@ -233,7 +233,7 @@ class Administration(commands.Cog):
         # Add permission to database
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        cursor.execute("INSERT INTO group_permissions VALUES (?,?,?)", value)
+        cursor.execute("INSERT INTO group_permission VALUES (?,?,?)", value)
         db.commit()
         db.close()
         
@@ -296,7 +296,7 @@ class Administration(commands.Cog):
         # Remove permission from database
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        cursor.execute("DELETE FROM group_permissions WHERE serverid=? AND groupid=? AND perm=?", query)
+        cursor.execute("DELETE FROM group_permission WHERE server_id=? AND group_id=? AND permission=?", query)
         db.commit()
         db.close()
 
@@ -317,7 +317,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (parent_group.id, child_group.id)
-        cursor.execute("SELECT child_group FROM group_parents WHERE child_group=? AND parent_group=?", query)
+        cursor.execute("SELECT child_id FROM group_parent WHERE parent_id=? AND child_id=?", query)
         check = cursor.fetchall()
         if check:
             db.close()
@@ -327,7 +327,7 @@ class Administration(commands.Cog):
 
         # Remove permission from database and notify user
         values = (ctx.guild.id, child_group.id, parent_group.id)
-        cursor.execute("INSERT INTO group_parents VALUES (?,?,?)", values)
+        cursor.execute("INSERT INTO group_parent VALUES (?,?,?)", values)
         embed = discord.Embed(colour=settings.embed_type('accept'), description=f"`{child_group.name}` now inherits permissions from `{parent_group.name}`")
         await ctx.send(embed=embed)  
         db.commit()
@@ -347,7 +347,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         values = (ctx.guild.id, child_group.id, parent_group.id)
-        cursor.execute("DELETE FROM group_parents WHERE serverid=? AND child_group=? AND parent_group=?", values)
+        cursor.execute("DELETE FROM group_parent WHERE server_id=? AND parent_id=? AND child_id=?", values)
         embed = discord.Embed(colour=settings.embed_type('accept'), description=f"`{child_group.name}` is no longer inheriting permissions from `{parent_group.name}`")
         await ctx.send(embed=embed) 
         db.commit()
@@ -367,7 +367,7 @@ class Administration(commands.Cog):
         # Query group's parents
         query = (ctx.guild.id, group.id)
         cursor.execute(
-                'SELECT parent_group FROM group_parents WHERE serverid=? AND child_group=?', query)
+                'SELECT parent_id FROM group_parent WHERE server_id=? AND child_id=?', query)
         parents = cursor.fetchall()
 
         # Output formatted parents list
@@ -380,7 +380,7 @@ class Administration(commands.Cog):
 
         # Query group's perms
         cursor.execute(
-                'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=?', query)
+                'SELECT permission FROM group_permission WHERE server_id=? AND group_id=?', query)
         perms = cursor.fetchall()
 
         # Output formatted perms list
@@ -400,7 +400,7 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (ctx.guild.id, role.id)
         cursor.execute(
-                'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=?', query)
+                'SELECT perm FROM group_permission WHERE server_id=? AND group_id=?', query)
         perms = cursor.fetchall()
 
         # Notify if specified user doesn't have any perms to clear
@@ -410,7 +410,7 @@ class Administration(commands.Cog):
             return
 
         # Clear all permissions
-        cursor.execute("DELETE FROM group_permissions WHERE serverid=? AND groupid=?", query)
+        cursor.execute("DELETE FROM group_permission WHERE server_id=? AND group_id=?", query)
         embed = discord.Embed(colour=settings.embed_type('accept'), description=f"All permissions cleared from `{role.name}`")
         await ctx.send(embed=embed) 
         db.commit()
@@ -489,7 +489,7 @@ class Administration(commands.Cog):
         # Add permission to database
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        cursor.execute("INSERT INTO user_permissions VALUES (?,?,?)", value)
+        cursor.execute("INSERT INTO user_permission VALUES (?,?,?)", value)
         db.commit()
         db.close()
         
@@ -552,7 +552,7 @@ class Administration(commands.Cog):
         # Remove permission from database
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        cursor.execute("DELETE FROM user_permissions WHERE serverid=? AND userid=? AND perm=?", query)
+        cursor.execute("DELETE FROM user_permission WHERE server_id=? AND user_id=? AND permission=?", query)
         db.commit()
         db.close()
 
@@ -579,7 +579,7 @@ class Administration(commands.Cog):
         # Query group's perms
         query = (ctx.guild.id, user.id)
         cursor.execute(
-                'SELECT perm FROM user_permissions WHERE serverid=? AND userid=?', query)
+                'SELECT permission FROM user_permission WHERE server_id=? AND user_id=?', query)
         perms = cursor.fetchall()
 
         # Output formatted perms list
@@ -599,7 +599,7 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (ctx.guild.id, user.id)
         cursor.execute(
-                'SELECT perm FROM user_permissions WHERE serverid=? AND userid=?', query)
+                'SELECT permission FROM user_permission WHERE server_id=? AND user_id=?', query)
         perms = cursor.fetchall()
 
         # Notify if specified user doesn't have any perms to clear
@@ -609,7 +609,7 @@ class Administration(commands.Cog):
             return
 
         # Clear all permissions
-        cursor.execute("DELETE FROM user_permissions WHERE serverid=? AND userid=?", query)
+        cursor.execute("DELETE FROM user_permission WHERE server_id=? AND user_id=?", query)
         embed = discord.Embed(colour=settings.embed_type('accept'), description=f"All permissions cleared from `{user.name}`")
         await ctx.send(embed=embed) 
         db.commit()
@@ -630,7 +630,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (ctx.guild.id, alias)
-        cursor.execute(f"SELECT command FROM command_aliases WHERE server_id=? AND alias=?", query)
+        cursor.execute(f"SELECT command FROM command_alias WHERE server_id=? AND alias=?", query)
         result = cursor.fetchall()
         db.close()
 
@@ -643,7 +643,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (id_, "*")
-        cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
+        cursor.execute(f"SELECT permission FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
         result = cursor.fetchall()
         db.close()
 
@@ -661,7 +661,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (id_, f"{cog.qualified_name}.*")
-        cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
+        cursor.execute(f"SELECT permission FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
         result = cursor.fetchall()
         db.close()
 
@@ -684,7 +684,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (id_, f"{command.cog.qualified_name}.{perm}")
-        cursor.execute(f"SELECT perm FROM {type_}_permissions WHERE {type_}id=? AND perm=?", query)
+        cursor.execute(f"SELECT perm FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
         result = cursor.fetchall()
         db.close()
 
@@ -697,7 +697,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (child, parent)
-        cursor.execute("SELECT parent_group FROM group_parents WHERE child_group=? AND parent_group=?", query)
+        cursor.execute("SELECT parent_id FROM group_parent WHERE parent_id=? AND child_id=?", query)
         result = cursor.fetchall()
         if result:
             db.close()
