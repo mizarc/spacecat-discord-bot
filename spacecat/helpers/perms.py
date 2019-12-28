@@ -53,7 +53,7 @@ def check():
         # Execute user perm queries
         for query in queries:
             cursor.execute(
-                'SELECT perm FROM user_permissions WHERE serverid=? AND userid=? AND perm LIKE ?', query)
+                'SELECT permission FROM user_permission WHERE server_id=? AND user_id=? AND permission LIKE ?', query)
             check = cursor.fetchall()
             if check:
                 return True
@@ -69,7 +69,7 @@ def check():
         # Execute all group perm queries
         for query in group_queries:
             cursor.execute(
-                'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm LIKE ?', query)
+                'SELECT permission FROM group_permission WHERE server_id=? AND group_id=? AND permission LIKE ?', query)
             check = cursor.fetchall()
             query = (ctx.guild.id, role.id)
             parent_check = parent_perms(ctx, cursor, query)
@@ -79,7 +79,7 @@ def check():
     def parent_perms(ctx, cursor, query):
         # Check if group has parents
         cursor.execute(
-                'SELECT parent_group FROM group_parents WHERE serverid=? AND child_group=?', query)
+                'SELECT parent_id FROM group_parents WHERE server_id=? AND child_id=?', query)
         parents = cursor.fetchall()
 
         # Check parent groups for permission
@@ -87,7 +87,7 @@ def check():
             for parent in parents:
                 query = (ctx.guild.id, parent[0], f"{ctx.command.cog.qualified_name}.{ctx.command.name}")
                 cursor.execute(
-                    'SELECT perm FROM group_permissions WHERE serverid=? AND groupid=? AND perm LIKE ?', query)
+                    'SELECT permission FROM group_permission WHERE server_id=? AND group_id=? AND permission LIKE ?', query)
                 check = cursor.fetchall()
                 if check:
                     return True
