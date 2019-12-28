@@ -7,11 +7,10 @@ def main():
 
     # Check if database has already been refactored by checking if column name
     # is server_id or serverid
-    cursor.execute(
-        'SELECT * FROM group_permissions WHERE 1=0')
-    identifier = cursor.description[0][0]
+    cursor.execute('SELECT name FROM sqlite_master WHERE type="table"')
+    table = cursor.fetchall()[1][0]
     
-    if identifier == 'server_id':
+    if table == 'command_alias':
         print("Database has already been refactored.")
         return
 
