@@ -35,7 +35,7 @@ class Administration(commands.Cog):
             '(server_id INTEGER, user_id INTEGER, permission TEXT)')
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS group_parent'
-            '(server_id INTEGER, parent_group INTEGER, child_group INTEGER)')
+            '(server_id INTEGER, parent_id INTEGER, child_id INTEGER)')
 
         # Compare bot servers and database servers to check if the bot was 
         # added to servers while the bot was offline
