@@ -47,9 +47,9 @@ def main():
         'ALTER TABLE group_parents RENAME TO group_parents_temp')
     cursor.execute(
         'CREATE TABLE group_parent'
-        '(server_id INTEGER, parent_group INTEGER, child_group INTEGER)')
+        '(server_id INTEGER, parent_id INTEGER, child_id INTEGER)')
     cursor.execute(
-        'INSERT INTO group_parent(server_id, parent_group, child_group)'
+        'INSERT INTO group_parent(server_id, parent_id, child_id)'
         'SELECT serverid, parent_group, child_group FROM group_parents_temp')
     cursor.execute('DROP TABLE group_parents_temp')
     print("Group parent db transfer complete.")
