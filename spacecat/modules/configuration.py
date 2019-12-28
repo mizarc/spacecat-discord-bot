@@ -25,7 +25,7 @@ class Configuration(commands.Cog):
             db = sqlite3.connect(settings.data + 'spacecat.db')
             cursor = db.cursor()
             query = (ctx.guild.id, cmd_name)
-            cursor.execute(f"SELECT command FROM command_aliases WHERE server_id=? AND alias=?", query)
+            cursor.execute(f"SELECT command FROM command_alias WHERE server_id=? AND alias=?", query)
             result = cursor.fetchall()
             db.close()
 
