@@ -3,6 +3,7 @@ from itertools import islice
 import os
 import re
 import shutil
+import sqlite3
 from time import gmtime, strftime, time
 
 import discord
@@ -70,6 +71,18 @@ class Alexa(commands.Cog):
         self.start_time = {}
         self.loop_toggle = {}
         self.skip_toggle = {}
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        # Create playlist table if it don't exist
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        cursor.execute(
+            'CREATE TABLE IF NOT EXISTS music_playlist'
+            '(song_id INTEGER PRIMARY KEY, song TEXT, previous_song,'
+            'playlist TEXT, server_id INTEGER)')
+        db.commit()
+        db.close()
 
     @commands.command()
     @perms.check()
