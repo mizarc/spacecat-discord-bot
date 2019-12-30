@@ -409,6 +409,15 @@ class Alexa(commands.Cog):
                 name=f"Queue  `{duration}`",
                 value=queue_output, inline=False)
         await ctx.send(file=image, embed=embed)
+
+    @commands.group()
+    @perms.check()
+    async def playlist(self, ctx):
+        """Configure music playlists"""
+        if ctx.invoked_subcommand is None:
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `create/destroy/add/remove`")
+            await ctx.send(embed=embed)
+
         
     def _next(self, ctx):
         # If looping, grab source from url again
