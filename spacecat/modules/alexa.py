@@ -77,7 +77,7 @@ class Alexa(commands.Cog):
         # Create playlist table if it don't exist
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        cursor.execute('PRAGMA foreign_keys=1')
+        cursor.execute('PRAGMA foreign_keys = ON')
 
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS playlist'
@@ -86,9 +86,9 @@ class Alexa(commands.Cog):
 
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS playlist_music'
-            '(id INTEGER PRIMARY KEY, song_name TEXT, url TEXT,'
-            'previous_song TEXT, FOREIGN KEY (playlist_id) REFERENCES '
-            'playlist (id))')
+            '(id INTEGER PRIMARY KEY, title TEXT, length INTEGER, url TEXT,'
+            'previous_song TEXT, playlist_id INTEGER,'
+            'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
 
         db.commit()
         db.close()
