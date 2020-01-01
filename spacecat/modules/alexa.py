@@ -77,10 +77,19 @@ class Alexa(commands.Cog):
         # Create playlist table if it don't exist
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
+        cursor.execute('PRAGMA foreign_keys=1')
+
         cursor.execute(
-            'CREATE TABLE IF NOT EXISTS music_playlist'
-            '(song_id INTEGER PRIMARY KEY, song TEXT, previous_song,'
-            'playlist TEXT, server_id INTEGER)')
+            'CREATE TABLE IF NOT EXISTS playlist'
+            '(id INTEGER PRIMARY KEY, playlist TEXT, description TEXT,'
+            'server_id INTEGER)')
+
+        cursor.execute(
+            'CREATE TABLE IF NOT EXISTS playlist_music'
+            '(id INTEGER PRIMARY KEY, song_name TEXT, url TEXT,'
+            'previous_song TEXT, FOREIGN KEY (playlist_id) REFERENCES'
+            'playlist (id))')
+
         db.commit()
         db.close()
 
@@ -146,6 +155,7 @@ class Alexa(commands.Cog):
 
         # Grab audio source from youtube_dl and check if longer than 3 hours
         source = await YTDLSource.from_url(url)
+        print(source)
         if source.duration >= 10800:
             embed = discord.Embed(colour=settings.embed_type('warn'), description="Video must be shorter than 3 hours")
             await ctx.send(embed=embed)
