@@ -81,7 +81,7 @@ class Alexa(commands.Cog):
 
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS playlist'
-            '(id INTEGER PRIMARY KEY, playlist TEXT, description TEXT,'
+            '(id INTEGER PRIMARY KEY, name TEXT, description TEXT,'
             'server_id INTEGER)')
 
         cursor.execute(
