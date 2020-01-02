@@ -428,6 +428,34 @@ class Alexa(commands.Cog):
             embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `create/destroy/add/remove`")
             await ctx.send(embed=embed)
 
+    @playlist.command(name='create')
+    @perms.check()
+    async def createplaylist(self, ctx, *, playlist):
+        """Create a new playlist"""
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (playlist, ctx.guild.id)
+
+        # Cancel if playlist name already exists for server in database
+        cursor.execute(
+            'SELECT name FROM playlist WHERE name=? AND server_id=?', values)
+        row_count = len(cursor.fetchall())
+        if row_count > 0:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` already exists")
+            await ctx.send(embed=embed)
+            return
+
+        # Add playlist to database
+        cursor.execute(
+            'INSERT INTO playlist(name, server_id) VALUES (?,?)', values)
+        db.commit()
+        db.close()
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Playlist `{playlist}` has been created")
+        await ctx.send(embed=embed)
         
     def _next(self, ctx):
         # If looping, grab source from url again
