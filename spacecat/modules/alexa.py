@@ -645,7 +645,9 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
             return
         song_links = {}
+        total_duration = 0
         for song in songs:
+            total_duration += song[2]
             song_links[song[4]] = [song[0], song]
 
         # Create pretty embed
@@ -657,6 +659,7 @@ class Alexa(commands.Cog):
         playlist_music_info = []
         index = 1
         next_song = song_links.get(None)
+
         while next_song is not None:
             if index >= 10:
                 break
@@ -667,8 +670,9 @@ class Alexa(commands.Cog):
 
         # Output results to chat
         playlist_music_output = '\n'.join(playlist_music_info)
+        formatted_duration = await self._get_duration(total_duration)
         embed.add_field(
-            name=f"{len(song_links)} available",
+            name=f"{len(song_links)} available `{formatted_duration}`",
             value=playlist_music_output, inline=False)
         await ctx.send(file=image, embed=embed)
 
