@@ -542,24 +542,32 @@ class Alexa(commands.Cog):
     @playlist.command(name='list')
     @perms.check()
     async def listplaylist(self, ctx):
+        """List all available playlists"""
+        # Get all playlist names and duration
         playlists = await self._get_playlists(ctx)
-
-        # Get duration of all songs in playlist
-        print(playlists)
-        return
+        playlist_names = []
+        for playlist in playlists:
+            _, songs = await self._get_songs(ctx, playlist[1])
+            song_duration = 0
+            for song in songs:
+                song_duration += song[2]
+            playlist_names.append([playlist[1], song_duration])
 
         # Output first in queue as currently playing
         embed = discord.Embed(colour=settings.embed_type('info'))
         image = discord.File(settings.embed_icons("music"), filename="image.png")
-        embed.set_author(name="Playlists", icon_url="attachment://image.png")
-        duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
+        embed.set_author(name="Music Playlists", icon_url="attachment://image.png")
+
+        playlist_info = []
+        for index, playlist_name in enumerate(islice(playlist_names, 0, 10)):
+            duration = await self._get_duration(playlist_name[1])
+            playlist_info.append(f"{index + 1}. {playlist_name[0]} `{duration}`")
 
         # Output results to chat
-        duration = await self._get_duration(total_duration)
-        queue_output = '\n'.join(queue_info)
+        playlist_output = '\n'.join(playlist_info)
         embed.add_field(
-            name=f"Queue  `{duration}`",
-            value=queue_output, inline=False)
+            name=f"{len(playlists)} available",
+            value=playlist_output, inline=False)
         await ctx.send(file=image, embed=embed)
         
 
@@ -654,6 +662,8 @@ class Alexa(commands.Cog):
     async def _get_duration(self, seconds):
         try:
             duration = strftime("%H:%M:%S", gmtime(seconds)).lstrip("0:")
+            if len(duration) < 1:
+                duration = "0:00"
             if len(duration) < 2:
                 duration = f"0:0{duration}"
             elif len(duration) < 3:
