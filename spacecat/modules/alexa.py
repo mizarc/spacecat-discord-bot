@@ -303,17 +303,17 @@ class Alexa(commands.Cog):
                 colour=settings.embed_type('accept'),
                 description=f"Now playing playlist `{playlist}`")
             await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Added playlist `{playlist}` to queue")
+            await ctx.send(embed=embed)
 
         # Add remaining songs to queue
         while next_song is not None:
             source = await YTDLSource.from_url(next_song[1][3])
             self.song_queue[ctx.guild.id].append(source)
             next_song = song_links.get(next_song[0])
-
-        embed = discord.Embed(
-            colour=settings.embed_type('accept'),
-            description=f"Added playlist `{playlist}` to queue")
-        await ctx.send(embed=embed)
 
     @commands.command()
     @perms.check()
