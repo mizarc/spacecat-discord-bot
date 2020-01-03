@@ -573,11 +573,15 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='add')
     @perms.check()
-    async def addplaylist(self, ctx, playlist, url):
+    async def addplaylist(self, ctx, playlist_name, url):
         """Adds a song to a playlist"""
         # Cancel if playlist doesn't exist
         playlists = await self._get_playlists(ctx)
-        if playlist not in playlists:
+        playlist_names = []
+        for playlist in playlists:
+            playlist_names.append(playlist[1])
+
+        if playlist_name not in playlist_names:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
                 description=f"Playlist `{playlist}` doesn't exist")
@@ -585,7 +589,7 @@ class Alexa(commands.Cog):
             return
 
         # First song in playlist has no previous song
-        playlist_id, songs = await self._get_songs(ctx, playlist)
+        playlist_id, songs = await self._get_songs(ctx, playlist_name)
         if not songs:
             previous_song = None
 
@@ -616,7 +620,7 @@ class Alexa(commands.Cog):
 
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
-            description=f"`{source.title}` has been added to playlist `{playlist}``")
+            description=f"`{source.title}` has been added to playlist `{playlist_name}`")
         await ctx.send(embed=embed)
 
     #@playlist.command(name='remove')
@@ -633,7 +637,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='songlist')
     @perms.check()
-    async def songlistplaylist(self, ctx, playlist):
+    async def songlistplaylist(self, ctx, playlist, page=1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
         try:
@@ -654,22 +658,35 @@ class Alexa(commands.Cog):
         embed = discord.Embed(colour=settings.embed_type('info'))
         image = discord.File(settings.embed_icons("music"), filename="image.png")
         embed.set_author(name="Playlist Contents", icon_url="attachment://image.png")
-        
-        # Add each song to a formatted queue
-        playlist_music_info = []
-        index = 1
-        next_song = song_links.get(None)
 
+        # Order songs using previous_song key
+        ordered_songs = []
+        next_song = song_links.get(None)
         while next_song is not None:
-            if index >= 10:
-                break
-            duration = await self._get_duration(next_song[1][2])
-            playlist_music_info.append(f"{index}. {next_song[1][1]} `{duration}`")
+            ordered_songs.append(next_song[1])
             next_song = song_links.get(next_song[0])
-            index += 1
+
+        # Modify page variable to get every ten results
+        page -= 1
+        if page > 0: page = page * 10
+
+        # Make a formatted list of 10 aliases based on the page
+        formatted_songs = []
+        for index, ordered_song in enumerate(islice(ordered_songs, page, page + 10)):
+            duration = await self._get_duration(ordered_song[2])
+            formatted_songs.append(
+                f"{page + index + 1}. {ordered_song[1]} `{duration}`")
+
+        # Alert of no songs are on the specified page
+        if not formatted_songs:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There are no songs on that page")
+            await ctx.send(embed=embed)
+            return
 
         # Output results to chat
-        playlist_music_output = '\n'.join(playlist_music_info)
+        playlist_music_output = '\n'.join(formatted_songs)
         formatted_duration = await self._get_duration(total_duration)
         embed.add_field(
             name=f"{len(song_links)} available `{formatted_duration}`",
