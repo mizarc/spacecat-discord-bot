@@ -268,6 +268,48 @@ class Alexa(commands.Cog):
 
     @commands.command()
     @perms.check()
+    async def playplaylist(self, ctx, playlist):
+        """Play from a locally saved playlist"""
+        # Join user's voice channel if not in one already
+        if ctx.voice_client is None:
+            await ctx.invoke(self.join)
+
+            # End function if bot failed to join a voice channel.
+            if ctx.voice_client is None:
+                return
+
+        # Get all songs in playlist
+        playlist_id, songs = await self._get_songs(ctx, playlist)
+        song_links = {}
+        for song in songs:
+            song_links[song[4]] = [song[0], song]
+
+        # Play first song if no song is currently playing
+        next_song = song_links.get(None)
+        if len(self.song_queue[ctx.guild.id]) == 0:
+            source = await YTDLSource.from_url(next_song[1][3])
+            next_song = song_links.get(next_song[0])
+            self.song_queue[ctx.guild.id].append(source)
+            self.start_time[ctx.guild.id] = time()
+            ctx.voice_client.play(source, after=lambda e: self._next(ctx))
+            embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description=f"Now playing playlist `{playlist}`")
+            await ctx.send(embed=embed)
+
+        # Add remaining songs to queue
+        while next_song is not None:
+            source = await YTDLSource.from_url(next_song[1][3])
+            self.song_queue[ctx.guild.id].append(source)
+            next_song = song_links.get(next_song[0])
+
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Added playlist `{playlist}` to queue")
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    @perms.check()
     async def stop(self, ctx):
         """Stops and clears the queue"""
         # Check if in a voice channel
