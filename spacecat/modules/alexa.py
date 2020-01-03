@@ -432,15 +432,9 @@ class Alexa(commands.Cog):
     @perms.check()
     async def createplaylist(self, ctx, *, playlist):
         """Create a new playlist"""
-        db = sqlite3.connect(settings.data + 'spacecat.db')
-        cursor = db.cursor()
-        values = (playlist, ctx.guild.id)
-
-        # Cancel if playlist name already exists for server in database
-        cursor.execute(
-            'SELECT name FROM playlist WHERE name=? AND server_id=?', values)
-        row_count = len(cursor.fetchall())
-        if row_count > 0:
+        # Cancel if playlist linked to server already exists in db
+        playlists = await self._get_playlists(ctx)
+        if playlist in playlists:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
                 description=f"Playlist `{playlist}` already exists")
@@ -448,13 +442,44 @@ class Alexa(commands.Cog):
             return
 
         # Add playlist to database
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (playlist, ctx.guild.id)
         cursor.execute(
             'INSERT INTO playlist(name, server_id) VALUES (?,?)', values)
         db.commit()
         db.close()
+
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
             description=f"Playlist `{playlist}` has been created")
+        await ctx.send(embed=embed)
+
+    @playlist.command(name='destroy')
+    @perms.check()
+    async def destroyplaylist(self, ctx, *, playlist):
+        """Deletes an existing playlist"""
+        # Cancel if playlist doesn't exist in db
+        playlists = await self._get_playlists(ctx)
+        if playlist not in playlists:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Add playlist to database
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (playlist, ctx.guild.id)
+        cursor.execute(
+            'DELETE FROM playlist WHERE name=? AND server_id=?', values)
+        db.commit()
+        db.close()
+
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Playlist `{playlist}` has been destroyed")
         await ctx.send(embed=embed)
         
     def _next(self, ctx):
@@ -516,6 +541,18 @@ class Alexa(commands.Cog):
                 "commands. \nUse **!join** or **!play** to connect me to a channel")
             await ctx.send(embed=embed)
             return False
+
+    async def _get_playlists(self, ctx):
+        # Cancel if playlist name already exists for server in database
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        db.row_factory = lambda cursor, row: row[0]
+        cursor = db.cursor()
+        values = (ctx.guild.id,)
+        cursor.execute(
+            'SELECT name FROM playlist WHERE server_id=?', values)
+        playlists = cursor.fetchall()
+        db.close()
+        return playlists
 
 
 def setup(bot):
