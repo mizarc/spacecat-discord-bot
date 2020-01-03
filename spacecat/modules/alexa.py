@@ -484,26 +484,52 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='add')
     @perms.check()
-    async def addplaylist(self, ctx, playlist, song):
+    async def addplaylist(self, ctx, playlist, url):
         """Adds a song to a playlist"""
+        # Cancel if playlist doesn't exist
+        playlists = await self._get_playlists(ctx)
+        if playlist not in playlists:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
 
+        # First song in playlist has no previous song
+        playlist_id, songs = await self._get_songs(ctx, playlist)
+        if not songs:
+            previous_song = None
 
-        source = await YTDLSource.from_url(song)
+        # Check if any song id exists as a previous id to determine if it is
+        # the last song in the playlist
+        else:
+            song_ids = []
+            previous_ids = []
+            for song in songs:
+                song_ids.append(song[0])
+                previous_ids.append(song[4])
 
+            previous_song = list(set(song_ids) - set(previous_ids))[0]
+
+        # Add song to end of playlist
+        source = await YTDLSource.from_url(url)
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        values = (playlist, ctx.guild.id)
+        values = (
+            source.title, source.duration, source.webpage_url,
+            previous_song, playlist_id)
         cursor.execute(
-            'INSERT INTO playlist(title, length, url, previous_song server_id) VALUES (?,?)', values)
+            'INSERT INTO playlist_music'
+            '(title, length, url, previous_song, playlist_id) '
+            'VALUES (?,?,?,?,?)', values)
         db.commit()
         db.close()
 
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
-            description=f"Playlist `{playlist}` has been destroyed")
+            description=f"`{source.title}` has been added to playlist `{playlist}``")
         await ctx.send(embed=embed)
     
-        
     def _next(self, ctx):
         # If looping, grab source from url again
         if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
@@ -584,7 +610,7 @@ class Alexa(commands.Cog):
         values = (playlist, ctx.guild.id)
         cursor.execute(
             'SELECT id FROM playlist WHERE name=? AND server_id=?', values)
-        playlist_id = cursor.fetchall()
+        playlist_id = cursor.fetchone()[0]
 
         # Get list of all songs in playlist
         values = (playlist_id,)
@@ -592,7 +618,7 @@ class Alexa(commands.Cog):
             'SELECT * FROM playlist_music WHERE playlist_id=?', values)
         songs = cursor.fetchall()
         db.close()
-        return songs
+        return playlist_id, songs
 
 
 def setup(bot):
