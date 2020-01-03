@@ -87,7 +87,7 @@ class Alexa(commands.Cog):
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS playlist_music'
             '(id INTEGER PRIMARY KEY, title TEXT, length INTEGER, url TEXT,'
-            'previous_song TEXT, playlist_id INTEGER,'
+            'previous_song INTEGER, playlist_id INTEGER,'
             'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
 
         db.commit()
@@ -425,7 +425,7 @@ class Alexa(commands.Cog):
     async def playlist(self, ctx):
         """Configure music playlists"""
         if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `create/destroy/add/remove`")
+            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `create/destroy/add/remove/list`")
             await ctx.send(embed=embed)
 
     @playlist.command(name='create')
@@ -481,6 +481,28 @@ class Alexa(commands.Cog):
             colour=settings.embed_type('accept'),
             description=f"Playlist `{playlist}` has been destroyed")
         await ctx.send(embed=embed)
+
+    @playlist.command(name='add')
+    @perms.check()
+    async def addplaylist(self, ctx, playlist, song):
+        """Adds a song to a playlist"""
+
+
+        source = await YTDLSource.from_url(song)
+
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (playlist, ctx.guild.id)
+        cursor.execute(
+            'INSERT INTO playlist(title, length, url, previous_song server_id) VALUES (?,?)', values)
+        db.commit()
+        db.close()
+
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Playlist `{playlist}` has been destroyed")
+        await ctx.send(embed=embed)
+    
         
     def _next(self, ctx):
         # If looping, grab source from url again
@@ -543,7 +565,6 @@ class Alexa(commands.Cog):
             return False
 
     async def _get_playlists(self, ctx):
-        # Cancel if playlist name already exists for server in database
         db = sqlite3.connect(settings.data + 'spacecat.db')
         db.row_factory = lambda cursor, row: row[0]
         cursor = db.cursor()
@@ -553,6 +574,25 @@ class Alexa(commands.Cog):
         playlists = cursor.fetchall()
         db.close()
         return playlists
+
+    async def _get_songs(self, ctx, playlist):
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        #db.row_factory = lambda cursor, row: row[0]
+        cursor = db.cursor()
+
+        # Get playlist id from name
+        values = (playlist, ctx.guild.id)
+        cursor.execute(
+            'SELECT id FROM playlist WHERE name=? AND server_id=?', values)
+        playlist_id = cursor.fetchall()
+
+        # Get list of all songs in playlist
+        values = (playlist_id,)
+        cursor.execute(
+            'SELECT * FROM playlist_music WHERE playlist_id=?', values)
+        songs = cursor.fetchall()
+        db.close()
+        return songs
 
 
 def setup(bot):
