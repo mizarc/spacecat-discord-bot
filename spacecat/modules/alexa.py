@@ -630,7 +630,47 @@ class Alexa(commands.Cog):
     #            description=f"Playlist `{playlist}` doesn't exist")
     #        await ctx.send(embed=embed)
     #        return
+
+    @playlist.command(name='listsongs')
+    @perms.check()
+    async def listsongsplaylist(self, ctx, playlist):
+        """List all songs in a playlist"""
+        # Fetch songs from playlist if it exists
+        try:
+            _, songs = await self._get_songs(ctx, playlist)
+        except TypeError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` does not exist")
+            await ctx.send(embed=embed)
+            return
+        song_links = {}
+        for song in songs:
+            song_links[song[4]] = [song[0], song]
+
+        # Create pretty embed
+        embed = discord.Embed(colour=settings.embed_type('info'))
+        image = discord.File(settings.embed_icons("music"), filename="image.png")
+        embed.set_author(name="Playlist Contents", icon_url="attachment://image.png")
         
+        # Add each song to a formatted queue
+        playlist_music_info = []
+        index = 1
+        next_song = song_links.get(None)
+        while next_song is not None:
+            if index >= 10:
+                break
+            duration = await self._get_duration(next_song[1][2])
+            playlist_music_info.append(f"{index}. {next_song[1][1]} `{duration}`")
+            next_song = song_links.get(next_song[0])
+            index += 1
+
+        # Output results to chat
+        playlist_music_output = '\n'.join(playlist_music_info)
+        embed.add_field(
+            name=f"{len(song_links)} available",
+            value=playlist_music_output, inline=False)
+        await ctx.send(file=image, embed=embed)
 
     def _next(self, ctx):
         # If looping, grab source from url again
