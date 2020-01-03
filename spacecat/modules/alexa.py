@@ -279,7 +279,14 @@ class Alexa(commands.Cog):
                 return
 
         # Get all songs in playlist
-        playlist_id, songs = await self._get_songs(ctx, playlist)
+        try:
+            playlist_id, songs = await self._get_songs(ctx, playlist)
+        except TypeError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` does not exist")
+            await ctx.send(embed=embed)
+            return
         song_links = {}
         for song in songs:
             song_links[song[4]] = [song[0], song]
