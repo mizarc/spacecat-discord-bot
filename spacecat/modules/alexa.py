@@ -618,9 +618,12 @@ class Alexa(commands.Cog):
         db.commit()
         db.close()
 
+        duration = await self._get_duration(source.duration)
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
-            description=f"`{source.title}` has been added to playlist `{playlist_name}`")
+            description=f"Added [{source.title}]({source.webpage_url}) "
+            f"`{duration}` to position #{len(songs)} "
+            f"in playlist `{playlist_name}`")
         await ctx.send(embed=embed)
 
     @playlist.command(name='remove')
@@ -657,8 +660,6 @@ class Alexa(commands.Cog):
             colour=settings.embed_type('accept'),
             description=f"`{selected_song[1]}` has been removed from `{playlist}`")
         await ctx.send(embed=embed)
-        
-        
 
     @playlist.command(name='songlist')
     @perms.check()
