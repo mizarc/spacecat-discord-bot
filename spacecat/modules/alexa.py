@@ -664,6 +664,7 @@ class Alexa(commands.Cog):
     @playlist.command(name='remove')
     @perms.check()
     async def remove_playlist(self, ctx, playlist, index):
+        """Removes a song from a playlist"""
         # Fetch songs from playlist if it exists
         try:
             _, songs = await self._get_songs(ctx, playlist)
@@ -706,6 +707,7 @@ class Alexa(commands.Cog):
     @playlist.command(name='move')
     @perms.check()
     async def move_playlist(self, ctx, playlist, original_pos, new_pos):
+        """Moves a song to a specified position in a playlist"""
         # Fetch songs from playlist if it exists
         try:
             _, songs = await self._get_songs(ctx, playlist)
