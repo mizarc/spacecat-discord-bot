@@ -479,7 +479,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='create')
     @perms.check()
-    async def createplaylist(self, ctx, *, playlist_name):
+    async def create_playlist(self, ctx, *, playlist_name):
         """Create a new playlist"""
         # Cancel if playlist linked to server already exists in db
         playlists = await self._get_playlists(ctx)
@@ -510,7 +510,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='destroy')
     @perms.check()
-    async def destroyplaylist(self, ctx, *, playlist_name):
+    async def destroy_playlist(self, ctx, *, playlist_name):
         """Deletes an existing playlist"""
         # Cancel if playlist doesn't exist in db
         playlists = await self._get_playlists(ctx)
@@ -541,7 +541,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='list')
     @perms.check()
-    async def listplaylist(self, ctx):
+    async def list_playlist(self, ctx):
         """List all available playlists"""
         # Get all playlist names and duration
         playlists = await self._get_playlists(ctx)
@@ -573,7 +573,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='add')
     @perms.check()
-    async def addplaylist(self, ctx, playlist_name, url):
+    async def add_playlist(self, ctx, playlist_name, url):
         """Adds a song to a playlist"""
         # Cancel if playlist doesn't exist
         playlists = await self._get_playlists(ctx)
@@ -628,7 +628,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='remove')
     @perms.check()
-    async def removeplaylist(self, ctx, playlist, index):
+    async def remove_playlist(self, ctx, playlist, index):
         # Fetch songs from playlist if it exists
         try:
             _, songs = await self._get_songs(ctx, playlist)
@@ -663,7 +663,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='songlist')
     @perms.check()
-    async def songlistplaylist(self, ctx, playlist, page=1):
+    async def songlist_playlist(self, ctx, playlist, page=1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
         try:
