@@ -540,6 +540,36 @@ class Alexa(commands.Cog):
             description=f"Playlist `{playlist_name}` has been destroyed")
         await ctx.send(embed=embed)
 
+    @playlist.command(name='rename')
+    @perms.check()
+    async def rename_playlist(self, ctx, playlist, new_name):
+        """Rename an existing playlist"""
+        # Alert if no playlists exist
+        try:
+            playlist_id = await self._get_playlist_id(ctx, playlist)
+        except TypeError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Rename playlist in database
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (new_name, playlist_id,)
+        cursor.execute(
+            'UPDATE playlist SET name=? WHERE id=?', values)
+        db.commit()
+        db.close()
+
+        # Output result to chat
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Playlist `{playlist}` has been renamed to "
+            f"`{new_name}`")
+        await ctx.send(embed=embed)
+
     @playlist.command(name='list')
     @perms.check()
     async def list_playlist(self, ctx):
@@ -581,7 +611,6 @@ class Alexa(commands.Cog):
             value=playlist_output, inline=False)
         await ctx.send(file=image, embed=embed)
         
-
     @playlist.command(name='add')
     @perms.check()
     async def add_playlist(self, ctx, playlist_name, *, url):
