@@ -544,9 +544,8 @@ class Alexa(commands.Cog):
     @perms.check()
     async def list_playlist(self, ctx):
         """List all available playlists"""
-        # Get all playlist names and duration
+        # Alert if no playlists exist
         playlists = await self._get_playlists(ctx)
-
         if not playlists:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -554,6 +553,7 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        # Get all playlist names and duration
         playlist_names = []
         for playlist in playlists:
             _, songs = await self._get_songs(ctx, playlist[1])
@@ -562,17 +562,19 @@ class Alexa(commands.Cog):
                 song_duration += song[2]
             playlist_names.append([playlist[1], song_duration])
 
-        # Output first in queue as currently playing
-        embed = discord.Embed(colour=settings.embed_type('info'))
-        image = discord.File(settings.embed_icons("music"), filename="image.png")
-        embed.set_author(name="Music Playlists", icon_url="attachment://image.png")
-
+        # Format playlist songs into pretty list
         playlist_info = []
         for index, playlist_name in enumerate(islice(playlist_names, 0, 10)):
             duration = await self._get_duration(playlist_name[1])
-            playlist_info.append(f"{index + 1}. {playlist_name[0]} `{duration}`")
+            playlist_info.append(
+                f"{index + 1}. {playlist_name[0]} `{duration}`")
 
         # Output results to chat
+        embed = discord.Embed(colour=settings.embed_type('info'))
+        image = discord.File(
+            settings.embed_icons("music"), filename="image.png")
+        embed.set_author(
+            name="Music Playlists", icon_url="attachment://image.png")
         playlist_output = '\n'.join(playlist_info)
         embed.add_field(
             name=f"{len(playlists)} available",
