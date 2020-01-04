@@ -648,34 +648,22 @@ class Alexa(commands.Cog):
                 description=f"Playlist `{playlist}` does not exist")
             await ctx.send(embed=embed)
             return
-        song_links = {}
-        total_duration = 0
-        for song in songs:
-            total_duration += song[2]
-            song_links[song[4]] = [song[0], song]
-
-        # Create pretty embed
-        embed = discord.Embed(colour=settings.embed_type('info'))
-        image = discord.File(settings.embed_icons("music"), filename="image.png")
-        embed.set_author(name="Playlist Contents", icon_url="attachment://image.png")
-
-        # Order songs using previous_song key
-        ordered_songs = []
-        next_song = song_links.get(None)
-        while next_song is not None:
-            ordered_songs.append(next_song[1])
-            next_song = song_links.get(next_song[0])
 
         # Modify page variable to get every ten results
         page -= 1
         if page > 0: page = page * 10
 
+        # Get total duration
+        total_duration = 0
+        for song in songs:
+            total_duration += song[2]
+
         # Make a formatted list of 10 aliases based on the page
         formatted_songs = []
-        for index, ordered_song in enumerate(islice(ordered_songs, page, page + 10)):
-            duration = await self._get_duration(ordered_song[2])
+        for index, song in enumerate(islice(songs, page, page + 10)):
+            duration = await self._get_duration(song[2])
             formatted_songs.append(
-                f"{page + index + 1}. {ordered_song[1]} `{duration}`")
+                f"{page + index + 1}. {song[1]} `{duration}`")
 
         # Alert of no songs are on the specified page
         if not formatted_songs:
@@ -686,10 +674,14 @@ class Alexa(commands.Cog):
             return
 
         # Output results to chat
-        playlist_music_output = '\n'.join(formatted_songs)
+        embed = discord.Embed(colour=settings.embed_type('info'))
+        image = discord.File(settings.embed_icons("music"), filename="image.png")
+        embed.set_author(name="Playlist Contents", icon_url="attachment://image.png")
+
         formatted_duration = await self._get_duration(total_duration)
+        playlist_music_output = '\n'.join(formatted_songs)
         embed.add_field(
-            name=f"{len(song_links)} available `{formatted_duration}`",
+            name=f"{len(songs)} available `{formatted_duration}`",
             value=playlist_music_output, inline=False)
         await ctx.send(file=image, embed=embed)
 
@@ -767,7 +759,6 @@ class Alexa(commands.Cog):
 
     async def _get_songs(self, ctx, playlist):
         db = sqlite3.connect(settings.data + 'spacecat.db')
-        #db.row_factory = lambda cursor, row: row[0]
         cursor = db.cursor()
 
         # Get playlist id from name
@@ -782,7 +773,20 @@ class Alexa(commands.Cog):
             'SELECT * FROM playlist_music WHERE playlist_id=?', values)
         songs = cursor.fetchall()
         db.close()
-        return playlist_id, songs
+
+        # Use dictionary to pair songs
+        song_links = {}
+        for song in songs:
+            song_links[song[4]] = [song[0], song]
+
+        # Order songs using previous_song key
+        ordered_songs = []
+        next_song = song_links.get(None)
+        while next_song is not None:
+            ordered_songs.append(next_song[1])
+            next_song = song_links.get(next_song[0])
+
+        return playlist_id, ordered_songs
 
 
 def setup(bot):
