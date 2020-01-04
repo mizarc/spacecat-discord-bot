@@ -623,17 +623,42 @@ class Alexa(commands.Cog):
             description=f"`{source.title}` has been added to playlist `{playlist_name}`")
         await ctx.send(embed=embed)
 
-    #@playlist.command(name='remove')
-    #@perms.check()
-    #async def removeplaylist(self, ctx, playlist, url):
-    #    # Cancel if playlist doesn't exist
-    #    playlists = await self._get_playlists(ctx)
-    #    if playlist not in playlists:
-    #        embed = discord.Embed(
-    #            colour=settings.embed_type('warn'),
-    #            description=f"Playlist `{playlist}` doesn't exist")
-    #        await ctx.send(embed=embed)
-    #        return
+    @playlist.command(name='remove')
+    @perms.check()
+    async def removeplaylist(self, ctx, playlist, index):
+        # Fetch songs from playlist if it exists
+        try:
+            _, songs = await self._get_songs(ctx, playlist)
+        except TypeError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` does not exist")
+            await ctx.send(embed=embed)
+            return
+
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        selected_song = songs[int(index) - 1]
+        next_song = songs[int(index)]
+
+        # Edit next song's previous song id if it exists
+        values = (selected_song[4], next_song[0],)
+        cursor.execute(
+            'UPDATE playlist_music SET previous_song=? WHERE id=?', values)
+
+        values = (selected_song[0],)
+        # Remove selected song from playlist
+        cursor.execute(
+            'DELETE FROM playlist_music WHERE id=?', values)
+        db.commit()
+        db.close()
+
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"`{selected_song[1]}` has been removed from `{playlist}`")
+        await ctx.send(embed=embed)
+        
+        
 
     @playlist.command(name='songlist')
     @perms.check()
