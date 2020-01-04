@@ -486,7 +486,7 @@ class Alexa(commands.Cog):
         """Create a new playlist"""
         # Cancel if playlist linked to server already exists in db
         try:
-            playlist_id = await self._get_playlist_id(ctx, playlist_name)
+            await self._get_playlist_id(ctx, playlist_name)
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
                 description=f"Playlist `{playlist_name}` already exists")
