@@ -696,9 +696,11 @@ class Alexa(commands.Cog):
         db.close()
 
         # Output result to chat
+        duration = await self._get_duration(selected_song[2])
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
-            description=f"`{selected_song[1]}` has been removed from `{playlist}`")
+            description=f"[{selected_song[1]}]({selected_song[3]}) "
+            f"`{duration}` has been removed from `{playlist}`")
         await ctx.send(embed=embed)
 
     @playlist.command(name='move')
