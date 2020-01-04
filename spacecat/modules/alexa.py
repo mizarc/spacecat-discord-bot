@@ -86,7 +86,7 @@ class Alexa(commands.Cog):
 
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS playlist_music'
-            '(id INTEGER PRIMARY KEY, title TEXT, length INTEGER, url TEXT,'
+            '(id INTEGER PRIMARY KEY, title TEXT, duration INTEGER, url TEXT,'
             'previous_song INTEGER, playlist_id INTEGER,'
             'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
 
@@ -613,7 +613,7 @@ class Alexa(commands.Cog):
             previous_song, playlist_id)
         cursor.execute(
             'INSERT INTO playlist_music'
-            '(title, length, url, previous_song, playlist_id) '
+            '(title, duration, url, previous_song, playlist_id) '
             'VALUES (?,?,?,?,?)', values)
         db.commit()
         db.close()
