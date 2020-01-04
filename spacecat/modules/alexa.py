@@ -484,7 +484,7 @@ class Alexa(commands.Cog):
     @perms.check()
     async def create_playlist(self, ctx, *, playlist_name):
         """Create a new playlist"""
-        # Cancel if playlist linked to server already exists in db
+        # Alert if playlist with specified name already exists
         try:
             await self._get_playlist_id(ctx, playlist_name)
             embed = discord.Embed(
@@ -513,7 +513,7 @@ class Alexa(commands.Cog):
     @perms.check()
     async def destroy_playlist(self, ctx, *, playlist_name):
         """Deletes an existing playlist"""
-        # Cancel if playlist doesn't exist in db
+        # Alert if playlist doesn't exist in db
         try:
             playlist_id = await self._get_playlist_id(ctx, playlist_name)
         except TypeError:
@@ -586,38 +586,31 @@ class Alexa(commands.Cog):
     @perms.check()
     async def add_playlist(self, ctx, playlist_name, *, url):
         """Adds a song to a playlist"""
-        # Cancel if playlist doesn't exist
-        playlists = await self._get_playlists(ctx)
-        playlist_names = []
-        for playlist in playlists:
-            playlist_names.append(playlist[1])
-
-        if playlist_name not in playlist_names:
+        # Alert if playlist doesn't exist in db
+        try:
+            playlist_id, songs = await self._get_songs(ctx, playlist_name)
+        except TypeError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
-                description=f"Playlist `{playlist}` doesn't exist")
+                description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
 
+        # Get song source
         source = await YTDLSource.from_url(url)
 
-        # First song in playlist has no previous song
-        playlist_id, songs = await self._get_songs(ctx, playlist_name)
+        # Set previous song as the last song in the playlist
         if not songs:
             previous_song = None
-
-        # Check if any song id exists as a previous id to determine if it is
-        # the last song in the playlist
         else:
             song_ids = []
             previous_ids = []
             for song in songs:
                 song_ids.append(song[0])
                 previous_ids.append(song[4])
-
             previous_song = list(set(song_ids) - set(previous_ids))[0]
 
-        # Add song to end of playlist
+        # Add song to playlist
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         values = (
@@ -630,6 +623,7 @@ class Alexa(commands.Cog):
         db.commit()
         db.close()
 
+        # Output result to chat
         duration = await self._get_duration(source.duration)
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
@@ -647,10 +641,11 @@ class Alexa(commands.Cog):
         except TypeError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
-                description=f"Playlist `{playlist}` does not exist")
+                description=f"Playlist `{playlist}` doesn't exist")
             await ctx.send(embed=embed)
             return
 
+        # Fetch selected song and the song after
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         selected_song = songs[int(index) - 1]
@@ -661,13 +656,14 @@ class Alexa(commands.Cog):
         cursor.execute(
             'UPDATE playlist_music SET previous_song=? WHERE id=?', values)
 
-        values = (selected_song[0],)
         # Remove selected song from playlist
+        values = (selected_song[0],)
         cursor.execute(
             'DELETE FROM playlist_music WHERE id=?', values)
         db.commit()
         db.close()
 
+        # Output result to chat
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
             description=f"`{selected_song[1]}` has been removed from `{playlist}`")
@@ -693,23 +689,22 @@ class Alexa(commands.Cog):
         values = [
             (other_song[4], selected_song[0]),
             (selected_song[0], other_song[0])]
-
         try:
             next_song = songs[int(original_pos)]
             values.append((selected_song[4], next_song[0]))
         except IndexError:
             pass
         
+        # Execute all those values
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        
         for value in values:
             cursor.execute(
                 'UPDATE playlist_music SET previous_song=? WHERE id=?', value)
         db.commit()
         db.close()
 
-        # Alert user of change
+        # Output result to chat
         duration = await self._get_duration(selected_song[2])
         embed = discord.Embed(
                 colour=settings.embed_type('accept'),
@@ -748,7 +743,7 @@ class Alexa(commands.Cog):
             formatted_songs.append(
                 f"{page + index + 1}. {song[1]} `{duration}`")
 
-        # Alert of no songs are on the specified page
+        # Alert if no songs are on the specified page
         if not formatted_songs:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -760,7 +755,6 @@ class Alexa(commands.Cog):
         embed = discord.Embed(colour=settings.embed_type('info'))
         image = discord.File(settings.embed_icons("music"), filename="image.png")
         embed.set_author(name="Playlist Contents", icon_url="attachment://image.png")
-
         formatted_duration = await self._get_duration(total_duration)
         playlist_music_output = '\n'.join(formatted_songs)
         embed.add_field(
