@@ -482,17 +482,15 @@ class Alexa(commands.Cog):
     async def create_playlist(self, ctx, *, playlist_name):
         """Create a new playlist"""
         # Cancel if playlist linked to server already exists in db
-        playlists = await self._get_playlists(ctx)
-        playlist_names = []
-        for playlist in playlists:
-            playlist_names.append(playlist[1])
-
-        if playlist_name in playlist_names:
+        try:
+            playlist_id = await self._get_playlist_id(ctx, playlist_name)
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
                 description=f"Playlist `{playlist_name}` already exists")
             await ctx.send(embed=embed)
             return
+        except TypeError:
+            pass
 
         # Add playlist to database
         db = sqlite3.connect(settings.data + 'spacecat.db')
@@ -513,21 +511,21 @@ class Alexa(commands.Cog):
     async def destroy_playlist(self, ctx, *, playlist_name):
         """Deletes an existing playlist"""
         # Cancel if playlist doesn't exist in db
-        playlists = await self._get_playlists(ctx)
-        playlist_names = []
-        for playlist in playlists:
-            playlist_names.append(playlist[1])
-
-        if playlist_name not in playlist_names:
+        try:
+            playlist_id = await self._get_playlist_id(ctx, playlist_name)
+        except TypeError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
                 description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
 
-        # Add playlist to database
+        # Remove playlist from database and all songs linked to it
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
+        values = (playlist_id,)
+        cursor.execute(
+            'DELETE FROM playlist_music WHERE playlist_id=?', values)
         values = (playlist_name, ctx.guild.id)
         cursor.execute(
             'DELETE FROM playlist WHERE name=? AND server_id=?', values)
@@ -838,17 +836,23 @@ class Alexa(commands.Cog):
         db.close()
         return playlists
 
-    async def _get_songs(self, ctx, playlist):
+    async def _get_playlist_id(self, ctx, playlist):
+        # Get playlist id from name
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-
-        # Get playlist id from name
         values = (playlist, ctx.guild.id)
         cursor.execute(
             'SELECT id FROM playlist WHERE name=? AND server_id=?', values)
         playlist_id = cursor.fetchone()[0]
+        return playlist_id
+
+
+    async def _get_songs(self, ctx, playlist):
+        playlist_id = await self._get_playlist_id(ctx, playlist)
 
         # Get list of all songs in playlist
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
         values = (playlist_id,)
         cursor.execute(
             'SELECT * FROM playlist_music WHERE playlist_id=?', values)
