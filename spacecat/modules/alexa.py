@@ -545,6 +545,14 @@ class Alexa(commands.Cog):
         """List all available playlists"""
         # Get all playlist names and duration
         playlists = await self._get_playlists(ctx)
+
+        if not playlists:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There are no playlists available")
+            await ctx.send(embed=embed)
+            return
+
         playlist_names = []
         for playlist in playlists:
             _, songs = await self._get_songs(ctx, playlist[1])
