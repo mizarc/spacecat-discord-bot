@@ -581,7 +581,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='add')
     @perms.check()
-    async def add_playlist(self, ctx, playlist_name, url):
+    async def add_playlist(self, ctx, playlist_name, *, url):
         """Adds a song to a playlist"""
         # Cancel if playlist doesn't exist
         playlists = await self._get_playlists(ctx)
