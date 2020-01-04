@@ -630,7 +630,7 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
             description=f"Added [{source.title}]({source.webpage_url}) "
-            f"`{duration}` to position #{len(songs)} "
+            f"`{duration}` to position #{len(songs) + 1} "
             f"in playlist `{playlist_name}`")
         await ctx.send(embed=embed)
 
@@ -669,6 +669,45 @@ class Alexa(commands.Cog):
             description=f"`{selected_song[1]}` has been removed from `{playlist}`")
         await ctx.send(embed=embed)
 
+    @playlist.command(name='move')
+    @perms.check()
+    async def move_playlist(self, ctx, playlist, original_pos, new_pos):
+        # Fetch songs from playlist if it exists
+        try:
+            _, songs = await self._get_songs(ctx, playlist)
+        except TypeError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` does not exist")
+            await ctx.send(embed=embed)
+            return
+
+        selected_song = songs[int(original_pos) - 1]
+        next_song = songs[int(original_pos)]
+        other_song = songs[int(new_pos) - 1]
+
+        # Edit db to put selected song in other song's position while shifting
+        # the other song to be after the selected song's position
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = [
+            (other_song[4], selected_song[0]),
+            (selected_song[4], next_song[0]),
+            (selected_song[0], other_song[0])]
+        for value in values:
+            cursor.execute(
+                'UPDATE playlist_music SET previous_song=? WHERE id=?', value)
+        db.commit()
+        db.close()
+
+        duration = await self._get_duration(selected_song[2])
+        embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description=f"[{selected_song[1]}]({selected_song[3]}) "
+                f"`{duration}` has been moved to position #{new_pos} "
+                f"in playlist `{playlist}`")
+        await ctx.send(embed=embed)
+        
     @playlist.command(name='songlist')
     @perms.check()
     async def songlist_playlist(self, ctx, playlist, page=1):
