@@ -678,13 +678,16 @@ class Alexa(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         selected_song = songs[int(index) - 1]
-        next_song = songs[int(index)]
-
+        
         # Edit next song's previous song id if it exists
-        values = (selected_song[4], next_song[0],)
-        cursor.execute(
-            'UPDATE playlist_music SET previous_song=? WHERE id=?', values)
-
+        try:
+            next_song = songs[int(index)]
+            values = (selected_song[4], next_song[0],)
+            cursor.execute(
+                'UPDATE playlist_music SET previous_song=? WHERE id=?', values)
+        except IndexError:
+            pass
+        
         # Remove selected song from playlist
         values = (selected_song[0],)
         cursor.execute(
