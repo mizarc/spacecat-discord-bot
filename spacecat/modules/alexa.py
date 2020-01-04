@@ -683,24 +683,30 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        selected_song = songs[int(original_pos) - 1]
-        next_song = songs[int(original_pos)]
-        other_song = songs[int(new_pos) - 1]
-
         # Edit db to put selected song in other song's position while shifting
         # the other song to be after the selected song's position
-        db = sqlite3.connect(settings.data + 'spacecat.db')
-        cursor = db.cursor()
+        selected_song = songs[int(original_pos) - 1]
+        other_song = songs[int(new_pos) - 1]
         values = [
             (other_song[4], selected_song[0]),
-            (selected_song[4], next_song[0]),
             (selected_song[0], other_song[0])]
+
+        try:
+            next_song = songs[int(original_pos)]
+            values.append((selected_song[4], next_song[0]))
+        except IndexError:
+            pass
+        
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        
         for value in values:
             cursor.execute(
                 'UPDATE playlist_music SET previous_song=? WHERE id=?', value)
         db.commit()
         db.close()
 
+        # Alert user of change
         duration = await self._get_duration(selected_song[2])
         embed = discord.Embed(
                 colour=settings.embed_type('accept'),
