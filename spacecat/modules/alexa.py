@@ -474,7 +474,10 @@ class Alexa(commands.Cog):
     async def playlist(self, ctx):
         """Configure music playlists"""
         if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `create/destroy/add/remove/list`")
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Please specify a valid subcommand: "
+                "`create/destroy/rename/list/add/remove/move/songlist`")
             await ctx.send(embed=embed)
 
     @playlist.command(name='create')
