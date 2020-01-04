@@ -596,6 +596,8 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        source = await YTDLSource.from_url(url)
+
         # First song in playlist has no previous song
         playlist_id, songs = await self._get_songs(ctx, playlist_name)
         if not songs:
@@ -613,7 +615,6 @@ class Alexa(commands.Cog):
             previous_song = list(set(song_ids) - set(previous_ids))[0]
 
         # Add song to end of playlist
-        source = await YTDLSource.from_url(url)
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         values = (
