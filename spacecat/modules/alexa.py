@@ -566,7 +566,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
-            description=f"Description set for playlist `{playlist}`"a )
+            description=f"Description set for playlist `{playlist}`")
         await ctx.send(embed=embed)
 
     @playlist.command(name='rename')
