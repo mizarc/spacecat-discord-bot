@@ -539,12 +539,41 @@ class Alexa(commands.Cog):
             colour=settings.embed_type('accept'),
             description=f"Playlist `{playlist_name}` has been destroyed")
         await ctx.send(embed=embed)
+    
+    @playlist.command(name='description')
+    @perms.check()
+    async def description_playlist(self, ctx, playlist, *, description):
+        """Sets the description for the playlist"""
+        # Alert if playlist doesn't exist
+        try:
+            playlist_id = await self._get_playlist_id(ctx, playlist)
+        except TypeError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Rename playlist in database
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (description, playlist_id,)
+        cursor.execute(
+            'UPDATE playlist SET description=? WHERE id=?', values)
+        db.commit()
+        db.close()
+
+        # Output result to chat
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Description set for playlist `{playlist}`"a )
+        await ctx.send(embed=embed)
 
     @playlist.command(name='rename')
     @perms.check()
     async def rename_playlist(self, ctx, playlist, new_name):
         """Rename an existing playlist"""
-        # Alert if no playlists exist
+        # Alert if playlist doesn't exist
         try:
             playlist_id = await self._get_playlist_id(ctx, playlist)
         except TypeError:
