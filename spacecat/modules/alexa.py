@@ -778,9 +778,9 @@ class Alexa(commands.Cog):
                 f"in playlist `{playlist}`")
         await ctx.send(embed=embed)
         
-    @playlist.command(name='songlist')
+    @playlist.command(name='view')
     @perms.check()
-    async def songlist_playlist(self, ctx, playlist, page=1):
+    async def view_playlist(self, ctx, playlist, page=1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
         try:
