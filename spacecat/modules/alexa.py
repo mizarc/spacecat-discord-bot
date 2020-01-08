@@ -486,7 +486,7 @@ class Alexa(commands.Cog):
         """Create a new playlist"""
         # Alert if playlist with specified name already exists
         try:
-            await self._get_playlist_id(ctx, playlist_name)
+            await self._get_playlist(ctx, playlist_name)
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
                 description=f"Playlist `{playlist_name}` already exists")
@@ -515,7 +515,8 @@ class Alexa(commands.Cog):
         """Deletes an existing playlist"""
         # Alert if playlist doesn't exist in db
         try:
-            playlist_id = await self._get_playlist_id(ctx, playlist_name)
+            playlist = await self._get_playlist(ctx, playlist_name)
+            playlist_id = playlist[0][0]
         except TypeError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -546,7 +547,8 @@ class Alexa(commands.Cog):
         """Sets the description for the playlist"""
         # Alert if playlist doesn't exist
         try:
-            playlist_id = await self._get_playlist_id(ctx, playlist)
+            playlist = await self._get_playlist(ctx, playlist)
+            playlist_id = playlist[0][0]
         except TypeError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -575,7 +577,8 @@ class Alexa(commands.Cog):
         """Rename an existing playlist"""
         # Alert if playlist doesn't exist
         try:
-            playlist_id = await self._get_playlist_id(ctx, playlist)
+            playlist = await self._get_playlist(ctx, playlist)
+            playlist_id = playlist[0][0]
         except TypeError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -604,7 +607,7 @@ class Alexa(commands.Cog):
     async def list_playlist(self, ctx):
         """List all available playlists"""
         # Alert if no playlists exist
-        playlists = await self._get_playlists(ctx)
+        playlists = await self._get_playlist(ctx)
         if not playlists:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -780,15 +783,16 @@ class Alexa(commands.Cog):
         
     @playlist.command(name='view')
     @perms.check()
-    async def view_playlist(self, ctx, playlist, page=1):
+    async def view_playlist(self, ctx, playlist_name, page=1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
         try:
-            _, songs = await self._get_songs(ctx, playlist)
+            playlist = await self._get_playlist(ctx, playlist_name)
+            _, songs = await self._get_songs(ctx, playlist_name)
         except TypeError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
-                description=f"Playlist `{playlist}` does not exist")
+                description=f"Playlist `{playlist_name}` does not exist")
             await ctx.send(embed=embed)
             return
 
@@ -890,29 +894,29 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
             return False
 
-    async def _get_playlists(self, ctx):
-        db = sqlite3.connect(settings.data + 'spacecat.db')
-        cursor = db.cursor()
-        values = (ctx.guild.id,)
-        cursor.execute(
-            'SELECT * FROM playlist WHERE server_id=?', values)
-        playlists = cursor.fetchall()
-        db.close()
-        return playlists
-
-    async def _get_playlist_id(self, ctx, playlist):
+    async def _get_playlist(self, ctx, playlist_name=None):
         # Get playlist id from name
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        values = (playlist, ctx.guild.id)
-        cursor.execute(
-            'SELECT id FROM playlist WHERE name=? AND server_id=?', values)
-        playlist_id = cursor.fetchone()[0]
-        return playlist_id
 
+        # Fetch all or specific playlist depending on argument
+        if not playlist_name:
+            values = (ctx.guild.id,)
+            cursor.execute(
+                'SELECT * FROM playlist WHERE server_id=?', values)
+            playlist = cursor.fetchall()
+        else:
+            values = (playlist_name, ctx.guild.id)
+            cursor.execute(
+                'SELECT * FROM playlist WHERE name=? AND server_id=?', values)
+            playlist = cursor.fetchone()
+        
+        db.close()
+        return playlist
 
     async def _get_songs(self, ctx, playlist):
-        playlist_id = await self._get_playlist_id(ctx, playlist)
+        playlist = await self._get_playlist(ctx, playlist)
+        playlist_id = playlist[0]
 
         # Get list of all songs in playlist
         db = sqlite3.connect(settings.data + 'spacecat.db')
