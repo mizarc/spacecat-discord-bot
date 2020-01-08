@@ -827,8 +827,10 @@ class Alexa(commands.Cog):
         formatted_duration = await self._get_duration(total_duration)
         playlist_music_output = '\n'.join(formatted_songs)
         embed.add_field(
-            name=f"{len(songs)} songs available in "
-            f"{playlist} `{formatted_duration}`",
+            name=f"{playlist_name}",
+            value=f"{playlist[2]}", inline=False)
+        embed.add_field(
+            name=f"{len(songs)} songs available `{formatted_duration}`",
             value=playlist_music_output, inline=False)
         await ctx.send(file=image, embed=embed)
 
