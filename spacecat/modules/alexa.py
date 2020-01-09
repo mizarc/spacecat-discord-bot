@@ -648,7 +648,6 @@ class Alexa(commands.Cog):
         # Alert if playlist doesn't exist in db
         try:
             playlist = await self._get_playlist(ctx, playlist_name)
-            songs = await self._get_songs(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -656,8 +655,9 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Get song source
+        # Get song source to add to song list
         source = await YTDLSource.from_url(url)
+        songs = await self._get_songs(ctx, playlist_name)
 
         # Set previous song as the last song in the playlist
         if not songs:
