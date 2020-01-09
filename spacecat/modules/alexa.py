@@ -647,6 +647,7 @@ class Alexa(commands.Cog):
         """Adds a song to a playlist"""
         # Alert if playlist doesn't exist in db
         try:
+            playlist = await self._get_playlist(ctx, playlist_name)
             songs = await self._get_songs(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
@@ -674,7 +675,7 @@ class Alexa(commands.Cog):
         cursor = db.cursor()
         values = (
             source.title, source.duration, source.webpage_url,
-            previous_song, songs[0][5])
+            previous_song, playlist[0])
         cursor.execute(
             'INSERT INTO playlist_music'
             '(title, duration, url, previous_song, playlist_id) '
