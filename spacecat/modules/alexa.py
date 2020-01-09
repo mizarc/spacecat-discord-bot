@@ -526,7 +526,7 @@ class Alexa(commands.Cog):
         # Remove playlist from database and all songs linked to it
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        values = (playlist_id,)
+        values = (playlist[0],)
         cursor.execute(
             'DELETE FROM playlist_music WHERE playlist_id=?', values)
         values = (playlist_name, ctx.guild.id)
@@ -535,6 +535,7 @@ class Alexa(commands.Cog):
         db.commit()
         db.close()
 
+        # Output result to chat
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
             description=f"Playlist `{playlist_name}` has been destroyed")
@@ -542,21 +543,22 @@ class Alexa(commands.Cog):
     
     @playlist.command(name='description')
     @perms.check()
-    async def description_playlist(self, ctx, playlist, *, description):
+    async def description_playlist(self, ctx, playlist_name, *, description):
         """Sets the description for the playlist"""
         # Alert if playlist doesn't exist
         try:
+            playlist = await self._get_playlist(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
-                description=f"Playlist `{playlist}` doesn't exist")
+                description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
 
         # Rename playlist in database
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        values = (description, playlist_id,)
+        values = (description, playlist[0],)
         cursor.execute(
             'UPDATE playlist SET description=? WHERE id=?', values)
         db.commit()
@@ -565,26 +567,27 @@ class Alexa(commands.Cog):
         # Output result to chat
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
-            description=f"Description set for playlist `{playlist}`")
+            description=f"Description set for playlist `{playlist_name}`")
         await ctx.send(embed=embed)
 
     @playlist.command(name='rename')
     @perms.check()
-    async def rename_playlist(self, ctx, playlist, new_name):
+    async def rename_playlist(self, ctx, playlist_name, new_name):
         """Rename an existing playlist"""
         # Alert if playlist doesn't exist
         try:
+            playlist = await self._get_playlist(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
-                description=f"Playlist `{playlist}` doesn't exist")
+                description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
 
         # Rename playlist in database
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        values = (new_name, playlist_id,)
+        values = (new_name, playlist[0],)
         cursor.execute(
             'UPDATE playlist SET name=? WHERE id=?', values)
         db.commit()
@@ -613,7 +616,7 @@ class Alexa(commands.Cog):
         # Get all playlist names and duration
         playlist_names = []
         for playlist in playlists:
-            _, songs = await self._get_songs(ctx, playlist[1])
+            songs = await self._get_songs(ctx, playlist[1])
             song_duration = 0
             for song in songs:
                 song_duration += song[2]
@@ -644,6 +647,7 @@ class Alexa(commands.Cog):
         """Adds a song to a playlist"""
         # Alert if playlist doesn't exist in db
         try:
+            songs = await self._get_songs(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -670,7 +674,7 @@ class Alexa(commands.Cog):
         cursor = db.cursor()
         values = (
             source.title, source.duration, source.webpage_url,
-            previous_song, playlist_id)
+            previous_song, songs[0][5])
         cursor.execute(
             'INSERT INTO playlist_music'
             '(title, duration, url, previous_song, playlist_id) '
@@ -689,15 +693,15 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='remove')
     @perms.check()
-    async def remove_playlist(self, ctx, playlist, index):
+    async def remove_playlist(self, ctx, playlist_name, index):
         """Removes a song from a playlist"""
         # Fetch songs from playlist if it exists
         try:
-            _, songs = await self._get_songs(ctx, playlist)
+            songs = await self._get_songs(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
-                description=f"Playlist `{playlist}` doesn't exist")
+                description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
 
@@ -727,19 +731,20 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
             description=f"[{selected_song[1]}]({selected_song[3]}) "
-            f"`{duration}` has been removed from `{playlist}`")
+            f"`{duration}` has been removed from `{playlist_name}`")
         await ctx.send(embed=embed)
 
     @playlist.command(name='move')
     @perms.check()
-    async def move_playlist(self, ctx, playlist, original_pos, new_pos):
+    async def move_playlist(self, ctx, playlist_name, original_pos, new_pos):
         """Moves a song to a specified position in a playlist"""
         # Fetch songs from playlist if it exists
         try:
+            songs = await self._get_songs(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
-                description=f"Playlist `{playlist}` does not exist")
+                description=f"Playlist `{playlist_name}` does not exist")
             await ctx.send(embed=embed)
             return
 
@@ -771,7 +776,7 @@ class Alexa(commands.Cog):
                 colour=settings.embed_type('accept'),
                 description=f"[{selected_song[1]}]({selected_song[3]}) "
                 f"`{duration}` has been moved to position #{new_pos} "
-                f"in playlist `{playlist}`")
+                f"in playlist `{playlist_name}`")
         await ctx.send(embed=embed)
         
     @playlist.command(name='view')
@@ -781,6 +786,7 @@ class Alexa(commands.Cog):
         # Fetch songs from playlist if it exists
         try:
             playlist = await self._get_playlist(ctx, playlist_name)
+            songs = await self._get_songs(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -920,25 +926,25 @@ class Alexa(commands.Cog):
         # Get list of all songs in playlist
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        values = (playlist_id,)
+        values = (playlist[0],)
         cursor.execute(
             'SELECT * FROM playlist_music WHERE playlist_id=?', values)
         songs = cursor.fetchall()
         db.close()
-
-        # Use dictionary to pair songs
+        
+        # Use dictionary to pair songs with the next song
         song_links = {}
         for song in songs:
             song_links[song[4]] = [song[0], song]
 
-        # Order songs using previous_song key
+        # Order playlist songs
         ordered_songs = []
         next_song = song_links.get(None)
         while next_song is not None:
             ordered_songs.append(next_song[1])
             next_song = song_links.get(next_song[0])
 
-        return playlist_id, ordered_songs
+        return ordered_songs
 
 
 def setup(bot):
