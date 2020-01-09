@@ -823,12 +823,13 @@ class Alexa(commands.Cog):
         # Output results to chat
         embed = discord.Embed(colour=settings.embed_type('info'))
         image = discord.File(settings.embed_icons("music"), filename="image.png")
-        embed.set_author(name="Playlist Contents", icon_url="attachment://image.png")
+        embed.set_author(
+            name=f"Playlist '{playlist_name}' Contents",
+            icon_url="attachment://image.png")
+        if playlist[2]:
+            embed.description = playlist[2]
         formatted_duration = await self._get_duration(total_duration)
         playlist_music_output = '\n'.join(formatted_songs)
-        embed.add_field(
-            name=f"{playlist_name}",
-            value=f"{playlist[2]}", inline=False)
         embed.add_field(
             name=f"{len(songs)} songs available `{formatted_duration}`",
             value=playlist_music_output, inline=False)
