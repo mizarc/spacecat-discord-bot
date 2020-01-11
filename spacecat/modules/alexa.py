@@ -238,19 +238,18 @@ class Alexa(commands.Cog):
 
         # Add reaction button for every result
         reactions = []
-        for index, result in enumerate(results_format):
+        for index in range(len(results_format)):
             emoji = settings.number_to_emoji(index + 1)
             await msg.add_reaction(emoji)
             reactions.append(emoji)
 
         # Check if the requester selects a valid reaction
         def reaction_check(reaction, user):
-            if user == ctx.author and str(reaction) in reactions:
-                return reaction
+            return user == ctx.author and str(reaction) in reactions
 
         # Request reaction within timeframe
         try:
-            reaction, user = await self.bot.wait_for(
+            reaction, _ = await self.bot.wait_for(
                 'reaction_add', timeout=30.0, check=reaction_check)
         except asyncio.TimeoutError:
             embed = discord.Embed(
@@ -280,7 +279,7 @@ class Alexa(commands.Cog):
 
         # Get all songs in playlist
         try:
-            playlist_id, songs = await self._get_songs(ctx, playlist)
+            songs = await self._get_songs(ctx, playlist)
         except TypeError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
