@@ -846,7 +846,7 @@ class Alexa(commands.Cog):
         embed.set_author(
             name=f"Playlist '{playlist_name}' Contents",
             icon_url="attachment://image.png")
-        if playlist[2]:
+        if playlist[2] and page == 0:
             embed.description = playlist[2]
         formatted_duration = await self._get_duration(total_duration)
         playlist_music_output = '\n'.join(formatted_songs)
