@@ -1,6 +1,7 @@
 import asyncio
 from itertools import islice
 import os
+import random
 import re
 import shutil
 import sqlite3
@@ -385,6 +386,30 @@ class Alexa(commands.Cog):
         # Stop current song and flag that it has been skipped
         self.skip_toggle[ctx.guild.id] = True
         ctx.voice_client.stop()
+
+    @commands.command()
+    @perms.check()
+    async def shuffle(self, ctx):
+        """Randomly moves the contents of the queue around"""
+        # Alert if queue is empty
+        if len(self.song_queue[ctx.guild.id]) < 2:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There's nothing in the queue to shuffle")
+            await ctx.send(embed=embed)
+            return
+
+        # Create temp queue excluding currently playing song to shuffle
+        temp_queue = self.song_queue[ctx.guild.id][1:]
+        random.shuffle(temp_queue)
+        self.song_queue[ctx.guild.id][1:] = temp_queue
+
+        # Output result to chat
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Queue has been shuffled")
+        await ctx.send(embed=embed)
+        return
 
     @commands.command()
     @perms.check()
