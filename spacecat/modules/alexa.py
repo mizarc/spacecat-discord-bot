@@ -822,9 +822,15 @@ class Alexa(commands.Cog):
         # Make a formatted list of 10 aliases based on the page
         formatted_songs = []
         for index, song in enumerate(islice(songs, page, page + 10)):
+            # Cut off song name to 90 chars
+            if len(song[1]) > 90:
+                song_name = f"{song[1][:87]}..." 
+            else:
+                song_name = song[1]
+
             duration = await self._get_duration(song[2])
             formatted_songs.append(
-                f"{page + index + 1}. {song[1]} `{duration}`")
+                f"{page + index + 1}. {song_name} `{duration}`")
 
         # Alert if no songs are on the specified page
         if not formatted_songs:
