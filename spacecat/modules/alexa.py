@@ -3,6 +3,7 @@ from itertools import islice
 import os
 import re
 import shutil
+import sqlite3
 from time import gmtime, strftime, time
 
 import discord
@@ -71,6 +72,27 @@ class Alexa(commands.Cog):
         self.loop_toggle = {}
         self.skip_toggle = {}
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        # Create playlist table if it don't exist
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+
+        cursor.execute(
+            'CREATE TABLE IF NOT EXISTS playlist'
+            '(id INTEGER PRIMARY KEY, name TEXT, description TEXT,'
+            'server_id INTEGER)')
+
+        cursor.execute(
+            'CREATE TABLE IF NOT EXISTS playlist_music'
+            '(id INTEGER PRIMARY KEY, title TEXT, duration INTEGER, url TEXT,'
+            'previous_song INTEGER, playlist_id INTEGER,'
+            'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
+
+        db.commit()
+        db.close()
+
     @commands.command()
     @perms.check()
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
@@ -133,6 +155,7 @@ class Alexa(commands.Cog):
 
         # Grab audio source from youtube_dl and check if longer than 3 hours
         source = await YTDLSource.from_url(url)
+        print(source)
         if source.duration >= 10800:
             embed = discord.Embed(colour=settings.embed_type('warn'), description="Video must be shorter than 3 hours")
             await ctx.send(embed=embed)
@@ -215,19 +238,18 @@ class Alexa(commands.Cog):
 
         # Add reaction button for every result
         reactions = []
-        for index, result in enumerate(results_format):
+        for index in range(len(results_format)):
             emoji = settings.number_to_emoji(index + 1)
             await msg.add_reaction(emoji)
             reactions.append(emoji)
 
         # Check if the requester selects a valid reaction
         def reaction_check(reaction, user):
-            if user == ctx.author and str(reaction) in reactions:
-                return reaction
+            return user == ctx.author and str(reaction) in reactions
 
         # Request reaction within timeframe
         try:
-            reaction, user = await self.bot.wait_for(
+            reaction, _ = await self.bot.wait_for(
                 'reaction_add', timeout=30.0, check=reaction_check)
         except asyncio.TimeoutError:
             embed = discord.Embed(
@@ -242,6 +264,55 @@ class Alexa(commands.Cog):
         number = settings.emoji_to_number(str(reaction))
         selected_song = urls[number - 1]
         await ctx.invoke(self.play, url=selected_song)
+
+    @commands.command()
+    @perms.check()
+    async def playplaylist(self, ctx, playlist):
+        """Play from a locally saved playlist"""
+        # Join user's voice channel if not in one already
+        if ctx.voice_client is None:
+            await ctx.invoke(self.join)
+
+            # End function if bot failed to join a voice channel.
+            if ctx.voice_client is None:
+                return
+
+        # Get all songs in playlist
+        try:
+            songs = await self._get_songs(ctx, playlist)
+        except TypeError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` does not exist")
+            await ctx.send(embed=embed)
+            return
+        song_links = {}
+        for song in songs:
+            song_links[song[4]] = [song[0], song]
+
+        # Play first song if no song is currently playing
+        next_song = song_links.get(None)
+        if len(self.song_queue[ctx.guild.id]) == 0:
+            source = await YTDLSource.from_url(next_song[1][3])
+            next_song = song_links.get(next_song[0])
+            self.song_queue[ctx.guild.id].append(source)
+            self.start_time[ctx.guild.id] = time()
+            ctx.voice_client.play(source, after=lambda e: self._next(ctx))
+            embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description=f"Now playing playlist `{playlist}`")
+            await ctx.send(embed=embed)
+        else:
+            embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Added playlist `{playlist}` to queue")
+            await ctx.send(embed=embed)
+
+        # Add remaining songs to queue
+        while next_song is not None:
+            source = await YTDLSource.from_url(next_song[1][3])
+            self.song_queue[ctx.guild.id].append(source)
+            next_song = song_links.get(next_song[0])
 
     @commands.command()
     @perms.check()
@@ -396,7 +467,394 @@ class Alexa(commands.Cog):
                 name=f"Queue  `{duration}`",
                 value=queue_output, inline=False)
         await ctx.send(file=image, embed=embed)
+
+    @commands.group()
+    @perms.check()
+    async def playlist(self, ctx):
+        """Configure music playlists"""
+        if ctx.invoked_subcommand is None:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Please specify a valid subcommand: "
+                "`create/destroy/rename/list/add/remove/move/songlist`")
+            await ctx.send(embed=embed)
+
+    @playlist.command(name='create')
+    @perms.check()
+    async def create_playlist(self, ctx, *, playlist_name):
+        """Create a new playlist"""
+        # Limit playlist name to 30 chars
+        if len(playlist_name) > 30:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist name is too long")
+            await ctx.send(embed=embed)
+            return
+
+        # Alert if playlist with specified name already exists
+        try:
+            await self._get_playlist(ctx, playlist_name)
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist_name}` already exists")
+            await ctx.send(embed=embed)
+            return
+        except ValueError:
+            pass
+
+        # Add playlist to database
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (playlist_name, ctx.guild.id)
+        cursor.execute(
+            'INSERT INTO playlist(name, server_id) VALUES (?,?)', values)
+        db.commit()
+        db.close()
+
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Playlist `{playlist_name}` has been created")
+        await ctx.send(embed=embed)
+
+    @playlist.command(name='destroy')
+    @perms.check()
+    async def destroy_playlist(self, ctx, *, playlist_name):
+        """Deletes an existing playlist"""
+        # Alert if playlist doesn't exist in db
+        try:
+            playlist = await self._get_playlist(ctx, playlist_name)
+        except ValueError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist_name}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Remove playlist from database and all songs linked to it
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (playlist[0],)
+        cursor.execute(
+            'DELETE FROM playlist_music WHERE playlist_id=?', values)
+        values = (playlist_name, ctx.guild.id)
+        cursor.execute(
+            'DELETE FROM playlist WHERE name=? AND server_id=?', values)
+        db.commit()
+        db.close()
+
+        # Output result to chat
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Playlist `{playlist_name}` has been destroyed")
+        await ctx.send(embed=embed)
+    
+    @playlist.command(name='description')
+    @perms.check()
+    async def description_playlist(self, ctx, playlist_name, *, description):
+        """Sets the description for the playlist"""
+        # Alert if playlist doesn't exist
+        try:
+            playlist = await self._get_playlist(ctx, playlist_name)
+        except ValueError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist_name}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Limit playlist description to 300 chars
+        if len(playlist_name) > 300:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist name is too long")
+            await ctx.send(embed=embed)
+            return
+
+        # Rename playlist in database
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (description, playlist[0],)
+        cursor.execute(
+            'UPDATE playlist SET description=? WHERE id=?', values)
+        db.commit()
+        db.close()
+
+        # Output result to chat
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Description set for playlist `{playlist_name}`")
+        await ctx.send(embed=embed)
+
+    @playlist.command(name='rename')
+    @perms.check()
+    async def rename_playlist(self, ctx, playlist_name, new_name):
+        """Rename an existing playlist"""
+        # Alert if playlist doesn't exist
+        try:
+            playlist = await self._get_playlist(ctx, playlist_name)
+        except ValueError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist_name}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Rename playlist in database
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (new_name, playlist[0],)
+        cursor.execute(
+            'UPDATE playlist SET name=? WHERE id=?', values)
+        db.commit()
+        db.close()
+
+        # Output result to chat
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Playlist `{playlist}` has been renamed to "
+            f"`{new_name}`")
+        await ctx.send(embed=embed)
+
+    @playlist.command(name='list')
+    @perms.check()
+    async def list_playlist(self, ctx):
+        """List all available playlists"""
+        # Alert if no playlists exist
+        playlists = await self._get_playlist(ctx)
+        if not playlists:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There are no playlists available")
+            await ctx.send(embed=embed)
+            return
+
+        # Get all playlist names and duration
+        playlist_names = []
+        for playlist in playlists:
+            songs = await self._get_songs(ctx, playlist[1])
+            song_duration = 0
+            for song in songs:
+                song_duration += song[2]
+            playlist_names.append([playlist[1], song_duration])
+
+        # Format playlist songs into pretty list
+        playlist_info = []
+        for index, playlist_name in enumerate(islice(playlist_names, 0, 10)):
+            duration = await self._get_duration(playlist_name[1])
+            playlist_info.append(
+                f"{index + 1}. {playlist_name[0]} `{duration}`")
+
+        # Output results to chat
+        embed = discord.Embed(colour=settings.embed_type('info'))
+        image = discord.File(
+            settings.embed_icons("music"), filename="image.png")
+        embed.set_author(
+            name="Music Playlists", icon_url="attachment://image.png")
+        playlist_output = '\n'.join(playlist_info)
+        embed.add_field(
+            name=f"{len(playlists)} available",
+            value=playlist_output, inline=False)
+        await ctx.send(file=image, embed=embed)
         
+    @playlist.command(name='add')
+    @perms.check()
+    async def add_playlist(self, ctx, playlist_name, *, url):
+        """Adds a song to a playlist"""
+        # Alert if playlist doesn't exist in db
+        try:
+            playlist = await self._get_playlist(ctx, playlist_name)
+        except ValueError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist_name}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Get song source to add to song list
+        source = await YTDLSource.from_url(url)
+        songs = await self._get_songs(ctx, playlist_name)
+
+        # Set previous song as the last song in the playlist
+        if not songs:
+            previous_song = None
+        else:
+            song_ids = []
+            previous_ids = []
+            for song in songs:
+                song_ids.append(song[0])
+                previous_ids.append(song[4])
+            previous_song = list(set(song_ids) - set(previous_ids))[0]
+
+        # Add song to playlist
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (
+            source.title, source.duration, source.webpage_url,
+            previous_song, playlist[0])
+        cursor.execute(
+            'INSERT INTO playlist_music'
+            '(title, duration, url, previous_song, playlist_id) '
+            'VALUES (?,?,?,?,?)', values)
+        db.commit()
+        db.close()
+
+        # Output result to chat
+        duration = await self._get_duration(source.duration)
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Added [{source.title}]({source.webpage_url}) "
+            f"`{duration}` to position #{len(songs) + 1} "
+            f"in playlist `{playlist_name}`")
+        await ctx.send(embed=embed)
+
+    @playlist.command(name='remove')
+    @perms.check()
+    async def remove_playlist(self, ctx, playlist_name, index):
+        """Removes a song from a playlist"""
+        # Fetch songs from playlist if it exists
+        try:
+            songs = await self._get_songs(ctx, playlist_name)
+        except ValueError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist_name}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Fetch selected song and the song after
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        selected_song = songs[int(index) - 1]
+        
+        # Edit next song's previous song id if it exists
+        try:
+            next_song = songs[int(index)]
+            values = (selected_song[4], next_song[0],)
+            cursor.execute(
+                'UPDATE playlist_music SET previous_song=? WHERE id=?', values)
+        except IndexError:
+            pass
+        
+        # Remove selected song from playlist
+        values = (selected_song[0],)
+        cursor.execute(
+            'DELETE FROM playlist_music WHERE id=?', values)
+        db.commit()
+        db.close()
+
+        # Output result to chat
+        duration = await self._get_duration(selected_song[2])
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"[{selected_song[1]}]({selected_song[3]}) "
+            f"`{duration}` has been removed from `{playlist_name}`")
+        await ctx.send(embed=embed)
+
+    @playlist.command(name='move')
+    @perms.check()
+    async def move_playlist(self, ctx, playlist_name, original_pos, new_pos):
+        """Moves a song to a specified position in a playlist"""
+        # Fetch songs from playlist if it exists
+        try:
+            songs = await self._get_songs(ctx, playlist_name)
+        except ValueError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist_name}` does not exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Edit db to put selected song in other song's position while shifting
+        # the other song to be after the selected song's position
+        selected_song = songs[int(original_pos) - 1]
+        other_song = songs[int(new_pos) - 1]
+        values = [
+            (other_song[4], selected_song[0]),
+            (selected_song[0], other_song[0])]
+        try:
+            next_song = songs[int(original_pos)]
+            values.append((selected_song[4], next_song[0]))
+        except IndexError:
+            pass
+        
+        # Execute all those values
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        for value in values:
+            cursor.execute(
+                'UPDATE playlist_music SET previous_song=? WHERE id=?', value)
+        db.commit()
+        db.close()
+
+        # Output result to chat
+        duration = await self._get_duration(selected_song[2])
+        embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description=f"[{selected_song[1]}]({selected_song[3]}) "
+                f"`{duration}` has been moved to position #{new_pos} "
+                f"in playlist `{playlist_name}`")
+        await ctx.send(embed=embed)
+        
+    @playlist.command(name='view')
+    @perms.check()
+    async def view_playlist(self, ctx, playlist_name, page=1):
+        """List all songs in a playlist"""
+        # Fetch songs from playlist if it exists
+        try:
+            playlist = await self._get_playlist(ctx, playlist_name)
+            songs = await self._get_songs(ctx, playlist_name)
+        except ValueError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist_name}` does not exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Modify page variable to get every ten results
+        page -= 1
+        if page > 0: page = page * 10
+
+        # Get total duration
+        total_duration = 0
+        for song in songs:
+            total_duration += song[2]
+
+        # Make a formatted list of 10 aliases based on the page
+        formatted_songs = []
+        for index, song in enumerate(islice(songs, page, page + 10)):
+            # Cut off song name to 90 chars
+            if len(song[1]) > 90:
+                song_name = f"{song[1][:87]}..." 
+            else:
+                song_name = song[1]
+
+            duration = await self._get_duration(song[2])
+            formatted_songs.append(
+                f"{page + index + 1}. [{song_name}]({song[3]}) `{duration}`")
+
+        # Alert if no songs are on the specified page
+        if not formatted_songs:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There are no songs on that page")
+            await ctx.send(embed=embed)
+            return
+
+        # Output results to chat
+        embed = discord.Embed(colour=settings.embed_type('info'))
+        image = discord.File(settings.embed_icons("music"), filename="image.png")
+        embed.set_author(
+            name=f"Playlist '{playlist_name}' Contents",
+            icon_url="attachment://image.png")
+        if playlist[2] and page == 0:
+            embed.description = playlist[2]
+        formatted_duration = await self._get_duration(total_duration)
+        playlist_music_output = '\n'.join(formatted_songs)
+        embed.add_field(
+            name=f"{len(songs)} songs available `{formatted_duration}`",
+            value=playlist_music_output, inline=False)
+        await ctx.send(file=image, embed=embed)
+
     def _next(self, ctx):
         # If looping, grab source from url again
         if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
@@ -427,6 +885,8 @@ class Alexa(commands.Cog):
     async def _get_duration(self, seconds):
         try:
             duration = strftime("%H:%M:%S", gmtime(seconds)).lstrip("0:")
+            if len(duration) < 1:
+                duration = "0:00"
             if len(duration) < 2:
                 duration = f"0:0{duration}"
             elif len(duration) < 3:
@@ -456,6 +916,57 @@ class Alexa(commands.Cog):
                 "commands. \nUse **!join** or **!play** to connect me to a channel")
             await ctx.send(embed=embed)
             return False
+
+    async def _get_playlist(self, ctx, playlist_name=None):
+        """Gets playlist data from name"""
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+
+        # Fetch all or specific playlist depending on argument
+        if not playlist_name:
+            values = (ctx.guild.id,)
+            cursor.execute(
+                'SELECT * FROM playlist WHERE server_id=?', values)
+            playlist = cursor.fetchall()
+        else:
+            values = (playlist_name, ctx.guild.id)
+            cursor.execute(
+                'SELECT * FROM playlist WHERE name=? AND server_id=?', values)
+            playlist = cursor.fetchone()
+            if playlist is None:
+                raise ValueError
+
+        db.close()
+        return playlist
+
+    async def _get_songs(self, ctx, playlist_name):
+        """Gets playlist songs from name"""
+        playlist = await self._get_playlist(ctx, playlist_name)
+        if playlist is None:
+            raise ValueError
+
+        # Get list of all songs in playlist
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        values = (playlist[0],)
+        cursor.execute(
+            'SELECT * FROM playlist_music WHERE playlist_id=?', values)
+        songs = cursor.fetchall()
+        db.close()
+        
+        # Use dictionary to pair songs with the next song
+        song_links = {}
+        for song in songs:
+            song_links[song[4]] = [song[0], song]
+
+        # Order playlist songs
+        ordered_songs = []
+        next_song = song_links.get(None)
+        while next_song is not None:
+            ordered_songs.append(next_song[1])
+            next_song = song_links.get(next_song[0])
+
+        return ordered_songs
 
 
 def setup(bot):
