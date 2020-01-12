@@ -830,7 +830,7 @@ class Alexa(commands.Cog):
 
             duration = await self._get_duration(song[2])
             formatted_songs.append(
-                f"{page + index + 1}. {song_name} `{duration}`")
+                f"{page + index + 1}. [{song_name}]({song[3]}) `{duration}`")
 
         # Alert if no songs are on the specified page
         if not formatted_songs:
