@@ -483,6 +483,14 @@ class Alexa(commands.Cog):
     @perms.check()
     async def create_playlist(self, ctx, *, playlist_name):
         """Create a new playlist"""
+        # Limit playlist name to 30 chars
+        if len(playlist_name) > 30:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist name is too long")
+            await ctx.send(embed=embed)
+            return
+
         # Alert if playlist with specified name already exists
         try:
             await self._get_playlist(ctx, playlist_name)
@@ -551,6 +559,14 @@ class Alexa(commands.Cog):
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
                 description=f"Playlist `{playlist_name}` doesn't exist")
+            await ctx.send(embed=embed)
+            return
+
+        # Limit playlist description to 300 chars
+        if len(playlist_name) > 300:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist name is too long")
             await ctx.send(embed=embed)
             return
 
