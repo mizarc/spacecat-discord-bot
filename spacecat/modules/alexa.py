@@ -432,66 +432,67 @@ class Alexa(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @commands.command()
+    @commands.group()
     @perms.check()
     async def queue(self, ctx):
         """List the current song queue"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
-            return
+        if ctx.invoked_subcommand is None:
+            status = await self._check_music_status(ctx, ctx.guild)
+            if not status:
+                return
 
-        # Notify user if nothing is in the queue
-        if not self.song_queue[ctx.guild.id]:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"There's nothing in the queue right now")
-            await ctx.send(embed=embed)
-            return
-        
-        # Output first in queue as currently playing
-        embed = discord.Embed(colour=settings.embed_type('info'))
-        image = discord.File(settings.embed_icons("music"), filename="image.png")
-        embed.set_author(name="Music Queue", icon_url="attachment://image.png")
-        duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
-        current_time = int(time() - self.start_time[ctx.guild.id])
-        current_time = await self._get_duration(current_time)
-
-        # Set header depending on if looping or not, and whether to add a spacer
-        queue_status = False
-        if self.loop_toggle[ctx.guild.id]:
-            header = "Currently Playing (Looping)"
-        else:
-            header = "Currently Playing"
-        if len(self.song_queue[ctx.guild.id]) > 1:
-            queue_status = True
-            spacer = "\u200B"
-        else:
-            spacer = ""
-        embed.add_field(
-        name=header,
-        value=f"{self.song_queue[ctx.guild.id][0].title} `{current_time}/{duration}` \n{spacer}")
-        
-        # List remaining songs in queue plus total duration
-        if queue_status:
-            queue_info = []
-
-            total_duration = -self.song_queue[ctx.guild.id][0].duration
-            for song in self.song_queue[ctx.guild.id]:
-                total_duration += song.duration
-
-            for index, song in enumerate(islice(self.song_queue[ctx.guild.id], 1, 11)):
-                duration = await self._get_duration(song.duration)
-                queue_info.append(f"{index + 1}. {song.title} `{duration}`")
+            # Notify user if nothing is in the queue
+            if not self.song_queue[ctx.guild.id]:
+                embed = discord.Embed(colour=settings.embed_type('warn'), description=f"There's nothing in the queue right now")
+                await ctx.send(embed=embed)
+                return
             
-            # Omit songs past 10 and just display amount instead
-            if len(self.song_queue[ctx.guild.id]) > 11:
-                queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11} more in queue`")
+            # Output first in queue as currently playing
+            embed = discord.Embed(colour=settings.embed_type('info'))
+            image = discord.File(settings.embed_icons("music"), filename="image.png")
+            embed.set_author(name="Music Queue", icon_url="attachment://image.png")
+            duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
+            current_time = int(time() - self.start_time[ctx.guild.id])
+            current_time = await self._get_duration(current_time)
 
-            # Output results to chat
-            duration = await self._get_duration(total_duration)
-            queue_output = '\n'.join(queue_info)
+            # Set header depending on if looping or not, and whether to add a spacer
+            queue_status = False
+            if self.loop_toggle[ctx.guild.id]:
+                header = "Currently Playing (Looping)"
+            else:
+                header = "Currently Playing"
+            if len(self.song_queue[ctx.guild.id]) > 1:
+                queue_status = True
+                spacer = "\u200B"
+            else:
+                spacer = ""
             embed.add_field(
-                name=f"Queue  `{duration}`",
-                value=queue_output, inline=False)
-        await ctx.send(file=image, embed=embed)
+            name=header,
+            value=f"{self.song_queue[ctx.guild.id][0].title} `{current_time}/{duration}` \n{spacer}")
+            
+            # List remaining songs in queue plus total duration
+            if queue_status:
+                queue_info = []
+
+                total_duration = -self.song_queue[ctx.guild.id][0].duration
+                for song in self.song_queue[ctx.guild.id]:
+                    total_duration += song.duration
+
+                for index, song in enumerate(islice(self.song_queue[ctx.guild.id], 1, 11)):
+                    duration = await self._get_duration(song.duration)
+                    queue_info.append(f"{index + 1}. {song.title} `{duration}`")
+                
+                # Omit songs past 10 and just display amount instead
+                if len(self.song_queue[ctx.guild.id]) > 11:
+                    queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11} more in queue`")
+
+                # Output results to chat
+                duration = await self._get_duration(total_duration)
+                queue_output = '\n'.join(queue_info)
+                embed.add_field(
+                    name=f"Queue  `{duration}`",
+                    value=queue_output, inline=False)
+            await ctx.send(file=image, embed=embed)
 
     @commands.group()
     @perms.check()
