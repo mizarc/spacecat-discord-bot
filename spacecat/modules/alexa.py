@@ -494,6 +494,37 @@ class Alexa(commands.Cog):
                     value=queue_output, inline=False)
             await ctx.send(file=image, embed=embed)
 
+    @queue.command(name='remove')
+    @perms.check()
+    async def queue_remove(self, ctx, index):
+        """Remove song from the queue"""
+        # Alert if there's nothing in the queue
+        if not self.song_queue[ctx.guild.id]:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There's nothing in the queue right now")
+            await ctx.send(embed=embed)
+            return
+
+        try:
+            song = self.song_queue[ctx.guild.id][int(index)]
+            self.song_queue[ctx.guild.id].pop(int(index))
+        except IndexError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There's no song in that position of the queue")
+            await ctx.send(embed=embed)
+            return
+        
+        # Output result to chat
+        duration = await self._get_duration(song.duration)
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"[{song.title}]({song.webpage_url}) "
+            f"`{duration}` has been removed from position #{int(index)} "
+            "of the queue")
+        await ctx.send(embed=embed)
+
     @commands.group()
     @perms.check()
     async def playlist(self, ctx):
