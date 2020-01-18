@@ -505,10 +505,10 @@ class Alexa(commands.Cog):
 
         # Try to remove song from queue using the specified index
         try:
-            if int(index) < 1:
+            if index < 1:
                 raise IndexError
-            song = self.song_queue[ctx.guild.id][int(index)]
-            self.song_queue[ctx.guild.id].pop(int(index))
+            song = self.song_queue[ctx.guild.id][index]
+            self.song_queue[ctx.guild.id].pop(index)
         except IndexError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -521,7 +521,7 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
             description=f"[{song.title}]({song.webpage_url}) "
-            f"`{duration}` has been removed from position #{int(index)} "
+            f"`{duration}` has been removed from position #{index} "
             "of the queue")
         await ctx.send(embed=embed)
 
