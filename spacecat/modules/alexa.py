@@ -503,22 +503,16 @@ class Alexa(commands.Cog):
         if not status:
             return
 
-        # Alert if queue position is invalid
-        if int(index) < 1:
-            embed = discord.Embed(  
-                colour=settings.embed_type('warn'),
-                description=f"That's an invalid queue position")
-            await ctx.send(embed=embed)
-            return
-
-        # Remove song from queue
+        # Try to remove song from queue using the specified index
         try:
+            if int(index) < 1:
+                raise IndexError
             song = self.song_queue[ctx.guild.id][int(index)]
             self.song_queue[ctx.guild.id].pop(int(index))
         except IndexError:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
-                description=f"There's no song in that position of the queue")
+                description=f"That's an invalid queue position")
             await ctx.send(embed=embed)
             return
         
