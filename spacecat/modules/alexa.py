@@ -496,16 +496,22 @@ class Alexa(commands.Cog):
 
     @queue.command(name='remove')
     @perms.check()
-    async def queue_remove(self, ctx, index):
+    async def queue_remove(self, ctx, index: int):
         """Remove song from the queue"""
-        # Alert if there's nothing in the queue
-        if not self.song_queue[ctx.guild.id]:
-            embed = discord.Embed(
+        # Alert if bot is not in a voice channel
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
+        # Alert if queue position is invalid
+        if int(index) < 1:
+            embed = discord.Embed(  
                 colour=settings.embed_type('warn'),
-                description=f"There's nothing in the queue right now")
+                description=f"That's an invalid queue position")
             await ctx.send(embed=embed)
             return
 
+        # Remove song from queue
         try:
             song = self.song_queue[ctx.guild.id][int(index)]
             self.song_queue[ctx.guild.id].pop(int(index))
