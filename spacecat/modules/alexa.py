@@ -525,6 +525,46 @@ class Alexa(commands.Cog):
             "of the queue")
         await ctx.send(embed=embed)
 
+    @queue.command(name='move')
+    @perms.check()
+    async def queue_move(self, ctx, original_pos: int, new_pos: int):
+        """Move a song to different position in the queue"""
+        # Alert if bot is not in a voice channel
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
+        # Try to remove song from queue using the specified index
+        try:
+            if original_pos < 1:
+                raise IndexError
+            song = self.song_queue[ctx.guild.id][original_pos]
+        except IndexError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There's no song at that position")
+            await ctx.send(embed=embed)
+            return
+
+        # Move song into new position in queue
+        if not 1 <= new_pos < len(self.song_queue[ctx.guild.id]):
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"You can't move the song into that position")
+            await ctx.send(embed=embed)
+            return
+        self.song_queue[ctx.guild.id].pop(original_pos)
+        self.song_queue[ctx.guild.id].insert(new_pos, song)
+            
+        # Output result to chat
+        duration = await self._get_duration(song.duration)
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"[{song.title}]({song.webpage_url}) "
+            f"`{duration}` has been moved from position #{original_pos} "
+            f"to position #{new_pos}")
+        await ctx.send(embed=embed)
+
     @commands.group()
     @perms.check()
     async def playlist(self, ctx):
