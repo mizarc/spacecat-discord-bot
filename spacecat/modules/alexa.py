@@ -501,37 +501,6 @@ class Alexa(commands.Cog):
                 value=queue_output, inline=False)
         await ctx.send(file=image, embed=embed)
 
-    @queue.command(name='remove')
-    @perms.check()
-    async def queue_remove(self, ctx, index: int):
-        """Remove song from the queue"""
-        # Alert if bot is not in a voice channel
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
-            return
-
-        # Try to remove song from queue using the specified index
-        try:
-            if index < 1:
-                raise IndexError
-            song = self.song_queue[ctx.guild.id][index]
-            self.song_queue[ctx.guild.id].pop(index)
-        except IndexError:
-            embed = discord.Embed(
-                colour=settings.embed_type('warn'),
-                description=f"That's an invalid queue position")
-            await ctx.send(embed=embed)
-            return
-        
-        # Output result to chat
-        duration = await self._get_duration(song.duration)
-        embed = discord.Embed(
-            colour=settings.embed_type('accept'),
-            description=f"[{song.title}]({song.webpage_url}) "
-            f"`{duration}` has been removed from position #{index} "
-            "of the queue")
-        await ctx.send(embed=embed)
-
     @queue.command(name='move')
     @perms.check()
     async def queue_move(self, ctx, original_pos: int, new_pos: int):
@@ -570,6 +539,37 @@ class Alexa(commands.Cog):
             description=f"[{song.title}]({song.webpage_url}) "
             f"`{duration}` has been moved from position #{original_pos} "
             f"to position #{new_pos}")
+        await ctx.send(embed=embed)
+
+    @queue.command(name='remove')
+    @perms.check()
+    async def queue_remove(self, ctx, index: int):
+        """Remove song from the queue"""
+        # Alert if bot is not in a voice channel
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
+        # Try to remove song from queue using the specified index
+        try:
+            if index < 1:
+                raise IndexError
+            song = self.song_queue[ctx.guild.id][index]
+            self.song_queue[ctx.guild.id].pop(index)
+        except IndexError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"That's an invalid queue position")
+            await ctx.send(embed=embed)
+            return
+        
+        # Output result to chat
+        duration = await self._get_duration(song.duration)
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"[{song.title}]({song.webpage_url}) "
+            f"`{duration}` has been removed from position #{index} "
+            "of the queue")
         await ctx.send(embed=embed)
 
     @commands.group()
