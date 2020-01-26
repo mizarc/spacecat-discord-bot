@@ -446,7 +446,7 @@ class Alexa(commands.Cog):
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
             return
-            
+
         # Notify user if nothing is in the queue
         if not self.song_queue[ctx.guild.id]:
             embed = discord.Embed(colour=settings.embed_type('warn'), description=f"There's nothing in the queue right now")
@@ -567,6 +567,29 @@ class Alexa(commands.Cog):
             description=f"[{song.title}]({song.webpage_url}) "
             f"`{duration}` has been removed from position #{index} "
             "of the queue")
+        await ctx.send(embed=embed)
+
+    @queue.command(name='clear')
+    @perms.check()
+    async def queue_clear(self, ctx):
+        """Clears the entire queue"""
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
+        # Try to remove all but the currently playing song from the queue
+        if len(self.song_queue[ctx.guild.id]) < 2:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There's nothing in the queue to clear")
+            await ctx.send(embed=embed)
+            return
+        self.song_queue[ctx.guild.id] = [self.song_queue[ctx.guild.id][0]]
+
+        # Output result to chat
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"All songs have been removed from the queue")
         await ctx.send(embed=embed)
 
     @commands.group()
