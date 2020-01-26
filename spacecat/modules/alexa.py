@@ -436,18 +436,17 @@ class Alexa(commands.Cog):
     @perms.check()
     async def queue(self, ctx, *args):
         """View and modify the current song queue. Defaults to 'queue list'"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
-            return
-
         # Run the queue list subcommand if no subcommand is specified
-        if ctx.invoked_subcommand is None:
-            await ctx.invoke(self.queue_list, args)
+        await ctx.invoke(self.queue_list, args)
 
     @queue.command(name='list')
     @perms.check()
     async def queue_list(self, ctx, page: int=None):
         """List the current song queue"""
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+            
         # Notify user if nothing is in the queue
         if not self.song_queue[ctx.guild.id]:
             embed = discord.Embed(colour=settings.embed_type('warn'), description=f"There's nothing in the queue right now")
@@ -505,7 +504,6 @@ class Alexa(commands.Cog):
     @perms.check()
     async def queue_move(self, ctx, original_pos: int, new_pos: int):
         """Move a song to different position in the queue"""
-        # Alert if bot is not in a voice channel
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
             return
@@ -545,7 +543,6 @@ class Alexa(commands.Cog):
     @perms.check()
     async def queue_remove(self, ctx, index: int):
         """Remove song from the queue"""
-        # Alert if bot is not in a voice channel
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
             return
