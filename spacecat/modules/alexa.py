@@ -446,12 +446,14 @@ class Alexa(commands.Cog):
         self.song_queue = {server.id: []}
         self.loop_toggle = {server.id: False}
         self.skip_toggle = {server.id: False}
-        self.song_pause_time = {server.id: False}
+        self.song_start_time = {server.id: None}
+        self.song_pause_time = {server.id: None}
 
     async def _remove_server_keys(self, server):
         self.song_queue.pop(server.id, None)
         self.loop_toggle.pop(server.id, None)
         self.skip_toggle.pop(server.id, None)
+        self.song_start_time.pop(server.id, None)
         self.song_pause_time.pop(server.id, None)
 
     async def _check_music_status(self, ctx, server):
