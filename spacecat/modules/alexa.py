@@ -277,7 +277,7 @@ class Alexa(commands.Cog):
         # Resumes music playback
         ctx.voice_client.resume()
         self.song_start_time[ctx.guild.id] = time() - self.song_pause_time[ctx.guild.id]
-        self.song_pause_time.pop(ctx.guild.id, None)
+        self.song_pause_time[ctx.guild.id] = None
         embed = discord.Embed(colour=embed_type('accept'), description="Music has been resumed")
         await ctx.send(embed=embed)
 
@@ -359,10 +359,10 @@ class Alexa(commands.Cog):
         image = discord.File(embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
         duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
-        try:
-            current_time = int(self.song_pause_time[ctx.guild.id])
-        except KeyError:
+        if not self.song_pause_time[ctx.guild.id]:
             current_time = int(time() - self.song_start_time[ctx.guild.id])
+        else:
+            current_time = int(self.song_pause_time[ctx.guild.id])
         current_time = await self._get_duration(current_time)
 
         # Set header depending on if looping or not, and whether to add a spacer
@@ -446,11 +446,13 @@ class Alexa(commands.Cog):
         self.song_queue = {server.id: []}
         self.loop_toggle = {server.id: False}
         self.skip_toggle = {server.id: False}
+        self.song_pause_time = {server.id: False}
 
     async def _remove_server_keys(self, server):
         self.song_queue.pop(server.id, None)
         self.loop_toggle.pop(server.id, None)
         self.skip_toggle.pop(server.id, None)
+        self.song_pause_time.pop(server.id, None)
 
     async def _check_music_status(self, ctx, server):
         try:
