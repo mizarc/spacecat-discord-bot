@@ -67,7 +67,8 @@ class Alexa(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.song_queue = {}
-        self.song_time = {}
+        self.song_start_time = {}
+        self.song_pause_time = {}
         self.loop_toggle = {}
         self.skip_toggle = {}
 
@@ -150,7 +151,7 @@ class Alexa(commands.Cog):
         # Play song instantly and notify user
         else:
             self.song_queue[ctx.guild.id].append(source)
-            self.song_time[ctx.guild.id] = time()
+            self.song_start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(colour=embed_type('accept'), description=f"Now playing {song_name}")
 
@@ -403,7 +404,7 @@ class Alexa(commands.Cog):
             get_source = YTDLSource.from_url(self.song_queue[ctx.guild.id][0].url)
             coroutine = asyncio.run_coroutine_threadsafe(get_source, self.bot.loop)
             source = coroutine.result()
-            self.song_time[ctx.guild.id] = time()
+            self.song_start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
 
@@ -419,7 +420,7 @@ class Alexa(commands.Cog):
 
         # Play the new first song in list
         if self.song_queue[ctx.guild.id]:
-            self.song_time[ctx.guild.id] = time()
+            self.song_start_time[ctx.guild.id] = time()
             ctx.voice_client.play(self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
             return
 
