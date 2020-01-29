@@ -18,6 +18,14 @@ class ErrorHandler(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        if isinstance(error, commands.BadArgument):
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Invalid arguments provided. "
+                f"Type `{ctx.prefix}help {ctx.command}` for more info")
+            await ctx.send(embed=embed)
+            return
+
         if isinstance(error, commands.CommandInvokeError):
             print(error)
             return

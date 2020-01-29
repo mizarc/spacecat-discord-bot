@@ -149,34 +149,23 @@ class Alexa(commands.Cog):
             # End function if bot failed to join a voice channel.
             if ctx.voice_client is None:
                 return
-        
-        # Check if too many songs in queue
-        if len(self.song_queue[ctx.guild.id]) > 30:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Too many songs in queue. Calm down.")
 
-        # Grab audio source from youtube_dl and check if longer than 3 hours
-        source = await YTDLSource.from_url(url)
-        print(source)
-        if source.duration >= 10800:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Video must be shorter than 3 hours")
-            await ctx.send(embed=embed)
-            return
-        duration = await self._get_duration(source.duration)
-        song_name = f"[{source.title}]({source.webpage_url}) `{duration}`"
-
-        # Notify user of song being added to queue
+        # Instantly play song if no song currently playing
+        # Send to queue_add function if there is a song playing
         if len(self.song_queue[ctx.guild.id]) > 0:
-            self.song_queue[ctx.guild.id].append(source)
-            embed = discord.Embed(
-                colour=settings.embed_type('accept'),
-                description=f"Added {song_name} to #{len(self.song_queue[ctx.guild.id]) - 1} in queue")
-
-        # Play song instantly and notify user
+            await ctx.invoke(self.queue_add, url)
+            return
         else:
+            try:
+                source, song_name = await self._process_song(ctx, url)
+            except ValueError:
+                return
             self.song_queue[ctx.guild.id].append(source)
             self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-            embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Now playing {song_name}")
+            embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description=f"Now playing {song_name}")
 
         await ctx.send(embed=embed)
         return
@@ -432,9 +421,16 @@ class Alexa(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @commands.command()
+    @commands.group(invoke_without_command=True)
     @perms.check()
-    async def queue(self, ctx):
+    async def queue(self, ctx, arg: int=1):
+        """View and modify the current song queue. Defaults to the list subcommand."""
+        # Run the queue list subcommand if no subcommand is specified
+        await ctx.invoke(self.queue_list, arg)
+
+    @queue.command(name='list')
+    @perms.check()
+    async def queue_list(self, ctx, page: int=1):
         """List the current song queue"""
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
@@ -445,7 +441,7 @@ class Alexa(commands.Cog):
             embed = discord.Embed(colour=settings.embed_type('warn'), description=f"There's nothing in the queue right now")
             await ctx.send(embed=embed)
             return
-        
+
         # Output first in queue as currently playing
         embed = discord.Embed(colour=settings.embed_type('info'))
         image = discord.File(settings.embed_icons("music"), filename="image.png")
@@ -468,22 +464,34 @@ class Alexa(commands.Cog):
         embed.add_field(
         name=header,
         value=f"{self.song_queue[ctx.guild.id][0].title} `{current_time}/{duration}` \n{spacer}")
-        
+
         # List remaining songs in queue plus total duration
         if queue_status:
             queue_info = []
+
+            # Modify page variable to get every ten results
+            page -= 1
+            if page > 0: page = page * 10
 
             total_duration = -self.song_queue[ctx.guild.id][0].duration
             for song in self.song_queue[ctx.guild.id]:
                 total_duration += song.duration
 
-            for index, song in enumerate(islice(self.song_queue[ctx.guild.id], 1, 11)):
+            for index, song in enumerate(islice(self.song_queue[ctx.guild.id], page + 1, page + 11)):
                 duration = await self._get_duration(song.duration)
-                queue_info.append(f"{index + 1}. {song.title} `{duration}`")
-            
+                queue_info.append(f"{page + index + 1}. {song.title} `{duration}`")
+
+            # Alert if no songs are on the specified page
+            if page > 0 and not queue_info:
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description=f"There are no songs on that page")
+                await ctx.send(embed=embed)
+                return
+
             # Omit songs past 10 and just display amount instead
-            if len(self.song_queue[ctx.guild.id]) > 11:
-                queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11} more in queue`")
+            if len(self.song_queue[ctx.guild.id]) > page + 11:
+                queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11 - page} more in queue`")
 
             # Output results to chat
             duration = await self._get_duration(total_duration)
@@ -492,6 +500,123 @@ class Alexa(commands.Cog):
                 name=f"Queue  `{duration}`",
                 value=queue_output, inline=False)
         await ctx.send(file=image, embed=embed)
+
+    @queue.command(name='move')
+    @perms.check()
+    async def queue_move(self, ctx, original_pos: int, new_pos: int):
+        """Move a song to a different position in the queue"""
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
+        # Try to remove song from queue using the specified index
+        try:
+            if original_pos < 1:
+                raise IndexError('Position can\'t be be less than 1')
+            song = self.song_queue[ctx.guild.id][original_pos]
+        except IndexError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There's no song at that position")
+            await ctx.send(embed=embed)
+            return
+
+        # Move song into new position in queue
+        if not 1 <= new_pos < len(self.song_queue[ctx.guild.id]):
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"You can't move the song into that position")
+            await ctx.send(embed=embed)
+            return
+        self.song_queue[ctx.guild.id].pop(original_pos)
+        self.song_queue[ctx.guild.id].insert(new_pos, song)
+            
+        # Output result to chat
+        duration = await self._get_duration(song.duration)
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"[{song.title}]({song.webpage_url}) "
+            f"`{duration}` has been moved from position #{original_pos} "
+            f"to position #{new_pos}")
+        await ctx.send(embed=embed)
+
+    @queue.command(name='add')
+    @perms.check()
+    async def queue_add(self, ctx, url):
+        """Adds a song to the queue"""
+        # Alert if too many songs in queue
+        if len(self.song_queue[ctx.guild.id]) > 30:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Too many songs in queue. Calm down.")
+            await ctx.send(embed=embed)
+            return
+            
+        # Add the song to the queue and output result
+        try:
+            source, song_name = await self._process_song(ctx, url)
+        except ValueError:
+            return
+        self.song_queue[ctx.guild.id].append(source)
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Added {song_name} to " 
+            f"#{len(self.song_queue[ctx.guild.id]) - 1} in queue")
+        await ctx.send(embed=embed)
+        return
+        
+    @queue.command(name='remove')
+    @perms.check()
+    async def queue_remove(self, ctx, index: int):
+        """Remove a song from the queue"""
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
+        # Try to remove song from queue using the specified index
+        try:
+            if index < 1:
+                raise IndexError('Position can\'t be less than 1')
+            song = self.song_queue[ctx.guild.id][index]
+            self.song_queue[ctx.guild.id].pop(index)
+        except IndexError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"That's an invalid queue position")
+            await ctx.send(embed=embed)
+            return
+        
+        # Output result to chat
+        duration = await self._get_duration(song.duration)
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"[{song.title}]({song.webpage_url}) "
+            f"`{duration}` has been removed from position #{index} "
+            "of the queue")
+        await ctx.send(embed=embed)
+
+    @queue.command(name='clear')
+    @perms.check()
+    async def queue_clear(self, ctx):
+        """Clears the entire queue"""
+        status = await self._check_music_status(ctx, ctx.guild)
+        if not status:
+            return
+
+        # Try to remove all but the currently playing song from the queue
+        if len(self.song_queue[ctx.guild.id]) < 2:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There's nothing in the queue to clear")
+            await ctx.send(embed=embed)
+            return
+        self.song_queue[ctx.guild.id] = [self.song_queue[ctx.guild.id][0]]
+
+        # Output result to chat
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"All songs have been removed from the queue")
+        await ctx.send(embed=embed)
 
     @commands.group()
     @perms.check()
@@ -959,7 +1084,7 @@ class Alexa(commands.Cog):
                 'SELECT * FROM playlist WHERE name=? AND server_id=?', values)
             playlist = cursor.fetchone()
             if playlist is None:
-                raise ValueError
+                raise ValueError('That playlist is unavailable')
 
         db.close()
         return playlist
@@ -968,7 +1093,7 @@ class Alexa(commands.Cog):
         """Gets playlist songs from name"""
         playlist = await self._get_playlist(ctx, playlist_name)
         if playlist is None:
-            raise ValueError
+            raise ValueError('That playlist is unavailable')
 
         # Get list of all songs in playlist
         db = sqlite3.connect(settings.data + 'spacecat.db')
@@ -992,6 +1117,20 @@ class Alexa(commands.Cog):
             next_song = song_links.get(next_song[0])
 
         return ordered_songs
+
+    async def _process_song(self, ctx, url):
+        """Grab audio source from YouTube and check if longer than 3 hours"""
+        source = await YTDLSource.from_url(url)
+        if source.duration >= 10800:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Video must be shorter than 3 hours")
+            await ctx.send(embed=embed)
+            raise ValueError('Specified song is longer than 3 hours')
+            
+        duration = await self._get_duration(source.duration)
+        name = f"[{source.title}]({source.webpage_url}) `{duration}`"
+        return source, name
 
 
 def setup(bot):
