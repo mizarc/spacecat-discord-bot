@@ -423,14 +423,14 @@ class Alexa(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     @perms.check()
-    async def queue(self, ctx, *args):
+    async def queue(self, ctx, arg: int=1):
         """View and modify the current song queue. Defaults to the list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
-        await ctx.invoke(self.queue_list, args)
+        await ctx.invoke(self.queue_list, arg)
 
     @queue.command(name='list')
     @perms.check()
-    async def queue_list(self, ctx, page: int=None):
+    async def queue_list(self, ctx, page: int=1):
         """List the current song queue"""
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
@@ -469,13 +469,25 @@ class Alexa(commands.Cog):
         if queue_status:
             queue_info = []
 
+            # Modify page variable to get every ten results
+            page -= 1
+            if page > 0: page = page * 10
+
             total_duration = -self.song_queue[ctx.guild.id][0].duration
             for song in self.song_queue[ctx.guild.id]:
                 total_duration += song.duration
 
-            for index, song in enumerate(islice(self.song_queue[ctx.guild.id], 1, 11)):
+            for index, song in enumerate(islice(self.song_queue[ctx.guild.id], page + 1, page + 11)):
                 duration = await self._get_duration(song.duration)
-                queue_info.append(f"{index + 1}. {song.title} `{duration}`")
+                queue_info.append(f"{page + index + 1}. {song.title} `{duration}`")
+
+            # Alert if no songs are on the specified page
+            if page > 0 and not queue_info:
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description=f"There are no songs on that page")
+                await ctx.send(embed=embed)
+                return
 
             # Omit songs past 10 and just display amount instead
             if len(self.song_queue[ctx.guild.id]) > 11:
