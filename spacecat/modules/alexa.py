@@ -490,8 +490,8 @@ class Alexa(commands.Cog):
                 return
 
             # Omit songs past 10 and just display amount instead
-            if len(self.song_queue[ctx.guild.id]) > 11:
-                queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11} more in queue`")
+            if len(self.song_queue[ctx.guild.id]) > page + 11:
+                queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11 - page} more in queue`")
 
             # Output results to chat
             duration = await self._get_duration(total_duration)
