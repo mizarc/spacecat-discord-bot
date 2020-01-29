@@ -424,7 +424,7 @@ class Alexa(commands.Cog):
     @commands.group(invoke_without_command=True)
     @perms.check()
     async def queue(self, ctx, *args):
-        """View and modify the current song queue. Defaults to 'queue list'"""
+        """View and modify the current song queue. Defaults to the list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
         await ctx.invoke(self.queue_list, args)
 
@@ -492,7 +492,7 @@ class Alexa(commands.Cog):
     @queue.command(name='move')
     @perms.check()
     async def queue_move(self, ctx, original_pos: int, new_pos: int):
-        """Move a song to different position in the queue"""
+        """Move a song to a different position in the queue"""
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
             return
