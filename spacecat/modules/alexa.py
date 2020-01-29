@@ -156,7 +156,10 @@ class Alexa(commands.Cog):
             await ctx.invoke(self.queue_add, url)
             return
         else:
-            source, song_name = await self._process_song(ctx, url)
+            try:
+                source, song_name = await self._process_song(ctx, url)
+            except ValueError:
+                return
             self.song_queue[ctx.guild.id].append(source)
             self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
@@ -538,7 +541,10 @@ class Alexa(commands.Cog):
             return
             
         # Add the song to the queue and output result
-        source, song_name = await self._process_song(ctx, url)
+        try:
+            source, song_name = await self._process_song(ctx, url)
+        except ValueError:
+            return
         self.song_queue[ctx.guild.id].append(source)
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
@@ -1108,7 +1114,7 @@ class Alexa(commands.Cog):
                 colour=settings.embed_type('warn'),
                 description="Video must be shorter than 3 hours")
             await ctx.send(embed=embed)
-            return
+            raise ValueError
             
         duration = await self._get_duration(source.duration)
         name = f"[{source.title}]({source.webpage_url}) `{duration}`"
