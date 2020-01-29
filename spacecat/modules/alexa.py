@@ -500,7 +500,7 @@ class Alexa(commands.Cog):
         # Try to remove song from queue using the specified index
         try:
             if original_pos < 1:
-                raise IndexError
+                raise IndexError('Position can\'t be be less than 1')
             song = self.song_queue[ctx.guild.id][original_pos]
         except IndexError:
             embed = discord.Embed(
@@ -564,7 +564,7 @@ class Alexa(commands.Cog):
         # Try to remove song from queue using the specified index
         try:
             if index < 1:
-                raise IndexError
+                raise IndexError('Position can\'t be less than 1')
             song = self.song_queue[ctx.guild.id][index]
             self.song_queue[ctx.guild.id].pop(index)
         except IndexError:
@@ -1072,7 +1072,7 @@ class Alexa(commands.Cog):
                 'SELECT * FROM playlist WHERE name=? AND server_id=?', values)
             playlist = cursor.fetchone()
             if playlist is None:
-                raise ValueError
+                raise ValueError('That playlist is unavailable')
 
         db.close()
         return playlist
@@ -1081,7 +1081,7 @@ class Alexa(commands.Cog):
         """Gets playlist songs from name"""
         playlist = await self._get_playlist(ctx, playlist_name)
         if playlist is None:
-            raise ValueError
+            raise ValueError('That playlist is unavailable')
 
         # Get list of all songs in playlist
         db = sqlite3.connect(settings.data + 'spacecat.db')
@@ -1114,7 +1114,7 @@ class Alexa(commands.Cog):
                 colour=settings.embed_type('warn'),
                 description="Video must be shorter than 3 hours")
             await ctx.send(embed=embed)
-            raise ValueError
+            raise ValueError('Specified song is longer than 3 hours')
             
         duration = await self._get_duration(source.duration)
         name = f"[{source.title}]({source.webpage_url}) `{duration}`"
