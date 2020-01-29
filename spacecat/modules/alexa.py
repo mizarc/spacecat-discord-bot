@@ -556,7 +556,7 @@ class Alexa(commands.Cog):
     @queue.command(name='remove')
     @perms.check()
     async def queue_remove(self, ctx, index: int):
-        """Remove song from the queue"""
+        """Remove a song from the queue"""
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
             return
