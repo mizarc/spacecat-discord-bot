@@ -149,34 +149,20 @@ class Alexa(commands.Cog):
             # End function if bot failed to join a voice channel.
             if ctx.voice_client is None:
                 return
-        
-        # Check if too many songs in queue
-        if len(self.song_queue[ctx.guild.id]) > 30:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Too many songs in queue. Calm down.")
 
-        # Grab audio source from youtube_dl and check if longer than 3 hours
-        source = await YTDLSource.from_url(url)
-        print(source)
-        if source.duration >= 10800:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Video must be shorter than 3 hours")
-            await ctx.send(embed=embed)
-            return
-        duration = await self._get_duration(source.duration)
-        song_name = f"[{source.title}]({source.webpage_url}) `{duration}`"
-
-        # Notify user of song being added to queue
+        # Instantly play song if no song currently playing
+        # Send to queue_add function if there is a song playing
         if len(self.song_queue[ctx.guild.id]) > 0:
-            self.song_queue[ctx.guild.id].append(source)
-            embed = discord.Embed(
-                colour=settings.embed_type('accept'),
-                description=f"Added {song_name} to #{len(self.song_queue[ctx.guild.id]) - 1} in queue")
-
-        # Play song instantly and notify user
+            await ctx.invoke(self.queue_add, url)
+            return
         else:
+            source, song_name = await self._process_song(ctx, url)
             self.song_queue[ctx.guild.id].append(source)
             self.start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-            embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Now playing {song_name}")
+            embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description=f"Now playing {song_name}")
 
         await ctx.send(embed=embed)
         return
@@ -539,6 +525,28 @@ class Alexa(commands.Cog):
             f"to position #{new_pos}")
         await ctx.send(embed=embed)
 
+    @queue.command(name='add')
+    @perms.check()
+    async def queue_add(self, ctx, url):
+        """Adds a song to the queue"""
+        # Alert if too many songs in queue
+        if len(self.song_queue[ctx.guild.id]) > 30:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Too many songs in queue. Calm down.")
+            await ctx.send(embed=embed)
+            return
+            
+        # Add the song to the queue and output result
+        source, song_name = await self._process_song(ctx, url)
+        self.song_queue[ctx.guild.id].append(source)
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Added {song_name} to " 
+            f"#{len(self.song_queue[ctx.guild.id]) - 1} in queue")
+        await ctx.send(embed=embed)
+        return
+        
     @queue.command(name='remove')
     @perms.check()
     async def queue_remove(self, ctx, index: int):
@@ -1091,6 +1099,20 @@ class Alexa(commands.Cog):
             next_song = song_links.get(next_song[0])
 
         return ordered_songs
+
+    async def _process_song(self, ctx, url):
+        """Grab audio source from YouTube and check if longer than 3 hours"""
+        source = await YTDLSource.from_url(url)
+        if source.duration >= 10800:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Video must be shorter than 3 hours")
+            await ctx.send(embed=embed)
+            return
+            
+        duration = await self._get_duration(source.duration)
+        name = f"[{source.title}]({source.webpage_url}) `{duration}`"
+        return source, name
 
 
 def setup(bot):
