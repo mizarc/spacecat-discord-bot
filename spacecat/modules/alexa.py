@@ -69,7 +69,8 @@ class Alexa(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.song_queue = {}
-        self.start_time = {}
+        self.song_start_time = {}
+        self.song_pause_time = {}
         self.loop_toggle = {}
         self.skip_toggle = {}
 
@@ -161,7 +162,7 @@ class Alexa(commands.Cog):
             except ValueError:
                 return
             self.song_queue[ctx.guild.id].append(source)
-            self.start_time[ctx.guild.id] = time()
+            self.song_start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(
                 colour=settings.embed_type('accept'),
@@ -286,7 +287,7 @@ class Alexa(commands.Cog):
             source = await YTDLSource.from_url(next_song[1][3])
             next_song = song_links.get(next_song[0])
             self.song_queue[ctx.guild.id].append(source)
-            self.start_time[ctx.guild.id] = time()
+            self.song_start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(
                 colour=settings.embed_type('accept'),
@@ -336,6 +337,8 @@ class Alexa(commands.Cog):
 
         # Resumes music playback
         ctx.voice_client.resume()
+        self.song_start_time[ctx.guild.id] = time() - self.song_pause_time[ctx.guild.id]
+        self.song_pause_time[ctx.guild.id] = None
         embed = discord.Embed(colour=settings.embed_type('accept'), description="Music has been resumed")
         await ctx.send(embed=embed)
 
@@ -355,6 +358,7 @@ class Alexa(commands.Cog):
 
         # Pauses music playback
         ctx.voice_client.pause()
+        self.song_pause_time[ctx.guild.id] = time() - self.song_start_time[ctx.guild.id]
         embed = discord.Embed(colour=settings.embed_type('accept'), description="Music has been paused")
         await ctx.send(embed=embed)
 
@@ -447,7 +451,10 @@ class Alexa(commands.Cog):
         image = discord.File(settings.embed_icons("music"), filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
         duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
-        current_time = int(time() - self.start_time[ctx.guild.id])
+        if not self.song_pause_time[ctx.guild.id]:
+            current_time = int(time() - self.song_start_time[ctx.guild.id])
+        else:
+            current_time = int(self.song_pause_time[ctx.guild.id])
         current_time = await self._get_duration(current_time)
 
         # Set header depending on if looping or not, and whether to add a spacer
@@ -1011,7 +1018,7 @@ class Alexa(commands.Cog):
             get_source = YTDLSource.from_url(self.song_queue[ctx.guild.id][0].url)
             coroutine = asyncio.run_coroutine_threadsafe(get_source, self.bot.loop)
             source = coroutine.result()
-            self.start_time[ctx.guild.id] = time()
+            self.song_start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             return
 
@@ -1027,7 +1034,7 @@ class Alexa(commands.Cog):
 
         # Play the new first song in list
         if self.song_queue[ctx.guild.id]:
-            self.start_time[ctx.guild.id] = time()
+            self.song_start_time[ctx.guild.id] = time()
             ctx.voice_client.play(self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
             return
 
@@ -1049,11 +1056,15 @@ class Alexa(commands.Cog):
         self.song_queue = {server.id: []}
         self.loop_toggle = {server.id: False}
         self.skip_toggle = {server.id: False}
+        self.song_start_time = {server.id: None}
+        self.song_pause_time = {server.id: None}
 
     async def _remove_server_keys(self, server):
         self.song_queue.pop(server.id, None)
         self.loop_toggle.pop(server.id, None)
         self.skip_toggle.pop(server.id, None)
+        self.song_start_time.pop(server.id, None)
+        self.song_pause_time.pop(server.id, None)
 
     async def _check_music_status(self, ctx, server):
         try:
