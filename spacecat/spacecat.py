@@ -22,6 +22,7 @@ import helpers.perms as perms
 parser = ArgumentParser()
 parser.add_argument('--apikey', '-a', help='apikey help', type=str)
 parser.add_argument('--user', '-u', help='user help', type=str)
+parser.add_argument('--prefix', '-p', help='prefix help', type=str)
 args = parser.parse_args()
 
 
