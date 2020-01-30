@@ -565,13 +565,8 @@ def main():
         config = toml.load(settings.data + 'config.toml')
         first_run = False
     except FileNotFoundError:
-        first_run = startup.create_config()
+        first_run = startup.introduction()
 
-    # Append New APIKey to config if specified by argument
-    if args.apikey is not None:
-        config['base']['apikey'] = args.apikey
-        toml.dump(config, settings.data + 'config.toml')
-    
     if first_run:
         startup.run(firstrun=True)
     startup.run()
