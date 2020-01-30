@@ -7,6 +7,7 @@ import logging
 import os
 import shutil
 import sqlite3
+import sys
 import time
 
 import discord
@@ -55,6 +56,18 @@ class Startup():
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         return
+
+    def config_arguments(self, config):
+        """Applies the cmd arguments to the config file"""
+        if args.apikey:
+            config['base']['apikey'] = args.apikey
+        if args.user:
+            config['base']['adminuser'] = args.user
+        if args.prefix:
+            config['base']['prefix'] = args.prefix
+
+        with open(settings.data + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
 
     def introduction(self):
         # Output introduction
@@ -559,6 +572,14 @@ def main():
     startup = Startup()
     startup.logging()
     startup.load_modules()
+
+    # Append New APIKey to config if specified by argument
+    if len(sys.argv) > 1:
+        try:
+            config = toml.load(settings.data + 'config.toml')
+        except FileNotFoundError:
+            startup.create_config()
+        startup.config_arguments(config)
 
     # Check if config exists and run config creator if it doesn't
     try:
