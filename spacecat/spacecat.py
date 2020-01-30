@@ -49,6 +49,14 @@ class Startup():
         logger.addHandler(handler)
 
     def create_config(self):
+        """Creates the base empty config file"""
+        config = {}
+        config['base'] = {}
+        with open(settings.data + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+        return
+
+    def introduction(self):
         # Output introduction
         print(
             "Hey there,\n"
@@ -79,12 +87,9 @@ class Startup():
             os.mkdir("../data")
 
         # Create new config file with API key
-        config = {}
-        config['base'] = {}
+        self.create_config()
+        config = toml.load(settings.data + 'config.toml')
         config['base']['apikey'] = keyinput
-        with open(settings.data + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
-
         return True
 
     def load_modules(self):
