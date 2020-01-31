@@ -55,7 +55,7 @@ class Startup():
         config['base'] = {}
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
-        return
+        return config
 
     def config_arguments(self, config):
         """Applies the cmd arguments to the config file"""
@@ -578,7 +578,7 @@ def main():
         try:
             config = toml.load(settings.data + 'config.toml')
         except FileNotFoundError:
-            startup.create_config()
+            config = startup.create_config()
         startup.config_arguments(config)
 
     # Check if config exists and run config creator if it doesn't
