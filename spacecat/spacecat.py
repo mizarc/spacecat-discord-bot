@@ -588,9 +588,7 @@ def main():
     except FileNotFoundError:
         first_run = startup.introduction()
 
-    if first_run:
-        startup.run(firstrun=True)
-    startup.run()
+    startup.run(firstrun=first_run)
     
 
 if __name__ == "__main__":
