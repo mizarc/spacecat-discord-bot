@@ -83,8 +83,8 @@ class Startup():
         # Output introduction
         print(
             "Hey there,\n"
-            "It appears that you don't have a configuration file.\n"
-            "Don't worry, I'll help you set one up in only 4 steps.\n")
+            "The bot will need some configuring to be able to run.\n"
+            "Don't worry, I'll walk you through everything.\n")
 
         input("Press Enter to continue...")
         print('--------------------\n')
