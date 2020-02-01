@@ -106,9 +106,10 @@ class Startup():
         print('--------------------\n')
 
         # Create new config file with API key
-        self.create_config()
-        config = toml.load(settings.data + 'config.toml')
+        config = self.create_config()
         config['base']['apikey'] = keyinput
+        with open(settings.data + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
         return True
 
     def load_modules(self):
