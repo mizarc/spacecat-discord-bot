@@ -66,10 +66,15 @@ class Startup():
         """Applies the cmd arguments to the config file"""
         if args.apikey:
             config['base']['apikey'] = args.apikey
-        if args.user:
-            config['base']['adminuser'] = args.user
         if args.prefix:
             config['base']['prefix'] = args.prefix
+        if args.user:
+            try:
+                users = config['base']['adminuser']
+                if args.user not in users:
+                    config['base']['adminuser'].append(args.user)
+            except KeyError:
+                config['base']['adminuser'] = [args.user]
 
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
@@ -517,7 +522,7 @@ class SpaceCat(commands.Cog):
                 print('--------------------\n')
 
                 if confirm == "yes":
-                    config['base']['adminuser'] = idinput
+                    config['base']['adminuser'] = [idinput]
                     break
                 elif confirm == "no":
                     break
