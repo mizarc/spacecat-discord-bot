@@ -105,8 +105,13 @@ class Startup():
         keyinput = input("Paste your token right here: ")
         print('--------------------\n')
 
-        # Create new config file with API key
-        config = self.create_config()
+        # Create new config file if it doesn't exist
+        try:
+            config = toml.load(settings.data + 'config.toml')
+        except FileNotFoundError:
+            config = self.create_config()
+
+        # Add API key to config file
         config['base']['apikey'] = keyinput
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
@@ -591,8 +596,9 @@ def main():
     # Check if config exists and run config creator if it doesn't
     try:
         config = toml.load(settings.data + 'config.toml')
+        config['base']['apikey']
         first_run = False
-    except FileNotFoundError:
+    except (FileNotFoundError, KeyError):
         first_run = startup.introduction()
 
     startup.run(firstrun=first_run)
