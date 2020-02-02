@@ -22,7 +22,7 @@ import helpers.perms as perms
 # Arguments for API key input
 parser = ArgumentParser()
 parser.add_argument('--apikey', '-a', help='apikey help', type=str)
-parser.add_argument('--user', '-u', help='user help', type=str)
+parser.add_argument('--user', '-u', help='user help', type=int)
 parser.add_argument('--prefix', '-p', help='prefix help', type=str)
 args = parser.parse_args()
 
@@ -500,12 +500,11 @@ class SpaceCat(commands.Cog):
                 "5. Exit user settings\n"
                 "6. Right click on your user and click 'Copy ID'\n")
 
-            idinput = input("Paste your ID right here: ")
-            print('--------------------\n')
-            
             # Check to see if the user ID is valid
             try:
-                user = self.bot.get_user(int(idinput))
+                idinput = int(input("Paste your ID right here: "))
+                print('--------------------\n')
+                user = self.bot.get_user(idinput)
                 await user.send("Hello there!")
             except (ValueError, AttributeError):
                 print(
