@@ -4,6 +4,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- `queue` subcommands added to modify the current songs in the queue
+    - `add` to add a song to the queue. Alternate method of using `play` when a song is already playing
+    - `remove` to remove a song from the queue
+    - `list` to list all songs in the queue. Executed by `queue` command if no subcommand is given
+    - `move` to move a selected song in the queue to a different position
+    - `clear` to remove all songs in the queue
+- `playlist` command holds all the subcommands for playlist related tools
+    - `create` to create a new playlist
+    - `destroy` to remove an existing playlist
+    - `rename` to rename an existing playlist
+    - `description` to set a playlist description
+    - `list` to view all playlists
+    - `add` to add a new song to an existing playlist
+    - `remove` to remove a song from a playlist
+    - `move` to move a selected song in a playlist to a different position
+    - `view` to view the songs in the selected playlist
+- `playplaylist` command play a selected playlist, playing the first song if no song is currently playing and adding the rest to the queue
+- `shuffle` command to move the songs in the current queue to random positions
+- Spoiler tag applied to gifs that were converted from WebPs
+- Launch arguments for admin user and command prefix
+- Argument passing through run scripts
+
+### Changed
+- Moved data, logs, cache, and assets to their own separate directories outside of the source folder
+- Arguments are now parsed before config creation, which can be used to skip the introduction altogether
+- Change database table and key naming convention
+- Adminuser config entry list based with integer entries to support multiple bot admins
+- Introduction text reworded
+
+### Fixed
+- Including directory with the file path rather than changing paths. This solves many IO requests when IO commands are executed quickly in succession
+
+
+## [0.2.1] - 2020-01-30
+### Fixed
+- Song time in queue still counting up when song is paused
+- YouTube-DL failing to fetch some videos (Version bumped all requirements)
+
 ## [0.2.0] - 2019-12-21
 ### Added
 - Repeat message using echo
