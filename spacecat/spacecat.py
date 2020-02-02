@@ -7,6 +7,7 @@ import logging
 import os
 import shutil
 import sqlite3
+import sys
 import time
 
 import discord
@@ -21,7 +22,8 @@ import helpers.perms as perms
 # Arguments for API key input
 parser = ArgumentParser()
 parser.add_argument('--apikey', '-a', help='apikey help', type=str)
-parser.add_argument('--user', '-u', help='user help', type=str)
+parser.add_argument('--user', '-u', help='user help', type=int)
+parser.add_argument('--prefix', '-p', help='prefix help', type=str)
 args = parser.parse_args()
 
 
@@ -48,11 +50,41 @@ class Startup():
         logger.addHandler(handler)
 
     def create_config(self):
+        """Creates the base empty config file"""
+        # Create data folder if it doesn't exist
+        if not os.path.exists('../data'):
+            os.mkdir("../data")
+
+        # Create config with just the base header
+        config = {}
+        config['base'] = {}
+        with open(settings.data + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+        return config
+
+    def config_arguments(self, config):
+        """Applies the cmd arguments to the config file"""
+        if args.apikey:
+            config['base']['apikey'] = args.apikey
+        if args.prefix:
+            config['base']['prefix'] = args.prefix
+        if args.user:
+            try:
+                users = config['base']['adminuser']
+                if args.user not in users:
+                    config['base']['adminuser'].append(args.user)
+            except KeyError:
+                config['base']['adminuser'] = [args.user]
+
+        with open(settings.data + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+
+    def introduction(self):
         # Output introduction
         print(
             "Hey there,\n"
-            "It appears that you don't have a configuration file.\n"
-            "Don't worry, I'll help you set one up in only 4 steps.\n")
+            "The bot will need some configuring to be able to run.\n"
+            "Don't worry, I'll walk you through everything.\n")
 
         input("Press Enter to continue...")
         print('--------------------\n')
@@ -73,17 +105,16 @@ class Startup():
         keyinput = input("Paste your token right here: ")
         print('--------------------\n')
 
-        # Create data folder if it doesn't exist
-        if not os.path.exists('../data'):
-            os.mkdir("../data")
+        # Create new config file if it doesn't exist
+        try:
+            config = toml.load(settings.data + 'config.toml')
+        except FileNotFoundError:
+            config = self.create_config()
 
-        # Create new config file with API key
-        config = {}
-        config['base'] = {}
+        # Add API key to config file
         config['base']['apikey'] = keyinput
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
-
         return True
 
     def load_modules(self):
@@ -469,12 +500,11 @@ class SpaceCat(commands.Cog):
                 "5. Exit user settings\n"
                 "6. Right click on your user and click 'Copy ID'\n")
 
-            idinput = input("Paste your ID right here: ")
-            print('--------------------\n')
-            
             # Check to see if the user ID is valid
             try:
-                user = self.bot.get_user(int(idinput))
+                idinput = int(input("Paste your ID right here: "))
+                print('--------------------\n')
+                user = self.bot.get_user(idinput)
                 await user.send("Hello there!")
             except (ValueError, AttributeError):
                 print(
@@ -497,7 +527,7 @@ class SpaceCat(commands.Cog):
                 print('--------------------\n')
 
                 if confirm == "yes":
-                    config['base']['adminuser'] = idinput
+                    config['base']['adminuser'] = [idinput]
                     break
                 elif confirm == "no":
                     break
@@ -554,21 +584,23 @@ def main():
     startup.logging()
     startup.load_modules()
 
+    # Append New APIKey to config if specified by argument
+    if len(sys.argv) > 1:
+        try:
+            config = toml.load(settings.data + 'config.toml')
+        except FileNotFoundError:
+            config = startup.create_config()
+        startup.config_arguments(config)
+
     # Check if config exists and run config creator if it doesn't
     try:
         config = toml.load(settings.data + 'config.toml')
+        config['base']['apikey']
         first_run = False
-    except FileNotFoundError:
-        first_run = startup.create_config()
+    except (FileNotFoundError, KeyError):
+        first_run = startup.introduction()
 
-    # Append New APIKey to config if specified by argument
-    if args.apikey is not None:
-        config['base']['apikey'] = args.apikey
-        toml.dump(config, settings.data + 'config.toml')
-    
-    if first_run:
-        startup.run(firstrun=True)
-    startup.run()
+    startup.run(firstrun=first_run)
     
 
 if __name__ == "__main__":
