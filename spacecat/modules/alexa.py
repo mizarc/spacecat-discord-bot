@@ -44,9 +44,7 @@ ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
         super().__init__(source, volume)
-
         self.data = data
-
         self.title = data.get('title')
         self.url = data.get('url')
         self.duration = data.get('duration')
@@ -58,9 +56,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
         before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5" 
 
-        if 'entries' in data:
-            # take first item from a playlist
-            data = data['entries'][0]
+        try:
+            if 'entries' in data:
+                # take first item from a playlist
+                data = data['entries'][0]
+        except TypeError:
+            return
 
         return cls(discord.FFmpegPCMAudio(data['url'], **ffmpeg_options, before_options=before_args), data=data)
 
@@ -1132,6 +1133,14 @@ class Alexa(commands.Cog):
     async def _process_song(self, ctx, url):
         """Grab audio source from YouTube and check if longer than 3 hours"""
         source = await YTDLSource.from_url(url)
+
+        if not source:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Woops, that video is unavailable")
+            await ctx.send(embed=embed)
+            raise ValueError('Specified song is unavailable')
+
         if source.duration >= 10800:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
