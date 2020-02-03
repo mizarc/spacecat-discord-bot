@@ -20,6 +20,17 @@ from helpers import settings
 youtube_dl.utils.bug_reports_message = lambda: ''
 
 
+class YTDLLogger(object):
+    def debug(self, msg):
+        pass
+
+    def warning(self, msg):
+        pass
+
+    def error(self, msg):
+        pass
+
+
 ytdl_format_options = {
     'format': 'bestaudio',
     'restrictfilenames': True,
@@ -31,7 +42,8 @@ ytdl_format_options = {
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0',
-    'youtube_include_dash_manifest': False
+    'youtube_include_dash_manifest': False,
+    'logger': YTDLLogger()
 }
 
 ffmpeg_options = {
