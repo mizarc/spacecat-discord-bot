@@ -314,7 +314,10 @@ class Alexa(commands.Cog):
 
         # Add remaining songs to queue
         while next_song is not None:
-            source = await YTDLSource.from_url(next_song[1][3])
+            try:
+                source, _ = await self._process_song(ctx, next_song[1][3])
+            except ValueError:
+                pass
             self.song_queue[ctx.guild.id].append(source)
             next_song = song_links.get(next_song[0])
 
