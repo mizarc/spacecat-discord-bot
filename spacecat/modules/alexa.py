@@ -330,14 +330,33 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
 
         # Add remaining songs to queue
-        while next_song is not None:
+        index = 1
+        unavailable_songs = []
+        while True:
+            index += 1
             next_song = song_links.get(next_song[0])
             try:
                 source, _ = await self._process_song(ctx, next_song[1][3])
-            except ValueError:
+            except VideoUnavailableError:
+                duration = await self._get_duration(next_song[1][2])
+                unavailable_songs.append(
+                    f"{index}. [{next_song[1][1]}]({next_song[1][3]})"
+                    f"`{duration}`")
                 continue
+            except TypeError:
+                break
             self.song_queue[ctx.guild.id].append(source)
 
+        # Alert user of unavailable songs
+        if unavailable_songs:
+            for index, song in enumerate(unavailable_songs):
+                song_format = "\n".join(unavailable_songs)
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"These songs in playlist `{playlist}` "
+                f"are unavailable: \n{song_format}")
+            await ctx.send(embed=embed)
+        
     @commands.command()
     @perms.check()
     async def stop(self, ctx):
