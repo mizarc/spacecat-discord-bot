@@ -630,7 +630,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='create')
     @perms.check()
-    async def create_playlist(self, ctx, *, playlist_name):
+    async def playlist_create(self, ctx, *, playlist_name):
         """Create a new playlist"""
         # Limit playlist name to 30 chars
         if len(playlist_name) > 30:
@@ -667,7 +667,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='destroy')
     @perms.check()
-    async def destroy_playlist(self, ctx, *, playlist_name):
+    async def playlist_destroy(self, ctx, *, playlist_name):
         """Deletes an existing playlist"""
         # Alert if playlist doesn't exist in db
         try:
@@ -699,7 +699,7 @@ class Alexa(commands.Cog):
     
     @playlist.command(name='description')
     @perms.check()
-    async def description_playlist(self, ctx, playlist_name, *, description):
+    async def playlist_description(self, ctx, playlist_name, *, description):
         """Sets the description for the playlist"""
         # Alert if playlist doesn't exist
         try:
@@ -736,7 +736,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='rename')
     @perms.check()
-    async def rename_playlist(self, ctx, playlist_name, new_name):
+    async def playlist_rename(self, ctx, playlist_name, new_name):
         """Rename an existing playlist"""
         # Alert if playlist doesn't exist
         try:
@@ -766,7 +766,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='list')
     @perms.check()
-    async def list_playlist(self, ctx):
+    async def playlist_list(self, ctx):
         """List all available playlists"""
         # Alert if no playlists exist
         playlists = await self._get_playlist(ctx)
@@ -807,7 +807,7 @@ class Alexa(commands.Cog):
         
     @playlist.command(name='add')
     @perms.check()
-    async def add_playlist(self, ctx, playlist_name, *, url):
+    async def playlist_add(self, ctx, playlist_name, *, url):
         """Adds a song to a playlist"""
         # Alert if playlist doesn't exist in db
         try:
@@ -871,7 +871,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='remove')
     @perms.check()
-    async def remove_playlist(self, ctx, playlist_name, index):
+    async def playlist_remove(self, ctx, playlist_name, index):
         """Removes a song from a playlist"""
         # Fetch songs from playlist if it exists
         try:
@@ -914,7 +914,7 @@ class Alexa(commands.Cog):
 
     @playlist.command(name='move')
     @perms.check()
-    async def move_playlist(self, ctx, playlist_name, original_pos, new_pos):
+    async def playlist_move(self, ctx, playlist_name, original_pos, new_pos):
         """Moves a song to a specified position in a playlist"""
         # Fetch songs from playlist if it exists
         try:
@@ -959,7 +959,7 @@ class Alexa(commands.Cog):
         
     @playlist.command(name='view')
     @perms.check()
-    async def view_playlist(self, ctx, playlist_name, page=1):
+    async def playlist_view(self, ctx, playlist_name, page=1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
         try:
@@ -1080,7 +1080,6 @@ class Alexa(commands.Cog):
             try:
                 source, _ = await self._process_song(ctx, next_song[1][3])
             except VideoUnavailableError:
-                print('hmm')
                 duration = await self._get_duration(next_song[1][2])
                 unavailable_songs.append(
                     f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
