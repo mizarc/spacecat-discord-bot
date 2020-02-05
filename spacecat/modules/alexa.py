@@ -286,89 +286,6 @@ class Alexa(commands.Cog):
         number = settings.emoji_to_number(str(reaction))
         selected_song = urls[number - 1]
         await ctx.invoke(self.play, url=selected_song)
-
-    @commands.command()
-    @perms.check()
-    async def playplaylist(self, ctx, playlist):
-        """Play from a locally saved playlist"""
-        # Join user's voice channel if not in one already
-        if ctx.voice_client is None:
-            await ctx.invoke(self.join)
-
-            # End function if bot failed to join a voice channel.
-            if ctx.voice_client is None:
-                return
-
-        # Get all songs in playlist
-        try:
-            songs = await self._get_songs(ctx, playlist)
-        except TypeError:
-            embed = discord.Embed(
-                colour=settings.embed_type('warn'),
-                description=f"Playlist `{playlist}` does not exist")
-            await ctx.send(embed=embed)
-            return
-        song_links = {}
-        for song in songs:
-            song_links[song[4]] = [song[0], song]
-
-        # Play first song if no song is currently playing
-        next_song = song_links.get(None)
-        unavailable_songs = []
-        index = 0
-        if len(self.song_queue[ctx.guild.id]) == 0: 
-            # Loop until available playlist song is found  
-            while True:
-                index += 1
-                try:
-                    source, _ = await self._process_song(ctx, next_song[1][3])
-                except VideoUnavailableError:
-                    duration = await self._get_duration(next_song[1][2])
-                    unavailable_songs.append(
-                        f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
-                        f"`{duration}`")
-                    continue
-                finally:
-                    next_song = song_links.get(next_song[0])
-                self.song_queue[ctx.guild.id].append(source)
-                self.song_start_time[ctx.guild.id] = time()
-                ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-                embed = discord.Embed(
-                    colour=settings.embed_type('accept'),
-                    description=f"Now playing playlist `{playlist}`")
-                await ctx.send(embed=embed)
-                break
-        else:
-            embed = discord.Embed(
-            colour=settings.embed_type('accept'),
-            description=f"Added playlist `{playlist}` to queue")
-            await ctx.send(embed=embed)
-
-        # Add remaining songs to queue
-        while next_song:
-            index += 1
-            try:
-                source, _ = await self._process_song(ctx, next_song[1][3])
-            except VideoUnavailableError:
-                print('hmm')
-                duration = await self._get_duration(next_song[1][2])
-                unavailable_songs.append(
-                    f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
-                    f"`{duration}`")
-                continue
-            finally:
-                next_song = song_links.get(next_song[0])
-            self.song_queue[ctx.guild.id].append(source)
-
-        # Alert user of unavailable songs
-        if unavailable_songs:
-            for index, song in enumerate(unavailable_songs):
-                song_format = "\n".join(unavailable_songs)
-            embed = discord.Embed(
-                colour=settings.embed_type('warn'),
-                description=f"These songs in playlist `{playlist}` "
-                f"are unavailable: \n{song_format}")
-            await ctx.send(embed=embed)
         
     @commands.command()
     @perms.check()
@@ -1099,6 +1016,89 @@ class Alexa(commands.Cog):
             name=f"{len(songs)} songs available `{formatted_duration}`",
             value=playlist_music_output, inline=False)
         await ctx.send(file=image, embed=embed)
+
+    @playlist.command(name='play')
+    @perms.check()
+    async def playlist_play(self, ctx, playlist):
+        """Play from a locally saved playlist"""
+        # Join user's voice channel if not in one already
+        if ctx.voice_client is None:
+            await ctx.invoke(self.join)
+
+            # End function if bot failed to join a voice channel.
+            if ctx.voice_client is None:
+                return
+
+        # Get all songs in playlist
+        try:
+            songs = await self._get_songs(ctx, playlist)
+        except TypeError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Playlist `{playlist}` does not exist")
+            await ctx.send(embed=embed)
+            return
+        song_links = {}
+        for song in songs:
+            song_links[song[4]] = [song[0], song]
+
+        # Play first song if no song is currently playing
+        next_song = song_links.get(None)
+        unavailable_songs = []
+        index = 0
+        if len(self.song_queue[ctx.guild.id]) == 0: 
+            # Loop until available playlist song is found  
+            while True:
+                index += 1
+                try:
+                    source, _ = await self._process_song(ctx, next_song[1][3])
+                except VideoUnavailableError:
+                    duration = await self._get_duration(next_song[1][2])
+                    unavailable_songs.append(
+                        f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
+                        f"`{duration}`")
+                    continue
+                finally:
+                    next_song = song_links.get(next_song[0])
+                self.song_queue[ctx.guild.id].append(source)
+                self.song_start_time[ctx.guild.id] = time()
+                ctx.voice_client.play(source, after=lambda e: self._next(ctx))
+                embed = discord.Embed(
+                    colour=settings.embed_type('accept'),
+                    description=f"Now playing playlist `{playlist}`")
+                await ctx.send(embed=embed)
+                break
+        else:
+            embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Added playlist `{playlist}` to queue")
+            await ctx.send(embed=embed)
+
+        # Add remaining songs to queue
+        while next_song:
+            index += 1
+            try:
+                source, _ = await self._process_song(ctx, next_song[1][3])
+            except VideoUnavailableError:
+                print('hmm')
+                duration = await self._get_duration(next_song[1][2])
+                unavailable_songs.append(
+                    f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
+                    f"`{duration}`")
+                continue
+            finally:
+                next_song = song_links.get(next_song[0])
+            self.song_queue[ctx.guild.id].append(source)
+
+        # Alert user of unavailable songs
+        if unavailable_songs:
+            for index, song in enumerate(unavailable_songs):
+                song_format = "\n".join(unavailable_songs)
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"These songs in playlist `{playlist}` "
+                f"are unavailable: \n{song_format}")
+            await ctx.send(embed=embed)
 
     def _next(self, ctx):
         # If looping, grab source from url again
