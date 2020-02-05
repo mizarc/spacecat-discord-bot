@@ -20,8 +20,27 @@ from helpers import settings
 youtube_dl.utils.bug_reports_message = lambda: ''
 
 
+class VideoTooLongError(ValueError):
+    pass
+
+
+class VideoUnavailableError(ValueError):
+    pass
+
+
+class YTDLLogger(object):
+    def debug(self, msg):
+        pass
+
+    def warning(self, msg):
+        pass
+
+    def error(self, msg):
+        pass
+
+
 ytdl_format_options = {
-    'format': 'bestaudio',
+    'format': 'bestaudio/best',
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
@@ -31,7 +50,8 @@ ytdl_format_options = {
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0',
-    'youtube_include_dash_manifest': False
+    'youtube_include_dash_manifest': False,
+    'logger': YTDLLogger()
 }
 
 ffmpeg_options = {
@@ -44,9 +64,7 @@ ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
         super().__init__(source, volume)
-
         self.data = data
-
         self.title = data.get('title')
         self.url = data.get('url')
         self.duration = data.get('duration')
@@ -58,9 +76,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
         before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5" 
 
-        if 'entries' in data:
-            # take first item from a playlist
-            data = data['entries'][0]
+        try:
+            if 'entries' in data:
+                # take first item from a playlist
+                data = data['entries'][0]
+        except TypeError:
+            return
 
         return cls(discord.FFmpegPCMAudio(data['url'], **ffmpeg_options, before_options=before_args), data=data)
 
@@ -159,7 +180,17 @@ class Alexa(commands.Cog):
         else:
             try:
                 source, song_name = await self._process_song(ctx, url)
-            except ValueError:
+            except VideoTooLongError:
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description="Woops, that video is too long")
+                await ctx.send(embed=embed)
+                return
+            except VideoUnavailableError:
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description="Woops, that video is unavailable")
+                await ctx.send(embed=embed)
                 return
             self.song_queue[ctx.guild.id].append(source)
             self.song_start_time[ctx.guild.id] = time()
@@ -283,16 +314,30 @@ class Alexa(commands.Cog):
 
         # Play first song if no song is currently playing
         next_song = song_links.get(None)
-        if len(self.song_queue[ctx.guild.id]) == 0:
-            source = await YTDLSource.from_url(next_song[1][3])
-            next_song = song_links.get(next_song[0])
-            self.song_queue[ctx.guild.id].append(source)
-            self.song_start_time[ctx.guild.id] = time()
-            ctx.voice_client.play(source, after=lambda e: self._next(ctx))
-            embed = discord.Embed(
-                colour=settings.embed_type('accept'),
-                description=f"Now playing playlist `{playlist}`")
-            await ctx.send(embed=embed)
+        unavailable_songs = []
+        index = 0
+        if len(self.song_queue[ctx.guild.id]) == 0: 
+            # Loop until available playlist song is found  
+            while True:
+                index += 1
+                try:
+                    source, _ = await self._process_song(ctx, next_song[1][3])
+                except VideoUnavailableError:
+                    duration = await self._get_duration(next_song[1][2])
+                    unavailable_songs.append(
+                        f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
+                        f"`{duration}`")
+                    continue
+                finally:
+                    next_song = song_links.get(next_song[0])
+                self.song_queue[ctx.guild.id].append(source)
+                self.song_start_time[ctx.guild.id] = time()
+                ctx.voice_client.play(source, after=lambda e: self._next(ctx))
+                embed = discord.Embed(
+                    colour=settings.embed_type('accept'),
+                    description=f"Now playing playlist `{playlist}`")
+                await ctx.send(embed=embed)
+                break
         else:
             embed = discord.Embed(
             colour=settings.embed_type('accept'),
@@ -300,11 +345,31 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
 
         # Add remaining songs to queue
-        while next_song is not None:
-            source = await YTDLSource.from_url(next_song[1][3])
+        while next_song:
+            index += 1
+            try:
+                source, _ = await self._process_song(ctx, next_song[1][3])
+            except VideoUnavailableError:
+                print('hmm')
+                duration = await self._get_duration(next_song[1][2])
+                unavailable_songs.append(
+                    f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
+                    f"`{duration}`")
+                continue
+            finally:
+                next_song = song_links.get(next_song[0])
             self.song_queue[ctx.guild.id].append(source)
-            next_song = song_links.get(next_song[0])
 
+        # Alert user of unavailable songs
+        if unavailable_songs:
+            for index, song in enumerate(unavailable_songs):
+                song_format = "\n".join(unavailable_songs)
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"These songs in playlist `{playlist}` "
+                f"are unavailable: \n{song_format}")
+            await ctx.send(embed=embed)
+        
     @commands.command()
     @perms.check()
     async def stop(self, ctx):
@@ -562,7 +627,17 @@ class Alexa(commands.Cog):
         # Add the song to the queue and output result
         try:
             source, song_name = await self._process_song(ctx, url)
-        except ValueError:
+        except VideoTooLongError:
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description="Woops, that video is too long")
+                await ctx.send(embed=embed)
+                return
+        except VideoUnavailableError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Woops, that video is unavailable")
+            await ctx.send(embed=embed)
             return
         self.song_queue[ctx.guild.id].append(source)
         embed = discord.Embed(
@@ -828,7 +903,20 @@ class Alexa(commands.Cog):
             return
 
         # Get song source to add to song list
-        source = await YTDLSource.from_url(url)
+        try:
+            source, _ = await self._process_song(ctx, url)
+        except VideoTooLongError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Woops, that video is too long")
+            await ctx.send(embed=embed)
+            return
+        except VideoUnavailableError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Woops, that video is unavailable")
+            await ctx.send(embed=embed)
+            return
         songs = await self._get_songs(ctx, playlist_name)
 
         # Set previous song as the last song in the playlist
@@ -1132,12 +1220,12 @@ class Alexa(commands.Cog):
     async def _process_song(self, ctx, url):
         """Grab audio source from YouTube and check if longer than 3 hours"""
         source = await YTDLSource.from_url(url)
+
+        if not source:
+            raise VideoUnavailableError('Specified song is unavailable')
+
         if source.duration >= 10800:
-            embed = discord.Embed(
-                colour=settings.embed_type('warn'),
-                description="Video must be shorter than 3 hours")
-            await ctx.send(embed=embed)
-            raise ValueError('Specified song is longer than 3 hours')
+            raise VideoTooLongError('Specified song is longer than 3 hours')
             
         duration = await self._get_duration(source.duration)
         name = f"[{source.title}]({source.webpage_url}) `{duration}`"

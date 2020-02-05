@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Spoiler tag applied to gifs that were converted from WebPs
 - Launch arguments for admin user and command prefix
 - Argument passing through run scripts
+- Error output when trying to play an unavailable youtube video
 
 ### Changed
 - Moved data, logs, cache, and assets to their own separate directories outside of the source folder
@@ -37,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Including directory with the file path rather than changing paths. This solves many IO requests when IO commands are executed quickly in succession
-
 
 ## [0.2.1] - 2020-01-30
 ### Fixed
