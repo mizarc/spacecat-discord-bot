@@ -890,7 +890,20 @@ class Alexa(commands.Cog):
             return
 
         # Get song source to add to song list
-        source = await YTDLSource.from_url(url)
+        try:
+            source, _ = await self._process_song(ctx, url)
+        except VideoTooLongError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Woops, that video is too long")
+            await ctx.send(embed=embed)
+            return
+        except VideoUnavailableError:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Woops, that video is unavailable")
+            await ctx.send(embed=embed)
+            return
         songs = await self._get_songs(ctx, playlist_name)
 
         # Set previous song as the last song in the playlist
