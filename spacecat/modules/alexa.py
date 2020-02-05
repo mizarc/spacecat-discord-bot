@@ -926,16 +926,28 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Edit db to put selected song in other song's position while shifting
-        # the other song to be after the selected song's position
+        # Edit db to put selected song in other song's position
         selected_song = songs[int(original_pos) - 1]
         other_song = songs[int(new_pos) - 1]
-        values = [
-            (other_song[4], selected_song[0]),
-            (selected_song[0], other_song[0])]
+        
+        # If moving down, shift other song down the list
+        if new_pos > original_pos:
+            values = [(other_song[0], selected_song[0])]
+            try:
+                after_new_song = songs[int(new_pos)]
+                values.append((selected_song[0], after_new_song[0]))
+            except IndexError:
+                pass
+        # If moving up, shift other song up the list
+        else:
+            values = [
+                (other_song[4], selected_song[0]),
+                (selected_song[0], other_song[0])]
+
+        # Connect the two songs beside the original song position
         try:
-            next_song = songs[int(original_pos)]
-            values.append((selected_song[4], next_song[0]))
+            after_selected_song = songs[int(original_pos)]
+            values.append((selected_song[4], after_selected_song[0]))
         except IndexError:
             pass
         
