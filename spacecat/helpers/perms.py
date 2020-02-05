@@ -79,7 +79,7 @@ def check():
     def parent_perms(ctx, cursor, query):
         # Check if group has parents
         cursor.execute(
-                'SELECT parent_id FROM group_parents WHERE server_id=? AND child_id=?', query)
+                'SELECT parent_id FROM group_parent WHERE server_id=? AND child_id=?', query)
         parents = cursor.fetchall()
 
         # Check parent groups for permission
