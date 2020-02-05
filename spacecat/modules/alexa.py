@@ -340,7 +340,7 @@ class Alexa(commands.Cog):
             except VideoUnavailableError:
                 duration = await self._get_duration(next_song[1][2])
                 unavailable_songs.append(
-                    f"{index}. [{next_song[1][1]}]({next_song[1][3]})"
+                    f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
                     f"`{duration}`")
                 continue
             except TypeError:
