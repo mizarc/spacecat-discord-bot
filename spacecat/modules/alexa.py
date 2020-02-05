@@ -534,7 +534,7 @@ class Alexa(commands.Cog):
     async def queue_add(self, ctx, url):
         """Adds a song to the queue"""
         # Alert if too many songs in queue
-        if len(self.song_queue[ctx.guild.id]) > 30:
+        if len(self.song_queue[ctx.guild.id]) > 100:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
                 description="Too many songs in queue. Calm down.")
@@ -819,6 +819,15 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        songs = await self._get_songs(ctx, playlist_name)
+        if len(songs) > 100:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="There's too many songs in the playlist. Remove"
+                "some songs to be able to add more")
+            await ctx.send(embed=embed)
+            return
+
         # Get song source to add to song list
         try:
             source, _ = await self._process_song(ctx, url)
@@ -834,8 +843,7 @@ class Alexa(commands.Cog):
                 description="Woops, that video is unavailable")
             await ctx.send(embed=embed)
             return
-        songs = await self._get_songs(ctx, playlist_name)
-
+        
         # Set previous song as the last song in the playlist
         if not songs:
             previous_song = None
