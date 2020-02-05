@@ -625,7 +625,7 @@ class Alexa(commands.Cog):
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
                 description="Please specify a valid subcommand: "
-                "`create/destroy/rename/list/add/remove/move/songlist`")
+                "\n`play/create/destroy/rename/list\nadd/remove/move/view`")
             await ctx.send(embed=embed)
 
     @playlist.command(name='create')
