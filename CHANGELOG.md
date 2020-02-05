@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `move` to move a selected song in the queue to a different position
     - `clear` to remove all songs in the queue
 - `playlist` command holds all the subcommands for playlist related tools
+    - `play` command play a selected playlist, playing the first song if no song is currently playing and adding the rest to the queue
     - `create` to create a new playlist
     - `destroy` to remove an existing playlist
     - `rename` to rename an existing playlist
@@ -22,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `remove` to remove a song from a playlist
     - `move` to move a selected song in a playlist to a different position
     - `view` to view the songs in the selected playlist
-- `playplaylist` command play a selected playlist, playing the first song if no song is currently playing and adding the rest to the queue
 - `shuffle` command to move the songs in the current queue to random positions
 - Spoiler tag applied to gifs that were converted from WebPs
 - Launch arguments for admin user and command prefix
@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Change database table and key naming convention
 - Adminuser config entry list based with integer entries to support multiple bot admins
 - Introduction text reworded
+- Song queue limit increased to 100
 
 ### Fixed
 - Including directory with the file path rather than changing paths. This solves many IO requests when IO commands are executed quickly in succession
