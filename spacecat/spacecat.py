@@ -14,9 +14,9 @@ import discord
 from discord.ext import commands
 import toml
 
-from helpers import settings
-import helpers.module_handler as module_handler
-import helpers.perms as perms
+from spacecat.helpers import settings
+import spacecat.helpers.module_handler as module_handler
+import spacecat.helpers.perms as perms
 
 
 # Arguments for API key input
