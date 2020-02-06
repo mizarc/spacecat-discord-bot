@@ -5,5 +5,4 @@ echo "Including Requirements..."
 PYTHON=.venv/bin/python3
 $PYTHON -m pip install -e .
 
-cd spacecat
-../$PYTHON spacecat.py $@
+$PYTHON -m spacecat $@
