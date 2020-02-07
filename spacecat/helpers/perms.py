@@ -7,7 +7,7 @@ from discord.ext import commands
 from discord.utils import get
 import toml
 
-from helpers import settings
+from spacecat.helpers import settings
 
 
 def new(guild):

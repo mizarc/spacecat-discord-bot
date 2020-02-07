@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 
-from helpers import perms
-from helpers import settings
+from spacecat.helpers import perms
+from spacecat.helpers import settings
 
 
 class Seethreepio(commands.Cog):

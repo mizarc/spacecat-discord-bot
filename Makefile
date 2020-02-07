@@ -18,10 +18,10 @@ clean: ## Cleans up all build and environment files
 	rm --force --recursive .venv/
 	
 run: setup ## Runs the program
-	${PYTHON} spacecat/spacecat.py
+	${PYTHON} -m spacecat
 
 run-daemon: setup ## Uses screen to run the program as a daemon (Linux only)
-	screen -dmS ${DAEMON} ${PYTHON} spacecat/spacecat.py
+	screen -dmS ${DAEMON} ${PYTHON} -m spacecat
 
 dist: setup ## Packages the software in a distributable format
 	${PYTHON} setup.py sdist

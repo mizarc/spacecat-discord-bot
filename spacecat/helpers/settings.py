@@ -2,9 +2,9 @@ import discord
 
 
 # Data folder location
-assets = '../assets/'
-cache = '../cache/'
-data = '../data/'
+assets = 'assets/'
+cache = 'cache/'
+data = 'data/'
 
 
 def activity_type_class(acttype):
