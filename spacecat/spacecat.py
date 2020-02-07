@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-from argparse import ArgumentParser
+import argparse
 import asyncio
 import configparser
-import glob
 import logging
 import os
 import shutil
@@ -44,7 +43,7 @@ class Startup():
 
     def parse_args(self):
         """Add command line argument options"""
-        parser = ArgumentParser()
+        parser = argparse.ArgumentParser()
         parser.add_argument('--apikey', '-a', help='apikey help', type=str)
         parser.add_argument('--user', '-u', help='user help', type=int)
         parser.add_argument('--prefix', '-p', help='prefix help', type=str)
