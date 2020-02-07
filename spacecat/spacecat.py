@@ -53,7 +53,7 @@ class Startup():
         self.bot.add_cog(SpaceCat(self.bot))
         modules = module_handler.get_enabled()
         for module in modules:
-            module = 'modules.' + module
+            module = 'spacecat.modules.' + module
             try:
                 self.bot.load_extension(module)
             except Exception as exception:

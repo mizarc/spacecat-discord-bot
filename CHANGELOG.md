@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Launch arguments for admin user and command prefix
 - Argument passing through run scripts
 - Error output when trying to play an unavailable youtube video
+- Top level run.py file for debugging
 
 ### Changed
 - Moved data, logs, cache, and assets to their own separate directories outside of the source folder
@@ -36,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adminuser config entry list based with integer entries to support multiple bot admins
 - Introduction text reworded
 - Song queue limit increased to 100
+- Package renamed to spacecat in setup.py
+- Bot is now officially run using python's -m argument
 
 ### Fixed
 - Including directory with the file path rather than changing paths. This solves many IO requests when IO commands are executed quickly in succession

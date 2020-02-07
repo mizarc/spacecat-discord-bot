@@ -7,10 +7,10 @@ import toml
 def get():
     # Get all modules that are present in the folder
     modulelist = []
-    for module in glob.glob('modules/*.py'):
-        if module[8:] == "__init__.py":
+    for module in glob.glob('spacecat/modules/*.py'):
+        if module[17:] == "__init__.py":
             continue
-        modulelist.append(module[8:-3])
+        modulelist.append(module[17:-3])
     return modulelist
 
 def get_enabled():
