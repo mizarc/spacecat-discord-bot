@@ -12,12 +12,12 @@ A magical, open source, self hostable, easy to use, general purpose, fully exten
 ### Windows
 Open the software root folder and run `run.bat`.
 
-Alternatively, python can be called directly using `py -3 spacecat.py` in the spacecat directory
+Alternatively, python can be called directly using `py -3 -m spacecat`
 
 ### MacOS & Linux
 Open the software root folder and run `run.sh`.
 
-Alternatively, python can be called directly using `python3 spacecat.py` in the spacecat directory
+Alternatively, python can be called directly using `python3 -m spacecat`
 
 ## Installation
 You'll go through this stuff when you run the program, don't worry.
