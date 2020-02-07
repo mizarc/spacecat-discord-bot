@@ -50,6 +50,21 @@ class Startup():
         parser.add_argument('--prefix', '-p', help='prefix help', type=str)
         self.args = parser.parse_args()
 
+    def load_modules(self):
+        # Enable enabled modules from list
+        self.bot.add_cog(SpaceCat(self.bot))
+        modules = module_handler.get_enabled()
+        for module in modules:
+            module = 'modules.' + module
+            try:
+                self.bot.load_extension(module)
+            except Exception as exception:
+                print(
+                    f"Failed to load extension {module}\n"
+                    f"{type(exception).__name__}: {exception}\n")
+
+        self.modules = modules
+
     def create_config(self):
         """Creates the base empty config file"""
         # Create data folder if it doesn't exist
@@ -117,21 +132,6 @@ class Startup():
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         return True
-
-    def load_modules(self):
-        # Enable enabled modules from list
-        self.bot.add_cog(SpaceCat(self.bot))
-        modules = module_handler.get_enabled()
-        for module in modules:
-            module = 'modules.' + module
-            try:
-                self.bot.load_extension(module)
-            except Exception as exception:
-                print(
-                    f"Failed to load extension {module}\n"
-                    f"{type(exception).__name__}: {exception}\n")
-
-        self.modules = modules
 
     def run(self, firstrun=False):
         config = toml.load(settings.data + 'config.toml')
