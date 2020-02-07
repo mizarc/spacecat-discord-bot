@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
-from argparse import ArgumentParser
+import argparse
 import asyncio
 import configparser
-import glob
 import logging
 import os
 import shutil
@@ -14,22 +12,15 @@ import discord
 from discord.ext import commands
 import toml
 
-from helpers import settings
-import helpers.module_handler as module_handler
-import helpers.perms as perms
-
-
-# Arguments for API key input
-parser = ArgumentParser()
-parser.add_argument('--apikey', '-a', help='apikey help', type=str)
-parser.add_argument('--user', '-u', help='user help', type=int)
-parser.add_argument('--prefix', '-p', help='prefix help', type=str)
-args = parser.parse_args()
+from spacecat.helpers import settings
+import spacecat.helpers.module_handler as module_handler
+import spacecat.helpers.perms as perms
 
 
 class Startup():
     def __init__(self):
         self.bot = commands.Bot(command_prefix=self.get_prefix)
+        self.args = None
 
     def logging(self):
         # Create log folder if it doesn't exist
@@ -49,6 +40,29 @@ class Startup():
         )
         logger.addHandler(handler)
 
+    def parse_args(self):
+        """Add command line argument options"""
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--apikey', '-a', help='apikey help', type=str)
+        parser.add_argument('--user', '-u', help='user help', type=int)
+        parser.add_argument('--prefix', '-p', help='prefix help', type=str)
+        self.args = parser.parse_args()
+
+    def load_modules(self):
+        # Enable enabled modules from list
+        self.bot.add_cog(SpaceCat(self.bot))
+        modules = module_handler.get_enabled()
+        for module in modules:
+            module = 'modules.' + module
+            try:
+                self.bot.load_extension(module)
+            except Exception as exception:
+                print(
+                    f"Failed to load extension {module}\n"
+                    f"{type(exception).__name__}: {exception}\n")
+
+        self.modules = modules
+
     def create_config(self):
         """Creates the base empty config file"""
         # Create data folder if it doesn't exist
@@ -64,17 +78,17 @@ class Startup():
 
     def config_arguments(self, config):
         """Applies the cmd arguments to the config file"""
-        if args.apikey:
-            config['base']['apikey'] = args.apikey
-        if args.prefix:
-            config['base']['prefix'] = args.prefix
-        if args.user:
+        if self.args.apikey:
+            config['base']['apikey'] = self.args.apikey
+        if self.args.prefix:
+            config['base']['prefix'] = self.args.prefix
+        if self.args.user:
             try:
                 users = config['base']['adminuser']
-                if args.user not in users:
-                    config['base']['adminuser'].append(args.user)
+                if self.args.user not in users:
+                    config['base']['adminuser'].append(self.args.user)
             except KeyError:
-                config['base']['adminuser'] = [args.user]
+                config['base']['adminuser'] = [self.args.user]
 
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
@@ -116,21 +130,6 @@ class Startup():
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         return True
-
-    def load_modules(self):
-        # Enable enabled modules from list
-        self.bot.add_cog(SpaceCat(self.bot))
-        modules = module_handler.get_enabled()
-        for module in modules:
-            module = 'modules.' + module
-            try:
-                self.bot.load_extension(module)
-            except Exception as exception:
-                print(
-                    f"Failed to load extension {module}\n"
-                    f"{type(exception).__name__}: {exception}\n")
-
-        self.modules = modules
 
     def run(self, firstrun=False):
         config = toml.load(settings.data + 'config.toml')
@@ -582,6 +581,7 @@ class SpaceCat(commands.Cog):
 def main():
     startup = Startup()
     startup.logging()
+    startup.parse_args()
     startup.load_modules()
 
     # Append New APIKey to config if specified by argument
@@ -601,7 +601,3 @@ def main():
         first_run = startup.introduction()
 
     startup.run(firstrun=first_run)
-    
-
-if __name__ == "__main__":
-    main()

@@ -6,8 +6,8 @@ import discord
 from discord.ext import commands
 import toml
 
-from helpers import perms
-from helpers import settings
+from spacecat.helpers import perms
+from spacecat.helpers import settings
 
 class Configuration(commands.Cog):
     def __init__(self, bot):

@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from helpers import settings
+from spacecat.helpers import settings
 
 
 class ErrorHandler(commands.Cog):

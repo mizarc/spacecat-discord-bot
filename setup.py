@@ -8,8 +8,8 @@ with open("requirements.txt", "r") as fh:
     install_requires = fh.read().splitlines()
 
 setuptools.setup(
-    name="SpaceCat-Discord-Bot",
-    version="0.2.0",
+    name="spacecat",
+    version="0.3.0",
     description="A self hostable modular Discord bot.",
     long_description=long_description,
     long_description_content_type="text/markdown",

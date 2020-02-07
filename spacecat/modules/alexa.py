@@ -13,8 +13,8 @@ import youtube_dl
 from bs4 import BeautifulSoup as bs
 import requests
 
-from helpers import perms
-from helpers import settings
+from spacecat.helpers import perms
+from spacecat.helpers import settings
 
 
 youtube_dl.utils.bug_reports_message = lambda: ''

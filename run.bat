@@ -5,5 +5,4 @@ echo Including Requirements...
 SET PYTHON=.venv\Scripts\python.exe
 %PYTHON% -m pip install -e .
 
-cd spacecat
-..\%PYTHON% spacecat.py %*
+%PYTHON% -m spacecat %*
