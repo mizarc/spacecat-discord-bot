@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Argument passing through run scripts
 - Error output when trying to play an unavailable youtube video
 - Top level run.py file for debugging
+- Error output for missing arguments
+- Error output for bot missing permissions
 
 ### Changed
 - Moved data, logs, cache, and assets to their own separate directories outside of the source folder
