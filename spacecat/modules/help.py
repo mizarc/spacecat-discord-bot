@@ -21,7 +21,7 @@ class Help(commands.Cog):
         modules = self.bot.cogs
         for module in modules.values():
             embed.add_field(
-                name=f"`**{module.qualified_name}**`",
+                name=f"**{module.qualified_name}**",
                 value=f"{module.description}")
         await ctx.send(file=image, embed=embed)
 
