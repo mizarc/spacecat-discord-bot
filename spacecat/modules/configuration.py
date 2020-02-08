@@ -10,6 +10,7 @@ from spacecat.helpers import perms
 from spacecat.helpers import settings
 
 class Configuration(commands.Cog):
+    """Modify Discord wide bot settings"""
     def __init__(self, bot):
         self.bot = bot
 

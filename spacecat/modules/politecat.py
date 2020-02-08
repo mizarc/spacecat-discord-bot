@@ -10,6 +10,7 @@ from spacecat.helpers import settings
 
 
 class PoliteCat(commands.Cog):
+    """Image posting based features"""
     def __init__(self, bot):
         self.bot = bot
         self.webp_convert = True

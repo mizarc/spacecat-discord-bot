@@ -5,6 +5,7 @@ from spacecat.helpers import settings
 
 
 class Help(commands.Cog):
+    """Information on how to use commands"""
     def __init__(self, bot):
         self.bot = bot
         bot.remove_command('help')

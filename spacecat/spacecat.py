@@ -177,6 +177,7 @@ class Startup():
 
 
 class SpaceCat(commands.Cog):
+    """The bare minimum for bot functionality"""
     def __init__(self, bot):
         self.bot = bot
 

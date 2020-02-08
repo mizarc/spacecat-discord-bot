@@ -5,6 +5,7 @@ from spacecat.helpers import settings
 
 
 class ErrorHandler(commands.Cog):
+    """Outputs appropriate messages on errors"""
     def __init__(self, bot):
         self.bot = bot
 
