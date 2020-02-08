@@ -289,7 +289,7 @@ class SpaceCat(commands.Cog):
         embed = discord.Embed(
             colour=settings.embed_type('info'), 
             description="**Bot is currently using version:**\n"
-            "[SpaceCat Discord Bot `v0.2.0`]"
+            "[SpaceCat Discord Bot `v0.3.0`]"
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
         await ctx.send(embed=embed)
 
