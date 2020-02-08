@@ -27,18 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Spoiler tag applied to gifs that were converted from WebPs
 - Launch arguments for admin user and command prefix
 - Argument passing through run scripts
-- Error output when trying to play an unavailable youtube video
 - Top level run.py file for debugging
+- Error output when trying to play an unavailable youtube video
 - Error output for missing arguments
 - Error output for bot missing permissions
 
 ### Changed
-- Moved data, logs, cache, and assets to their own separate directories outside of the source folder
-- Arguments are now parsed before config creation, which can be used to skip the introduction altogether
-- Change database table and key naming convention
-- Adminuser config entry list based with integer entries to support multiple bot admins
-- Introduction text reworded
 - Song queue limit increased to 100
+- Arguments are now parsed before config creation, which can be used to skip the introduction altogether
+- Adminuser config entry list based with integer entries to support multiple bot admins
+- Moved data, logs, cache, and assets to their own separate directories outside of the source folder
+- Introduction text reworded
+- Change database table and key naming convention
 - Package renamed to spacecat in setup.py
 - Bot is now officially run using python's -m argument
 
