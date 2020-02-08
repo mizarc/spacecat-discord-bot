@@ -24,14 +24,14 @@ class Startup():
 
     def logging(self):
         # Create log folder if it doesn't exist
-        if not os.path.exists('../logs'):
-            os.mkdir("../logs")
+        if not os.path.exists('logs'):
+            os.mkdir("logs")
 
         # Setup file logging
         logger = logging.getLogger('discord')
         logger.setLevel(logging.DEBUG)
         handler = logging.FileHandler(
-            filename='../logs/latest.log',
+            filename='logs/latest.log',
             encoding='utf-8',
             mode='w'
         )
