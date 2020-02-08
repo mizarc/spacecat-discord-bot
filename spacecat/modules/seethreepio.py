@@ -6,6 +6,7 @@ from spacecat.helpers import settings
 
 
 class Seethreepio(commands.Cog):
+    """Random text response based features"""
     def __init__(self, bot):
         self.bot = bot
 

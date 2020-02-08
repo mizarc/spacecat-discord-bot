@@ -87,7 +87,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 
 class Alexa(commands.Cog):
-    """Play some music in a VC"""
+    """Play some funky music in a voice chat"""
     def __init__(self, bot):
         self.bot = bot
         self.song_queue = {}
