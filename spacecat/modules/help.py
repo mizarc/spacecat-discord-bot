@@ -11,23 +11,18 @@ class Help(commands.Cog):
 
     @commands.command()
     async def help(self, ctx, menu=None):
-        # Output first in queue as currently playing
-        embed = discord.Embed(colour=settings.embed_type('info'))
+        # Create embed
+        embed = discord.Embed(colour=settings.embed_type('info'),
+        description=f"Type !help <module> to list all commands in the module")
         image = discord.File(settings.embed_icons("information"), filename="image.png")
         embed.set_author(name="Help Menu", icon_url="attachment://image.png")
 
+        # Add all modules to the embed
         modules = self.bot.cogs
-        modules_output = []
         for module in modules.values():
-            modules_output.append(f"`{module.qualified_name}`: {module.description}")
-        #modules_output = 
-
-        embed.add_field(
-        name="Type !help <module> to list all commands in the module",
-        value="\n".join(modules_output))
-
-
-        # Output results to chat
+            embed.add_field(
+                name=f"`**{module.qualified_name}**`",
+                value=f"{module.description}")
         await ctx.send(file=image, embed=embed)
 
 
