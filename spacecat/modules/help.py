@@ -11,11 +11,17 @@ class Help(commands.Cog):
         bot.remove_command('help')
 
     @commands.command()
-    async def help(self, ctx, menu=None):
+    async def help(self, ctx, module=None):
+        """Information on how to use commands"""
+        if module:
+            await self.command_list(ctx, self.bot.get_cog(module))
+            return
+            
         # Create embed
         embed = discord.Embed(colour=settings.embed_type('info'),
         description=f"Type !help <module> to list all commands in the module")
-        image = discord.File(settings.embed_icons("information"), filename="image.png")
+        image = discord.File(
+            settings.embed_icons("information"), filename="image.png")
         embed.set_author(name="Help Menu", icon_url="attachment://image.png")
 
         # Add all modules to the embed
@@ -25,6 +31,30 @@ class Help(commands.Cog):
                 name=f"**{module.qualified_name}**",
                 value=f"{module.description}")
         await ctx.send(file=image, embed=embed)
+
+    async def command_list(self, ctx, module):
+        """Get a list of commands from the selected module"""
+        commands = module.get_commands()
+        command_output = []
+        for command in commands:
+            if command.signature:
+                arguments = f' {command.signature}'
+            else:
+                arguments = ''
+            command_output.append(f"`{command.name}{arguments}`: {command.short_doc}")
+
+        # Create embed
+        embed = discord.Embed(colour=settings.embed_type('info'),
+        description=f"Type !help <command> for more info on a command")
+        image = discord.File(
+            settings.embed_icons("information"), filename="image.png")
+        embed.set_author(name="Help Menu", icon_url="attachment://image.png")
+
+        embed.add_field(
+            name=f"**Commands**",
+            value="\n".join(command_output))
+        await ctx.send(file=image, embed=embed)
+
 
 
 def setup(bot):
