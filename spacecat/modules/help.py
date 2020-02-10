@@ -13,7 +13,7 @@ class Help(commands.Cog):
         bot.remove_command('help')
 
     @commands.command()
-    async def help(self, ctx, command=None):
+    async def help(self, ctx, *, command=None):
         """Information on how to use commands"""
         # Generate main help menu
         if command is None:
@@ -42,6 +42,7 @@ class Help(commands.Cog):
         cmd = self.bot.all_commands.get(command)
         if cmd:
             await self.command_info(ctx, cmd)
+            return
 
         # Output alert if argument is neither a valid module or command
         embed = discord.Embed(
