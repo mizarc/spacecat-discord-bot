@@ -1,3 +1,5 @@
+import sqlite3
+
 import discord
 from discord.ext import commands
 
@@ -65,14 +67,31 @@ class Help(commands.Cog):
 
     async def command_info(self, ctx, command):
         """Gives you information on how to use a command"""
-        embed = discord.Embed(colour=settings.embed_type('info'))
-        embed.set_author(name=command.name.title(), icon_url="attachment://image.png")
-
+        # Add base command entry with command name and usage
         if command.signature:
             arguments = f' {command.signature}'
         else:
             arguments = ''
-        embed.description = f"```{command.name}{arguments}```\n{command.help}"
+        embed = discord.Embed(colour=settings.embed_type('info'),
+        description=f"```{command.name}{arguments}```")
+        embed.set_author(name=command.name.title(), icon_url="attachment://image.png")
+
+        # Get all aliases of command from database
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        value = (ctx.guild.id, command.name)
+        cursor.execute("SELECT alias FROM command_alias WHERE server_id=? AND command=?", value)
+        aliases = cursor.fetchall()
+        db.close()
+
+        if aliases:
+            alias_output = []
+            for alias in aliases:
+                alias_output.append(f"`{alias[0]}`")
+
+
+        embed.add_field(name="Aliases", value=", ".join(alias_output))
+
 
         await ctx.send(embed=embed)
 
