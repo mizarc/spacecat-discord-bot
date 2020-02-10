@@ -84,14 +84,16 @@ class Help(commands.Cog):
         aliases = cursor.fetchall()
         db.close()
 
+        # Add command alias field
         if aliases:
             alias_output = []
             for alias in aliases:
                 alias_output.append(f"`{alias[0]}`")
-
-
         embed.add_field(name="Aliases", value=", ".join(alias_output))
 
+        # Add commnand description field
+        if command.help:
+            embed.add_field(name="Description", value=command.help, inline=False)
 
         await ctx.send(embed=embed)
 
