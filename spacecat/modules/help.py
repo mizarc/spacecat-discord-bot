@@ -15,8 +15,8 @@ class Help(commands.Cog):
     @commands.command()
     async def help(self, ctx, command=None):
         """Information on how to use commands"""
+        # Generate main help menu
         if command is None:
-            # Create embed
             embed = discord.Embed(colour=settings.embed_type('info'),
             description=f"Type !help <module> to list all commands in the module")
             image = discord.File(
@@ -38,9 +38,16 @@ class Help(commands.Cog):
             await self.command_list(ctx, module)
             return
 
+        # Check if specified argument is a command
         cmd = self.bot.all_commands.get(command)
         if cmd:
             await self.command_info(ctx, cmd)
+
+        # Output alert if argument is neither a valid module or command
+        embed = discord.Embed(
+            colour=settings.embed_type('warn'),
+            description=f"There is no module or command with that name")
+        await ctx.send(embed=embed)
 
     async def command_list(self, ctx, module):
         """Get a list of commands from the selected module"""
@@ -98,7 +105,6 @@ class Help(commands.Cog):
         image = discord.File(
             settings.embed_icons("help"), filename="image.png")
         await ctx.send(file=image, embed=embed)
-
 
 
 def setup(bot):
