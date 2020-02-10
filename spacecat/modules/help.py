@@ -20,7 +20,7 @@ class Help(commands.Cog):
             embed = discord.Embed(colour=settings.embed_type('info'),
             description=f"Type !help <module> to list all commands in the module")
             image = discord.File(
-                settings.embed_icons("information"), filename="image.png")
+                settings.embed_icons("help"), filename="image.png")
             embed.set_author(name="Help Menu", icon_url="attachment://image.png")
 
             # Add all modules to the embed
@@ -57,7 +57,7 @@ class Help(commands.Cog):
         embed = discord.Embed(colour=settings.embed_type('info'),
         description=f"Type !help <command> for more info on a command")
         image = discord.File(
-            settings.embed_icons("information"), filename="image.png")
+            settings.embed_icons("help"), filename="image.png")
         embed.set_author(name="Help Menu", icon_url="attachment://image.png")
 
         embed.add_field(
@@ -89,7 +89,7 @@ class Help(commands.Cog):
             alias_output = []
             for alias in aliases:
                 alias_output.append(f"`{alias[0]}`")
-        embed.add_field(name="Aliases", value=", ".join(alias_output))
+            embed.add_field(name="Aliases", value=", ".join(alias_output))
 
         # Add commnand description field
         if command.help:
