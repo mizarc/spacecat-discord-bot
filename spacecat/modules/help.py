@@ -95,7 +95,9 @@ class Help(commands.Cog):
         if command.help:
             embed.add_field(name="Description", value=command.help, inline=False)
 
-        await ctx.send(embed=embed)
+        image = discord.File(
+            settings.embed_icons("help"), filename="image.png")
+        await ctx.send(file=image, embed=embed)
 
 
 
