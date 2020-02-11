@@ -18,7 +18,7 @@ class Help(commands.Cog):
         # Generate main help menu
         if command is None:
             embed = discord.Embed(colour=settings.embed_type('info'),
-            description=f"Type !help <module> to list all commands in the module")
+            description=f"Type !help <module> to list all commands in the module (case sensitive)")
             image = discord.File(
                 settings.embed_icons("help"), filename="image.png")
             embed.set_author(name="Help Menu", icon_url="attachment://image.png")
