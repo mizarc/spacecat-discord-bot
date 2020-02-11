@@ -26,9 +26,11 @@ class Help(commands.Cog):
             # Add all modules to the embed
             modules = self.bot.cogs
             for module in modules.values():
-                embed.add_field(
-                    name=f"**{module.qualified_name}**",
-                    value=f"{module.description}")
+                commands = await self.filter_commands(ctx, module.get_commands())
+                if commands:
+                    embed.add_field(
+                        name=f"**{module.qualified_name}**",
+                        value=f"{module.description}")
             await ctx.send(file=image, embed=embed)
             return
 
