@@ -66,7 +66,9 @@ class Help(commands.Cog):
         description=f"Type !help <command> for more info on a command")
         image = discord.File(
             settings.embed_icons("help"), filename="image.png")
-        embed.set_author(name="Help Menu", icon_url="attachment://image.png")
+        embed.set_author(
+            name=f"{module.qualified_name} Commands",
+            icon_url="attachment://image.png")
 
         embed.add_field(
             name=f"**Commands**",
