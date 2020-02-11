@@ -39,11 +39,17 @@ class Help(commands.Cog):
             return
 
         # Check if specified argument is a command
-        cmd = self.bot.all_commands.get(command)
+        cmds = command.split(' ')
+        cmd = self.bot.all_commands.get(cmds[0])
         if cmd:
+            for subcmd in cmds[1:]:
+                check = cmd.all_commands.get(subcmd)
+                if not check:
+                    break
+                cmd = check
             await self.command_info(ctx, cmd)
             return
-
+        
         # Output alert if argument is neither a valid module or command
         embed = discord.Embed(
             colour=settings.embed_type('warn'),
@@ -76,13 +82,20 @@ class Help(commands.Cog):
     async def command_info(self, ctx, command):
         """Gives you information on how to use a command"""
         # Add base command entry with command name and usage
+        if command.full_parent_name:
+            parents = f'{command.full_parent_name} '
+        else:
+            parents = ''
         if command.signature:
             arguments = f' {command.signature}'
         else:
             arguments = ''
-        embed = discord.Embed(colour=settings.embed_type('info'),
-        description=f"```{command.name}{arguments}```")
-        embed.set_author(name=command.name.title(), icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=settings.embed_type('info'),
+            description=f"```{parents}{command.name}{arguments}```")
+        embed.set_author(
+            name=f"{parents.title()}{command.name.title()}",
+            icon_url="attachment://image.png")
 
         # Get all aliases of command from database
         db = sqlite3.connect(settings.data + 'spacecat.db')
