@@ -58,7 +58,7 @@ class Help(commands.Cog):
 
     async def command_list(self, ctx, module):
         """Get a list of commands from the selected module"""
-        commands = module.get_commands()
+        commands = await self.filter_commands(ctx, module.get_commands())
         command_output, command_group_output = await self.get_formatted_command_list(commands)
 
         # Create embed
@@ -124,7 +124,8 @@ class Help(commands.Cog):
 
         # Add command subcommand field
         try:
-            subcommands = command.all_commands.values()
+            subcommands = await self.filter_commands(
+                ctx, command.all_commands.values())
             subcommand_output, subcommand_group_output = await self.get_formatted_command_list(subcommands)
 
             if subcommand_group_output:
@@ -144,6 +145,17 @@ class Help(commands.Cog):
             settings.embed_icons("help"), filename="image.png")
         await ctx.send(file=image, embed=embed)
 
+    async def filter_commands(self, ctx, commands):
+        """Filter out commands that users don't have permission to use"""
+        filtered_commands = []
+        for command in commands:
+            try:
+                check = await command.can_run(ctx)
+                if check:
+                    filtered_commands.append(command)
+            except discord.ext.commands.CommandError:
+                pass
+        return filtered_commands
 
     async def get_formatted_command_list(self, commands):
         """Format the command list to look pretty"""
@@ -164,6 +176,7 @@ class Help(commands.Cog):
             except AttributeError:
                 command_output.append(command_format)
         return command_output, command_group_output
+    
 
 
 def setup(bot):
