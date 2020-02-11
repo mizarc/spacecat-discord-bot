@@ -177,6 +177,7 @@ class Startup():
 
 
 class SpaceCat(commands.Cog):
+    """The bare minimum for bot functionality"""
     def __init__(self, bot):
         self.bot = bot
 
@@ -275,7 +276,11 @@ class SpaceCat(commands.Cog):
     @commands.command()
     @perms.check()
     async def ping(self, ctx):
-        """A simple ping to check if the bot is responding."""
+        """
+        A simple ping to check if the bot is responding
+        The ping will show in milliseconds the connection between the
+        bot host and the discord servers.
+        """
         embed = discord.Embed(
             colour=settings.embed_type('accept'), 
             description=f"{self.bot.user.name} is operational at \
@@ -285,7 +290,11 @@ class SpaceCat(commands.Cog):
     @commands.command()
     @perms.check()
     async def version(self, ctx):
-        """Check the current bot version."""
+        """
+        Check the current bot version
+        This links to the gitlab source page, showing the most updated
+        version of the bot.
+        """
         embed = discord.Embed(
             colour=settings.embed_type('info'), 
             description="**Bot is currently using version:**\n"
@@ -296,7 +305,11 @@ class SpaceCat(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def globalprefix(self, ctx, prefix):
-        """Changes the global command prefix"""
+        """
+        Changes the global command prefix
+        Servers with a custom prefix override as specified with the
+        'prefix' command are not affected by this change.
+        """
         # Changes the prefix entry in the config
         config = toml.load(settings.data + 'config.toml')
         config['base']['prefix'] = prefix
@@ -311,6 +324,10 @@ class SpaceCat(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def modules(self, ctx):
+        """
+        Lists all currently available modules
+        Will show which modules are currently enabled or disabled.
+        """
         enabled = module_handler.get_enabled()
         disabled = module_handler.get_disabled()
 
@@ -342,7 +359,10 @@ class SpaceCat(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def reload(self, ctx, module=None):
-        """Reloads all or specified module"""
+        """
+        Reloads all or specified module
+        Used for applying changes that were done to the source code.
+        """
         module_list = module_handler.get_enabled()
         modules_to_load = []
         failed_modules = []
@@ -399,7 +419,11 @@ class SpaceCat(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def enable(self, ctx, module):
-        """Enables a module"""
+        """
+        Enables a module
+        New modules added to the bot in the modules folder can started
+        using this command rather than having to restart the bot.
+        """
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
@@ -431,7 +455,11 @@ class SpaceCat(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def disable(self, ctx, module):
-        """Disables a module"""
+        """
+        Disables a module
+        Modules can be safely disabled, which will stop all commands and
+        listeners from functioning.
+        """
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
@@ -469,7 +497,11 @@ class SpaceCat(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def exit(self, ctx):
-        """Shuts down the bot."""
+        """
+        Shuts down the bot
+        Ensures that proper shutdown prodedures are done so that issues
+        do not arise during next start.
+        """
         # Clear the cache folder if it exists
         try:
             shutil.rmtree(settings.cache)

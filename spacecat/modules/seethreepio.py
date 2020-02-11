@@ -6,6 +6,7 @@ from spacecat.helpers import settings
 
 
 class Seethreepio(commands.Cog):
+    """Random text response based features"""
     def __init__(self, bot):
         self.bot = bot
 
@@ -38,6 +39,7 @@ class Seethreepio(commands.Cog):
                                + ctx.message.author.mention)
 
     @commands.command()
+    @perms.check()
     async def stealuserpic(self, ctx, user: discord.User):
         await ctx.send(user.avatar_url)
 
