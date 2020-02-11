@@ -60,6 +60,8 @@ class Help(commands.Cog):
 
     async def command_list(self, ctx, module):
         """Get a list of commands from the selected module"""
+        # Get all the commands in the module. Alert if user doesn't
+        # have permission to view any commands in the module
         commands = await self.filter_commands(ctx, module.get_commands())
         if not commands:
             embed = discord.Embed(
@@ -93,6 +95,7 @@ class Help(commands.Cog):
 
     async def command_info(self, ctx, command):
         """Gives you information on how to use a command"""
+        # Alert if user doesn't have permission to use that command
         check = await self.filter_commands(ctx, [command])
         if not check:
             embed = discord.Embed(
@@ -154,7 +157,7 @@ class Help(commands.Cog):
                     name="Subcommands",
                     value='\n'.join(subcommand_output),
                     inline=False)
-        except:
+        except AttributeError:
             pass
 
         image = discord.File(
