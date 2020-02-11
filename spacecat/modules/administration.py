@@ -12,6 +12,7 @@ from spacecat.helpers import settings
 
 
 class Administration(commands.Cog):
+    """Modify server wide settings"""
     def __init__(self, bot):
         self.bot = bot
 

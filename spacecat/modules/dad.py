@@ -6,6 +6,7 @@ from spacecat.helpers import settings
 
 
 class Dad(commands.Cog):
+    """A minor annoyance and a pinch of fun"""
     def __init__(self, bot):
         self.bot = bot
         self.toggle = True
