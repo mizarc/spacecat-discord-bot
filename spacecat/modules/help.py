@@ -59,13 +59,7 @@ class Help(commands.Cog):
     async def command_list(self, ctx, module):
         """Get a list of commands from the selected module"""
         commands = module.get_commands()
-        command_output = []
-        for command in commands:
-            if command.signature:
-                arguments = f' {command.signature}'
-            else:
-                arguments = ''
-            command_output.append(f"`{command.name}{arguments}`: {command.short_doc}")
+        command_output = await self.get_formatted_command_list(commands)
 
         # Create embed
         embed = discord.Embed(colour=settings.embed_type('info'),
@@ -81,7 +75,7 @@ class Help(commands.Cog):
 
     async def command_info(self, ctx, command):
         """Gives you information on how to use a command"""
-        # Add base command entry with command name and usage
+        # Check for command parents to use as prefix and signature as suffix
         if command.full_parent_name:
             parents = f'{command.full_parent_name} '
         else:
@@ -90,6 +84,8 @@ class Help(commands.Cog):
             arguments = f' {command.signature}'
         else:
             arguments = ''
+
+        # Add base command entry with command name and usage
         embed = discord.Embed(
             colour=settings.embed_type('info'),
             description=f"```{parents}{command.name}{arguments}```")
@@ -116,9 +112,29 @@ class Help(commands.Cog):
         if command.help:
             embed.add_field(name="Description", value=command.help, inline=False)
 
+        # Add command subcommand field
+        try:
+            subcommands = command.all_commands.values()
+            subcommand_output = await self.get_formatted_command_list(subcommands)
+            if subcommand_output:
+                embed.add_field(name="Subcommands", value='\n'.join(subcommand_output), inline=False)
+        except:
+            pass
+
         image = discord.File(
             settings.embed_icons("help"), filename="image.png")
         await ctx.send(file=image, embed=embed)
+
+
+    async def get_formatted_command_list(self, commands):
+        command_output = []
+        for command in commands:
+            if command.signature:
+                arguments = f' {command.signature}'
+            else:
+                arguments = ''
+            command_output.append(f"`{command.name}{arguments}`: {command.short_doc}")
+        return command_output
 
 
 def setup(bot):
