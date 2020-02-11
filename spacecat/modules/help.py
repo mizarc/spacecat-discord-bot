@@ -85,6 +85,14 @@ class Help(commands.Cog):
 
     async def command_info(self, ctx, command):
         """Gives you information on how to use a command"""
+        check = await self.filter_commands(ctx, [command])
+        if not check:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"You don't have permission to view that command's help page")
+            await ctx.send(embed=embed)
+            return
+
         # Check for command parents to use as prefix and signature as suffix
         if command.full_parent_name:
             parents = f'{command.full_parent_name} '
