@@ -59,7 +59,7 @@ class Help(commands.Cog):
     async def command_list(self, ctx, module):
         """Get a list of commands from the selected module"""
         commands = module.get_commands()
-        command_output = await self.get_formatted_command_list(commands)
+        command_output, command_group_output = await self.get_formatted_command_list(commands)
 
         # Create embed
         embed = discord.Embed(colour=settings.embed_type('info'),
@@ -70,9 +70,17 @@ class Help(commands.Cog):
             name=f"{module.qualified_name} Commands",
             icon_url="attachment://image.png")
 
-        embed.add_field(
-            name=f"**Commands**",
-            value="\n".join(command_output))
+        if command_group_output:
+            embed.add_field(
+                name=f"**Command Groups**",
+                value="\n".join(command_group_output))
+
+        if command_output:
+            embed.add_field(
+                name=f"**Commands**",
+                value="\n".join(command_output),
+                inline=False)
+            
         await ctx.send(file=image, embed=embed)
 
     async def command_info(self, ctx, command):
@@ -117,9 +125,18 @@ class Help(commands.Cog):
         # Add command subcommand field
         try:
             subcommands = command.all_commands.values()
-            subcommand_output = await self.get_formatted_command_list(subcommands)
+            subcommand_output, subcommand_group_output = await self.get_formatted_command_list(subcommands)
+
+            if subcommand_group_output:
+                embed.add_field(
+                    name="Subcommand Groups",
+                    value='\n'.join(subcommand_group_output))
+            
             if subcommand_output:
-                embed.add_field(name="Subcommands", value='\n'.join(subcommand_output), inline=False)
+                embed.add_field(
+                    name="Subcommands",
+                    value='\n'.join(subcommand_output),
+                    inline=False)
         except:
             pass
 
@@ -129,14 +146,24 @@ class Help(commands.Cog):
 
 
     async def get_formatted_command_list(self, commands):
+        """Format the command list to look pretty"""
+        command_group_output = []
         command_output = []
         for command in commands:
+            # Check if command has arguments
             if command.signature:
                 arguments = f' {command.signature}'
             else:
                 arguments = ''
-            command_output.append(f"`{command.name}{arguments}`: {command.short_doc}")
-        return command_output
+
+            # Categorise commands and command groups
+            command_format = f"`{command.name}{arguments}`: {command.short_doc}"
+            try:
+                command.all_commands
+                command_group_output.append(command_format)
+            except AttributeError:
+                command_output.append(command_format)
+        return command_output, command_group_output
 
 
 def setup(bot):
