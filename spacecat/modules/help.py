@@ -61,6 +61,12 @@ class Help(commands.Cog):
     async def command_list(self, ctx, module):
         """Get a list of commands from the selected module"""
         commands = await self.filter_commands(ctx, module.get_commands())
+        if not commands:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"You don't have permission to view that module's help page")
+            await ctx.send(embed=embed)
+            return
         command_output, command_group_output = await self.get_formatted_command_list(commands)
 
         # Create embed
