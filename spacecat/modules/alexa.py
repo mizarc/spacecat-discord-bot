@@ -618,16 +618,12 @@ class Alexa(commands.Cog):
             description=f"All songs have been removed from the queue")
         await ctx.send(embed=embed)
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     @perms.check()
     async def playlist(self, ctx):
-        """Configure music playlists"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(
-                colour=settings.embed_type('warn'),
-                description="Please specify a valid subcommand: "
-                "\n`play/create/destroy/rename/list\nadd/remove/move/view`")
-            await ctx.send(embed=embed)
+        """Configure music playlists. Defaults to list subcommand."""
+        # Run the queue list subcommand if no subcommand is specified
+        await ctx.invoke(self.playlist_list)
 
     @playlist.command(name='create')
     @perms.check()
