@@ -15,6 +15,21 @@ class Configuration(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener()
+    async def on_ready(self):
+        config = toml.load(settings.data + 'config.toml')
+        try:
+            config['permissions']
+        except KeyError:
+            config['permissions'] = {}
+        try:
+            config['permissions']['default']
+        except KeyError:
+            config['permissions']['default'] = []
+
+        with open(settings.data + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+
+    @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CommandNotFound):
             prefix = ctx.prefix
@@ -100,17 +115,17 @@ class Configuration(commands.Cog):
 
     @permpreset.command()
     @perms.exclusive()
-    async def removed(self, ctx):
+    async def destroy(self, ctx):
         print('nah')
 
     @permpreset.command()
     @perms.exclusive()
-    async def append(self, ctx):
+    async def add(self, ctx):
         print('nah')
 
     @permpreset.command()
     @perms.exclusive()
-    async def truncate(self, ctx):
+    async def remove(self, ctx):
         print('nah')
 
 
