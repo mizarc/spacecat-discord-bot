@@ -103,31 +103,34 @@ class Configuration(commands.Cog):
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     @perms.exclusive()
     async def permpreset(self, ctx):
         print('nah')
 
-    @permpreset.command()
+    @permpreset.command(name='create')
     @perms.exclusive()
-    async def create(self, ctx):
+    async def permpreset_create(self, ctx):
         print('nah')
 
-    @permpreset.command()
+    @permpreset.command(name='destroy')
     @perms.exclusive()
-    async def destroy(self, ctx):
+    async def permpreset_destroy(self, ctx):
         print('nah')
 
-    @permpreset.command()
+    @permpreset.command(name='add')
     @perms.exclusive()
-    async def add(self, ctx):
+    async def permpreset_add(self, ctx):
         print('nah')
 
-    @permpreset.command()
+    @permpreset.command(name='remove')
     @perms.exclusive()
-    async def remove(self, ctx):
+    async def permpreset_remove(self, ctx):
         print('nah')
 
+    @permpreset.command(name='list')
+    @perms.exclusive()
+    async def permpreset_list(self, ctx):
 
 def setup(bot):
     bot.add_cog(Configuration(bot))
