@@ -1,4 +1,5 @@
 import configparser
+from itertools import islice
 import os
 import sqlite3
 
@@ -16,6 +17,8 @@ class Configuration(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        # Auto generate the permissions config category with
+        # default (@everyone) role
         config = toml.load(settings.data + 'config.toml')
         try:
             config['permissions']
@@ -131,6 +134,27 @@ class Configuration(commands.Cog):
     @permpreset.command(name='list')
     @perms.exclusive()
     async def permpreset_list(self, ctx):
+        config = toml.load(settings.data + 'config.toml')
+        perm_presets = config['permissions']
+
+        # Output first in queue as currently playing
+        embed = discord.Embed(colour=settings.embed_type('info'))
+        image = discord.File(
+            settings.embed_icons('information'),
+            filename="image.png")
+        embed.set_author(name="Permission Presets",
+            icon_url="attachment://image.png")
+
+        # Format playlist songs into pretty list
+        perm_presets_output = []
+        for index, preset_name in enumerate(islice(perm_presets, 0, 10)):
+            perm_presets_output.append(f"{index + 1}. {preset_name}")
+
+        embed.add_field(
+            name=f"{len(perm_presets)} available",
+            value='\n'.join(perm_presets_output), inline=False)
+        await ctx.send(file=image, embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Configuration(bot))
