@@ -113,8 +113,27 @@ class Configuration(commands.Cog):
 
     @permpreset.command(name='create')
     @perms.exclusive()
-    async def permpreset_create(self, ctx):
-        print('nah')
+    async def permpreset_create(self, ctx, name):
+        config = toml.load(settings.data + 'config.toml')
+        
+        try:
+            config['permissions'][name]
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="There's already a preset with that name")
+            await ctx.send(embed=embed)
+            return
+        except KeyError:
+            pass
+
+        config['permissions'][name] = []
+        with open(settings.data + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+            
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Added permission preset `{name}`")
+        await ctx.send(embed=embed)
 
     @permpreset.command(name='destroy')
     @perms.exclusive()
