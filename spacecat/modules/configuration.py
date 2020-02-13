@@ -129,7 +129,6 @@ class Configuration(commands.Cog):
         config['permissions'][name] = []
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
-            
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
             description=f"Added permission preset `{name}`")
@@ -137,8 +136,26 @@ class Configuration(commands.Cog):
 
     @permpreset.command(name='destroy')
     @perms.exclusive()
-    async def permpreset_destroy(self, ctx):
-        print('nah')
+    async def permpreset_destroy(self, ctx, name):
+        config = toml.load(settings.data + 'config.toml')
+
+        # Alert if there's no preset with that name
+        try:
+            del config['permissions'][name]
+        except:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"There is no preset with the name `{name}`")
+            await ctx.send(embed=embed)
+            return
+
+        # Apply changes and output result to user
+        with open(settings.data + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Deleted permission preset `{name}`")
+        await ctx.send(embed=embed)
 
     @permpreset.command(name='add')
     @perms.exclusive()
