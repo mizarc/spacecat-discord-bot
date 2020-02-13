@@ -109,7 +109,7 @@ class Configuration(commands.Cog):
     @commands.group(invoke_without_command=True)
     @perms.exclusive()
     async def permpreset(self, ctx):
-        print('nah')
+        await ctx.invoke(self.permpreset_list)
 
     @permpreset.command(name='create')
     @perms.exclusive()
