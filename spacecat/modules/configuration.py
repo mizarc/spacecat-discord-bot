@@ -149,6 +149,13 @@ class Configuration(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        if name == 'default':
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"You cannot remove the default preset")
+            await ctx.send(embed=embed)
+            return
+
         # Apply changes and output result to user
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
