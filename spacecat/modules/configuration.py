@@ -218,26 +218,29 @@ class Configuration(commands.Cog):
 
         # Check if permission is a command
         if not skip:
-            command_parents = perm.split('.')
+            command_perm = '.'.join(perm_values)
             
             # Exclude subcommand wildcard when checking if command exists
-            if command_parents[-1] == '*':
-                command = self.bot.get_command(perm[:-2].replace('.', ' '))
+            if command_perm[-1] == '*':
+                command = self.bot.get_command(command_perm[:-2].replace('.', ' '))
             else:
-                command = self.bot.get_command(perm.replace('.', ' '))
+                command = self.bot.get_command(command_perm.replace('.', ' '))
 
             # Alert if no permission goes by that name after checking
             # both module and command names
-            if not command:
-                embed = discord.Embed(
-                    colour=settings.embed_type('warn'),
-                    description=f"Permission does not exist."
-                    "Please enter a valid permission")
-                await ctx.send(embed=embed) 
-                return
-
+            try:
+                if not command or command.cog != cog:
+                    embed = discord.Embed(
+                        colour=settings.embed_type('warn'),
+                        description=f"Permission does not exist. "
+                        "Please enter a valid permission")
+                    await ctx.send(embed=embed) 
+                    return
+            except UnboundLocalError:
+                pass
+                
             # Add command permission if it doesn't already exist
-            full_permission = f"{command.cog.qualified_name}.{perm}"
+            full_permission = f"{command.cog.qualified_name}.{command_perm}"
             if full_permission in config['permissions'][preset]:
                 embed = discord.Embed(
                     colour=settings.embed_type('warn'),
@@ -246,10 +249,10 @@ class Configuration(commands.Cog):
                 return
             else:
                 config['permissions'][preset].append(
-                    f"{command.cog.qualified_name}.{perm}")
+                    f"{command.cog.qualified_name}.{command_perm}")
                 embed = discord.Embed(
                     colour=settings.embed_type('accept'),
-                    description=f"Command `{perm}` added to preset `{preset}`")
+                    description=f"Command `{command.cog.qualified_name}.{command_perm}` added to preset `{preset}`")
                 await ctx.send(embed=embed)
             
         with open(settings.data + "config.toml", "w") as config_file:
@@ -309,26 +312,29 @@ class Configuration(commands.Cog):
 
         # Check if permission is a command
         if not skip:
-            command_parents = perm.split('.')
+            command_perm = '.'.join(perm_values)
 
             # Exclude subcommand wildcard when checking if command exists
-            if command_parents[-1] == '*':
-                command = self.bot.get_command(perm[:-2].replace('.', ' '))
+            if command_perm[-1] == '*':
+                command = self.bot.get_command(command_perm[:-2].replace('.', ' '))
             else:
-                command = self.bot.get_command(perm.replace('.', ' '))
+                command = self.bot.get_command(command_perm.replace('.', ' '))
 
             # Alert if no permission goes by that name after checking
             # both module and command names
-            if not command:
-                embed = discord.Embed(
-                    colour=settings.embed_type('warn'),
-                    description=f"Permission does not exist. "
-                    "Please enter a valid permission")
-                await ctx.send(embed=embed) 
-                return
+            try:
+                if not command or command.cog != cog:
+                    embed = discord.Embed(
+                        colour=settings.embed_type('warn'),
+                        description=f"Permission does not exist. "
+                        "Please enter a valid permission")
+                    await ctx.send(embed=embed) 
+                    return
+            except UnboundLocalError:
+                pass
 
-        # Add command permission if it doesn't already exist
-            full_permission = f"{command.cog.qualified_name}.{perm}"
+            # Add command permission if it doesn't already exist
+            full_permission = f"{command.cog.qualified_name}.{command_perm}"
             if full_permission not in config['permissions'][preset]:
                 embed = discord.Embed(
                     colour=settings.embed_type('warn'),
@@ -337,11 +343,11 @@ class Configuration(commands.Cog):
                 return
             else:
                 config['permissions'][preset].remove(
-                    f"{command.cog.qualified_name}.{perm}")
+                    f"{command.cog.qualified_name}.{command_perm}")
                 embed = discord.Embed(
                     colour=settings.embed_type('accept'),
-                    description=f"Command `{perm}` removed from preset "
-                    f"`{preset}`")
+                    description=f"Command `{command.cog.qualified_name}."
+                    f"{command_perm}` removed from preset `{preset}`")
                 await ctx.send(embed=embed)
             
         with open(settings.data + "config.toml", "w") as config_file:
