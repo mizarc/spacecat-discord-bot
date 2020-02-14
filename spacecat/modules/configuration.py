@@ -257,8 +257,95 @@ class Configuration(commands.Cog):
 
     @permpreset.command(name='remove')
     @perms.exclusive()
-    async def permpreset_remove(self, ctx):
-        print('nah')
+    async def permpreset_remove(self, ctx, preset, perm):
+        config = toml.load(settings.data + 'config.toml')
+        perm_values = perm.split('.')
+        skip = False
+
+        # Remove wildcard permission if it exists in preset entry
+        if perm == '*':
+            if perm in config['permissions'][preset]:
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description=f"Preset `{preset}` doesn't have the "
+                    "wildcard permission")
+                await ctx.send(embed=embed) 
+                return
+            else:
+                config['permissions'][preset].remove(perm)
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description=f"Wildcard permission removed from preset "
+                    f"`{preset}`")
+                await ctx.send(embed=embed) 
+                skip = True
+
+        # Check if permission starts with a cog
+        if not skip and len(perm_values) > 1:
+            cog = self.bot.get_cog(perm_values[0])
+
+            # Check if non-wildcard permission has been chosen and move onto
+            # the next section for command level perm handling
+            if cog and perm_values[1] != '*':
+                perm_values.pop(0)
+
+            # Remove command group permission if it doesn't already exist
+            elif cog and perm not in config['permissions'][preset]:
+                embed = discord.Embed(
+                    colour=settings.embed_type('accept'),
+                    description=f"`{preset}` doesn't have the "
+                    f"`{cog.qualified_name}` permission group")
+                await ctx.send(embed=embed)
+                return
+            elif cog and perm in config['permissions'][preset]:
+                config['permissions'][preset].remove(
+                    f"{cog.qualified_name}.*")
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description=f"Permission group `{cog.qualified_name}` "
+                    f"removed from preset `{preset}`")
+                await ctx.send(embed=embed)
+                skip = True
+
+        # Check if permission is a command
+        if not skip:
+            command_parents = perm.split('.')
+
+            # Exclude subcommand wildcard when checking if command exists
+            if command_parents[-1] == '*':
+                command = self.bot.get_command(perm[:-2].replace('.', ' '))
+            else:
+                command = self.bot.get_command(perm.replace('.', ' '))
+
+            # Alert if no permission goes by that name after checking
+            # both module and command names
+            if not command:
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description=f"Permission does not exist. "
+                    "Please enter a valid permission")
+                await ctx.send(embed=embed) 
+                return
+
+        # Add command permission if it doesn't already exist
+            full_permission = f"{command.cog.qualified_name}.{perm}"
+            if full_permission not in config['permissions'][preset]:
+                embed = discord.Embed(
+                    colour=settings.embed_type('warn'),
+                    description=f"`{preset}` doesn't have that permission")
+                await ctx.send(embed=embed) 
+                return
+            else:
+                config['permissions'][preset].remove(
+                    f"{command.cog.qualified_name}.{perm}")
+                embed = discord.Embed(
+                    colour=settings.embed_type('accept'),
+                    description=f"Command `{perm}` removed from preset "
+                    f"`{preset}`")
+                await ctx.send(embed=embed)
+            
+        with open(settings.data + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
 
     @permpreset.command(name='list')
     @perms.exclusive()
