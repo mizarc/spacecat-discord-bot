@@ -58,13 +58,12 @@ class Administration(commands.Cog):
     async def on_guild_join(self, guild):
         await self._add_server_entry(guild.id)
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     @perms.check()
     async def alias(self, ctx):
         """Configure command aliases"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `add/remove`")
-            await ctx.send(embed=embed)
+        embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `add/remove`")
+        await ctx.send(embed=embed)
 
     @alias.command(name='add')
     @perms.check()
@@ -161,21 +160,19 @@ class Administration(commands.Cog):
         embed.add_field(name="Aliases", value='\n'.join(aliases))
         await ctx.send(embed=embed, file=image)
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     @perms.check()
     async def perm(self, ctx):
         """Configure server permissions"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `group/user`")
-            await ctx.send(embed=embed)
+        embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `group/user`")
+        await ctx.send(embed=embed)
     
-    @perm.group()
+    @perm.group(invoke_without_command=True)
     @perms.check()
     async def group(self, ctx):
         """Configure server permissions"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
-            await ctx.send(embed=embed)
+        embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
+        await ctx.send(embed=embed)
 
     @group.command(name='add')
     @perms.check()
@@ -417,13 +414,12 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
 
-    @perm.group()
+    @perm.group(invoke_without_command=True)
     @perms.check()
     async def user(self, ctx):
         """Configure server permissions"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please enter a valid subcommand: `add/remove/info`")
-            await ctx.send(embed=embed) 
+        embed = discord.Embed(colour=settings.embed_type('warn'), description="Please enter a valid subcommand: `add/remove/info`")
+        await ctx.send(embed=embed) 
 
     @user.command(name='add')
     @perms.check()
