@@ -24,7 +24,8 @@ class Administration(commands.Cog):
         # Create tables if they don't exist
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS server_settings'
-            '(server_id INTEGER PRIMARY KEY, prefix TEXT)')
+            '(server_id INTEGER PRIMARY KEY, prefix TEXT, '
+            'advanced_permission BOOLEAN)')
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS command_alias'
             '(server_id INTEGER, alias TEXT, command TEXT)')
@@ -166,6 +167,48 @@ class Administration(commands.Cog):
         """Configure server permissions"""
         embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `group/user`")
         await ctx.send(embed=embed)
+
+    @perm.command(name='advanced')
+    @perms.check()
+    async def perm_advanced(self, ctx):
+        """
+        Sets permissions to advanced mode
+        This mode essentially disables the bot's default permission
+        assignment, meaning that you have to assign default permissions
+        from scratch.
+        """
+        # Connect to the database to fetch the current permission mode
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        query = (ctx.guild.id,)
+        cursor.execute(
+            'SELECT advanced_permission FROM server_settings '
+            'WHERE server_id=?', query)
+        advanced = cursor.fetchone()
+
+        # Toggle permission mode
+        if advanced:
+            value = (False,)
+            embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description="Advanced permission mode has been disabled. The"
+                "bot's default permissions are now in effect")
+            await ctx.send(embed=embed)
+        else:
+            value = (True,)
+            embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description="Advanced permission mode has been enabled. "
+                "Default permission assignment must be configured manually "
+                "so that users are able to use the bot's functions")
+            await ctx.send(embed=embed)
+
+        cursor.execute(
+            'UPDATE server_settings SET advanced_permission=? '
+            'WHERE server_id=?', value)
+        db.commit()
+        db.close()
+
     
     @perm.group(invoke_without_command=True)
     @perms.check()
