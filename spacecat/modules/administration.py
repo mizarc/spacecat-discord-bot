@@ -178,6 +178,7 @@ class Administration(commands.Cog):
         from scratch.
         """
         # Connect to the database to fetch the current permission mode
+        await self._server_settings_database()
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (ctx.guild.id,)
@@ -186,16 +187,16 @@ class Administration(commands.Cog):
             'WHERE server_id=?', query)
         advanced = cursor.fetchone()
 
-        # Toggle permission mode
-        if advanced:
-            value = (False,)
+        # Toggle permission mode and output result to user
+        if advanced[0] == 1:
+            value = (False, ctx.guild.id)
             embed = discord.Embed(
                 colour=settings.embed_type('accept'),
                 description="Advanced permission mode has been disabled. The"
                 "bot's default permissions are now in effect")
             await ctx.send(embed=embed)
         else:
-            value = (True,)
+            value = (True, ctx.guild.id)
             embed = discord.Embed(
                 colour=settings.embed_type('accept'),
                 description="Advanced permission mode has been enabled. "
@@ -203,12 +204,12 @@ class Administration(commands.Cog):
                 "so that users are able to use the bot's functions")
             await ctx.send(embed=embed)
 
+        # Apply changes to database
         cursor.execute(
             'UPDATE server_settings SET advanced_permission=? '
             'WHERE server_id=?', value)
         db.commit()
         db.close()
-
     
     @perm.group(invoke_without_command=True)
     @perms.check()
