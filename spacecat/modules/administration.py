@@ -685,7 +685,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (id_, f"{command.cog.qualified_name}.{perm}")
-        cursor.execute(f"SELECT perm FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
+        cursor.execute(f"SELECT permission FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
         result = cursor.fetchall()
         db.close()
 
