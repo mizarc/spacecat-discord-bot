@@ -795,6 +795,26 @@ class Administration(commands.Cog):
             description=f"Command prefix has been reset back to: `{prefix}`")
         await ctx.send(embed=embed)
 
+    async def _server_settings_database(self):
+        """Ensures that keys in server_settings table exist post creation"""
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        cursor.execute('PRAGMA table_info(server_settings)')
+        table_keys = cursor.fetchall()
+
+        # Fetch all key names from table keys
+        key_names = []
+        for table_key in table_keys:
+            key_names.append(table_key[1])
+
+        # Add advanced_permission key if it doesn't exist
+        if 'advanced_permission' not in key_names:
+            cursor.execute(
+                'ALTER TABLE server_settings ADD advanced_permission BOOLEAN')
+        db.commit()
+        db.close()
+
+
 
 def setup(bot):
     bot.add_cog(Administration(bot))
