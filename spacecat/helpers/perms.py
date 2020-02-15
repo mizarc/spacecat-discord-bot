@@ -23,12 +23,31 @@ def new(guild):
         config['PermsGroups'][str(guild.default_role.id)] = userperms
         config['PermsUsers'] = {}
 
+
 def check():
     def predicate(ctx):
         # If user is the server administrator, always allow
-        command_parents = ctx.command.qualified_name.split(' ')
+        module = ctx.command.cog.qualified_name
+        command = ctx.command.qualified_name
+        command_parents = command.split(' ')
 
         if ctx.author.guild_permissions.administrator:
+            return True
+
+        # Check config's default permission list
+        config = toml.load(settings.data + 'config.toml')
+        config_queries = ['*', f'{module}.*']
+        perm = ''
+        for index, command in enumerate(command_parents):
+            if index == 0:
+                perm = command
+            else:
+                perm = f"{perm}.{command}"
+            config_queries.append(f'{module}.{perm}.*')
+        config_queries.append(f'{module}.{perm}')
+        
+        comparison = list(set(config['permissions']['default']).intersection(set(config_queries)))
+        if comparison:
             return True
 
         # Open server's database file
@@ -76,6 +95,7 @@ def check():
             if check or parent_check:
                 return True
 
+
     def parent_perms(ctx, cursor, query):
         # Check if group has parents
         cursor.execute(
@@ -97,7 +117,6 @@ def check():
                 if parent_check:
                     return True
 
-        
     return commands.check(predicate)
 
         
