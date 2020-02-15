@@ -79,9 +79,13 @@ def check():
                 'SELECT permission FROM group_permission '
                 'WHERE server_id=? AND group_id=? AND permission=?', query)
             check = cursor.fetchall()
-            query = (ctx.guild.id, role.id)
-            parent_check = parent_perms(ctx, cursor, query)
-            if check or parent_check:
+            if check:
+                return True
+
+            # Execute recurring parent check
+            parent_query = (ctx.guild.id, query[1])
+            parent_check = parent_perms(ctx, cursor, parent_query, query[2])
+            if parent_check:
                 return True
 
         # Check config's default permission list
@@ -98,24 +102,34 @@ def check():
             if comparison:
                 return True
 
-    def parent_perms(ctx, cursor, query):
+
+    def parent_perms(ctx, cursor, query, permission):
+        """
+        Recursively checks all parents until either all dead ends have
+        been reached, or the appropriate permission has been found.
+        """
         # Check if group has parents
         cursor.execute(
-                'SELECT parent_id FROM group_parent WHERE server_id=? AND child_id=?', query)
+            'SELECT parent_id FROM group_parent '
+            'WHERE server_id=? AND child_id=?', query)
         parents = cursor.fetchall()
 
-        # Check parent groups for permission
         if parents:
+            # Check parent groups for permission
             for parent in parents:
-                query = (ctx.guild.id, parent[0], f"{ctx.command.cog.qualified_name}.{ctx.command.name}")
+                perm_query = (
+                    ctx.guild.id, parent[0], permission)
                 cursor.execute(
-                    'SELECT permission FROM group_permission WHERE server_id=? AND group_id=? AND permission LIKE ?', query)
+                    'SELECT permission FROM group_permission '
+                    'WHERE server_id=? AND group_id=? AND permission=?',
+                    perm_query)
                 check = cursor.fetchall()
                 if check:
                     return True
 
+                # Check next parent level
                 query = (ctx.guild.id, parent[0])
-                parent_check = parent_perms(ctx, cursor, f"{ctx.command.cog.qualified_name}.{ctx.command.name}")
+                parent_check = parent_perms(ctx, cursor, query, permission)
                 if parent_check:
                     return True
 
