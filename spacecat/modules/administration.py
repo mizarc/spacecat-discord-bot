@@ -368,7 +368,7 @@ class Administration(commands.Cog):
             return
 
         # Remove permission from database and notify user
-        values = (ctx.guild.id, child_group.id, parent_group.id)
+        values = (ctx.guild.id, parent_group.id, child_group.id)
         cursor.execute("INSERT INTO group_parent VALUES (?,?,?)", values)
         embed = discord.Embed(colour=settings.embed_type('accept'), description=f"`{child_group.name}` now inherits permissions from `{parent_group.name}`")
         await ctx.send(embed=embed)  
@@ -388,7 +388,7 @@ class Administration(commands.Cog):
         # Remove permission from database and notify user
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        values = (ctx.guild.id, child_group.id, parent_group.id)
+        values = (ctx.guild.id, parent_group.id, child_group.id)
         cursor.execute("DELETE FROM group_parent WHERE server_id=? AND parent_id=? AND child_id=?", values)
         embed = discord.Embed(colour=settings.embed_type('accept'), description=f"`{child_group.name}` is no longer inheriting permissions from `{parent_group.name}`")
         await ctx.send(embed=embed) 
@@ -737,7 +737,7 @@ class Administration(commands.Cog):
         # Query database to check if group already has the parent
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        query = (child, parent)
+        query = (parent, child)
         cursor.execute("SELECT parent_id FROM group_parent WHERE parent_id=? AND child_id=?", query)
         result = cursor.fetchall()
         if result:
