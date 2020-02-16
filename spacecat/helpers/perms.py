@@ -103,7 +103,7 @@ def check():
                 return True
 
 
-    def parent_perms(ctx, cursor, query, permission):
+    def parent_perms(ctx, cursor, parent_query, permission):
         """
         Recursively checks all parents until either all dead ends have
         been reached, or the appropriate permission has been found.
@@ -111,7 +111,7 @@ def check():
         # Check if group has parents
         cursor.execute(
             'SELECT parent_id FROM group_parent '
-            'WHERE server_id=? AND child_id=?', query)
+            'WHERE server_id=? AND child_id=?', parent_query)
         parents = cursor.fetchall()
 
         if parents:
@@ -128,8 +128,9 @@ def check():
                     return True
 
                 # Check next parent level
-                query = (ctx.guild.id, parent[0])
-                parent_check = parent_perms(ctx, cursor, query, permission)
+                new_parent_query = (ctx.guild.id, parent[0])
+                parent_check = parent_perms(
+                    ctx, cursor, new_parent_query, permission)
                 if parent_check:
                     return True
 
