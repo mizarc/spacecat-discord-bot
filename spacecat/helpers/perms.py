@@ -26,6 +26,12 @@ def new(guild):
 
 def check():
     def predicate(ctx):
+        """
+        Checks if the user has permission to use the command based on
+        if they are a server admin, if they have the required
+        permission on the server, or if it's a default permission set
+        within the bot's global config.
+        """
         module = ctx.command.cog.qualified_name
         command = ctx.command.qualified_name
         command_values = command.split(' ')
@@ -129,8 +135,7 @@ def check():
 
                 # Check next parent level
                 new_parent_query = (ctx.guild.id, parent[0])
-                parent_check = parent_perms(
-                    ctx, cursor, new_parent_query, permission)
+                parent_check = parent_perms(ctx, cursor, new_parent_query, permission)
                 if parent_check:
                     return True
 
