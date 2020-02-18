@@ -221,6 +221,14 @@ class Administration(commands.Cog):
     @group.command(name='preset')
     @perms.check()
     async def perm_group_preset(self, ctx, group: discord.Role, preset):
+        """
+        Add a permission preset to the group
+        Permission presets are sets of permissions used to simplify the process
+        of giving permissions to users. New features that belong to a specific
+        preset will be automatically added, requiring no additional input
+        from the server administrator.
+        """
+        # Check if the specified permission preset exists
         config = toml.load(settings.data + 'config.toml')
         if preset not in config['permissions']:
             embed = discord.Embed(
@@ -229,8 +237,8 @@ class Administration(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        db_preset = f'Preset.{preset}'
-            
+        # Alert if the preset has already been assigned to the group
+        db_preset = f'Preset.{preset}'   
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (ctx.guild.id, group.id, db_preset)
@@ -238,7 +246,6 @@ class Administration(commands.Cog):
             'SELECT permission FROM group_permission '
             'WHERE server_id=? AND group_id=? AND permission=?', query)
         result = cursor.fetchone()
-
         if result:
             embed = discord.Embed(
                 colour=settings.embed_type('warn'),
@@ -246,6 +253,7 @@ class Administration(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        # Assign the preset to the group's list of permissions
         cursor.execute("INSERT INTO group_permission VALUES (?,?,?)", query)
         db.commit()
         db.close()
