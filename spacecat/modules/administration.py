@@ -223,10 +223,10 @@ class Administration(commands.Cog):
     async def perm_group_preset(self, ctx, group: discord.Role, preset):
         """
         Add a permission preset to the group
-        Permission presets are sets of permissions used to simplify the process
-        of giving permissions to users. New features that belong to a specific
-        preset will be automatically added, requiring no additional input
-        from the server administrator.
+        Permission presets are sets of permissions used to simplify the
+        process of giving permissions to users. New features that belong
+        to a specific preset will be automatically added, requiring no
+        additional input from the server administrator.
         """
         # Check if the specified permission preset exists
         config = toml.load(settings.data + 'config.toml')
@@ -259,7 +259,53 @@ class Administration(commands.Cog):
         db.close()
         embed = discord.Embed(
             colour=settings.embed_type('accept'),
-            description=f"Group {group.name} now uses the {preset} preset")
+            description=f"Group {group.name} now uses the `{preset}` preset")
+        await ctx.send(embed=embed)
+
+    @group.command(name='unpreset')
+    @perms.check()
+    async def perm_group_unpreset(self, ctx, group: discord.Role, preset):
+        """
+        Removes a permission preset from the group
+        Once a permission preset has been removed, the group will no
+        longer inherent permissions from the preset. Manual assignment
+        will have to be done to ensure that users can still use the
+        commands.
+        """
+        # Check if the specified permission preset exists
+        config = toml.load(settings.data + 'config.toml')
+        if preset not in config['permissions']:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Unknown permission preset.")
+            await ctx.send(embed=embed)
+            return
+
+        # Alert if the group doesn't have the specified preset
+        db_preset = f'Preset.{preset}'   
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        query = (ctx.guild.id, group.id, db_preset)
+        cursor.execute(
+            'SELECT permission FROM group_permission '
+            'WHERE server_id=? AND group_id=? AND permission=?', query)
+        result = cursor.fetchone()
+        if not result:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Group {group.name} doesn't have that preset")
+            await ctx.send(embed=embed)
+            return
+
+        # Remove the preset from the group's list of permissions
+        cursor.execute(
+            'DELETE FROM group_permission '
+            'WHERE server_id=? AND group_id=? AND permission=?', query)
+        db.commit()
+        db.close()
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Group {group.name} no longer uses preset `{preset}`")
         await ctx.send(embed=embed)
 
     @group.command(name='add')
