@@ -218,6 +218,42 @@ class Administration(commands.Cog):
         embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
         await ctx.send(embed=embed)
 
+    @group.command(name='preset')
+    @perms.check()
+    async def perm_group_preset(self, ctx, group: discord.Role, preset):
+        config = toml.load(settings.data + 'config.toml')
+        if preset not in config['permissions']:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Unknown permission preset.")
+            await ctx.send(embed=embed)
+            return
+
+        db_preset = f'Preset.{preset}'
+            
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        query = (ctx.guild.id, group.id, db_preset)
+        cursor.execute(
+            'SELECT permission FROM group_permission '
+            'WHERE server_id=? AND group_id=? AND permission=?', query)
+        result = cursor.fetchone()
+
+        if result:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Group {group.name} already has that preset")
+            await ctx.send(embed=embed)
+            return
+
+        cursor.execute("INSERT INTO group_permission VALUES (?,?,?)", query)
+        db.commit()
+        db.close()
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Group {group.name} now uses the {preset} preset")
+        await ctx.send(embed=embed)
+
     @group.command(name='add')
     @perms.check()
     async def addgroup(self, ctx, group: discord.Role, perm):
