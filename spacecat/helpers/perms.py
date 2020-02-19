@@ -80,7 +80,8 @@ def check():
 
             # Execute recurring parent check
             parent_query = (ctx.guild.id, query[1])
-            parent_check = parent_perms(ctx, cursor, parent_query, checks)
+            parent_check, presets = parent_perms(
+                ctx, cursor, parent_query, checks, presets)
             if parent_check:
                 return True
 
@@ -104,7 +105,7 @@ def check():
             if comparison:
                 return True
 
-    def parent_perms(ctx, cursor, parent_query, checks):
+    def parent_perms(ctx, cursor, parent_query, checks, presets):
         """
         Recursively checks all parents until either all dead ends have
         been reached, or the appropriate permission has been found.
@@ -121,15 +122,19 @@ def check():
             cursor.execute(
                 'SELECT permission FROM group_permission '
                 'WHERE server_id=? AND group_id=?', perm_query)
-            results = set(cursor.fetchall())
-            if results.intersection(checks):
-                return True
+            results = cursor.fetchall()
+            regex_query = re.compile('Preset.[a-zA-Z0-9]+')
+            presets = presets + list(filter(regex_query.match, results))
+            if set(results).intersection(checks):
+                return True, presets
 
             # Check next parent level
             new_parent_query = (ctx.guild.id, parent)
-            parent_check = parent_perms(ctx, cursor, new_parent_query, checks)
+            parent_check, presets = parent_perms(
+                ctx, cursor, new_parent_query, checks, presets)
             if parent_check:
-                return True
+                return True, presets
+        return False, presets
 
     return commands.check(predicate)
 
