@@ -1,6 +1,7 @@
 import configparser
 import os
 import sqlite3
+import timeit
 
 import discord
 from discord.ext import commands
@@ -32,67 +33,58 @@ def check():
         permission on the server, or if it's a default permission set
         within the bot's global config.
         """
-        module = ctx.command.cog.qualified_name
-        command = ctx.command.qualified_name
-        command_values = command.split(' ')
-
         # Allow if user is a server administrator
         if ctx.author.guild_permissions.administrator:
             return True
 
-        # Add queries for both config and database by including the
-        # global wildcard, module wildcard, command wildcard,
-        # and the command on its own
-        database_queries = [
-            (ctx.guild.id, ctx.author.id, "*"),
-            (ctx.guild.id, ctx.author.id, f"{module}.*")]
-        config_queries = ['*', f'{module}.*']
-        perm = ''
-        for index, command in enumerate(command_values):
-            if index == 0:
-                perm = command
-            else:
-                perm = f"{perm}.{command}"
-            database_queries.append(
-                (ctx.guild.id, ctx.author.id, f"{module}.{perm}.*"))
-            config_queries.append(f'{module}.{perm}.*')
-        database_queries.append(
-            (ctx.guild.id, ctx.author.id, f"{module}.{perm}"))
-        config_queries.append(f'{module}.{perm}')
+        # Grab useful command variables
+        module = ctx.command.cog.qualified_name
+        command = ctx.command.qualified_name
+        command_values = command.split(' ')
         
-        # Query database for user permissions
+        # Add queries for the global, module, and command wildcards,
+        # plus the command on its own
+        perm = command_values[0]
+        checks = {'*', f'{module}.*', f'{module}.{perm}.*'}
+        for command_value in command_values[1:]:
+            perm = f"{perm}.{command_value}"
+            checks.add(f'{module}.{perm}.*')
+        checks.add(f'{module}.{perm}')
+        
+        # Query database to allow if user has the required permission
         db = sqlite3.connect(settings.data + 'spacecat.db')
+        db.row_factory = lambda cursor, row: row[0]
         cursor = db.cursor()
-        for query in database_queries:
-            cursor.execute(
-                'SELECT permission FROM user_permission '
-                'WHERE server_id=? AND user_id=? AND permission=?', query)
-            check = cursor.fetchall()
-            if check:
-                return True
-        
-        # Convert query from user ID to every group ID that a user has
-        group_queries = []
-        for role in ctx.author.roles:
-            for index, query in enumerate(database_queries):
-                query_conversion = list(query)
-                query_conversion[1] = role.id
-                group_queries.append(query_conversion)
+        query = (ctx.guild.id, ctx.author.id)
+        cursor.execute(
+            'SELECT permission FROM user_permission '
+            'WHERE server_id=? AND user_id=?', query)
+        results = set(cursor.fetchall())
+        if results.intersection(checks):
+            return True
 
-        # Execute all group perm queries
-        for query in group_queries:
+        # Query database to allow if any group that the user is assigned
+        # to has the required permission
+        for group in ctx.author.roles:
+            query = (ctx.guild.id, group.id)
             cursor.execute(
                 'SELECT permission FROM group_permission '
-                'WHERE server_id=? AND group_id=? AND permission=?', query)
-            check = cursor.fetchall()
-            if check:
+                'WHERE server_id=? AND group_id=?', query)
+            results = set(cursor.fetchall())
+            if results.intersection(checks):
                 return True
 
             # Execute recurring parent check
             parent_query = (ctx.guild.id, query[1])
-            parent_check = parent_perms(ctx, cursor, parent_query, query[2])
+            parent_check = parent_perms(ctx, cursor, parent_query, checks)
             if parent_check:
                 return True
+
+        config = toml.load(settings.data + 'config.toml')
+        #for preset in presets:
+        #    comparison = list(
+        #        set(config['permissions'][preset])
+        #        .intersection(set(config_queries)))
 
         # Check config's default permission list
         query = (ctx.guild.id,)
@@ -100,16 +92,13 @@ def check():
             'SELECT advanced_permission FROM server_settings '
             'WHERE server_id=?', query)
         advanced = cursor.fetchone()
-        if advanced[0] == 0:
-            config = toml.load(settings.data + 'config.toml')
-            comparison = list(
-                set(config['permissions']['default'])
-                .intersection(set(config_queries)))
+        if advanced == 0:
+            comparison = set(
+                config['permissions']['default']).intersection(checks)
             if comparison:
                 return True
 
-
-    def parent_perms(ctx, cursor, parent_query, permission):
+    def parent_perms(ctx, cursor, parent_query, checks):
         """
         Recursively checks all parents until either all dead ends have
         been reached, or the appropriate permission has been found.
@@ -120,24 +109,21 @@ def check():
             'WHERE server_id=? AND child_id=?', parent_query)
         parents = cursor.fetchall()
 
-        if parents:
-            # Check parent groups for permission
-            for parent in parents:
-                perm_query = (
-                    ctx.guild.id, parent[0], permission)
-                cursor.execute(
-                    'SELECT permission FROM group_permission '
-                    'WHERE server_id=? AND group_id=? AND permission=?',
-                    perm_query)
-                check = cursor.fetchall()
-                if check:
-                    return True
+        # Check parent groups for permission
+        for parent in parents:
+            perm_query = (ctx.guild.id, parent)
+            cursor.execute(
+                'SELECT permission FROM group_permission '
+                'WHERE server_id=? AND group_id=?', perm_query)
+            results = set(cursor.fetchall())
+            if results.intersection(checks):
+                return True
 
-                # Check next parent level
-                new_parent_query = (ctx.guild.id, parent[0])
-                parent_check = parent_perms(ctx, cursor, new_parent_query, permission)
-                if parent_check:
-                    return True
+            # Check next parent level
+            new_parent_query = (ctx.guild.id, parent)
+            parent_check = parent_perms(ctx, cursor, new_parent_query, checks)
+            if parent_check:
+                return True
 
     return commands.check(predicate)
 
