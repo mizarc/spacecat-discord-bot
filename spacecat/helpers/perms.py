@@ -1,5 +1,6 @@
 import configparser
 import os
+import re
 import sqlite3
 import timeit
 
@@ -46,6 +47,7 @@ def check():
         # plus the command on its own
         perm = command_values[0]
         checks = {'*', f'{module}.*', f'{module}.{perm}.*'}
+        regex_query = re.compile('Preset.[a-zA-Z0-9]+')
         for command_value in command_values[1:]:
             perm = f"{perm}.{command_value}"
             checks.add(f'{module}.{perm}.*')
@@ -59,8 +61,9 @@ def check():
         cursor.execute(
             'SELECT permission FROM user_permission '
             'WHERE server_id=? AND user_id=?', query)
-        results = set(cursor.fetchall())
-        if results.intersection(checks):
+        user_results = cursor.fetchall()
+        presets = list(filter(regex_query.match, user_results))
+        if set(user_results).intersection(checks):
             return True
 
         # Query database to allow if any group that the user is assigned
@@ -70,8 +73,9 @@ def check():
             cursor.execute(
                 'SELECT permission FROM group_permission '
                 'WHERE server_id=? AND group_id=?', query)
-            results = set(cursor.fetchall())
-            if results.intersection(checks):
+            group_results = cursor.fetchall()
+            presets = presets + list(filter(regex_query.match, group_results))
+            if set(group_results).intersection(checks):
                 return True
 
             # Execute recurring parent check
@@ -80,13 +84,15 @@ def check():
             if parent_check:
                 return True
 
+        # Query permission presets from config that the user or group may have
         config = toml.load(settings.data + 'config.toml')
-        #for preset in presets:
-        #    comparison = list(
-        #        set(config['permissions'][preset])
-        #        .intersection(set(config_queries)))
+        for preset in presets:
+            comparison = list(
+                set(config['permissions'][preset[7:]]).intersection(checks))
+            if comparison:
+                return True
 
-        # Check config's default permission list
+        # Query config's default permission list
         query = (ctx.guild.id,)
         cursor.execute(
             'SELECT advanced_permission FROM server_settings '
