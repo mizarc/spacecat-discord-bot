@@ -109,11 +109,17 @@ class Configuration(commands.Cog):
     @commands.group(invoke_without_command=True)
     @perms.exclusive()
     async def permpreset(self, ctx):
+        """
+        Configure permission presets
+        Permissions assigned to presets can be utilised by server
+        administrators to simplify permission assignment
+        """
         await ctx.invoke(self.permpreset_list)
 
     @permpreset.command(name='create')
     @perms.exclusive()
     async def permpreset_create(self, ctx, name):
+        """Creates a new permission preset list"""
         config = toml.load(settings.data + 'config.toml')
         
         try:
@@ -137,6 +143,7 @@ class Configuration(commands.Cog):
     @permpreset.command(name='destroy')
     @perms.exclusive()
     async def permpreset_destroy(self, ctx, name):
+        """Completely deletes a preset and all its contents"""
         config = toml.load(settings.data + 'config.toml')
 
         # Alert if there's no preset with that name
@@ -167,6 +174,7 @@ class Configuration(commands.Cog):
     @permpreset.command(name='add')
     @perms.exclusive()
     async def permpreset_add(self, ctx, preset, perm):
+        """Adds a valid permission to a permission preset"""
         config = toml.load(settings.data + 'config.toml')
         perm_values = perm.split('.')
         skip = False
@@ -261,6 +269,7 @@ class Configuration(commands.Cog):
     @permpreset.command(name='remove')
     @perms.exclusive()
     async def permpreset_remove(self, ctx, preset, perm):
+        """Removes an existing permission from a preset"""
         config = toml.load(settings.data + 'config.toml')
         perm_values = perm.split('.')
         skip = False
@@ -356,6 +365,7 @@ class Configuration(commands.Cog):
     @permpreset.command(name='list')
     @perms.exclusive()
     async def permpreset_list(self, ctx):
+        """List all available presets"""
         config = toml.load(settings.data + 'config.toml')
         perm_presets = config['permissions']
 
@@ -380,6 +390,7 @@ class Configuration(commands.Cog):
     @permpreset.command(name='view')
     @perms.exclusive()
     async def permpreset_view(self, ctx, preset):
+        """Lists all the permissions assigned to a preset"""
         config = toml.load(settings.data + 'config.toml')
         perms = config['permissions'][preset]
         perms_output = [f'`{perm}`' for perm in perms]
@@ -395,6 +406,7 @@ class Configuration(commands.Cog):
             name=f"{len(perms)} assigned perms",
             value=', '.join(perms_output))
         await ctx.send(file=image, embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Configuration(bot))
