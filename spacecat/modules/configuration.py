@@ -377,6 +377,24 @@ class Configuration(commands.Cog):
             value='\n'.join(perm_presets_output), inline=False)
         await ctx.send(file=image, embed=embed)
 
+    @permpreset.command(name='view')
+    @perms.exclusive()
+    async def permpreset_view(self, ctx, preset):
+        config = toml.load(settings.data + 'config.toml')
+        perms = config['permissions'][preset]
+        perms_output = [f'`{perm}`' for perm in perms]
+
+        embed = discord.Embed(colour=settings.embed_type('info'))
+        image = discord.File(
+            settings.embed_icons('information'),
+            filename="image.png")
+        embed.set_author(name=f"Permissions of {preset}",
+            icon_url="attachment://image.png")
+
+        embed.add_field(
+            name=f"{len(perms)} assigned perms",
+            value=', '.join(perms_output))
+        await ctx.send(file=image, embed=embed)
 
 def setup(bot):
     bot.add_cog(Configuration(bot))
