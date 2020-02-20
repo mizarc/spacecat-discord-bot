@@ -9,6 +9,7 @@ import toml
 
 from spacecat.helpers import perms
 from spacecat.helpers import settings
+from spacecat.modules.configuration import Configuration
 
 
 class Administration(commands.Cog):
@@ -210,6 +211,19 @@ class Administration(commands.Cog):
             'WHERE server_id=?', value)
         db.commit()
         db.close()
+
+    @perm.command(name='presets')
+    @perms.check()
+    async def perm_presets(self, ctx):
+        """
+        Lists available permission presets
+        Permission presets are sets of permissions used to simplify the
+        process of giving permissions to users. New features that belong
+        to a specific preset will be automatically added, requiring no
+        additional input from the server administrator.
+        """
+        await ctx.invoke(Configuration.permpreset_list, ctx)
+
     
     @perm.group(invoke_without_command=True)
     @perms.check()
@@ -223,10 +237,9 @@ class Administration(commands.Cog):
     async def perm_group_preset(self, ctx, group: discord.Role, preset):
         """
         Add a permission preset to the group
-        Permission presets are sets of permissions used to simplify the
-        process of giving permissions to users. New features that belong
-        to a specific preset will be automatically added, requiring no
-        additional input from the server administrator.
+        Adding a permission preset automatically assigns all the given
+        permissions associated with the preset as specified by the bot
+        administrator.
         """
         # Check if the specified permission preset exists
         config = toml.load(settings.data + 'config.toml')
