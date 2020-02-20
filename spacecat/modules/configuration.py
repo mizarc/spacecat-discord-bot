@@ -369,19 +369,18 @@ class Configuration(commands.Cog):
         config = toml.load(settings.data + 'config.toml')
         perm_presets = config['permissions']
 
-        # Output first in queue as currently playing
+        # Format playlist songs into pretty list
+        perm_presets_output = []
+        for index, preset_name in enumerate(islice(perm_presets, 0, 10)):
+            perm_presets_output.append(f"{index + 1}. {preset_name}")
+
+        # Output list of presets in a pretty embed
         embed = discord.Embed(colour=settings.embed_type('info'))
         image = discord.File(
             settings.embed_icons('information'),
             filename="image.png")
         embed.set_author(name="Permission Presets",
             icon_url="attachment://image.png")
-
-        # Format playlist songs into pretty list
-        perm_presets_output = []
-        for index, preset_name in enumerate(islice(perm_presets, 0, 10)):
-            perm_presets_output.append(f"{index + 1}. {preset_name}")
-
         embed.add_field(
             name=f"{len(perm_presets)} available",
             value='\n'.join(perm_presets_output), inline=False)
@@ -391,17 +390,18 @@ class Configuration(commands.Cog):
     @perms.exclusive()
     async def permpreset_view(self, ctx, preset):
         """Lists all the permissions assigned to a preset"""
+        # Fetch permissions of preset from the config
         config = toml.load(settings.data + 'config.toml')
         perms = config['permissions'][preset]
         perms_output = [f'`{perm}`' for perm in perms]
 
+        # Output list of permissions in a pretty embed
         embed = discord.Embed(colour=settings.embed_type('info'))
         image = discord.File(
             settings.embed_icons('information'),
             filename="image.png")
         embed.set_author(name=f"Permissions of {preset}",
             icon_url="attachment://image.png")
-
         embed.add_field(
             name=f"{len(perms)} assigned perms",
             value=', '.join(perms_output))
