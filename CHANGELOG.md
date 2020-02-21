@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- `permpreset` command group to manage global permissions
+    - `create` to create a new permission preset
+    - `destroy` to remove an existing preset
+    - `add` to add a valid permission to a preset
+    - `destroy` to remove a permission from a preset
+    - `list` to output a list of all available presets
+    - `view` to show what permissions a preset contains
+- Various new subcommands added to `perm`
+    - `presets` to allow server admins to list and view presets set by the bot admin
+    - `group preset` to assign a preset to a group
+    - `group unpreset` to remove a preset from a group
+- Permissions in the default preset are assigned to every user
+- Presets assigned to a group read permissions from the config on command checks
 - Extended descriptions to the `SpaceCat` module commands
 
 ### Changed
