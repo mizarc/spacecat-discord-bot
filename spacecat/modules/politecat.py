@@ -84,13 +84,12 @@ class PoliteCat(commands.Cog):
                 description="Automatic WebP conversion has been enabled")
             await ctx.send(embed=embed)
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     @perms.check()
     async def reactcfg(self, ctx):
         "Configure available reaction images"
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"Please specify a valid subcommand: `add/remove`")
-            await ctx.send(embed=embed) 
+        embed = discord.Embed(colour=settings.embed_type('warn'), description=f"Please specify a valid subcommand: `add/remove`")
+        await ctx.send(embed=embed) 
 
     @reactcfg.command()
     @perms.check()

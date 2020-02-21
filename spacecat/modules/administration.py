@@ -9,6 +9,7 @@ import toml
 
 from spacecat.helpers import perms
 from spacecat.helpers import settings
+from spacecat.modules.configuration import Configuration
 
 
 class Administration(commands.Cog):
@@ -24,7 +25,8 @@ class Administration(commands.Cog):
         # Create tables if they don't exist
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS server_settings'
-            '(server_id INTEGER PRIMARY KEY, prefix TEXT)')
+            '(server_id INTEGER PRIMARY KEY, prefix TEXT, '
+            'advanced_permission BOOLEAN)')
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS command_alias'
             '(server_id INTEGER, alias TEXT, command TEXT)')
@@ -58,13 +60,12 @@ class Administration(commands.Cog):
     async def on_guild_join(self, guild):
         await self._add_server_entry(guild.id)
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     @perms.check()
     async def alias(self, ctx):
         """Configure command aliases"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `add/remove`")
-            await ctx.send(embed=embed)
+        embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `add/remove`")
+        await ctx.send(embed=embed)
 
     @alias.command(name='add')
     @perms.check()
@@ -161,21 +162,166 @@ class Administration(commands.Cog):
         embed.add_field(name="Aliases", value='\n'.join(aliases))
         await ctx.send(embed=embed, file=image)
 
-    @commands.group()
+    @commands.group(invoke_without_command=True)
     @perms.check()
     async def perm(self, ctx):
         """Configure server permissions"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `group/user`")
+        embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `group/user`")
+        await ctx.send(embed=embed)
+
+    @perm.command(name='advanced')
+    @perms.check()
+    async def perm_advanced(self, ctx):
+        """
+        Sets permissions to advanced mode
+        This mode essentially disables the bot's default permission
+        assignment, meaning that you have to assign default permissions
+        from scratch.
+        """
+        # Connect to the database to fetch the current permission mode
+        await self._server_settings_database()
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        query = (ctx.guild.id,)
+        cursor.execute(
+            'SELECT advanced_permission FROM server_settings '
+            'WHERE server_id=?', query)
+        advanced = cursor.fetchone()
+
+        # Toggle permission mode and output result to user
+        if advanced[0] == 1:
+            value = (False, ctx.guild.id)
+            embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description="Advanced permission mode has been disabled. The"
+                "bot's default permissions are now in effect")
             await ctx.send(embed=embed)
-    
-    @perm.group()
+        else:
+            value = (True, ctx.guild.id)
+            embed = discord.Embed(
+                colour=settings.embed_type('accept'),
+                description="Advanced permission mode has been enabled. "
+                "Default permission assignment must be configured manually "
+                "so that users are able to use the bot's functions")
+            await ctx.send(embed=embed)
+
+        # Apply changes to database
+        cursor.execute(
+            'UPDATE server_settings SET advanced_permission=? '
+            'WHERE server_id=?', value)
+        db.commit()
+        db.close()
+
+    @perm.command(name='presets')
+    @perms.check()
+    async def perm_presets(self, ctx, preset=None):
+        """
+        Lists available permission presets
+        Permission presets are sets of permissions used to simplify the
+        process of giving permissions to users. New features that belong
+        to a specific preset will be automatically added, requiring no
+        additional input from the server administrator.
+        """
+        if preset:
+            await ctx.invoke(Configuration.permpreset_view, ctx, preset)
+            return
+        await ctx.invoke(Configuration.permpreset_list, ctx)
+
+    @perm.group(invoke_without_command=True)
     @perms.check()
     async def group(self, ctx):
         """Configure server permissions"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
+        embed = discord.Embed(colour=settings.embed_type('warn'), description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
+        await ctx.send(embed=embed)
+
+    @group.command(name='preset')
+    @perms.check()
+    async def perm_group_preset(self, ctx, group: discord.Role, preset):
+        """
+        Add a permission preset to the group
+        Adding a permission preset automatically assigns all the given
+        permissions associated with the preset as specified by the bot
+        administrator.
+        """
+        # Check if the specified permission preset exists
+        config = toml.load(settings.data + 'config.toml')
+        if preset not in config['permissions']:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Unknown permission preset.")
             await ctx.send(embed=embed)
+            return
+
+        # Alert if the preset has already been assigned to the group
+        db_preset = f'Preset.{preset}'   
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        query = (ctx.guild.id, group.id, db_preset)
+        cursor.execute(
+            'SELECT permission FROM group_permission '
+            'WHERE server_id=? AND group_id=? AND permission=?', query)
+        result = cursor.fetchone()
+        if result:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Group {group.name} already has that preset")
+            await ctx.send(embed=embed)
+            return
+
+        # Assign the preset to the group's list of permissions
+        cursor.execute("INSERT INTO group_permission VALUES (?,?,?)", query)
+        db.commit()
+        db.close()
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Group {group.name} now uses the `{preset}` preset")
+        await ctx.send(embed=embed)
+
+    @group.command(name='unpreset')
+    @perms.check()
+    async def perm_group_unpreset(self, ctx, group: discord.Role, preset):
+        """
+        Removes a permission preset from the group
+        Once a permission preset has been removed, the group will no
+        longer inherent permissions from the preset. Manual assignment
+        will have to be done to ensure that users can still use the
+        commands.
+        """
+        # Check if the specified permission preset exists
+        config = toml.load(settings.data + 'config.toml')
+        if preset not in config['permissions']:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description="Unknown permission preset.")
+            await ctx.send(embed=embed)
+            return
+
+        # Alert if the group doesn't have the specified preset
+        db_preset = f'Preset.{preset}'   
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        query = (ctx.guild.id, group.id, db_preset)
+        cursor.execute(
+            'SELECT permission FROM group_permission '
+            'WHERE server_id=? AND group_id=? AND permission=?', query)
+        result = cursor.fetchone()
+        if not result:
+            embed = discord.Embed(
+                colour=settings.embed_type('warn'),
+                description=f"Group {group.name} doesn't have that preset")
+            await ctx.send(embed=embed)
+            return
+
+        # Remove the preset from the group's list of permissions
+        cursor.execute(
+            'DELETE FROM group_permission '
+            'WHERE server_id=? AND group_id=? AND permission=?', query)
+        db.commit()
+        db.close()
+        embed = discord.Embed(
+            colour=settings.embed_type('accept'),
+            description=f"Group {group.name} no longer uses preset `{preset}`")
+        await ctx.send(embed=embed)
 
     @group.command(name='add')
     @perms.check()
@@ -302,7 +448,6 @@ class Administration(commands.Cog):
         db.close()
 
         await ctx.send(embed=embed)
-        
 
     @group.command()
     @perms.check()
@@ -327,7 +472,7 @@ class Administration(commands.Cog):
             return
 
         # Remove permission from database and notify user
-        values = (ctx.guild.id, child_group.id, parent_group.id)
+        values = (ctx.guild.id, parent_group.id, child_group.id)
         cursor.execute("INSERT INTO group_parent VALUES (?,?,?)", values)
         embed = discord.Embed(colour=settings.embed_type('accept'), description=f"`{child_group.name}` now inherits permissions from `{parent_group.name}`")
         await ctx.send(embed=embed)  
@@ -347,7 +492,7 @@ class Administration(commands.Cog):
         # Remove permission from database and notify user
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        values = (ctx.guild.id, child_group.id, parent_group.id)
+        values = (ctx.guild.id, parent_group.id, child_group.id)
         cursor.execute("DELETE FROM group_parent WHERE server_id=? AND parent_id=? AND child_id=?", values)
         embed = discord.Embed(colour=settings.embed_type('accept'), description=f"`{child_group.name}` is no longer inheriting permissions from `{parent_group.name}`")
         await ctx.send(embed=embed) 
@@ -417,13 +562,12 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
 
-    @perm.group()
+    @perm.group(invoke_without_command=True)
     @perms.check()
     async def user(self, ctx):
         """Configure server permissions"""
-        if ctx.invoked_subcommand is None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Please enter a valid subcommand: `add/remove/info`")
-            await ctx.send(embed=embed) 
+        embed = discord.Embed(colour=settings.embed_type('warn'), description="Please enter a valid subcommand: `add/remove/info`")
+        await ctx.send(embed=embed) 
 
     @user.command(name='add')
     @perms.check()
@@ -685,7 +829,7 @@ class Administration(commands.Cog):
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
         query = (id_, f"{command.cog.qualified_name}.{perm}")
-        cursor.execute(f"SELECT perm FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
+        cursor.execute(f"SELECT permission FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
         result = cursor.fetchall()
         db.close()
 
@@ -697,7 +841,7 @@ class Administration(commands.Cog):
         # Query database to check if group already has the parent
         db = sqlite3.connect(settings.data + 'spacecat.db')
         cursor = db.cursor()
-        query = (child, parent)
+        query = (parent, child)
         cursor.execute("SELECT parent_id FROM group_parent WHERE parent_id=? AND child_id=?", query)
         result = cursor.fetchall()
         if result:
@@ -755,6 +899,26 @@ class Administration(commands.Cog):
             colour=settings.embed_type('accept'),
             description=f"Command prefix has been reset back to: `{prefix}`")
         await ctx.send(embed=embed)
+
+    async def _server_settings_database(self):
+        """Ensures that keys in server_settings table exist post creation"""
+        db = sqlite3.connect(settings.data + 'spacecat.db')
+        cursor = db.cursor()
+        cursor.execute('PRAGMA table_info(server_settings)')
+        table_keys = cursor.fetchall()
+
+        # Fetch all key names from table keys
+        key_names = []
+        for table_key in table_keys:
+            key_names.append(table_key[1])
+
+        # Add advanced_permission key if it doesn't exist
+        if 'advanced_permission' not in key_names:
+            cursor.execute(
+                'ALTER TABLE server_settings ADD advanced_permission BOOLEAN')
+        db.commit()
+        db.close()
+
 
 
 def setup(bot):
