@@ -214,7 +214,7 @@ class Administration(commands.Cog):
 
     @perm.command(name='presets')
     @perms.check()
-    async def perm_presets(self, ctx):
+    async def perm_presets(self, ctx, preset=None):
         """
         Lists available permission presets
         Permission presets are sets of permissions used to simplify the
@@ -222,9 +222,11 @@ class Administration(commands.Cog):
         to a specific preset will be automatically added, requiring no
         additional input from the server administrator.
         """
+        if preset:
+            await ctx.invoke(Configuration.permpreset_view, ctx, preset)
+            return
         await ctx.invoke(Configuration.permpreset_list, ctx)
 
-    
     @perm.group(invoke_without_command=True)
     @perms.check()
     async def group(self, ctx):
@@ -446,7 +448,6 @@ class Administration(commands.Cog):
         db.close()
 
         await ctx.send(embed=embed)
-        
 
     @group.command()
     @perms.check()
