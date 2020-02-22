@@ -418,7 +418,7 @@ class SpaceCat(commands.Cog):
             return
 
         # Enable module and write to config
-        self.bot.load_extension(f'modules.{module}')
+        self.bot.load_extension(f'{__package__}.modules.{module}')
         config = toml.load(settings.data + 'config.toml')
         config['base']['disabled_modules'].remove(module)
         with open(settings.data + "config.toml", "w") as config_file:
@@ -458,7 +458,7 @@ class SpaceCat(commands.Cog):
             config['base']['disabled_modules'] = [module]   
 
         # Disable module and write to config
-        self.bot.unload_extension(f'modules.{module}')
+        self.bot.unload_extension(f'{__package__}.modules.{module}')
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
