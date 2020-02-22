@@ -314,7 +314,7 @@ class SpaceCat(commands.Cog):
         enabled = module_handler.get_enabled()
         disabled = module_handler.get_disabled()
 
-        # Create embed with enabled modules
+        # Create embed
         image = discord.File(
             settings.embed_icons("information"),
             filename="image.png")
@@ -323,20 +323,18 @@ class SpaceCat(commands.Cog):
         embed.set_author(
             name=f"{self.bot.user.name} Modules",
             icon_url="attachment://image.png")
-        embed.add_field(
-            name="Enabled",
-            value=', '.join(enabled),
-            inline=False)
 
-        # Add disabled modules if there are any
-        try:
+        # Categorise modules into enabled and disabled fields
+        if enabled:
+            embed.add_field(
+                name="Enabled",
+                value=', '.join(enabled),
+                inline=False)
+        if disabled:
             embed.add_field(
                 name="Disabled",
                 value=', '.join(disabled),
                 inline=False)
-        except TypeError:
-            pass
-
         await ctx.send(file=image, embed=embed)
 
     @commands.command()
