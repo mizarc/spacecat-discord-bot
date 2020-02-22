@@ -53,7 +53,7 @@ class Startup():
         self.bot.add_cog(SpaceCat(self.bot))
         modules = module_handler.get_enabled()
         for module in modules:
-            module = 'spacecat.modules.' + module
+            module = f'{settings.package}.modules.' + module
             try:
                 self.bot.load_extension(module)
             except Exception as exception:
@@ -418,7 +418,7 @@ class SpaceCat(commands.Cog):
             return
 
         # Enable module and write to config
-        self.bot.load_extension(f'{__package__}.modules.{module}')
+        self.bot.load_extension(f'{settings.package}.modules.{module}')
         config = toml.load(settings.data + 'config.toml')
         config['base']['disabled_modules'].remove(module)
         with open(settings.data + "config.toml", "w") as config_file:
@@ -458,7 +458,7 @@ class SpaceCat(commands.Cog):
             config['base']['disabled_modules'] = [module]   
 
         # Disable module and write to config
-        self.bot.unload_extension(f'{__package__}.modules.{module}')
+        self.bot.unload_extension(f'{settings.package}.modules.{module}')
         with open(settings.data + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
