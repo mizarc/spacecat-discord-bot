@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Disallow users to view module and command `help` pages they don't have permission for
 - `playlist` command now defaults to `playlist list` subcommand
 
+## [0.3.1] - 2020-02-23
+### Fixed
+- Unable to enable or disable modules
+- Module list failing to output after a module has been disabled and re-enabled
+
 ## [0.3.0] - 2020-02-08
 ### Added
 - `queue` subcommands added to modify the current songs in the queue
