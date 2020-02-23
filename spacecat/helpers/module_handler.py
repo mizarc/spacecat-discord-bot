@@ -4,10 +4,12 @@ import os
 import discord
 import toml
 
+from spacecat.helpers import settings
+
 def get():
     # Get all modules that are present in the folder
     modulelist = []
-    for module in glob.glob('spacecat/modules/*.py'):
+    for module in glob.glob(f'{settings.package}/modules/*.py'):
         if module[17:] == "__init__.py":
             continue
         modulelist.append(module[17:-3])
@@ -32,7 +34,7 @@ def get_enabled():
 def get_disabled():
     # Fetch disabled modules from config file
     try:
-        config = toml.load('config.toml')
+        config = toml.load(f'{settings.data}/config.toml')
         disabled_modules = config['base']['disabled_modules']
         return disabled_modules
     except (KeyError, FileNotFoundError):
