@@ -66,8 +66,8 @@ class Startup():
     def create_config(self):
         """Creates the base empty config file"""
         # Create data folder if it doesn't exist
-        if not os.path.exists('../data'):
-            os.mkdir("../data")
+        if not os.path.exists('data'):
+            os.mkdir("data")
 
         # Create config with just the base header
         config = {}
