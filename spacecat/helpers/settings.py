@@ -2,6 +2,7 @@ import discord
 
 
 # Data folder location
+package = __package__.split('.')[0]
 assets = 'assets/'
 cache = 'cache/'
 data = 'data/'
