@@ -30,10 +30,10 @@ EMBED_TYPE = {
 }
 
 EMBED_ICON = {
-    'information': ASSETS + 'information.png',
-    'help': ASSETS + 'help.png',
-    'music': ASSETS + "music_disc.jpg",
-    'database': ASSETS + 'database.png'
+    'information': ASSETS_DIR + 'information.png',
+    'help': ASSETS_DIR + 'help.png',
+    'music': ASSETS_DIR + "music_disc.jpg",
+    'database': ASSETS_DIR + 'database.png'
 }
 
 NUM_TO_EMOJI = {

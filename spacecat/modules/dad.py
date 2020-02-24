@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 
+from spacecat.helpers import constants
 from spacecat.helpers import perms
-from spacecat.helpers import settings
 
 
 class Dad(commands.Cog):
@@ -36,11 +36,11 @@ class Dad(commands.Cog):
     async def toggledad(self, ctx):
         if self.toggle:
             self.toggle = False
-            embed = discord.Embed(colour=settings.embed_type('accept'), description="Dad has been disabled")
+            embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description="Dad has been disabled")
             await ctx.send(embed=embed) 
         elif not self.toggle:
             self.toggle = True
-            embed = discord.Embed(colour=settings.embed_type('accept'), description="Dad has been enabled")
+            embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description="Dad has been enabled")
             await ctx.send(embed=embed) 
 
 
