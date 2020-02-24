@@ -3,10 +3,10 @@ import discord
 from spacecat import spacecat
 
 
-PACKAGE = __package__.split('.')[0]
-DATA = f'data/{spacecat.main}'
-ASSETS = 'assets/'
-CACHE = 'cache/'
+MAIN_DIR = __package__.split('.')[0]
+DATA_DIR = f'data/{spacecat.main}'
+ASSETS_DIR = 'assets/'
+CACHE_DIR = 'cache/'
 
 ACTIVITY = {
     'playing': discord.ActivityType.playing,
