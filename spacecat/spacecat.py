@@ -12,7 +12,7 @@ import discord
 from discord.ext import commands
 import toml
 
-from spacecat.helpers import settings
+from spacecat.helpers import constants
 import spacecat.helpers.module_handler as module_handler
 import spacecat.helpers.perms as perms
 
