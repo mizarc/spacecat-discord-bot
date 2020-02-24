@@ -4,7 +4,7 @@ from spacecat import spacecat
 
 
 MAIN_DIR = __package__.split('.')[0]
-DATA_DIR = f'data/{spacecat.main}'
+DATA_DIR = 'data/'
 ASSETS_DIR = 'assets/'
 CACHE_DIR = 'cache/'
 
