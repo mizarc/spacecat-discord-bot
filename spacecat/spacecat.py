@@ -487,6 +487,22 @@ def introduction():
         return True
 
 
+def load_modules(bot):
+    """Loads all modules from the modules folder for the bot"""
+    # Enable enabled modules from list
+    bot.add_cog(SpaceCat(bot))
+    modules = module_handler.get_enabled()
+    for module in modules:
+        module = f'{constants.MAIN_DIR}.modules.' + module
+        try:
+            bot.load_extension(module)
+        except Exception as exception:
+            print(
+                f"Failed to load extension {module}\n"
+                f"{type(exception).__name__}: {exception}\n")
+    return bot
+
+
 def get_prefix(self, bot, message):
     # Access database if it exists and fetch server's custom prefix if set
     try:
