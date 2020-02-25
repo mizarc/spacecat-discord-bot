@@ -497,7 +497,7 @@ def load_modules(bot):
     return bot
 
 
-def get_prefix(self, bot, message):
+def get_prefix(bot, message):
     # Access database if it exists and fetch server's custom prefix if set
     try:
         db = sqlite3.connect(f'file:{constants.DATA_DIR}spacecat.db?mode=ro', uri=True)
