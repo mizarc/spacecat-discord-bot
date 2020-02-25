@@ -1,4 +1,3 @@
-import argparse
 import asyncio
 import configparser
 import logging
@@ -15,168 +14,6 @@ import toml
 from spacecat.helpers import constants
 import spacecat.helpers.module_handler as module_handler
 import spacecat.helpers.perms as perms
-
-
-class Startup():
-    def __init__(self):
-        self.bot = commands.Bot(command_prefix=self.get_prefix)
-        self.args = None
-
-    def logging(self):
-        # Create log folder if it doesn't exist
-        if not os.path.exists('logs'):
-            os.mkdir("logs")
-
-        # Setup file logging
-        logger = logging.getLogger('discord')
-        logger.setLevel(logging.DEBUG)
-        handler = logging.FileHandler(
-            filename='logs/latest.log',
-            encoding='utf-8',
-            mode='w'
-        )
-        handler.setFormatter(logging.Formatter(
-            '%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-        )
-        logger.addHandler(handler)
-
-    def parse_args(self):
-        """Add command line argument options"""
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--apikey', '-a', help='apikey help', type=str)
-        parser.add_argument('--user', '-u', help='user help', type=int)
-        parser.add_argument('--prefix', '-p', help='prefix help', type=str)
-        self.args = parser.parse_args()
-
-    def load_modules(self):
-        # Enable enabled modules from list
-        self.bot.add_cog(SpaceCat(self.bot))
-        modules = module_handler.get_enabled()
-        for module in modules:
-            module = f'{constants.MAIN_DIR}.modules.' + module
-            try:
-                self.bot.load_extension(module)
-            except Exception as exception:
-                print(
-                    f"Failed to load extension {module}\n"
-                    f"{type(exception).__name__}: {exception}\n")
-
-        self.modules = modules
-
-    def create_config(self):
-        """Creates the base empty config file"""
-        # Create data folder and optional instance folder if it doesn't exist
-        if not os.path.exists(constants.DATA_DIR):
-            os.mkdir(constants.DATA_DIR)
-        if self.args.instance:
-            if not os.path.exists(f"{constants.DATA_DIR}/{self.args.instance}"):
-                os.mkdir(f"{constants.DATA_DIR}/{self.args.instance}")
-
-        # Create config with just the base header
-        config = {}
-        config['base'] = {}
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
-        return config
-
-    def config_arguments(self, config):
-        """Applies the cmd arguments to the config file"""
-        if self.args.apikey:
-            config['base']['apikey'] = self.args.apikey
-        if self.args.prefix:
-            config['base']['prefix'] = self.args.prefix
-        if self.args.user:
-            try:
-                users = config['base']['adminuser']
-                if self.args.user not in users:
-                    config['base']['adminuser'].append(self.args.user)
-            except KeyError:
-                config['base']['adminuser'] = [self.args.user]
-
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
-
-    def introduction(self):
-        # Output introduction
-        print(
-            "Hey there,\n"
-            "The bot will need some configuring to be able to run.\n"
-            "Don't worry, I'll walk you through everything.\n")
-
-        input("Press Enter to continue...")
-        print('--------------------\n')
-        time.sleep(1)
-
-        # Ask users to provide an API key for the bot
-        print(
-            "[API Key]\n"
-            "I'll need to get an API Key from your bot.\n"
-            "https://discordapp.com/developers/applications/\n\n"
-            "Open that link and follow these instructions:\n"
-            "1. Create a new application and set a name.\n"
-            "2. Open the 'Bot' tab on the left.\n"
-            "3. Select 'Create a Bot' and confirm.\n"
-            "4. Click on 'Copy' under Token.\n"
-            "(Don't ever reveal this token to anyone you don't trust)\n")
-        
-        keyinput = input("Paste your token right here: ")
-        print('--------------------\n')
-
-        # Create new config file if it doesn't exist
-        try:
-            config = toml.load(constants.DATA_DIR + 'config.toml')
-        except FileNotFoundError:
-            config = self.create_config()
-
-        # Add API key to config file
-        config['base']['apikey'] = keyinput
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
-        return True
-
-    def run(self, firstrun=False):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        apikey = config['base']['apikey']
-
-        # Attempt to use API key from config and output error if unable to run
-        try:
-            print("Active API Key: " + apikey + "\n")
-            self.bot.run(apikey)
-        except discord.LoginFailure:
-            if firstrun:
-                print(
-                    "Looks like that API key didn't work.\n"
-                    "Run the program again and use the correct key.")
-                os.remove(constants.DATA_DIR + "config.toml")
-                return
-            print(
-                "[Error]\n"
-                "The API key doesn't work.\n"
-                "Set a new key by running the bot again"
-                "with the --apikey argument.\n"
-                "Eg. ./spacecat --apikey <insert_key>")
-            return
-
-    def get_prefix(self, bot, message):
-        # Access database if it exists and fetch server's custom prefix if set
-        try:
-            db = sqlite3.connect(f'file:{constants.DATA_DIR}spacecat.db?mode=ro', uri=True)
-            cursor = db.cursor()
-            query = (message.guild.id,)
-            cursor.execute(
-                "SELECT prefix FROM server_settings WHERE server_id=?", query)
-            prefix = cursor.fetchone()[0]
-            db.close()
-
-            if prefix:
-                return commands.when_mentioned_or(prefix)(bot, message)
-        except sqlite3.OperationalError:
-            pass
-
-        # Use the prefix set in config if no custom server prefix is set
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        prefix = config['base']['prefix']
-        return commands.when_mentioned_or(prefix)(bot, message)
 
 
 class SpaceCat(commands.Cog):
@@ -611,26 +448,87 @@ class SpaceCat(commands.Cog):
         await asyncio.sleep(1)
 
 
-def main():
-    startup = Startup()
-    startup.logging()
-    startup.parse_args()
-    startup.load_modules()
+def introduction():
+        # Output introduction
+        print(
+            "Hey there,\n"
+            "The bot will need some configuring to be able to run.\n"
+            "Don't worry, I'll walk you through everything.\n")
 
-    # Append New APIKey to config if specified by argument
-    if len(sys.argv) > 1:
+        input("Press Enter to continue...")
+        print('--------------------\n')
+        time.sleep(1)
+
+        # Ask users to provide an API key for the bot
+        print(
+            "[API Key]\n"
+            "I'll need to get an API Key from your bot.\n"
+            "https://discordapp.com/developers/applications/\n\n"
+            "Open that link and follow these instructions:\n"
+            "1. Create a new application and set a name.\n"
+            "2. Open the 'Bot' tab on the left.\n"
+            "3. Select 'Create a Bot' and confirm.\n"
+            "4. Click on 'Copy' under Token.\n"
+            "(Don't ever reveal this token to anyone you don't trust)\n")
+        
+        keyinput = input("Paste your token right here: ")
+        print('--------------------\n')
+
+        # Create new config file if it doesn't exist
         try:
             config = toml.load(constants.DATA_DIR + 'config.toml')
         except FileNotFoundError:
-            config = startup.create_config()
-        startup.config_arguments(config)
+            config = self.create_config()
 
-    # Check if config exists and run config creator if it doesn't
+        # Add API key to config file
+        config['base']['apikey'] = keyinput
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+        return True
+
+
+def get_prefix(self, bot, message):
+    # Access database if it exists and fetch server's custom prefix if set
     try:
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        config['base']['apikey']
-        first_run = False
-    except (FileNotFoundError, KeyError):
-        first_run = startup.introduction()
+        db = sqlite3.connect(f'file:{constants.DATA_DIR}spacecat.db?mode=ro', uri=True)
+        cursor = db.cursor()
+        query = (message.guild.id,)
+        cursor.execute(
+            "SELECT prefix FROM server_settings WHERE server_id=?", query)
+        prefix = cursor.fetchone()[0]
+        db.close()
 
-    startup.run(firstrun=first_run)
+        if prefix:
+            return commands.when_mentioned_or(prefix)(bot, message)
+    except sqlite3.OperationalError:
+        pass
+
+    # Use the prefix set in config if no custom server prefix is set
+    config = toml.load(constants.DATA_DIR + 'config.toml')
+    prefix = config['base']['prefix']
+    return commands.when_mentioned_or(prefix)(bot, message)
+
+
+def run(firstrun=False):
+    config = toml.load(constants.DATA_DIR + 'config.toml')
+    apikey = config['base']['apikey']
+
+    # Attempt to use API key from config and output error if unable to run
+    try:
+        print("Active API Key: " + apikey + "\n")
+        bot = commands.Bot(command_prefix=get_prefix)
+        bot.run(apikey)
+    except discord.LoginFailure:
+        if firstrun:
+            print(
+                "Looks like that API key didn't work.\n"
+                "Run the program again and use the correct key.")
+            os.remove(constants.DATA_DIR + "config.toml")
+            return
+        print(
+            "[Error]\n"
+            "The API key doesn't work.\n"
+            "Set a new key by running the bot again"
+            "with the --apikey argument.\n"
+            "Eg. ./spacecat --apikey <insert_key>")
+        return
