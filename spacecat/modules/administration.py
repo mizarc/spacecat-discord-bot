@@ -763,9 +763,9 @@ class Administration(commands.Cog):
     async def _add_server_entry(self, guild):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
-        value = (guild, None)
+        value = (guild, None, None)
         cursor.execute(
-            "INSERT OR IGNORE INTO server_settings VALUES (?,?)",
+            "INSERT OR IGNORE INTO server_settings VALUES (?,?,?)",
             value)
         db.commit()
         db.close()
