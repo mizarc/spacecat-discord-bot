@@ -1,12 +1,15 @@
 import discord
 
-from spacecat import spacecat
-
 
 MAIN_DIR = __package__.split('.')[0]
-DATA_DIR = 'data/'
 ASSETS_DIR = 'assets/'
 CACHE_DIR = 'cache/'
+DATA_DIR = 'data/'
+
+def data_location(args):
+    global DATA_DIR
+    if args.instance:
+        DATA_DIR = f'data/{args.instance}/'
 
 ACTIVITY = {
     'playing': discord.ActivityType.playing,

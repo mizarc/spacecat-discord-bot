@@ -48,9 +48,6 @@ def create_config(args):
     # Create data folder and optional instance folder if it doesn't exist
     if not os.path.exists(constants.DATA_DIR):
         os.mkdir(constants.DATA_DIR)
-    if args.instance:
-        if not os.path.exists(f"{constants.DATA_DIR}/{args.instance}"):
-            os.mkdir(f"{constants.DATA_DIR}/{args.instance}")
 
     # Create config with just the base header
     config = {}
@@ -82,6 +79,7 @@ def config_arguments(config, args):
 def main():
     logger()
     args = parse_args()
+    constants.data_location(args)
 
     # Run config creator if config file doesn't exist
     try:
