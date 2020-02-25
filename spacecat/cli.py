@@ -39,23 +39,6 @@ def parse_args():
     return args
 
 
-def load_modules():
-    """Loads all modules from the modules folder for the bot"""
-    # Enable enabled modules from list
-    self.bot.add_cog(SpaceCat(self.bot))
-    modules = module_handler.get_enabled()
-    for module in modules:
-        module = f'{constants.MAIN_DIR}.modules.' + module
-        try:
-            self.bot.load_extension(module)
-        except Exception as exception:
-            print(
-                f"Failed to load extension {module}\n"
-                f"{type(exception).__name__}: {exception}\n")
-
-    self.modules = modules
-
-
 def create_config(args):
     """
     Creates the base empty config file
@@ -93,27 +76,21 @@ def config_arguments(config, args):
 
     with open(constants.DATA_DIR + "config.toml", "w") as config_file:
         toml.dump(config, config_file)
+    return config
 
 
 def main():
     logger()
-    load_modules()
     args = parse_args()
 
-    # Append New APIKey to config if specified by argument
-    if len(sys.argv) > 1:
-        try:
-            config = toml.load(constants.DATA_DIR + 'config.toml')
-        except FileNotFoundError:
-            config = create_config(args)
-        config_arguments(config, args)
-
-    # Check if config exists and run config creator if it doesn't
+    # Run config creator if config file doesn't exist
     try:
         config = toml.load(constants.DATA_DIR + 'config.toml')
         config['base']['apikey']
         first_run = False
     except (FileNotFoundError, KeyError):
-        first_run = spacecat.introduction()
+        config = create_config(args)
+        config_arguments(config, args)
+        first_run = spacecat.introduction(config)
 
     spacecat.run(firstrun=first_run)

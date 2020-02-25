@@ -448,45 +448,39 @@ class SpaceCat(commands.Cog):
         await asyncio.sleep(1)
 
 
-def introduction():
-        # Output introduction
-        print(
-            "Hey there,\n"
-            "The bot will need some configuring to be able to run.\n"
-            "Don't worry, I'll walk you through everything.\n")
+def introduction(config):
+    # Output introduction
+    print(
+        "Hey there,\n"
+        "The bot will need some configuring to be able to run.\n"
+        "Don't worry, I'll walk you through everything.\n")
 
-        input("Press Enter to continue...")
-        print('--------------------\n')
-        time.sleep(1)
+    input("Press Enter to continue...")
+    print('--------------------\n')
+    time.sleep(1)
 
-        # Ask users to provide an API key for the bot
-        print(
-            "[API Key]\n"
-            "I'll need to get an API Key from your bot.\n"
-            "https://discordapp.com/developers/applications/\n\n"
-            "Open that link and follow these instructions:\n"
-            "1. Create a new application and set a name.\n"
-            "2. Open the 'Bot' tab on the left.\n"
-            "3. Select 'Create a Bot' and confirm.\n"
-            "4. Click on 'Copy' under Token.\n"
-            "(Don't ever reveal this token to anyone you don't trust)\n")
-        
-        keyinput = input("Paste your token right here: ")
-        print('--------------------\n')
+    # Ask users to provide an API key for the bot
+    print(
+        "[API Key]\n"
+        "I'll need to get an API Key from your bot.\n"
+        "https://discordapp.com/developers/applications/\n\n"
+        "Open that link and follow these instructions:\n"
+        "1. Create a new application and set a name.\n"
+        "2. Open the 'Bot' tab on the left.\n"
+        "3. Select 'Create a Bot' and confirm.\n"
+        "4. Click on 'Copy' under Token.\n"
+        "(Don't ever reveal this token to anyone you don't trust)\n")
+    
+    keyinput = input("Paste your token right here: ")
+    print('--------------------\n')
 
-        # Create new config file if it doesn't exist
-        try:
-            config = toml.load(constants.DATA_DIR + 'config.toml')
-        except FileNotFoundError:
-            config = self.create_config()
+    # Add API key to config file
+    config['base']['apikey'] = keyinput
+    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        toml.dump(config, config_file)
+    return True
 
-        # Add API key to config file
-        config['base']['apikey'] = keyinput
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
-        return True
-
-
+    
 def load_modules(bot):
     """Loads all modules from the modules folder for the bot"""
     # Enable enabled modules from list
@@ -533,6 +527,7 @@ def run(firstrun=False):
     try:
         print("Active API Key: " + apikey + "\n")
         bot = commands.Bot(command_prefix=get_prefix)
+        bot = load_modules(bot)
         bot.run(apikey)
     except discord.LoginFailure:
         if firstrun:
