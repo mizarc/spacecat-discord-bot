@@ -76,10 +76,8 @@ def config_arguments(config, args):
     return config
 
 def get_instances():
+    """Checks for a config file in each subfolder to detect an instance"""
     instances = []
-    if os.path.isfile(constants.DATA_DIR + 'config.toml'):
-        instances.append('default')
-        
     folders = os.listdir(constants.DATA_DIR)
     for content in folders:
         if os.path.isfile(f'{constants.DATA_DIR}{content}/config.toml'):
@@ -105,8 +103,7 @@ def select_instance():
         try:
             if choice == (len(instances) + 1):
                 pass
-                #create_instance()
-            selected_instance = instances[choice]
+            selected_instance = instances[choice - 1]
             break
         except IndexError:
             print("Invalid instance. Select a valid number.")
@@ -121,8 +118,12 @@ def main():
         """)
     logger()
     args = parse_args()
-    instance = select_instance()
-    constants.data_location(args)
+
+    if not args.instance:
+        instance = select_instance()
+    else:
+        instance = parse_args()
+    constants.data_location(instance)
 
     # Run config creator if config file doesn't exist
     try:

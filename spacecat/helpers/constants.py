@@ -6,10 +6,9 @@ ASSETS_DIR = 'assets/'
 CACHE_DIR = 'cache/'
 DATA_DIR = 'data/'
 
-def data_location(args):
+def data_location(instance):
     global DATA_DIR
-    if args.instance:
-        DATA_DIR = f'data/{args.instance}/'
+    DATA_DIR = f'data/{instance}/'
 
 ACTIVITY = {
     'playing': discord.ActivityType.playing,
