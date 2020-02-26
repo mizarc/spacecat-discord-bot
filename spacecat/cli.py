@@ -75,10 +75,53 @@ def config_arguments(config, args):
         toml.dump(config, config_file)
     return config
 
+def get_instances():
+    instances = []
+    if os.path.isfile(constants.DATA_DIR + 'config.toml'):
+        instances.append('default')
+        
+    folders = os.listdir(constants.DATA_DIR)
+    for content in folders:
+        if os.path.isfile(f'{constants.DATA_DIR}{content}/config.toml'):
+            instances.append(content)
+    return instances
+
+
+def select_instance():
+    """Prompt the user to select an instance"""
+    instances = get_instances()
+    print("[Available Instances]")
+    
+    formatted_index = []
+    for index, instance in enumerate(instances):
+        formatted_index.append(f'{index + 1}. {instance}')
+    print('\n'.join(formatted_index))
+    print(f"{len(instances) + 1}. CREATE NEW INSTANCE\n")
+
+    while True:
+        choice = int(input("Select instance index: "))
+        print('--------------------\n')
+
+        try:
+            if choice == (len(instances) + 1):
+                pass
+                #create_instance()
+            selected_instance = instances[choice]
+            break
+        except IndexError:
+            print("Invalid instance. Select a valid number.")
+    return selected_instance
+
 
 def main():
+    print(r"""         ___  ___   ___  _                   _   ___      _
+        / __|/ __| |   \(_)___ __ ___ _ _ __| | | _ ) ___| |_
+        \__ \ (__  | |) | (_-</ _/ _ \ '_/ _` | | _ \/ _ \  _|
+        |___/\___| |___/|_/__/\__\___/_| \__,_| |___/\___/\__|
+        """)
     logger()
     args = parse_args()
+    instance = select_instance()
     constants.data_location(args)
 
     # Run config creator if config file doesn't exist
