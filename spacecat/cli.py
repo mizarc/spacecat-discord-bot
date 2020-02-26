@@ -98,22 +98,29 @@ def select_instance():
     instances = get_instances()
     print("[Available Instances]")
     
-    formatted_index = []
+    # Add list of instances, plus extra options for creating and leaving
+    formatted_instances = []
     for index, instance in enumerate(instances):
-        formatted_index.append(f'{index + 1}. {instance}')
-    print('\n'.join(formatted_index))
-    print(f"{len(instances) + 1}. CREATE NEW INSTANCE\n")
+        formatted_instances.append(f'{index + 1}. {instance}')
+    print('\n'.join(formatted_instances))
+    print(f"{len(instances) + 1}. CREATE NEW INSTANCE")
+    print(f"{len(instances) + 2}. EXIT\n")
 
+    # Run function if the selected option is valid
     while True:
         choice = int(input("Select instance index: "))
         print('--------------------\n')
         try:
-            if choice == (len(instances) + 1):
-                selected_instance = create_instance()
-            else:
-                selected_instance = instances[choice - 1]
+            selected_instance = instances[choice - 1]
             break
         except IndexError:
+            switch = {
+                len(instances) + 1: create_instance,
+                len(instances) + 2: quit
+            }
+            selected_instance = switch[choice]()
+            if select_instance:
+                break
             print("Invalid instance. Select a valid number.")
     return selected_instance
 
