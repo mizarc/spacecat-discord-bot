@@ -75,6 +75,14 @@ def config_arguments(config, args):
         toml.dump(config, config_file)
     return config
 
+
+def create_instance():
+    """Creates a new instance folder"""
+    name = input("Specify the new instance name: ")
+    print('--------------------\n')
+    return name
+
+
 def get_instances():
     """Checks for a config file in each subfolder to detect an instance"""
     instances = []
@@ -99,11 +107,11 @@ def select_instance():
     while True:
         choice = int(input("Select instance index: "))
         print('--------------------\n')
-
         try:
             if choice == (len(instances) + 1):
-                pass
-            selected_instance = instances[choice - 1]
+                selected_instance = create_instance()
+            else:
+                selected_instance = instances[choice - 1]
             break
         except IndexError:
             print("Invalid instance. Select a valid number.")
@@ -119,6 +127,7 @@ def main():
     logger()
     args = parse_args()
 
+    # Select instance folder to store data in
     if not args.instance:
         instance = select_instance()
     else:
