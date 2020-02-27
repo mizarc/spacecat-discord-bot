@@ -1,6 +1,8 @@
 import argparse
+import functools
 import logging
 import os
+import shutil
 import sys
 import toml
 
@@ -83,6 +85,14 @@ def create_instance():
     return name
     
 
+def destroy_instance(instances):
+    """Deletes an instance folder by the index"""
+    index = int(input("Specify the instance number to delete: "))
+    print('--------------------\n')
+    selected_instance = instances[index - 1]
+    shutil.rmtree(constants.DATA_DIR + selected_instance)
+    return
+
 
 def get_instances():
     """Checks for a config file in each subfolder to detect an instance"""
@@ -119,12 +129,11 @@ def select_instance():
         except ValueError:
             switch = {
                 'n': create_instance,
-                'r': quit,
+                'r': functools.partial(destroy_instance, instances),
                 'e': quit
             }
             try:
                 selected_instance = switch[choice]()
-                break
             except KeyError:
                 pass
         except IndexError:
