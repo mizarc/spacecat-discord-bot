@@ -107,16 +107,16 @@ def select_instance():
     print("\n[Other Options]")
     print("n. NEW INSTANCE")
     print("r. REMOVE INSTANCE")
-    print(f"e. EXIT\n")
+    print("e. EXIT\n")
 
     # Run function if the selected option is valid
     while True:
-        choice = input("Select option: ")
+        choice = input("Select an instance or option: ")
         print('--------------------\n')
         try:
             selected_instance = instances[int(choice) - 1]
             break
-        except (IndexError, TypeError):
+        except (IndexError, ValueError):
             switch = {
                 'n': create_instance,
                 'r': quit,
