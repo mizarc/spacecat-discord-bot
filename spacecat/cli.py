@@ -6,8 +6,9 @@ import shutil
 import sys
 import toml
 
-from spacecat.helpers import constants
 from spacecat import spacecat
+from spacecat import instance
+from spacecat.helpers import constants
 
 
 def logger():
@@ -78,41 +79,15 @@ def config_arguments(config, args):
     return config
 
 
-def create_instance():
-    """Creates a new instance folder"""
-    name = input("Specify the new instance name: ")
-    print('--------------------\n')
-    return name
-    
-
-def destroy_instance(instances):
-    """Deletes an instance folder by the index"""
-    index = int(input("Specify the instance number to delete: "))
-    print('--------------------\n')
-    selected_instance = instances[index - 1]
-    shutil.rmtree(constants.DATA_DIR + selected_instance)
-    return
-
-
-def get_instances():
-    """Checks for a config file in each subfolder to detect an instance"""
-    instances = []
-    folders = os.listdir(constants.DATA_DIR)
-    for content in folders:
-        if os.path.isfile(f'{constants.DATA_DIR}{content}/config.toml'):
-            instances.append(content)
-    return instances
-
-
 def select_instance():
     """Prompt the user to select an instance"""
-    instances = get_instances()
+    instances = instance.get()
     print("[Available Instances]")
     
     # Add list of instances, plus extra options
     formatted_instances = []
-    for index, instance in enumerate(instances):
-        formatted_instances.append(f'{index + 1}. {instance}')
+    for index, inst in enumerate(instances):
+        formatted_instances.append(f'{index + 1}. {inst}')
     print('\n'.join(formatted_instances))
     print("\n[Other Options]")
     print("n. NEW INSTANCE")
@@ -128,8 +103,8 @@ def select_instance():
             break
         except ValueError:
             switch = {
-                'n': create_instance,
-                'r': functools.partial(destroy_instance, instances),
+                'n': instance.create,
+                'r': functools.partial(instance.destroy, instances),
                 'e': quit
             }
             try:
