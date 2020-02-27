@@ -116,16 +116,22 @@ def select_instance():
         try:
             selected_instance = instances[int(choice) - 1]
             break
-        except (IndexError, ValueError):
+        except ValueError:
             switch = {
                 'n': create_instance,
                 'r': quit,
                 'e': quit
             }
-            selected_instance = switch[choice]()
-            if select_instance:
+            try:
+                selected_instance = switch[choice]()
                 break
-            print("Invalid instance. Select a valid number.")
+            except KeyError:
+                pass
+        except IndexError:
+            pass
+        print(
+            "Invalid selection. Please select a valid instance number or an "
+            "option letter.")
     return selected_instance
 
 
