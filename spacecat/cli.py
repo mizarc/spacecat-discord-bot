@@ -54,6 +54,7 @@ def select_instance():
         # Attempt to get a valid instance
         try:
             selected_instance = instances[int(choice) - 1]
+            break
         except ValueError:
             pass
         except IndexError:
@@ -75,8 +76,8 @@ def select_instance():
             print(
                 "Invalid selection. Please select a valid instance number or an "
                 "option letter.")
+            invalid_selection = False
             continue
-        invalid_selection = False
     return selected_instance
 
 
@@ -98,11 +99,11 @@ def main():
 
     # Run config creator if config file doesn't exist
     try:
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        config['base']['apikey']
+        config_data = toml.load(constants.DATA_DIR + 'config.toml')
+        config_data['base']['apikey']
         first_run = False
     except (FileNotFoundError, KeyError):
-        config.apply_arguments(config, args)
+        config.apply_arguments(config_data, args)
         first_run = spacecat.introduction(config)
 
     spacecat.run(firstrun=first_run)
