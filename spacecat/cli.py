@@ -8,7 +8,7 @@ import toml
 
 from spacecat import spacecat
 from spacecat import instance
-from spacecat.helpers import constants
+from spacecat.helpers import constants, config
 
 
 def logger():
@@ -42,80 +42,41 @@ def parse_args():
     return args
 
 
-def create_config(args):
-    """
-    Creates the base empty config file
-    If an instance is provided as an argument, a subfolder will be created
-    to house the config
-    """
-    # Create data folder and optional instance folder if it doesn't exist
-    if not os.path.exists(constants.DATA_DIR):
-        os.mkdir(constants.DATA_DIR)
-
-    # Create config with just the base header
-    config = {}
-    config['base'] = {}
-    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-        toml.dump(config, config_file)
-    return config
-
-
-def config_arguments(config, args):
-    """Applies the cmd arguments to the config file"""
-    if args.apikey:
-        config['base']['apikey'] = args.apikey
-    if args.prefix:
-        config['base']['prefix'] = args.prefix
-    if args.user:
-        try:
-            users = config['base']['adminuser']
-            if args.user not in users:
-                config['base']['adminuser'].append(args.user)
-        except KeyError:
-            config['base']['adminuser'] = [args.user]
-
-    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-        toml.dump(config, config_file)
-    return config
-
-
 def select_instance():
     """Prompt the user to select an instance"""
-    instances = instance.get()
-    print("[Available Instances]")
-    
-    # Add list of instances, plus extra options
-    formatted_instances = []
-    for index, inst in enumerate(instances):
-        formatted_instances.append(f'{index + 1}. {inst}')
-    print('\n'.join(formatted_instances))
-    print("\n[Other Options]")
-    print("n. NEW INSTANCE")
-    print("r. REMOVE INSTANCE")
-    print("e. EXIT\n")
-
-    # Run function if the selected option is valid
-    while True:
+    invalid_selection = False
+    instance.display()
+    while not invalid_selection:
+        instances = instance.get()
         choice = input("Select an instance or option: ")
         print('--------------------\n')
+
+        # Attempt to get a valid instance
         try:
             selected_instance = instances[int(choice) - 1]
-            break
         except ValueError:
-            switch = {
-                'n': instance.create,
-                'r': functools.partial(instance.destroy, instances),
-                'e': quit
-            }
-            try:
-                selected_instance = switch[choice]()
-            except KeyError:
-                pass
-        except IndexError:
             pass
-        print(
-            "Invalid selection. Please select a valid instance number or an "
-            "option letter.")
+        except IndexError:
+            invalid_selection = True
+
+        # Attempt to get a valid alternate option
+        switch = {
+            'n': instance.create,
+            'r': functools.partial(instance.destroy, instances),
+            'e': quit
+        }
+        try:
+            selected_instance = switch[choice]()
+        except KeyError:
+            invalid_selection = True
+
+        # Alert if no valid option has been selected
+        if invalid_selection:
+            print(
+                "Invalid selection. Please select a valid instance number or an "
+                "option letter.")
+            continue
+        invalid_selection = False
     return selected_instance
 
 
@@ -141,8 +102,7 @@ def main():
         config['base']['apikey']
         first_run = False
     except (FileNotFoundError, KeyError):
-        config = create_config(args)
-        config_arguments(config, args)
+        config.apply_arguments(config, args)
         first_run = spacecat.introduction(config)
 
     spacecat.run(firstrun=first_run)
