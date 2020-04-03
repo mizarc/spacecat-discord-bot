@@ -43,9 +43,29 @@ def create():
 
 def destroy(instances):
     """Deletes an instance folder by the index"""
-    index = int(input("Specify the instance number to delete: "))
-    print('--------------------\n')
-    selected_instance = instances[index - 1]
+    while True:
+        index = int(input("Specify the instance number to delete: "))
+        print('--------------------\n')
+
+        # Check if selected instance is valid
+        try:
+            selected_instance = instances[index - 1]
+        except IndexError:
+            print("Invalid instance number. Moved back to main menu.\n")
+            display()
+            return
+
+        # Ask to confirm instance deletion
+        confirm = input("Are you sure you want to delete that instance? (y/n): ")
+        print('--------------------\n')
+
+        if confirm == 'y':
+            break
+        elif confirm == 'n':
+            return
+        else:
+            print("Invalid option.")
+
     shutil.rmtree(constants.DATA_DIR + selected_instance)
     display()
     return
