@@ -64,7 +64,7 @@ def select_instance():
         switch = {
             'n': instance.create,
             'r': functools.partial(instance.destroy, instances),
-            'e': quit
+            'x': quit
         }
         try:
             selected_instance = switch[choice]()
