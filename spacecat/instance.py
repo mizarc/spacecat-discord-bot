@@ -17,7 +17,7 @@ def display():
     print("\n[Other Options]")
     print("n. NEW INSTANCE")
     print("r. REMOVE INSTANCE")
-    print("e. EXIT\n")
+    print("x. EXIT\n")
 
 
 def get():
