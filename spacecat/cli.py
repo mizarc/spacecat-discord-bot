@@ -44,23 +44,20 @@ def parse_args():
 
 def select_instance():
     """Prompt the user to select an instance"""
-    invalid_selection = False
     instance.display()
-    while not invalid_selection:
+    while True:
         instances = instance.get()
         choice = input("Select an instance or option: ")
         print('--------------------\n')
 
-        # Attempt to get a valid instance
+        # Attempt to get a valid instance by index
         try:
             selected_instance = instances[int(choice) - 1]
             break
-        except ValueError:
+        except (ValueError, IndexError):
             pass
-        except IndexError:
-            invalid_selection = True
 
-        # Attempt to get a valid alternate option
+        # Attempt to get a valid option
         switch = {
             'n': instance.create,
             'r': functools.partial(instance.destroy, instances),
@@ -68,16 +65,15 @@ def select_instance():
         }
         try:
             selected_instance = switch[choice]()
+            continue
         except KeyError:
-            invalid_selection = True
+            pass
 
         # Alert if no valid option has been selected
-        if invalid_selection:
-            print(
-                "Invalid selection. Please select a valid instance number or an "
-                "option letter.")
-            invalid_selection = False
-            continue
+        print(
+            "Invalid selection. Please select a valid instance number or an "
+            "option letter."
+        )
     return selected_instance
 
 
