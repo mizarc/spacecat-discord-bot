@@ -60,7 +60,8 @@ def select_instance():
         # Attempt to get a valid option
         switch = {
             'n': instance.create,
-            'r': functools.partial(instance.destroy, instances),
+            'r': instance.rename,
+            'd': functools.partial(instance.destroy, instances),
             'x': quit
         }
         try:
