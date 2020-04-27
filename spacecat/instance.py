@@ -9,8 +9,7 @@ def get_all():
     folders = os.listdir(constants.DATA_DIR)
     instances = []
     for folder in folders:
-        if os.path.isfile(f'{constants.DATA_DIR}{folder}/config.toml'):
-            instances.append(folder)
+        instances.append(folder)
 
     return instances
 
