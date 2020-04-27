@@ -44,7 +44,7 @@ def parse_args():
 
 def select_instance():
     """Prompt the user to select an instance"""
-    instance.display()
+    display_instances()
     while True:
         instances = instance.get()
         choice = input("Select an instance or option: ")
@@ -59,9 +59,9 @@ def select_instance():
 
         # Attempt to get a valid option
         switch = {
-            'n': instance.create,
-            'r': instance.rename,
-            'd': functools.partial(instance.destroy, instances),
+            'n': create_instance_menu,
+            'r': rename_instance_menu,
+            'd': functools.partial(destroy_instance_menu, instances),
             'x': quit
         }
         try:
@@ -75,8 +75,64 @@ def select_instance():
             "Invalid selection. Please select a valid instance number or an "
             "option letter."
         )
+
     return selected_instance
 
+
+def display_instances():
+    """Prints a list of instances and other instance editing options"""
+    instances = instance.get()
+    
+    # Add list of instances, plus extra options
+    print("[Available Instances]")
+    formatted_instances = []
+    for index, inst in enumerate(instances):
+        formatted_instances.append(f'{index + 1}. {inst}')
+    print('\n'.join(formatted_instances))
+
+    print("\n[Other Options]")
+    print("n. NEW INSTANCE")
+    print("r. REMOVE INSTANCE")
+    print("x. EXIT\n")
+
+
+def create_instance_menu():
+    """A menu which prompts the user for the name of the new instance"""
+    name = input("Specify the new instance name: ")
+    print('--------------------\n')
+
+    instance.create(name)
+    display_instances()
+    return name
+
+def rename_instance_menu():
+    """A menu which prompts the user to rename an instance"""
+    pass
+
+def destroy_instance_menu(instances):
+    """Deletes an instance folder by the index"""
+    while True:
+        index = int(input("Specify the instance number to delete: "))
+        print('--------------------\n')
+
+        # Check if selected instance is valid
+        try:
+            selected_instance = instances[index - 1]
+        except IndexError:
+            print("Invalid instance number. Moved back to main menu.\n")
+            display_instances()
+            return
+
+        # Ask to confirm instance deletion
+        confirm = input("Are you sure you want to delete that instance? (y/n): ")
+        print('--------------------\n')
+
+        if confirm == 'y':
+            break
+        elif confirm == 'n':
+            return
+        else:
+            print("Invalid option.")
 
 def main():
     print(
@@ -88,12 +144,16 @@ def main():
     logger()
     args = parse_args()
 
-    # Select instance folder to store data in
+    # Create data folder
+    if not os.path.exists(constants.DATA_DIR):
+        os.mkdir(constants.DATA_DIR)
+
+    # Select instance folder
     if not args.instance:
         instance = select_instance()
     else:
         instance = parse_args()
-    constants.data_location(instance)
+    constants.instance_location(instance)
 
     # Run config creator if config file doesn't exist
     try:
