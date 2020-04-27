@@ -46,7 +46,7 @@ def select_instance():
     """Prompt the user to select an instance"""
     display_instances()
     while True:
-        instances = instance.get()
+        instances = instance.get_all()
         choice = input("Select an instance or option: ")
         print('--------------------\n')
 
@@ -61,7 +61,7 @@ def select_instance():
         switch = {
             'n': create_instance_menu,
             'r': rename_instance_menu,
-            'd': functools.partial(destroy_instance_menu, instances),
+            'd': destroy_instance_menu,
             'x': quit
         }
         try:
@@ -81,7 +81,7 @@ def select_instance():
 
 def display_instances():
     """Prints a list of instances and other instance editing options"""
-    instances = instance.get()
+    instances = instance.get_all()
     
     # Add list of instances, plus extra options
     print("[Available Instances]")
@@ -105,9 +105,11 @@ def create_instance_menu():
     display_instances()
     return name
 
+
 def rename_instance_menu():
     """A menu which prompts the user to rename an instance"""
     pass
+
 
 def destroy_instance_menu(instances):
     """Deletes an instance folder by the index"""
@@ -133,6 +135,7 @@ def destroy_instance_menu(instances):
             return
         else:
             print("Invalid option.")
+
 
 def main():
     print(
