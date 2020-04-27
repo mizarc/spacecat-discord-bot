@@ -19,7 +19,7 @@ def get_by_index(index):
     instances = get_all()
     try:
         instance = instances[index]
-    except IndexError:
+    except (IndexError, TypeError):
         return False
 
     return instance
