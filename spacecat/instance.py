@@ -4,15 +4,26 @@ import os
 from spacecat.helpers import config, constants
 
 
-def get():
+def get_all():
     """Checks for a config file in each subfolder to detect an instance"""
     folders = os.listdir(constants.DATA_DIR)
     instances = []
     for folder in folders:
         if os.path.isfile(f'{constants.DATA_DIR}{folder}/config.toml'):
             instances.append(folder)
-            
+
     return instances
+
+
+def get_by_index(index):
+    """Get a specific instance by the index obtained by get_all()"""
+    instances = get_all()
+    try:
+        instance = instances[index]
+    except IndexError:
+        return False
+
+    return instance
 
 
 def create(name):
@@ -23,15 +34,22 @@ def create(name):
         return False
 
     return True
-    
 
-def destroy(instances, index):
-    """Deletes an instance folder by the index"""
-    # Check if selected instance is valid
-    try:
-        selected_instance = instances[index - 1]
-    except IndexError:
+
+def rename(index, name):
+    instance = get_by_index(index)
+    if not instance:
         return False
 
-    shutil.rmtree(f'{constants.DATA_DIR}{selected_instance}')
+    os.rename(instance, name)
+    return True
+    
+
+def destroy(index):
+    """Deletes an instance folder by the index"""
+    instance = get_by_index(index)
+    if not instance:
+        return False
+
+    shutil.rmtree(f'{constants.DATA_DIR}{instance}')
     return True
