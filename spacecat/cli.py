@@ -123,8 +123,13 @@ def rename_instance_menu():
 
     # Prompt to set the new instance name
     new_name = input(f"State the new name for instance {instance_name}: ")
-    instance.rename(index - 1, new_name)
+    check = instance.rename(index - 1, new_name)
     print('--------------------\n')
+
+    if not check:
+        print(
+            "An instance of that name already exists. "
+            "Moved back to main menu.\n")
 
 
 def destroy_instance_menu():

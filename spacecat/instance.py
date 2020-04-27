@@ -38,6 +38,10 @@ def create(name):
 def rename(index, name):
     instance = get_by_index(index)
     if not instance:
+        raise IndexError
+
+    instances = get_all()
+    if name in instances:
         return False
 
     shutil.move(
@@ -49,7 +53,7 @@ def destroy(index):
     """Deletes an instance folder by the index"""
     instance = get_by_index(index)
     if not instance:
-        return False
+        raise IndexError
 
     shutil.rmtree(f'{constants.DATA_DIR}{instance}')
     return True
