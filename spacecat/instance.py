@@ -40,7 +40,8 @@ def rename(index, name):
     if not instance:
         return False
 
-    os.rename(instance, name)
+    shutil.move(
+        f'{constants.DATA_DIR}{instance}', f'{constants.DATA_DIR}{name}')
     return True
     
 
