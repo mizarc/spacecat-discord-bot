@@ -183,10 +183,12 @@ def main():
 
     # Run config creator if config file doesn't exist
     try:
-        config_data = toml.load(constants.DATA_DIR + 'config.toml')
+        config_data = toml.load(constants.INSTANCE_DIR + 'config.toml')
+        config.apply_arguments(config_data, args)
         config_data['base']['apikey']
         first_run = False
     except (FileNotFoundError, KeyError):
+        config_data = config.create()
         config.apply_arguments(config_data, args)
         first_run = spacecat.introduction(config)
 
