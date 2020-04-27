@@ -44,9 +44,16 @@ def parse_args():
 
 def select_instance():
     """Prompt the user to select an instance"""
-    display_instances()
+    options = {
+            'n': create_instance_menu,
+            'r': rename_instance_menu,
+            'd': destroy_instance_menu,
+            'x': quit
+        }
+    
     while True:
-        instances = instance.get()
+        display_instances(options)
+        instances = instance.get_all()
         choice = input("Select an instance or option: ")
         print('--------------------\n')
 
@@ -58,14 +65,8 @@ def select_instance():
             pass
 
         # Attempt to get a valid option
-        switch = {
-            'n': create_instance_menu,
-            'r': rename_instance_menu,
-            'd': functools.partial(destroy_instance_menu, instances),
-            'x': quit
-        }
         try:
-            selected_instance = switch[choice]()
+            selected_instance = options[choice]()
             continue
         except KeyError:
             pass
@@ -73,15 +74,15 @@ def select_instance():
         # Alert if no valid option has been selected
         print(
             "Invalid selection. Please select a valid instance number or an "
-            "option letter."
+            "option letter.\n"
         )
 
     return selected_instance
 
 
-def display_instances():
+def display_instances(options):
     """Prints a list of instances and other instance editing options"""
-    instances = instance.get()
+    instances = instance.get_all()
     
     # Add list of instances, plus extra options
     print("[Available Instances]")
@@ -90,10 +91,12 @@ def display_instances():
         formatted_instances.append(f'{index + 1}. {inst}')
     print('\n'.join(formatted_instances))
 
+    option_letters = list(options.keys())
     print("\n[Other Options]")
-    print("n. NEW INSTANCE")
-    print("r. REMOVE INSTANCE")
-    print("x. EXIT\n")
+    print(f"{option_letters[0]}. NEW INSTANCE")
+    print(f"{option_letters[1]}. RENAME INSTANCE")
+    print(f"{option_letters[2]}. DELETE INSTANCE")
+    print(f"{option_letters[3]}. EXIT\n")
 
 
 def create_instance_menu():
@@ -102,7 +105,6 @@ def create_instance_menu():
     print('--------------------\n')
 
     instance.create(name)
-    display_instances()
     return name
 
 def rename_instance_menu():
@@ -120,7 +122,6 @@ def destroy_instance_menu(instances):
             selected_instance = instances[index - 1]
         except IndexError:
             print("Invalid instance number. Moved back to main menu.\n")
-            display_instances()
             return
 
         # Ask to confirm instance deletion
