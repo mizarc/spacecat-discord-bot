@@ -110,11 +110,25 @@ def create_instance_menu():
 
 def rename_instance_menu():
     """A menu which prompts the user to rename an instance"""
-    pass
+    # Check if selected instance is valid
+    try:
+        index = int(input("Specify the instance number to rename: "))
+        instance_name = instance.get_by_index(index - 1)
+    except ValueError:
+        instance_name = None
+    print('--------------------\n')
+    if not instance_name:
+        print("Invalid instance number. Moved back to main menu.\n")
+        return
+
+    # Prompt to set the new instance name
+    new_name = input(f"State the new name for instance {instance_name}: ")
+    instance.rename(index - 1, new_name)
+    print('--------------------\n')
 
 
 def destroy_instance_menu():
-    """Deletes an instance folder by the index"""
+    """A menu which prompts the user to delete an instance"""
     while True:
         # Check if selected instance is valid
         try:
