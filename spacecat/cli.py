@@ -181,7 +181,7 @@ def main():
         instance = parse_args()
     constants.instance_location(instance)
 
-    # Run config creator if config file doesn't exist
+    # Fetch the config file attached to the instance
     try:
         config_data = toml.load(constants.INSTANCE_DIR + 'config.toml')
         config.apply_arguments(config_data, args)
