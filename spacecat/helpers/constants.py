@@ -5,10 +5,11 @@ MAIN_DIR = __package__.split('.')[0]
 ASSETS_DIR = 'assets/'
 CACHE_DIR = 'cache/'
 DATA_DIR = 'data/'
+INSTANCE_DIR = ''
 
-def data_location(instance):
-    global DATA_DIR
-    DATA_DIR = f'data/{instance}/'
+def instance_location(instance):
+    global INSTANCE_DIR
+    INSTANCE_DIR = f'{DATA_DIR}/{instance}/'
 
 ACTIVITY = {
     'playing': discord.ActivityType.playing,
