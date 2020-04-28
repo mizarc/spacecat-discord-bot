@@ -1,4 +1,4 @@
-from spacecat.spacecat import main
+from spacecat.cli import main
 
 if __name__ == '__main__':
     main()

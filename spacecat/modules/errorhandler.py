@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from spacecat.helpers import settings
+from spacecat.helpers import constants
 
 
 class ErrorHandler(commands.Cog):
@@ -16,14 +16,14 @@ class ErrorHandler(commands.Cog):
 
         if isinstance(error, commands.CheckFailure):
             embed = discord.Embed(
-                colour=settings.embed_type('warn'),
+                colour=constants.EMBED_TYPE['warn'],
                 description="You don't have permission to use that command")
             await ctx.send(embed=embed)
             return
 
         if isinstance(error, commands.BotMissingPermissions):
             embed = discord.Embed(
-                colour=settings.embed_type('warn'),
+                colour=constants.EMBED_TYPE['warn'],
                 description="I don't have the necessary server permission"
                 "to execute that. Contact the server administrator.")
             await ctx.send(embed=embed)
@@ -31,7 +31,7 @@ class ErrorHandler(commands.Cog):
 
         if isinstance(error, commands.MissingRequiredArgument):
             embed = discord.Embed(
-                colour=settings.embed_type('warn'),
+                colour=constants.EMBED_TYPE['warn'],
                 description="Missing Arguments. "
                 f"Type `{ctx.prefix}help {ctx.command}` for more info")
             await ctx.send(embed=embed)
@@ -39,7 +39,7 @@ class ErrorHandler(commands.Cog):
 
         if isinstance(error, commands.BadArgument):
             embed = discord.Embed(
-                colour=settings.embed_type('warn'),
+                colour=constants.EMBED_TYPE['warn'],
                 description="Invalid arguments provided. "
                 f"Type `{ctx.prefix}help {ctx.command}` for more info")
             await ctx.send(embed=embed)
