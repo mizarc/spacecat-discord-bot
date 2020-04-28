@@ -184,12 +184,15 @@ def main():
     # Fetch the config file attached to the instance
     try:
         config_data = toml.load(constants.DATA_DIR + 'config.toml')
-        config.apply_arguments(config_data, args)
+    except FileNotFoundError:
+        config_data = config.create()
+
+    # Fetch the APIKey from the config
+    config.apply_arguments(config_data, args)
+    try:
         config_data['base']['apikey']
         first_run = False
-    except (FileNotFoundError, KeyError):
-        config_data = config.create()
-        config.apply_arguments(config_data, args)
+    except KeyError:
         first_run = spacecat.introduction(config)
 
     spacecat.run(firstrun=first_run)
