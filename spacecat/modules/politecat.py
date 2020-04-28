@@ -5,8 +5,8 @@ import discord
 from discord.ext import commands
 from PIL import Image
 
+from spacecat.helpers import constants
 from spacecat.helpers import perms
-from spacecat.helpers import settings
 
 
 class PoliteCat(commands.Cog):
@@ -27,8 +27,8 @@ class PoliteCat(commands.Cog):
             return
 
         # Fetch image from attachment
-        gif = f'{settings.cache}{str(message.id)}.gif'
-        webp = f'{settings.cache}{str(message.id)}.webp'
+        gif = f'{constants.CACHE_DIR}{str(message.id)}.gif'
+        webp = f'{constants.CACHE_DIR}{str(message.id)}.webp'
         await message.attachments[0].save(webp)
         image = Image.open(webp)
 
@@ -56,7 +56,7 @@ class PoliteCat(commands.Cog):
         # Notify if conversion failed
         except discord.errors.HTTPException:
             embed = discord.Embed(
-                colour=settings.embed_type('warn'),
+                colour=constants.EMBED_TYPE['warn'],
                 description=f"Failed to convert webp to gif. "
                 "Image may be too large")
             await message.channel.send(embed=embed) 
@@ -73,14 +73,14 @@ class PoliteCat(commands.Cog):
         if self.webp_convert:
             self.webp_convert = False
             embed = discord.Embed(
-                colour=settings.embed_type('accept'),
+                colour=constants.EMBED_TYPE['accept'],
                 description="Automatic WebP conversion has been disabled")
             await ctx.send(embed=embed)
 
         elif not self.webp_convert:
             self.webp_convert = True
             embed = discord.Embed(
-                colour=settings.embed_type('accept'),
+                colour=constants.EMBED_TYPE['accept'],
                 description="Automatic WebP conversion has been enabled")
             await ctx.send(embed=embed)
 
@@ -88,7 +88,7 @@ class PoliteCat(commands.Cog):
     @perms.check()
     async def reactcfg(self, ctx):
         "Configure available reaction images"
-        embed = discord.Embed(colour=settings.embed_type('warn'), description=f"Please specify a valid subcommand: `add/remove`")
+        embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"Please specify a valid subcommand: `add/remove`")
         await ctx.send(embed=embed) 
 
     @reactcfg.command()
@@ -99,33 +99,33 @@ class PoliteCat(commands.Cog):
         try:
             image = ctx.message.attachments[0]
         except IndexError:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"There are no attachments in that message")
+            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"There are no attachments in that message")
             await ctx.send(embed=embed) 
             return
 
         # Create reactions folder if it doesn't exist
-        if not os.path.exists(settings.data + 'reactions/'):
-            os.mkdir(settings.data + 'reactions/')
+        if not os.path.exists(constants.DATA_DIR + 'reactions/'):
+            os.mkdir(constants.DATA_DIR + 'reactions/')
 
         # Cancel if name already exists
         reactions = await self._get_reactions()
         if name in reactions:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"Reaction name already in use")
+            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"Reaction name already in use")
             await ctx.send(embed=embed)
             return
 
         # Check if file extention is valid and convert to webp when possible
         ext = image.filename.split(".")[-1]
         if ext == "webp" or ext == "gif":
-            await image.save(f'{settings.data}reactions/{name}.{ext}')
+            await image.save(f'{constants.DATA_DIR}reactions/{name}.{ext}')
         elif ext == "jpg" or ext == "jpeg" or ext == "bmp" or ext == "png":
-            await image.save(f'{settings.data}reactions/{name}.webp')
+            await image.save(f'{constants.DATA_DIR}reactions/{name}.webp')
         else:
             await ctx.send("Image must be formatted in " +
                             "webp, png, jpg, bmp or gif")
             return
         
-        embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Added {name} to reactions")
+        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Added {name} to reactions")
         await ctx.send(embed=embed)
         return
 
@@ -136,17 +136,17 @@ class PoliteCat(commands.Cog):
         # Cancel if image name exists
         reactions = await self._get_reactions()
         if name not in reactions:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="Reaction image does not exist")
+            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Reaction image does not exist")
             await ctx.send(embed=embed)
             return
 
         # Remove specified image
         try:
-            os.remove(f"{settings.data}reactions/{name}.webp")
+            os.remove(f"{constants.DATA_DIR}reactions/{name}.webp")
         except FileNotFoundError:
-            os.remove(f"{settings.data}reactions/{name}.gif")
+            os.remove(f"{constants.DATA_DIR}reactions/{name}.gif")
 
-        embed = discord.Embed(colour=settings.embed_type('accept'), description=f"Removed {name} from reactions")
+        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Removed {name} from reactions")
         await ctx.send(embed=embed) 
         return
             
@@ -159,7 +159,7 @@ class PoliteCat(commands.Cog):
 
         # Alert if no reactions exist
         if not reactions:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description="No reactions are available")
+            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="No reactions are available")
             await ctx.send(embed=embed)
             return
 
@@ -170,7 +170,7 @@ class PoliteCat(commands.Cog):
         # Try sending WebP
         try:
             await ctx.send(
-                file=discord.File(f"{settings.data}reactions/{name}.webp"))
+                file=discord.File(f"{constants.DATA_DIR}reactions/{name}.webp"))
             return
         except FileNotFoundError:
             pass
@@ -178,21 +178,21 @@ class PoliteCat(commands.Cog):
         # Try sending Gif
         try:
             await ctx.send(
-                file=discord.File(f"{settings.data}reactions/{name}.gif"))
+                file=discord.File(f"{constants.DATA_DIR}reactions/{name}.gif"))
             return
         except FileNotFoundError:
             pass
 
         # Warn if reaction name doesn't exist
         embed = discord.Embed(
-            colour=settings.embed_type('warn'),
+            colour=constants.EMBED_TYPE['warn'],
             description=f"Reaction `{name}` does not exist")
         await ctx.send(embed=embed) 
 
     async def _get_reactions(self):
         # Get all images from directoy and add to list
         reactions = []
-        for files in glob.glob(settings.data + "reactions/*"):
+        for files in glob.glob(constants.DATA_DIR + "reactions/*"):
             existing_image = os.path.basename(os.path.splitext(files)[0])
             reactions.append(existing_image)
         return reactions

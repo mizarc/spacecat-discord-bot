@@ -9,18 +9,18 @@ from discord.ext import commands
 from discord.utils import get
 import toml
 
-from spacecat.helpers import settings
+from spacecat.helpers import constants
 
 
 def new(guild):
     # Check if server doesn't have a config file
     if not os.path.exists('servers/' + str(guild.id) + '.toml'):
         # Get default perms from global config
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         userperms = config['PermsPreset']['user']
 
         # Assign @everyone role the global user perms
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         config['PermsGroups'] = {}
         config['PermsGroups'][str(guild.default_role.id)] = userperms
         config['PermsUsers'] = {}
@@ -54,7 +54,7 @@ def check():
         checks.add(f'{module}.{perm}')
         
         # Query database to allow if user has the required permission
-        db = sqlite3.connect(settings.data + 'spacecat.db')
+        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         db.row_factory = lambda cursor, row: row[0]
         cursor = db.cursor()
         query = (ctx.guild.id, ctx.author.id)
@@ -86,7 +86,7 @@ def check():
                 return True
 
         # Query permission presets from config that the user or group may have
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         for preset in presets:
             comparison = list(
                 set(config['permissions'][preset[7:]]).intersection(checks))
@@ -142,7 +142,7 @@ def check():
 def exclusive():
     def predicate(ctx):
         # Open global config file
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
 
         # If user is the bot administrator
         if ctx.author.id in config['base']['adminuser']:

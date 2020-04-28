@@ -7,8 +7,9 @@ import discord
 from discord.ext import commands
 import toml
 
+from spacecat.helpers import constants
 from spacecat.helpers import perms
-from spacecat.helpers import settings
+
 
 class Configuration(commands.Cog):
     """Modify Discord wide bot settings"""
@@ -19,7 +20,7 @@ class Configuration(commands.Cog):
     async def on_ready(self):
         # Auto generate the permissions config category with
         # default (@everyone) role
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         try:
             config['permissions']
         except KeyError:
@@ -29,7 +30,7 @@ class Configuration(commands.Cog):
         except KeyError:
             config['permissions']['default'] = []
 
-        with open(settings.data + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @commands.Cog.listener()
@@ -41,7 +42,7 @@ class Configuration(commands.Cog):
             cmd_args = cmd.content.split()[1:]
 
             # Query if command exists as an alias in database
-            db = sqlite3.connect(settings.data + 'spacecat.db')
+            db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
             cursor = db.cursor()
             query = (ctx.guild.id, cmd_name)
             cursor.execute(f"SELECT command FROM command_alias WHERE server_id=? AND alias=?", query)
@@ -56,17 +57,17 @@ class Configuration(commands.Cog):
     @commands.command()
     @perms.exclusive()
     async def status(self, ctx, statusname):
-        config = toml.load(settings.data + 'config.toml')
-        status = settings.status_class(statusname)
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        status = constants.STATUS[statusname]
         try:
-            activity = discord.Activity(type=settings.activity_type_class(config['base']['activity_type']), name=config['base']['activity_name'])
+            activity = discord.Activity(type=constants.ACTIVITY[config['base']['activity_type']], name=config['base']['activity_name'])
         except KeyError:
             activity = None
         
 
         # Check if valid status name was used
         if status == None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"That's not a valid status")
+            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"That's not a valid status")
             await ctx.send(embed=embed)
             return
 
@@ -76,14 +77,14 @@ class Configuration(commands.Cog):
             await self.bot.change_presence(status=status)
 
         config['base']['status'] = statusname
-        with open(settings.data + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @commands.command()
     @perms.exclusive()
     async def activity(self, ctx, acttype, *, name):
-        config = toml.load(settings.data + 'config.toml')
-        activitytype = settings.activity_type_class(acttype)
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        activitytype = constants.ACTIVITY[acttype]
         activity = discord.Activity(type=activitytype, name=name, url="https://www.twitch.tv/yeet")
         try:
             status = config['base']['status']
@@ -91,7 +92,7 @@ class Configuration(commands.Cog):
             status = None
 
         if activitytype == None:
-            embed = discord.Embed(colour=settings.embed_type('warn'), description=f"That's not a valid activity type")
+            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"That's not a valid activity type")
             await ctx.send(embed=embed)
             return
 
@@ -103,7 +104,7 @@ class Configuration(commands.Cog):
 
         config['base']['activity_type'] = acttype
         config['base']['activity_name'] = name
-        with open(settings.data + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @commands.group(invoke_without_command=True)
@@ -120,12 +121,12 @@ class Configuration(commands.Cog):
     @perms.exclusive()
     async def permpreset_create(self, ctx, name):
         """Creates a new permission preset list"""
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         
         try:
             config['permissions'][name]
             embed = discord.Embed(
-                colour=settings.embed_type('warn'),
+                colour=constants.EMBED_TYPE['warn'],
                 description="There's already a preset with that name")
             await ctx.send(embed=embed)
             return
@@ -133,10 +134,10 @@ class Configuration(commands.Cog):
             pass
 
         config['permissions'][name] = []
-        with open(settings.data + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-            colour=settings.embed_type('accept'),
+            colour=constants.EMBED_TYPE['accept'],
             description=f"Added permission preset `{name}`")
         await ctx.send(embed=embed)
 
@@ -144,30 +145,30 @@ class Configuration(commands.Cog):
     @perms.exclusive()
     async def permpreset_destroy(self, ctx, name):
         """Completely deletes a preset and all its contents"""
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
 
         # Alert if there's no preset with that name
         try:
             del config['permissions'][name]
         except:
             embed = discord.Embed(
-                colour=settings.embed_type('warn'),
+                colour=constants.EMBED_TYPE['warn'],
                 description=f"There is no preset with the name `{name}`")
             await ctx.send(embed=embed)
             return
 
         if name == 'default':
             embed = discord.Embed(
-                colour=settings.embed_type('warn'),
+                colour=constants.EMBED_TYPE['warn'],
                 description=f"You cannot remove the default preset")
             await ctx.send(embed=embed)
             return
 
         # Apply changes and output result to user
-        with open(settings.data + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-            colour=settings.embed_type('accept'),
+            colour=constants.EMBED_TYPE['accept'],
             description=f"Deleted permission preset `{name}`")
         await ctx.send(embed=embed)
 
@@ -175,7 +176,7 @@ class Configuration(commands.Cog):
     @perms.exclusive()
     async def permpreset_add(self, ctx, preset, perm):
         """Adds a valid permission to a permission preset"""
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         perm_values = perm.split('.')
         skip = False
 
@@ -183,7 +184,7 @@ class Configuration(commands.Cog):
         if perm == '*':
             if perm in config['permissions'][preset]:
                 embed = discord.Embed(
-                    colour=settings.embed_type('warn'),
+                    colour=constants.EMBED_TYPE['warn'],
                     description=f"Permission preset `{preset}` "
                     "already has the wildcard permission")
                 await ctx.send(embed=embed)
@@ -191,7 +192,7 @@ class Configuration(commands.Cog):
             else:
                 config['permissions'][preset].append('*')
                 embed = discord.Embed(
-                    colour=settings.embed_type('accept'),
+                    colour=constants.EMBED_TYPE['accept'],
                     description="Wildcard permission added to "
                     f"permission preset `{preset}`")
                 await ctx.send(embed=embed)
@@ -209,7 +210,7 @@ class Configuration(commands.Cog):
             # Add permission group permission if it doesn't already exist
             elif cog and perm in config['permissions'][preset]:
                 embed = discord.Embed(
-                    colour=settings.embed_type('warn'),
+                    colour=constants.EMBED_TYPE['warn'],
                     description=f"`{preset}` already has the"
                     f"`{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed) 
@@ -218,7 +219,7 @@ class Configuration(commands.Cog):
                 config['permissions'][preset].append(
                     f"{cog.qualified_name}.*")
                 embed = discord.Embed(
-                    colour=settings.embed_type('accept'),
+                    colour=constants.EMBED_TYPE['accept'],
                     description=f"Permission group `{cog.qualified_name}`"
                     f" added to preset `{preset}`")
                 await ctx.send(embed=embed)
@@ -239,7 +240,7 @@ class Configuration(commands.Cog):
             try:
                 if not command or command.cog != cog:
                     embed = discord.Embed(
-                        colour=settings.embed_type('warn'),
+                        colour=constants.EMBED_TYPE['warn'],
                         description=f"Permission does not exist. "
                         "Please enter a valid permission")
                     await ctx.send(embed=embed) 
@@ -251,7 +252,7 @@ class Configuration(commands.Cog):
             full_permission = f"{command.cog.qualified_name}.{command_perm}"
             if full_permission in config['permissions'][preset]:
                 embed = discord.Embed(
-                    colour=settings.embed_type('warn'),
+                    colour=constants.EMBED_TYPE['warn'],
                     description=f"`{preset}` already has that permission")
                 await ctx.send(embed=embed) 
                 return
@@ -259,18 +260,18 @@ class Configuration(commands.Cog):
                 config['permissions'][preset].append(
                     f"{command.cog.qualified_name}.{command_perm}")
                 embed = discord.Embed(
-                    colour=settings.embed_type('accept'),
+                    colour=constants.EMBED_TYPE['accept'],
                     description=f"Command `{command.cog.qualified_name}.{command_perm}` added to preset `{preset}`")
                 await ctx.send(embed=embed)
             
-        with open(settings.data + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @permpreset.command(name='remove')
     @perms.exclusive()
     async def permpreset_remove(self, ctx, preset, perm):
         """Removes an existing permission from a preset"""
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         perm_values = perm.split('.')
         skip = False
 
@@ -278,7 +279,7 @@ class Configuration(commands.Cog):
         if perm == '*':
             if perm in config['permissions'][preset]:
                 embed = discord.Embed(
-                    colour=settings.embed_type('warn'),
+                    colour=constants.EMBED_TYPE['warn'],
                     description=f"Preset `{preset}` doesn't have the "
                     "wildcard permission")
                 await ctx.send(embed=embed) 
@@ -286,7 +287,7 @@ class Configuration(commands.Cog):
             else:
                 config['permissions'][preset].remove(perm)
                 embed = discord.Embed(
-                    colour=settings.embed_type('warn'),
+                    colour=constants.EMBED_TYPE['warn'],
                     description=f"Wildcard permission removed from preset "
                     f"`{preset}`")
                 await ctx.send(embed=embed) 
@@ -304,7 +305,7 @@ class Configuration(commands.Cog):
             # Remove command group permission if it doesn't already exist
             elif cog and perm not in config['permissions'][preset]:
                 embed = discord.Embed(
-                    colour=settings.embed_type('accept'),
+                    colour=constants.EMBED_TYPE['accept'],
                     description=f"`{preset}` doesn't have the "
                     f"`{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed)
@@ -313,7 +314,7 @@ class Configuration(commands.Cog):
                 config['permissions'][preset].remove(
                     f"{cog.qualified_name}.*")
                 embed = discord.Embed(
-                    colour=settings.embed_type('warn'),
+                    colour=constants.EMBED_TYPE['warn'],
                     description=f"Permission group `{cog.qualified_name}` "
                     f"removed from preset `{preset}`")
                 await ctx.send(embed=embed)
@@ -334,7 +335,7 @@ class Configuration(commands.Cog):
             try:
                 if not command or command.cog != cog:
                     embed = discord.Embed(
-                        colour=settings.embed_type('warn'),
+                        colour=constants.EMBED_TYPE['warn'],
                         description=f"Permission does not exist. "
                         "Please enter a valid permission")
                     await ctx.send(embed=embed) 
@@ -346,7 +347,7 @@ class Configuration(commands.Cog):
             full_permission = f"{command.cog.qualified_name}.{command_perm}"
             if full_permission not in config['permissions'][preset]:
                 embed = discord.Embed(
-                    colour=settings.embed_type('warn'),
+                    colour=constants.EMBED_TYPE['warn'],
                     description=f"`{preset}` doesn't have that permission")
                 await ctx.send(embed=embed) 
                 return
@@ -354,19 +355,19 @@ class Configuration(commands.Cog):
                 config['permissions'][preset].remove(
                     f"{command.cog.qualified_name}.{command_perm}")
                 embed = discord.Embed(
-                    colour=settings.embed_type('accept'),
+                    colour=constants.EMBED_TYPE['accept'],
                     description=f"Command `{command.cog.qualified_name}."
                     f"{command_perm}` removed from preset `{preset}`")
                 await ctx.send(embed=embed)
             
-        with open(settings.data + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @permpreset.command(name='list')
     @perms.exclusive()
     async def permpreset_list(self, ctx):
         """List all available presets"""
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         perm_presets = config['permissions']
 
         # Format playlist songs into pretty list
@@ -375,9 +376,9 @@ class Configuration(commands.Cog):
             perm_presets_output.append(f"{index + 1}. {preset_name}")
 
         # Output list of presets in a pretty embed
-        embed = discord.Embed(colour=settings.embed_type('info'))
+        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
         image = discord.File(
-            settings.embed_icons('information'),
+            constants.EMBED_ICON['information'],
             filename="image.png")
         embed.set_author(name="Permission Presets",
             icon_url="attachment://image.png")
@@ -391,14 +392,14 @@ class Configuration(commands.Cog):
     async def permpreset_view(self, ctx, preset):
         """Lists all the permissions assigned to a preset"""
         # Fetch permissions of preset from the config
-        config = toml.load(settings.data + 'config.toml')
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         perms = config['permissions'][preset]
         perms_output = [f'`{perm}`' for perm in perms]
 
         # Output list of permissions in a pretty embed
-        embed = discord.Embed(colour=settings.embed_type('info'))
+        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
         image = discord.File(
-            settings.embed_icons('information'),
+            constants.EMBED_ICON['information'],
             filename="image.png")
         embed.set_author(name=f"Permissions of {preset}",
             icon_url="attachment://image.png")
