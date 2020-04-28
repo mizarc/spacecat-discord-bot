@@ -9,7 +9,7 @@ DATA_DIR = ''
 
 def instance_location(instance):
     global DATA_DIR
-    DATA_DIR = f'{DATA_DIR}/{instance}/'
+    DATA_DIR = f'{GLOBAL_DATA_DIR}/{instance}/'
 
 ACTIVITY = {
     'playing': discord.ActivityType.playing,

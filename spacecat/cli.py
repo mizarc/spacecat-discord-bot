@@ -171,8 +171,8 @@ def main():
     args = parse_args()
 
     # Create data folder
-    if not os.path.exists(constants.DATA_DIR):
-        os.mkdir(constants.DATA_DIR)
+    if not os.path.exists(constants.GLOBAL_DATA_DIR):
+        os.mkdir(constants.GLOBAL_DATA_DIR)
 
     # Select instance folder
     if not args.instance:

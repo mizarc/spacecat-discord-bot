@@ -6,7 +6,7 @@ from spacecat.helpers import config, constants
 
 def get_all():
     """Checks for a config file in each subfolder to detect an instance"""
-    folders = os.listdir(constants.DATA_DIR)
+    folders = os.listdir(constants.GLOBAL_DATA_DIR)
     instances = []
     for folder in folders:
         instances.append(folder)
@@ -28,7 +28,7 @@ def get_by_index(index):
 def create(name):
     """Creates a new instance folder"""
     try:
-        os.mkdir(f'{constants.DATA_DIR}{name}')
+        os.mkdir(f'{constants.GLOBAL_DATA_DIR}{name}')
     except FileExistsError:
         return False
 
@@ -45,7 +45,8 @@ def rename(index, name):
         return False
 
     shutil.move(
-        f'{constants.DATA_DIR}{instance}', f'{constants.DATA_DIR}{name}')
+        f'{constants.GLOBAL_DATA_DIR}{instance}',
+        f'{constants.GLOBAL_DATA_DIR}{name}')
     return True
     
 
@@ -55,5 +56,5 @@ def destroy(index):
     if not instance:
         raise IndexError
 
-    shutil.rmtree(f'{constants.DATA_DIR}{instance}')
+    shutil.rmtree(f'{constants.GLOBAL_DATA_DIR}{instance}')
     return True
