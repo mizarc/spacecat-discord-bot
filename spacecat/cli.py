@@ -105,6 +105,7 @@ def create_instance_menu():
     print('--------------------\n')
 
     instance.create(name)
+    print(f"A new instance by the name of '{name}' has been created.\n")
     return name
 
 
@@ -130,6 +131,7 @@ def rename_instance_menu():
         print(
             "An instance of that name already exists. "
             "Moved back to main menu.\n")
+    print(f"Instance '{instance_name}' has been renamed to '{new_name}'.\n")
 
 
 def destroy_instance_menu():
@@ -148,13 +150,16 @@ def destroy_instance_menu():
 
         # Ask to confirm instance deletion
         confirm = input(
-            f"Are you sure you want to delete instance {instance_name} (y/n): "
+            f"Are you sure you want to delete instance "
+            f"'{instance_name}' (y/n): "
             )
         print('--------------------\n')
         if confirm == 'y':
             instance.destroy(index - 1)
-            break
+            print(f"Instance '{instance_name}' has been deleted.\n")
+            return
         elif confirm == 'n':
+            print(f"Instance deletion has been cancelled.\n")
             return
         else:
             print("Invalid option.")
