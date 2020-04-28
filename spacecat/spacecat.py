@@ -475,6 +475,7 @@ def introduction(config):
     print('--------------------\n')
 
     # Add API key to config file
+    config = toml.load(constants.DATA_DIR + 'config.toml')
     config['base']['apikey'] = keyinput
     with open(constants.DATA_DIR + "config.toml", "w") as config_file:
         toml.dump(config, config_file)
