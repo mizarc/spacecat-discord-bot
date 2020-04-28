@@ -183,7 +183,7 @@ def main():
     if not args.instance:
         instance = select_instance()
     else:
-        instance = parse_args()
+        instance = args.instance
     constants.instance_location(instance)
 
     # Fetch the config file attached to the instance
