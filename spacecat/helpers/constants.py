@@ -4,12 +4,12 @@ import discord
 MAIN_DIR = __package__.split('.')[0]
 ASSETS_DIR = 'assets/'
 CACHE_DIR = 'cache/'
-DATA_DIR = 'data/'
-INSTANCE_DIR = ''
+GLOBAL_DATA_DIR = 'data/'
+DATA_DIR = ''
 
 def instance_location(instance):
-    global INSTANCE_DIR
-    INSTANCE_DIR = f'{DATA_DIR}/{instance}/'
+    global DATA_DIR
+    DATA_DIR = f'{DATA_DIR}/{instance}/'
 
 ACTIVITY = {
     'playing': discord.ActivityType.playing,

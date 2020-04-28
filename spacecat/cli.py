@@ -183,7 +183,7 @@ def main():
 
     # Fetch the config file attached to the instance
     try:
-        config_data = toml.load(constants.INSTANCE_DIR + 'config.toml')
+        config_data = toml.load(constants.DATA_DIR + 'config.toml')
         config.apply_arguments(config_data, args)
         config_data['base']['apikey']
         first_run = False
