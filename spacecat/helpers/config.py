@@ -18,9 +18,6 @@ def create():
     If an instance is provided as an argument, a subfolder will be created
     to house the config
     """
-    # Create data folder and optional instance folder if it doesn't exist
-    if not os.path.exists(constants.DATA_DIR):
-        os.mkdir(constants.DATA_DIR)
 
     # Create config with just the base header
     config = {}
