@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Instance menu display on startup to run and edit available instances
+    - `NEW INSTANCE`: Creates a new folder in the data folder as an instance
+    - `RENAME INSTANCE`: Renames an existing instances
+    - `DELETE INSTANCE`: Deletes an existing instance and removes all of its data
+    - `EXIT`: Closes the program
 - `permpreset` command group to manage global permissions
     - `create` to create a new permission preset
     - `destroy` to remove an existing preset
@@ -20,12 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Permissions in the default preset are assigned to every user
 - Presets assigned to a group read permissions from the config on command checks
 - Extended descriptions to the `SpaceCat` module commands
+- Constants helper to hold all old and new constant variables
 
 ### Changed
 - Revamp the `help` menu to use embeds for pretty formatting
 - `help` command without arguments now only shows modules to reduce clutter
 - Disallow users to view module and command `help` pages they don't have permission for
 - `playlist` command now defaults to `playlist list` subcommand
+
+### Fixed
+- New servers not being added to the database
 
 ## [0.3.1] - 2020-02-23
 ### Fixed
