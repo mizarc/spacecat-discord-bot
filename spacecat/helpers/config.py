@@ -19,13 +19,13 @@ def create():
     to house the config
     """
     # Create data folder and optional instance folder if it doesn't exist
-    if not os.path.exists(constants.INSTANCE_DIR):
-        os.mkdir(constants.INSTANCE_DIR)
+    if not os.path.exists(constants.DATA_DIR):
+        os.mkdir(constants.DATA_DIR)
 
     # Create config with just the base header
     config = {}
     config['base'] = {}
-    with open(constants.INSTANCE_DIR + "config.toml", "w") as config_file:
+    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
         toml.dump(config, config_file)
     return config
 
@@ -48,6 +48,6 @@ def apply_arguments(config, args):
         except KeyError:
             config['base']['adminuser'] = [args.user]
 
-    with open(constants.INSTANCE_DIR + "config.toml", "w") as config_file:
+    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
         toml.dump(config, config_file)
     return config
