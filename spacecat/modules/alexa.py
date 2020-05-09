@@ -121,13 +121,18 @@ class Alexa(commands.Cog):
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         """Disconnect the bot if the last user leaves the channel"""
+        # Check if bot voice client isn't active
         voice_client = member.guild.voice_client
         if not voice_client:
             return
 
-        voice_channel = voice_client.channel
-        channel_members = voice_channel.members
-        if len(channel_members) < 2:
+        # Check if user isn't in same channel or not a disconnect/move event
+        if (voice_client.channel != before.channel or
+                before.channel == after.channel):
+            return
+
+        # Disconnect if the bot is the only user left
+        if len(voice_client.channel.members) < 2:
             await voice_client.disconnect()
 
     @commands.command()
