@@ -95,6 +95,7 @@ class Alexa(commands.Cog):
         self.song_pause_time = {}
         self.loop_toggle = {}
         self.skip_toggle = {}
+        self.player_disconnect_time = {}
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -116,6 +117,18 @@ class Alexa(commands.Cog):
 
         db.commit()
         db.close()
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        """Disconnect the bot if the last user leaves the channel"""
+        voice_client = member.guild.voice_client
+        if not voice_client:
+            return
+
+        voice_channel = voice_client.channel
+        channel_members = voice_channel.members
+        if len(channel_members) < 2:
+            await voice_client.disconnect()
 
     @commands.command()
     @perms.check()
