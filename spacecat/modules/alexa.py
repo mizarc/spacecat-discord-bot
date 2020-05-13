@@ -8,7 +8,7 @@ import sqlite3
 from time import gmtime, strftime, time
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import youtube_dl
 from bs4 import BeautifulSoup as bs
 import requests
@@ -95,7 +95,8 @@ class Alexa(commands.Cog):
         self.song_pause_time = {}
         self.loop_toggle = {}
         self.skip_toggle = {}
-        self.player_disconnect_time = {}
+        self.disconnect_time = {}
+        self._disconnect_timer.start()
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -316,6 +317,7 @@ class Alexa(commands.Cog):
             return
 
         # Stops and clears the queue
+        self.disconnect_time[ctx.guild.id] = time() + 300
         self.skip_toggle[ctx.guild.id] = True
         self.song_queue[ctx.guild.id].clear()
         ctx.voice_client.stop()
@@ -358,6 +360,7 @@ class Alexa(commands.Cog):
             return
 
         # Pauses music playback
+        self.disconnect_time[ctx.guild.id] = time() + 300
         ctx.voice_client.pause()
         self.song_pause_time[ctx.guild.id] = time() - self.song_start_time[ctx.guild.id]
         embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description="Music has been paused")
@@ -1135,6 +1138,7 @@ class Alexa(commands.Cog):
             await ctx.send(embed=embed)
 
     def _next(self, ctx):
+        self.disconnect_time[ctx.guild.id] = time() + 300
         # If looping, grab source from url again
         if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
             get_source = YTDLSource.from_url(self.song_queue[ctx.guild.id][0].url)
@@ -1180,6 +1184,7 @@ class Alexa(commands.Cog):
         self.skip_toggle = {server.id: False}
         self.song_start_time = {server.id: None}
         self.song_pause_time = {server.id: None}
+        self.disconnect_time = {server.id: time() + 300}
 
     async def _remove_server_keys(self, server):
         self.song_queue.pop(server.id, None)
@@ -1264,6 +1269,15 @@ class Alexa(commands.Cog):
         duration = await self._get_duration(source.duration)
         name = f"[{source.title}]({source.webpage_url}) `{duration}`"
         return source, name
+
+    @tasks.loop(seconds=30)
+    async def _disconnect_timer(self):
+        for server_id in self.disconnect_time:
+            server = await self.bot.fetch_guild(server_id)
+            voice_client = server.voice_client
+            if (time() > self.disconnect_time[server_id] and
+                    not voice_client.is_playing()):
+                await voice_client.disconnect()
 
 
 def setup(bot):
