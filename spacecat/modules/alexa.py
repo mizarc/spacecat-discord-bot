@@ -1137,6 +1137,13 @@ class Alexa(commands.Cog):
                 f"are unavailable: \n{song_format}")
             await ctx.send(embed=embed)
 
+    @commands.command(invoke_without_command=True)
+    @perms.exclusive()
+    async def musicsettings(self, ctx):
+        """Configure music playlists. Defaults to list subcommand."""
+        # Run the queue list subcommand if no subcommand is specified
+        await ctx.send("Please specify a valid subcommand.")
+
     def _next(self, ctx):
         self.disconnect_time[ctx.guild.id] = time() + 300
         # If looping, grab source from url again
