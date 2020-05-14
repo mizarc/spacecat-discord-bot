@@ -1154,7 +1154,7 @@ class Alexa(commands.Cog):
                 f"are unavailable: \n{song_format}")
             await ctx.send(embed=embed)
 
-    @commands.command(invoke_without_command=True)
+    @commands.group(invoke_without_command=True)
     @perms.exclusive()
     async def musicsettings(self, ctx):
         """Configure music playlists. Defaults to list subcommand."""
