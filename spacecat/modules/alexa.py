@@ -1154,7 +1154,7 @@ class Alexa(commands.Cog):
     async def musicsettings_autodisconnect(self, ctx):
         # Disable auto disconnect is enabled
         if self.auto_disconnect[ctx.guild.id]:
-            self.loop_toggle[ctx.guild.id] = False
+            self.auto_disconnect[ctx.guild.id] = False
             embed = discord.Embed(colour=constants.EMBED_TYPE['accept'],
                 description=f"Music player auto disconnect enabled")
             await ctx.send(embed=embed)
