@@ -12,6 +12,7 @@ from discord.ext import commands, tasks
 import youtube_dl
 from bs4 import BeautifulSoup as bs
 import requests
+import toml
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
@@ -101,6 +102,17 @@ class Alexa(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        # Add config keys
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        if 'music' not in config:
+            config['music'] = {}
+        if 'auto_disconnect' not in config:
+            config['music']['auto_disconnect'] = True
+        if 'disconnect_timer' not in config:
+            config['music']['auto_disconnect'] = 300
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+        
         # Create playlist table if it don't exist
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
