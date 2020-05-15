@@ -109,7 +109,7 @@ class Alexa(commands.Cog):
         if 'auto_disconnect' not in config:
             config['music']['auto_disconnect'] = True
         if 'disconnect_timer' not in config:
-            config['music']['auto_disconnect'] = 300
+            config['music']['disconnect_timer'] = 300
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         
