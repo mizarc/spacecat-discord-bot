@@ -1182,10 +1182,20 @@ class Alexa(commands.Cog):
             description=f"Music player auto disconnect {result_text}")
         await ctx.send(embed=embed)
 
-        # Enable auto disconnect is enabled
-        self.auto_disconnect[ctx.guild.id] = True
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'],
-            description=f"Music player auto disconnect enabled")
+    @musicsettings.command(name='disconnecttime')
+    @perms.exclusive()
+    async def musicsettings_disconnecttime(self, ctx, seconds: int):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+
+        # Set disconnect_timer config variable
+        config['music']['disconnect_timer'] = seconds
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['accept'],
+            description=f"Music player auto disconnect timer set to "
+                f"{seconds} seconds")
         await ctx.send(embed=embed)
         return
 
