@@ -43,9 +43,9 @@ class Linkle(commands.Cog):
             query = (member.guild.id, after.channel.id)
             cursor.execute('SELECT text_channel FROM linked_channel '
                 'WHERE server_id=? AND voice_channel=?', query)
-            text_channel_id = cursor.fetchall()[0]
+            text_channel_id = cursor.fetchall()
             if text_channel_id:
-                text_channel = await self.bot.fetch_channel(text_channel_id)
+                text_channel = await self.bot.fetch_channel(text_channel_id[0])
                 await text_channel.set_permissions(member, read_messages=True)
         except AttributeError:
             pass
@@ -55,9 +55,9 @@ class Linkle(commands.Cog):
             query = (member.guild.id, before.channel.id)
             cursor.execute('SELECT text_channel FROM linked_channel '
                 'WHERE server_id=? AND voice_channel=?', query)
-            text_channel_id = cursor.fetchall()[0]
+            text_channel_id = cursor.fetchall()
             if text_channel_id:
-                text_channel = await self.bot.fetch_channel(text_channel_id)
+                text_channel = await self.bot.fetch_channel(text_channel_id[0])
                 await text_channel.set_permissions(member, read_messages=False)
         except AttributeError:
             pass
