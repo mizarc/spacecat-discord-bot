@@ -106,9 +106,9 @@ class Alexa(commands.Cog):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         if 'music' not in config:
             config['music'] = {}
-        if 'auto_disconnect' not in config:
+        if 'auto_disconnect' not in config['music']:
             config['music']['auto_disconnect'] = True
-        if 'disconnect_timer' not in config:
+        if 'disconnect_timer' not in config['music']:
             config['music']['disconnect_timer'] = 300
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
