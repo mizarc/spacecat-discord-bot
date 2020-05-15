@@ -31,7 +31,7 @@ class Linkle(commands.Cog):
     async def on_voice_state_update(self, member, before, after):
         """Do things when users join voice channels"""
         # Don't do anything if user doesn't switch channels
-        if (before.channel == after.channel):
+        if before.channel == after.channel or member.bot:
             return
         
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
