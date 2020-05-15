@@ -8,10 +8,11 @@ import sqlite3
 from time import gmtime, strftime, time
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import youtube_dl
 from bs4 import BeautifulSoup as bs
 import requests
+import toml
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
@@ -95,9 +96,22 @@ class Alexa(commands.Cog):
         self.song_pause_time = {}
         self.loop_toggle = {}
         self.skip_toggle = {}
+        self.disconnect_time = {}
+        self._disconnect_timer.start()
 
     @commands.Cog.listener()
     async def on_ready(self):
+        # Add config keys
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        if 'music' not in config:
+            config['music'] = {}
+        if 'auto_disconnect' not in config['music']:
+            config['music']['auto_disconnect'] = True
+        if 'disconnect_time' not in config['music']:
+            config['music']['disconnect_time'] = 300
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+        
         # Create playlist table if it don't exist
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
@@ -116,6 +130,28 @@ class Alexa(commands.Cog):
 
         db.commit()
         db.close()
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        """Disconnect the bot if the last user leaves the channel"""
+        # Check if bot voice client isn't active
+        voice_client = member.guild.voice_client
+        if not voice_client:
+            return
+
+        # Check if auto disconnect is disabled
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        if not config['music']['auto_disconnect']:
+            return
+
+        # Check if user isn't in same channel or not a disconnect/move event
+        if (voice_client.channel != before.channel or
+                before.channel == after.channel):
+            return
+
+        # Disconnect if the bot is the only user left
+        if len(voice_client.channel.members) < 2:
+            await voice_client.disconnect()
 
     @commands.command()
     @perms.check()
@@ -340,6 +376,9 @@ class Alexa(commands.Cog):
             return
 
         # Pauses music playback
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        self.disconnect_time[ctx.guild.id] = time() \
+            + config['music']['disconnect_time']
         ctx.voice_client.pause()
         self.song_pause_time[ctx.guild.id] = time() - self.song_start_time[ctx.guild.id]
         embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description="Music has been paused")
@@ -1116,7 +1155,68 @@ class Alexa(commands.Cog):
                 f"are unavailable: \n{song_format}")
             await ctx.send(embed=embed)
 
+    @commands.group(invoke_without_command=True)
+    @perms.exclusive()
+    async def musicsettings(self, ctx):
+        """Configure music playlists. Defaults to list subcommand."""
+        # Run the queue list subcommand if no subcommand is specified
+        await ctx.send("Please specify a valid subcommand.")
+
+    @musicsettings.command(name='autodisconnect')
+    @perms.exclusive()
+    async def musicsettings_autodisconnect(self, ctx):
+        """
+        Toggles if the bot should auto disconnect from a voice channel
+        Turning this value on will allow the bot to disconnect after
+        a set amount of time after a song has finished playing, or if
+        all users have left the voice channel. This saves on system
+        resources.
+        """
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+
+        # Toggle auto_disconnect config setting
+        if config['music']['auto_disconnect']:
+            config['music']['auto_disconnect'] = False
+            result_text = "disabled"
+        else:
+            config['music']['auto_disconnect'] = True
+            result_text = "enabled"
+
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['accept'],
+            description=f"Music player auto disconnect {result_text}")
+        await ctx.send(embed=embed)
+
+    @musicsettings.command(name='disconnecttime')
+    @perms.exclusive()
+    async def musicsettings_disconnecttime(self, ctx, seconds: int):
+        """
+        Sets a time for when the bot should disconnect from voice
+        A time in seconds specifies when the bot should disconnect after
+        the bot is not playing any songs if auto disconnect has been
+        enabled.
+        """
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+
+        # Set disconnect_time config variable
+        config['music']['disconnect_time'] = seconds
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['accept'],
+            description=f"Music player auto disconnect timer set to "
+                f"{seconds} seconds")
+        await ctx.send(embed=embed)
+        return
+
     def _next(self, ctx):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        self.disconnect_time[ctx.guild.id] = time() \
+            + config['music']['disconnect_time']
         # If looping, grab source from url again
         if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
             get_source = YTDLSource.from_url(self.song_queue[ctx.guild.id][0].url)
@@ -1157,11 +1257,14 @@ class Alexa(commands.Cog):
             return "N/A"
 
     async def _add_server_keys(self, server):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         self.song_queue = {server.id: []}
         self.loop_toggle = {server.id: False}
         self.skip_toggle = {server.id: False}
         self.song_start_time = {server.id: None}
         self.song_pause_time = {server.id: None}
+        self.disconnect_time = {server.id: time() +
+            config['music']['disconnect_time']}
 
     async def _remove_server_keys(self, server):
         self.song_queue.pop(server.id, None)
@@ -1169,6 +1272,7 @@ class Alexa(commands.Cog):
         self.skip_toggle.pop(server.id, None)
         self.song_start_time.pop(server.id, None)
         self.song_pause_time.pop(server.id, None)
+        self.disconnect_time = {server.id, None}
 
     async def _check_music_status(self, ctx, server):
         try:
@@ -1246,6 +1350,17 @@ class Alexa(commands.Cog):
         duration = await self._get_duration(source.duration)
         name = f"[{source.title}]({source.webpage_url}) `{duration}`"
         return source, name
+
+    @tasks.loop(seconds=30)
+    async def _disconnect_timer(self):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        for server_id in self.disconnect_time:
+            server = await self.bot.fetch_guild(server_id)
+            voice_client = server.voice_client
+            if (time() > self.disconnect_time[server_id] and
+                    not voice_client.is_playing() and
+                    config['music']['auto_disconnect']):
+                await voice_client.disconnect()
 
 
 def setup(bot):
