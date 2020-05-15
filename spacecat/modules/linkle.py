@@ -38,18 +38,6 @@ class Linkle(commands.Cog):
         db.row_factory = lambda cursor, row: row[0]
         cursor = db.cursor()
 
-        # Show linked text channel if joining a linked voice channel
-        try:
-            query = (member.guild.id, after.channel.id)
-            cursor.execute('SELECT text_channel FROM linked_channel '
-                'WHERE server_id=? AND voice_channel=?', query)
-            text_channel_id = cursor.fetchall()
-            if text_channel_id:
-                text_channel = await self.bot.fetch_channel(text_channel_id[0])
-                await text_channel.set_permissions(member, read_messages=True)
-        except AttributeError:
-            pass
-
         # Hide linked text channel if leaving a linked voice channel
         try:
             query = (member.guild.id, before.channel.id)
@@ -59,6 +47,18 @@ class Linkle(commands.Cog):
             if text_channel_id:
                 text_channel = await self.bot.fetch_channel(text_channel_id[0])
                 await text_channel.set_permissions(member, read_messages=False)
+        except AttributeError:
+            pass
+
+        # Show linked text channel if joining a linked voice channel
+        try:
+            query = (member.guild.id, after.channel.id)
+            cursor.execute('SELECT text_channel FROM linked_channel '
+                'WHERE server_id=? AND voice_channel=?', query)
+            text_channel_id = cursor.fetchall()
+            if text_channel_id:
+                text_channel = await self.bot.fetch_channel(text_channel_id[0])
+                await text_channel.set_permissions(member, read_messages=True)
         except AttributeError:
             pass
 
