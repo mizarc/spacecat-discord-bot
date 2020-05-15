@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sqlite3
 
@@ -49,6 +50,7 @@ class Linkle(commands.Cog):
                 await text_channel.set_permissions(member, read_messages=False)
         except AttributeError:
             pass
+        await asyncio.sleep(1)
 
         # Show linked text channel if joining a linked voice channel
         try:
