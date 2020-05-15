@@ -107,8 +107,8 @@ class Alexa(commands.Cog):
             config['music'] = {}
         if 'auto_disconnect' not in config['music']:
             config['music']['auto_disconnect'] = True
-        if 'disconnect_timer' not in config['music']:
-            config['music']['disconnect_timer'] = 300
+        if 'disconnect_time' not in config['music']:
+            config['music']['disconnect_time'] = 300
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         
@@ -378,7 +378,7 @@ class Alexa(commands.Cog):
         # Pauses music playback
         config = toml.load(constants.DATA_DIR + 'config.toml')
         self.disconnect_time[ctx.guild.id] = time() \
-            + config['music']['disconnect_timer']
+            + config['music']['disconnect_time']
         ctx.voice_client.pause()
         self.song_pause_time[ctx.guild.id] = time() - self.song_start_time[ctx.guild.id]
         embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description="Music has been paused")
@@ -1201,8 +1201,8 @@ class Alexa(commands.Cog):
         """
         config = toml.load(constants.DATA_DIR + 'config.toml')
 
-        # Set disconnect_timer config variable
-        config['music']['disconnect_timer'] = seconds
+        # Set disconnect_time config variable
+        config['music']['disconnect_time'] = seconds
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
@@ -1216,7 +1216,7 @@ class Alexa(commands.Cog):
     def _next(self, ctx):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         self.disconnect_time[ctx.guild.id] = time() \
-            + config['music']['disconnect_timer']
+            + config['music']['disconnect_time']
         # If looping, grab source from url again
         if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
             get_source = YTDLSource.from_url(self.song_queue[ctx.guild.id][0].url)
@@ -1264,7 +1264,7 @@ class Alexa(commands.Cog):
         self.song_start_time = {server.id: None}
         self.song_pause_time = {server.id: None}
         self.disconnect_time = {server.id: time() +
-            config['music']['disconnect_timer']}
+            config['music']['disconnect_time']}
 
     async def _remove_server_keys(self, server):
         self.song_queue.pop(server.id, None)
