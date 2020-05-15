@@ -1164,6 +1164,13 @@ class Alexa(commands.Cog):
     @musicsettings.command(name='autodisconnect')
     @perms.exclusive()
     async def musicsettings_autodisconnect(self, ctx):
+        """
+        Toggles if the bot should auto disconnect from a voice channel
+        Turning this value on will allow the bot to disconnect after
+        a set amount of time after a song has finished playing, or if
+        all users have left the voice channel. This saves on system
+        resources.
+        """
         config = toml.load(constants.DATA_DIR + 'config.toml')
 
         # Toggle auto_disconnect config setting
@@ -1185,6 +1192,12 @@ class Alexa(commands.Cog):
     @musicsettings.command(name='disconnecttime')
     @perms.exclusive()
     async def musicsettings_disconnecttime(self, ctx, seconds: int):
+        """
+        Sets a time for when the bot should disconnect from voice
+        A time in seconds specifies when the bot should disconnect after
+        the bot is not playing any songs if auto disconnect has been
+        enabled.
+        """
         config = toml.load(constants.DATA_DIR + 'config.toml')
 
         # Set disconnect_timer config variable
