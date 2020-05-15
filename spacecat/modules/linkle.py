@@ -22,7 +22,7 @@ class Linkle(commands.Cog):
         # Create database tables if they don't exist
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS linked_channel'
-            '(server_id INTEGER, text_channel INTEGER, voice_channel INTEGER)')
+            '(server_id INTEGER, voice_channel INTEGER, text_channel INTEGER)')
 
         db.commit()
         db.close()
