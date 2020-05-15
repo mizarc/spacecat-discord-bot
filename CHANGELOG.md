@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Presets assigned to a group read permissions from the config on command checks
 - Extended descriptions to the `SpaceCat` module commands
 - Constants helper to hold all old and new constant variables
+- Auto voice channel disconnection when no users are in the voice channel
+- Auto voice channel disconnection when nothing has been playing for a specified amount of time
+- New section to the config pertaining to holding variables of music features
 
 ### Changed
 - Revamp the `help` menu to use embeds for pretty formatting
