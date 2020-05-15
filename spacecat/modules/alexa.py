@@ -1161,16 +1161,26 @@ class Alexa(commands.Cog):
         # Run the queue list subcommand if no subcommand is specified
         await ctx.send("Please specify a valid subcommand.")
 
-    @musicsettings.command(name='toggle')
+    @musicsettings.command(name='autodisconnect')
     @perms.exclusive()
     async def musicsettings_autodisconnect(self, ctx):
-        # Disable auto disconnect is enabled
-        if self.auto_disconnect[ctx.guild.id]:
-            self.auto_disconnect[ctx.guild.id] = False
-            embed = discord.Embed(colour=constants.EMBED_TYPE['accept'],
-                description=f"Music player auto disconnect enabled")
-            await ctx.send(embed=embed)
-            return
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+
+        # Toggle auto_disconnect config setting
+        if config['music']['auto_disconnect']:
+            config['music']['auto_disconnect'] = False
+            result_text = "disabled"
+        else:
+            config['music']['auto_disconnect'] = True
+            result_text = "enabled"
+
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+            toml.dump(config, config_file)
+
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['accept'],
+            description=f"Music player auto disconnect {result_text}")
+        await ctx.send(embed=embed)
 
         # Enable auto disconnect is enabled
         self.auto_disconnect[ctx.guild.id] = True
