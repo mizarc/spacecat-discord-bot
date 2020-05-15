@@ -97,7 +97,6 @@ class Alexa(commands.Cog):
         self.loop_toggle = {}
         self.skip_toggle = {}
         self.disconnect_time = {}
-        self.auto_disconnect = {}
         self._disconnect_timer.start()
 
     @commands.Cog.listener()
@@ -141,7 +140,8 @@ class Alexa(commands.Cog):
             return
 
         # Check if auto disconnect is disabled
-        if not self.auto_disconnect[member.guild.id]:
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        if not config['music']['auto_disconnect']:
             return
 
         # Check if user isn't in same channel or not a disconnect/move event
@@ -334,7 +334,6 @@ class Alexa(commands.Cog):
             return
 
         # Stops and clears the queue
-        self.disconnect_time[ctx.guild.id] = time() + 300
         self.skip_toggle[ctx.guild.id] = True
         self.song_queue[ctx.guild.id].clear()
         ctx.voice_client.stop()
@@ -377,7 +376,9 @@ class Alexa(commands.Cog):
             return
 
         # Pauses music playback
-        self.disconnect_time[ctx.guild.id] = time() + 300
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        self.disconnect_time[ctx.guild.id] = time() \
+            + config['music']['disconnect_timer']
         ctx.voice_client.pause()
         self.song_pause_time[ctx.guild.id] = time() - self.song_start_time[ctx.guild.id]
         embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description="Music has been paused")
@@ -1213,7 +1214,9 @@ class Alexa(commands.Cog):
         return
 
     def _next(self, ctx):
-        self.disconnect_time[ctx.guild.id] = time() + 300
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        self.disconnect_time[ctx.guild.id] = time() \
+            + config['music']['disconnect_timer']
         # If looping, grab source from url again
         if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
             get_source = YTDLSource.from_url(self.song_queue[ctx.guild.id][0].url)
@@ -1254,13 +1257,14 @@ class Alexa(commands.Cog):
             return "N/A"
 
     async def _add_server_keys(self, server):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         self.song_queue = {server.id: []}
         self.loop_toggle = {server.id: False}
         self.skip_toggle = {server.id: False}
         self.song_start_time = {server.id: None}
         self.song_pause_time = {server.id: None}
-        self.disconnect_time = {server.id: time() + 300}
-        self.auto_disconnect = {server.id: False}
+        self.disconnect_time = {server.id: time() +
+            config['music']['disconnect_timer']}
 
     async def _remove_server_keys(self, server):
         self.song_queue.pop(server.id, None)
@@ -1269,7 +1273,6 @@ class Alexa(commands.Cog):
         self.song_start_time.pop(server.id, None)
         self.song_pause_time.pop(server.id, None)
         self.disconnect_time = {server.id, None}
-        self.auto_disconnect = {server.id, None}
 
     async def _check_music_status(self, ctx, server):
         try:
@@ -1350,12 +1353,13 @@ class Alexa(commands.Cog):
 
     @tasks.loop(seconds=30)
     async def _disconnect_timer(self):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
         for server_id in self.disconnect_time:
             server = await self.bot.fetch_guild(server_id)
             voice_client = server.voice_client
             if (time() > self.disconnect_time[server_id] and
                     not voice_client.is_playing() and
-                    self.auto_disconnect):
+                    config['music']['auto_disconnect']):
                 await voice_client.disconnect()
 
 
