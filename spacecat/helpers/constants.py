@@ -38,14 +38,10 @@ EMBED_TYPE = {
 }
 
 class EmbedIcon(enum.Enum):
-    with importlib.resources.path(resources, 'information.png') as info_path:
-        INFORMATION = info_path
-    with importlib.resources.path(resources, 'help.png') as help_path:
-        HELP = help_path
-    with importlib.resources.path(resources, 'music_disc.jpg') as music_path:
-        MUSIC = music_path
-    with importlib.resources.path(resources, 'database.png') as database_path:
-        DATABASE = database_path
+    INFORMATION = ':bulb: '
+    HELP = ':question:  '
+    MUSIC = ':musical_note: '
+    DATABASE = ':cd: '
 
 NUM_TO_EMOJI = {
     1: "1\u20e3",
