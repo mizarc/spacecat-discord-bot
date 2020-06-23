@@ -16,12 +16,16 @@ def instance_location(instance):
     global DATA_DIR
     DATA_DIR = f'{GLOBAL_DATA_DIR}/{instance}/'
 
-EMBED_TYPE = {
-    'accept': discord.Color.from_rgb(67, 160, 71),
-    'warn': discord.Color.from_rgb(211, 47, 47),
-    'info': discord.Color.from_rgb(3, 169, 244),
-    'special': discord.Color.from_rgb(103, 58, 183)
-}
+
+class EmbedStatus(enum.Enum):
+    YES = discord.Color.from_rgb(67, 160, 71)
+    NO = discord.Color.from_rgb(218, 120, 16)
+    INFO: discord.Color.from_rgb(3, 169, 244)
+    FAIL: discord.Color.from_rgb(211, 47, 47)
+    SPECIAL: discord.Color.from_rgb(103, 58, 183)
+
+    def __str__(self):
+        return self.value
 
 
 class EmbedIcon(enum.Enum):
@@ -31,7 +35,7 @@ class EmbedIcon(enum.Enum):
     DATABASE = ':cd: '
 
     def __str__(self):
-        return str(self.value)
+        return self.value
 
 
 NUM_TO_EMOJI = {
