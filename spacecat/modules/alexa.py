@@ -287,7 +287,7 @@ class Alexa(commands.Cog):
 
         # Output results to chat
         embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EMBED_ICON["music"], filename="image.png")
+        image = discord.File(constants.EmbedIcon.MUSIC.value, filename="image.png")
         embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
         results_output = '\n'.join(results_format)
         embed.add_field(
@@ -470,7 +470,7 @@ class Alexa(commands.Cog):
 
         # Output first in queue as currently playing
         embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EMBED_ICON["music"], filename="image.png")
+        image = discord.File(constants.EmbedIcon.MUSIC.value, filename="image.png")
         embed.set_author(name="Music Queue", icon_url="attachment://image.png")
         duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
         if not self.song_pause_time[ctx.guild.id]:
@@ -832,7 +832,7 @@ class Alexa(commands.Cog):
         # Output results to chat
         embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
         image = discord.File(
-            constants.EMBED_ICON["music"], filename="image.png")
+            constants.EmbedIcon.MUSIC.value, filename="image.png")
         embed.set_author(
             name="Music Playlists", icon_url="attachment://image.png")
         playlist_output = '\n'.join(playlist_info)
@@ -1060,7 +1060,7 @@ class Alexa(commands.Cog):
 
         # Output results to chat
         embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EMBED_ICON["music"], filename="image.png")
+        image = discord.File(constants.EmbedIcon.MUSIC.value, filename="image.png")
         embed.set_author(
             name=f"Playlist '{playlist_name}' Contents",
             icon_url="attachment://image.png")

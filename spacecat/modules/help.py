@@ -20,7 +20,7 @@ class Help(commands.Cog):
             embed = discord.Embed(colour=constants.EMBED_TYPE['info'],
             description=f"Type !help <module> to list all commands in the module (case sensitive)")
             image = discord.File(
-                constants.EMBED_ICON["help"], filename="image.png")
+                constants.EmbedIcon.HELP.value, filename="image.png")
             embed.set_author(name="Help Menu", icon_url="attachment://image.png")
 
             # Add all modules to the embed
@@ -75,7 +75,7 @@ class Help(commands.Cog):
         embed = discord.Embed(colour=constants.EMBED_TYPE['info'],
         description=f"Type !help <command> for more info on a command")
         image = discord.File(
-            constants.EMBED_ICON["help"], filename="image.png")
+            constants.EmbedIcon.HELP.value, filename="image.png")
         embed.set_author(
             name=f"{module.qualified_name} Commands",
             icon_url="attachment://image.png")
@@ -161,7 +161,7 @@ class Help(commands.Cog):
             pass
 
         image = discord.File(
-            constants.EMBED_ICON["help"], filename="image.png")
+            constants.EmbedIcon.HELP.value, filename="image.png")
         await ctx.send(file=image, embed=embed)
 
     async def filter_commands(self, ctx, commands):
