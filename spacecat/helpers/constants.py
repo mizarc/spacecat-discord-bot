@@ -16,13 +16,6 @@ def instance_location(instance):
     global DATA_DIR
     DATA_DIR = f'{GLOBAL_DATA_DIR}/{instance}/'
 
-ACTIVITY = {
-    'playing': discord.ActivityType.playing,
-    'streaming': discord.ActivityType.streaming,
-    'listening': discord.ActivityType.listening,
-    'watching':  discord.ActivityType.watching
-}
-
 STATUS = {
     'online': discord.Status.online,
     'idle': discord.Status.idle,
