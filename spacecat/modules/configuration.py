@@ -59,8 +59,11 @@ class Configuration(commands.Cog):
     async def status(self, ctx, statusname):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         status = constants.STATUS[statusname]
+        activity_name = config['base']['activity_type']
         try:
-            activity = discord.Activity(type=constants.ACTIVITY[config['base']['activity_type']], name=config['base']['activity_name'])
+            activity = discord.Activity(
+                type=discord.ActivityType[activity_name],
+                name=config['base']['activity_name'])
         except KeyError:
             activity = None
         
@@ -82,16 +85,16 @@ class Configuration(commands.Cog):
 
     @commands.command()
     @perms.exclusive()
-    async def activity(self, ctx, acttype, *, name):
+    async def activity(self, ctx, activity_name, *, name):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        activitytype = constants.ACTIVITY[acttype]
-        activity = discord.Activity(type=activitytype, name=name, url="https://www.twitch.tv/yeet")
+        activity_type = discord.ActivityType[activity_name]
+        activity = discord.Activity(type=activity_type, name=name, url="https://www.twitch.tv/yeet")
         try:
             status = config['base']['status']
         except KeyError:
             status = None
 
-        if activitytype == None:
+        if activity_type == None:
             embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"That's not a valid activity type")
             await ctx.send(embed=embed)
             return
@@ -102,7 +105,7 @@ class Configuration(commands.Cog):
             await self.bot.change_presence(activity=activity)
 
 
-        config['base']['activity_type'] = acttype
+        config['base']['activity_type'] = activity_type
         config['base']['activity_name'] = name
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)

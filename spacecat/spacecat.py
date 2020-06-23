@@ -63,11 +63,11 @@ class SpaceCat(commands.Cog):
 
         # Change activity if specified in config
         try:
-            acttypename = config['base']['activity_type']
-            activitytype = constants.ACTIVITY[acttypename]
+            activity_name = config['base']['activity_type']
+            activity_type = discord.ActivityType[activity_name]
 
             activity = discord.Activity(
-                type=activitytype,
+                type=activity_type,
                 name=config['base']['activity_name'],
                 url="https://www.twitch.tv/monstercat")
             await self.bot.change_presence(activity=activity)
