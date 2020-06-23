@@ -288,7 +288,7 @@ class Alexa(commands.Cog):
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.MUSIC.value} Search Query")
+            title=f"{constants.EmbedIcon.MUSIC} Search Query")
         results_output = '\n'.join(results_format)
         embed.add_field(
             name=f"Results for '{search}'",
@@ -471,7 +471,7 @@ class Alexa(commands.Cog):
         # Output first in queue as currently playing
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.MUSIC.value} Music Queue")
+            title=f"{constants.EmbedIcon.MUSIC} Music Queue")
         duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
         if not self.song_pause_time[ctx.guild.id]:
             current_time = int(time() - self.song_start_time[ctx.guild.id])
@@ -832,7 +832,7 @@ class Alexa(commands.Cog):
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.MUSIC.value} Music Playlists")
+            title=f"{constants.EmbedIcon.MUSIC} Music Playlists")
         playlist_output = '\n'.join(playlist_info)
         embed.add_field(
             name=f"{len(playlists)} available",
@@ -1059,7 +1059,7 @@ class Alexa(commands.Cog):
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.MUSIC.value} Playlist '{playlist_name}' Contents")
+            title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}' Contents")
         if playlist[2] and page == 0:
             embed.description = playlist[2]
         formatted_duration = await self._get_duration(total_duration)

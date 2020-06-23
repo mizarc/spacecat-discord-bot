@@ -37,11 +37,16 @@ EMBED_TYPE = {
     'special': discord.Color.from_rgb(103, 58, 183)
 }
 
+
 class EmbedIcon(enum.Enum):
     INFORMATION = ':bulb: '
     HELP = ':question:  '
     MUSIC = ':musical_note: '
     DATABASE = ':cd: '
+
+    def __str__(self):
+        return str(self.value)
+
 
 NUM_TO_EMOJI = {
     1: "1\u20e3",
