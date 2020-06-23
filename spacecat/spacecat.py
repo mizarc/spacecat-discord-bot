@@ -171,7 +171,7 @@ class SpaceCat(commands.Cog):
         # Create embed
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO,
-            title=f"{constants.EmbedIcon.INFORMATION} {self.bot.user.name} Modules")
+            title=f"{constants.EmbedIcon.DEFAULT} {self.bot.user.name} Modules")
 
         # Categorise modules into enabled and disabled fields
         if enabled:
