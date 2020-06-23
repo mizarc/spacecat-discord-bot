@@ -380,7 +380,7 @@ class Configuration(commands.Cog):
         # Output list of presets in a pretty embed
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO,
-            title=f"{constants.EmbedIcon.INFORMATION} Permission Presets")
+            title=f"{constants.EmbedIcon.DEFAULT} Permission Presets")
         embed.add_field(
             name=f"{len(perm_presets)} available",
             value='\n'.join(perm_presets_output), inline=False)
@@ -398,7 +398,7 @@ class Configuration(commands.Cog):
         # Output list of permissions in a pretty embed
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO,
-            title=f"{constants.EmbedIcon.INFORMATION} Permissions of {preset}")
+            title=f"{constants.EmbedIcon.DEFAULT} Permissions of {preset}")
         embed.add_field(
             name=f"{len(perms)} assigned perms",
             value=', '.join(perms_output))

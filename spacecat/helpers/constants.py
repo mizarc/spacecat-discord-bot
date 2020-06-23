@@ -29,8 +29,8 @@ class EmbedStatus(enum.Enum):
 
 
 class EmbedIcon(enum.Enum):
-    INFORMATION = ':bulb: '
-    HELP = ':question:  '
+    DEFAULT = ':bulb: '
+    HELP = ':question: '
     MUSIC = ':musical_note: '
     DATABASE = ':cd: '
 
