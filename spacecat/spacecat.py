@@ -94,7 +94,7 @@ class SpaceCat(commands.Cog):
                     colour=constants.EMBED_TYPE['info'],
                     description="I'm here to provide a useful set a features")
                 image = discord.File(
-                    constants.EMBED_ICON["information"], filename="image.png")
+                    constants.EmbedIcon.INFORMATION.value, filename="image.png")
                 embed.set_author(
                     name="Hello There!", icon_url="attachment://image.png")
                 embed.add_field(
@@ -173,7 +173,7 @@ class SpaceCat(commands.Cog):
 
         # Create embed
         image = discord.File(
-            constants.EMBED_ICON["information"],
+            constants.EmbedIcon.INFORMATION.value,
             filename="image.png")
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'])

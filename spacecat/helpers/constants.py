@@ -1,4 +1,9 @@
+import enum
+import importlib.resources
+
 import discord
+
+from .. import resources
 
 
 MAIN_DIR = __package__.split('.')[0]
@@ -32,12 +37,15 @@ EMBED_TYPE = {
     'special': discord.Color.from_rgb(103, 58, 183)
 }
 
-EMBED_ICON = {
-    'information': ASSETS_DIR + 'information.png',
-    'help': ASSETS_DIR + 'help.png',
-    'music': ASSETS_DIR + "music_disc.jpg",
-    'database': ASSETS_DIR + 'database.png'
-}
+class EmbedIcon(enum.Enum):
+    with importlib.resources.path(resources, 'information.png') as info_path:
+        INFORMATION = info_path
+    with importlib.resources.path(resources, 'help.png') as help_path:
+        HELP = help_path
+    with importlib.resources.path(resources, 'music_disc.jpg') as music_path:
+        MUSIC = music_path
+    with importlib.resources.path(resources, 'database.png') as database_path:
+        DATABASE = database_path
 
 NUM_TO_EMOJI = {
     1: "1\u20e3",
