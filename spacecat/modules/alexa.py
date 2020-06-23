@@ -286,14 +286,14 @@ class Alexa(commands.Cog):
             results_format.append(f"{index}. [{title.get_text()}]({url}) `{duration.get_text()}`")
 
         # Output results to chat
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EmbedIcon.MUSIC.value, filename="image.png")
-        embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.MUSIC.value} Search Query")
         results_output = '\n'.join(results_format)
         embed.add_field(
             name=f"Results for '{search}'",
             value=results_output, inline=False)
-        msg = await ctx.send(file=image, embed=embed)
+        msg = await ctx.send(embed=embed)
 
         # Add reaction button for every result
         reactions = []
@@ -469,9 +469,9 @@ class Alexa(commands.Cog):
             return
 
         # Output first in queue as currently playing
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EmbedIcon.MUSIC.value, filename="image.png")
-        embed.set_author(name="Music Queue", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.MUSIC.value} Music Queue")
         duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
         if not self.song_pause_time[ctx.guild.id]:
             current_time = int(time() - self.song_start_time[ctx.guild.id])
@@ -528,7 +528,7 @@ class Alexa(commands.Cog):
             embed.add_field(
                 name=f"Queue  `{duration}`",
                 value=queue_output, inline=False)
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @queue.command(name='move')
     @perms.check()
@@ -830,16 +830,14 @@ class Alexa(commands.Cog):
                 f"{index + 1}. {playlist_name[0]} `{duration}`")
 
         # Output results to chat
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(
-            constants.EmbedIcon.MUSIC.value, filename="image.png")
-        embed.set_author(
-            name="Music Playlists", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.MUSIC.value} Music Playlists")
         playlist_output = '\n'.join(playlist_info)
         embed.add_field(
             name=f"{len(playlists)} available",
             value=playlist_output, inline=False)
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
         
     @playlist.command(name='add')
     @perms.check()
@@ -1059,11 +1057,9 @@ class Alexa(commands.Cog):
             return
 
         # Output results to chat
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EmbedIcon.MUSIC.value, filename="image.png")
-        embed.set_author(
-            name=f"Playlist '{playlist_name}' Contents",
-            icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.MUSIC.value} Playlist '{playlist_name}' Contents")
         if playlist[2] and page == 0:
             embed.description = playlist[2]
         formatted_duration = await self._get_duration(total_duration)
@@ -1071,7 +1067,7 @@ class Alexa(commands.Cog):
         embed.add_field(
             name=f"{len(songs)} songs available `{formatted_duration}`",
             value=playlist_music_output, inline=False)
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @playlist.command(name='play')
     @perms.check()

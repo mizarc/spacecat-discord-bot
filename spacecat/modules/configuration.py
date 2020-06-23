@@ -376,16 +376,13 @@ class Configuration(commands.Cog):
             perm_presets_output.append(f"{index + 1}. {preset_name}")
 
         # Output list of presets in a pretty embed
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(
-            constants.EmbedIcon.INFORMATION,
-            filename="image.png")
-        embed.set_author(name="Permission Presets",
-            icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.INFORMATION.value} Permission Presets")
         embed.add_field(
             name=f"{len(perm_presets)} available",
             value='\n'.join(perm_presets_output), inline=False)
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @permpreset.command(name='view')
     @perms.exclusive()
@@ -397,16 +394,13 @@ class Configuration(commands.Cog):
         perms_output = [f'`{perm}`' for perm in perms]
 
         # Output list of permissions in a pretty embed
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(
-            constants.EmbedIcon.INFORMATION,
-            filename="image.png")
-        embed.set_author(name=f"Permissions of {preset}",
-            icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.INFORMATION.value} Permissions of {preset}")
         embed.add_field(
             name=f"{len(perms)} assigned perms",
             value=', '.join(perms_output))
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

@@ -156,11 +156,11 @@ class Administration(commands.Cog):
             await ctx.send(embed=embed)
             return
             
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EmbedIcon.DATABASE.value, filename="image.png")
-        embed.set_author(name="Command Aliases", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.DATABASE.value} Command Aliases")
         embed.add_field(name="Aliases", value='\n'.join(aliases))
-        await ctx.send(embed=embed, file=image)
+        await ctx.send(embed=embed)
 
     @commands.group(invoke_without_command=True)
     @perms.check()
@@ -506,8 +506,9 @@ class Administration(commands.Cog):
         cursor = db.cursor()
 
         # Add user's name to embed
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EmbedIcon.DATABASE.value, filename="image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.DATABASE.value} Group Perms of {group.name}")
         embed.set_author(name=f"Group Perms of {group.name}", icon_url="attachment://image.png")
 
         # Query group's parents
@@ -536,7 +537,7 @@ class Administration(commands.Cog):
                 perms_output.append("`" + perm[0] + "`")
             embed.add_field(name="Permissions", value=', '.join(perms_output), inline=False)
 
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @group.command(name='purge')
     @perms.check()
@@ -711,9 +712,9 @@ class Administration(commands.Cog):
         cursor = db.cursor()
 
         # Add user's name to embed
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EmbedIcon.DATABASE.value, filename="image.png")
-        embed.set_author(name=f"User Perms of {user.name}", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.DATABASE.value} User Perms of {user.name}")
 
         # Output formatted groups list
         groups_output = []
@@ -734,7 +735,7 @@ class Administration(commands.Cog):
                 perms_output.append("`" + perm[0] + "`")
             embed.add_field(name="Permissions", value=', '.join(perms_output), inline=False)
 
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @user.command(name='purge')
     @perms.check()

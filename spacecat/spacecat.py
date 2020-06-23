@@ -92,11 +92,8 @@ class SpaceCat(commands.Cog):
                 # Info on how to use the bot
                 embed = discord.Embed(
                     colour=constants.EMBED_TYPE['info'],
+                    title=f"{constants.EmbedIcon.HELP.value} Hello There!",
                     description="I'm here to provide a useful set a features")
-                image = discord.File(
-                    constants.EmbedIcon.INFORMATION.value, filename="image.png")
-                embed.set_author(
-                    name="Hello There!", icon_url="attachment://image.png")
                 embed.add_field(
                     name=f"Current Prefix",
                     value=f"`{prefix[2]}`", inline=False)
@@ -109,7 +106,7 @@ class SpaceCat(commands.Cog):
                     value=f"[Request them here]"
                     "(https://gitlab.com/Mizarc/spacecat-discord-bot/issues)",
                     inline=False) 
-                await message.channel.send(file=image, embed=embed)
+                await message.channel.send(embed=embed)
                 return
 
     # Commands
@@ -172,14 +169,9 @@ class SpaceCat(commands.Cog):
         disabled = module_handler.get_disabled()
 
         # Create embed
-        image = discord.File(
-            constants.EmbedIcon.INFORMATION.value,
-            filename="image.png")
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['info'])
-        embed.set_author(
-            name=f"{self.bot.user.name} Modules",
-            icon_url="attachment://image.png")
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.INFORMATION.value} {self.bot.user.name} Modules")
 
         # Categorise modules into enabled and disabled fields
         if enabled:
@@ -192,7 +184,7 @@ class SpaceCat(commands.Cog):
                 name="Disabled",
                 value=', '.join(disabled),
                 inline=False)
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @commands.command()
     @perms.exclusive()

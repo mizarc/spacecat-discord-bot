@@ -17,11 +17,10 @@ class Help(commands.Cog):
         """Information on how to use commands"""
         # Generate main help menu
         if command is None:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['info'],
-            description=f"Type !help <module> to list all commands in the module (case sensitive)")
-            image = discord.File(
-                constants.EmbedIcon.HELP.value, filename="image.png")
-            embed.set_author(name="Help Menu", icon_url="attachment://image.png")
+            embed = discord.Embed(
+                colour=constants.EMBED_TYPE['info'],
+                title=f"{constants.EmbedIcon.HELP.value} Help Menu",
+                description=f"Type !help <module> to list all commands in the module (case sensitive)")
 
             # Add all modules to the embed
             modules = self.bot.cogs
@@ -31,7 +30,7 @@ class Help(commands.Cog):
                     embed.add_field(
                         name=f"**{module.qualified_name}**",
                         value=f"{module.description}")
-            await ctx.send(file=image, embed=embed)
+            await ctx.send(embed=embed)
             return
 
         # Check if specified argument is actually a module
@@ -72,13 +71,10 @@ class Help(commands.Cog):
         command_output, command_group_output = await self.get_formatted_command_list(commands)
 
         # Create embed
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'],
-        description=f"Type !help <command> for more info on a command")
-        image = discord.File(
-            constants.EmbedIcon.HELP.value, filename="image.png")
-        embed.set_author(
-            name=f"{module.qualified_name} Commands",
-            icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.HELP.value} {module.qualified_name} Commands",
+            description=f"Type !help <command> for more info on a command")
 
         if command_group_output:
             embed.add_field(
@@ -91,7 +87,7 @@ class Help(commands.Cog):
                 value="\n".join(command_output),
                 inline=False)
             
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     async def command_info(self, ctx, command):
         """Gives you information on how to use a command"""
@@ -117,10 +113,8 @@ class Help(commands.Cog):
         # Add base command entry with command name and usage
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
+            title=f"{constants.EmbedIcon.HELP.value} {parents.title()}{command.name.title()}",
             description=f"```{parents}{command.name}{arguments}```")
-        embed.set_author(
-            name=f"{parents.title()}{command.name.title()}",
-            icon_url="attachment://image.png")
 
         # Get all aliases of command from database
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
@@ -160,9 +154,7 @@ class Help(commands.Cog):
         except AttributeError:
             pass
 
-        image = discord.File(
-            constants.EmbedIcon.HELP.value, filename="image.png")
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     async def filter_commands(self, ctx, commands):
         """Filter out commands that users don't have permission to use"""
