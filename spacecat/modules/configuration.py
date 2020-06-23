@@ -56,9 +56,9 @@ class Configuration(commands.Cog):
 
     @commands.command()
     @perms.exclusive()
-    async def status(self, ctx, statusname):
+    async def status(self, ctx, status_name):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        status = constants.STATUS[statusname]
+        status = discord.Status[status_name]
         activity_name = config['base']['activity_type']
         try:
             activity = discord.Activity(
@@ -67,7 +67,6 @@ class Configuration(commands.Cog):
         except KeyError:
             activity = None
         
-
         # Check if valid status name was used
         if status == None:
             embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"That's not a valid status")
@@ -79,7 +78,7 @@ class Configuration(commands.Cog):
         else:
             await self.bot.change_presence(status=status)
 
-        config['base']['status'] = statusname
+        config['base']['status'] = status_name
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
