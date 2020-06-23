@@ -378,7 +378,7 @@ class Configuration(commands.Cog):
         # Output list of presets in a pretty embed
         embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
         image = discord.File(
-            constants.EMBED_ICON['information'],
+            constants.EmbedIcon.INFORMATION,
             filename="image.png")
         embed.set_author(name="Permission Presets",
             icon_url="attachment://image.png")
@@ -399,7 +399,7 @@ class Configuration(commands.Cog):
         # Output list of permissions in a pretty embed
         embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
         image = discord.File(
-            constants.EMBED_ICON['information'],
+            constants.EmbedIcon.INFORMATION,
             filename="image.png")
         embed.set_author(name=f"Permissions of {preset}",
             icon_url="attachment://image.png")
