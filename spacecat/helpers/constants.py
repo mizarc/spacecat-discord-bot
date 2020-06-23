@@ -16,13 +16,6 @@ def instance_location(instance):
     global DATA_DIR
     DATA_DIR = f'{GLOBAL_DATA_DIR}/{instance}/'
 
-STATUS = {
-    'online': discord.Status.online,
-    'idle': discord.Status.idle,
-    'dnd': discord.Status.dnd,
-    'invisible': discord.Status.invisible
-}
-
 EMBED_TYPE = {
     'accept': discord.Color.from_rgb(67, 160, 71),
     'warn': discord.Color.from_rgb(211, 47, 47),

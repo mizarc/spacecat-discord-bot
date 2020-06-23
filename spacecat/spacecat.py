@@ -55,8 +55,8 @@ class SpaceCat(commands.Cog):
 
         # Change status if specified in config
         try:
-            statusname = config['base']['status']
-            status = constants.STATUS[statusname]
+            status_name = config['base']['status']
+            status = discord.Status[status_name]
             await self.bot.change_presence(status=status)
         except KeyError:
             pass
