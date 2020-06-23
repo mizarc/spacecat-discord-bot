@@ -158,7 +158,7 @@ class Administration(commands.Cog):
             
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.DATABASE.value} Command Aliases")
+            title=f"{constants.EmbedIcon.DATABASE} Command Aliases")
         embed.add_field(name="Aliases", value='\n'.join(aliases))
         await ctx.send(embed=embed)
 
@@ -508,7 +508,7 @@ class Administration(commands.Cog):
         # Add user's name to embed
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.DATABASE.value} Group Perms of {group.name}")
+            title=f"{constants.EmbedIcon.DATABASE} Group Perms of {group.name}")
         embed.set_author(name=f"Group Perms of {group.name}", icon_url="attachment://image.png")
 
         # Query group's parents
@@ -714,7 +714,7 @@ class Administration(commands.Cog):
         # Add user's name to embed
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.DATABASE.value} User Perms of {user.name}")
+            title=f"{constants.EmbedIcon.DATABASE} User Perms of {user.name}")
 
         # Output formatted groups list
         groups_output = []

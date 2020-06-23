@@ -92,7 +92,7 @@ class SpaceCat(commands.Cog):
                 # Info on how to use the bot
                 embed = discord.Embed(
                     colour=constants.EMBED_TYPE['info'],
-                    title=f"{constants.EmbedIcon.HELP.value} Hello There!",
+                    title=f"{constants.EmbedIcon.HELP} Hello There!",
                     description="I'm here to provide a useful set a features")
                 embed.add_field(
                     name=f"Current Prefix",
@@ -171,7 +171,7 @@ class SpaceCat(commands.Cog):
         # Create embed
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.INFORMATION.value} {self.bot.user.name} Modules")
+            title=f"{constants.EmbedIcon.INFORMATION} {self.bot.user.name} Modules")
 
         # Categorise modules into enabled and disabled fields
         if enabled:

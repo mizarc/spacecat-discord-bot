@@ -19,7 +19,7 @@ class Help(commands.Cog):
         if command is None:
             embed = discord.Embed(
                 colour=constants.EMBED_TYPE['info'],
-                title=f"{constants.EmbedIcon.HELP.value} Help Menu",
+                title=f"{constants.EmbedIcon.HELP} Help Menu",
                 description=f"Type !help <module> to list all commands in the module (case sensitive)")
 
             # Add all modules to the embed
@@ -73,7 +73,7 @@ class Help(commands.Cog):
         # Create embed
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.HELP.value} {module.qualified_name} Commands",
+            title=f"{constants.EmbedIcon.HELP} {module.qualified_name} Commands",
             description=f"Type !help <command> for more info on a command")
 
         if command_group_output:
@@ -113,7 +113,7 @@ class Help(commands.Cog):
         # Add base command entry with command name and usage
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
-            title=f"{constants.EmbedIcon.HELP.value} {parents.title()}{command.name.title()}",
+            title=f"{constants.EmbedIcon.HELP} {parents.title()}{command.name.title()}",
             description=f"```{parents}{command.name}{arguments}```")
 
         # Get all aliases of command from database
