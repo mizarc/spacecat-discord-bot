@@ -8,6 +8,7 @@ import toml
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 
+
 class Linkle(commands.Cog):
     """Have channels (dis)appear under certain conditions"""
 
@@ -33,11 +34,11 @@ class Linkle(commands.Cog):
         # Don't do anything if user doesn't switch channels
         if before.channel == after.channel or member.bot:
             return
-        
+
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         db.row_factory = lambda cursor, row: row[0]
         cursor = db.cursor()
-        
+
         try:
             # Show linked text channel if joining a linked voice channel
             query = (member.guild.id, after.channel.id)
@@ -103,7 +104,7 @@ class Linkle(commands.Cog):
         command, this command can be used to unlink the channels stopping it
         from being dynamically shown and hidden on voice connects.
         """
-        # Add linked values to database
+        # Remove linked value from database
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         value = (voice_channel.id, text_channel.id)
@@ -117,6 +118,44 @@ class Linkle(commands.Cog):
             colour=constants.EMBED_TYPE['accept'],
             description=f"Voice channel `{voice_channel.name}` has been "
                 f"unlinked to text channel `{text_channel.name}`")
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    @perms.check()
+    async def listlinkchannels(self, ctx):
+        """
+        List currently linked voice to text channels
+        Channels that have been linked together by the linkchannels command
+        can be viewed here.
+        """
+        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+        cursor = db.cursor()
+        value = (ctx.guild.id,)
+        cursor.execute(
+            'SELECT * FROM linked_channel WHERE server_id=?', value)
+        links = cursor.fetchall()
+        db.close()
+
+        if not links:
+            embed = discord.Embed(
+                colour=constants.EMBED_TYPE['warn'],
+                description="There are no linked channels")
+            return
+
+        links_display_list = []
+        for link in links:
+            voice_channel = self.bot.get_channel(link[1])
+            text_channel = self.bot.get_channel(link[2])
+            links_display_list.append(
+                f"{voice_channel.mention} = {text_channel.mention}")
+        links_display = '\n'.join(links_display_list)
+
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['info'],
+            title="Linked Channels")
+        embed.add_field(
+            name=f"There are `{len(links_display_list)}` links",
+            value=links_display, inline=False)
         await ctx.send(embed=embed)
 
 
