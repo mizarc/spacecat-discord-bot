@@ -92,7 +92,7 @@ class SpaceCat(commands.Cog):
                 # Info on how to use the bot
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.INFO.value,
-                    title=f"{constants.EmbedIcon.HELP} Hello There!",
+                    title=f"{constants.EmbedIcon.DEFAULT} Hello There!",
                     description="I'm here to provide a useful set a features")
                 embed.add_field(
                     name=f"Current Prefix",
@@ -119,7 +119,7 @@ class SpaceCat(commands.Cog):
         bot host and the discord servers.
         """
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value, 
+            colour=constants.EmbedStatus.INFO.value, 
             description=f"{self.bot.user.name} is operational at \
             {int(self.bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
@@ -153,9 +153,9 @@ class SpaceCat(commands.Cog):
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-                colour=constants.EmbedStatus.YES.value,
-                description=f"Global command prefix changed to: `{prefix}`.\n\
-                Servers with prefix override will not be affected.")
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Global command prefix changed to: `{prefix}`.\n\
+            Servers with prefix override will not be affected.")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -220,17 +220,17 @@ class SpaceCat(commands.Cog):
         # Ouput error messages depending on if only one or multiple modules
         if failed_modules and len(modules_to_load) == 1:
             embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
-                    description=f"Failed to reload module \
-                    `{module[8:]}`")
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Failed to reload module \
+                `{module[8:]}`")
             await ctx.send(embed=embed)
             return
         elif failed_modules:
             embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
-                    description=f"Failed to reload module(s): \
-                    `{', '.join(failed_modules)}`. \
-                    Other modules have successfully reloaded")
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Failed to reload module(s): \
+                `{', '.join(failed_modules)}`. \
+                Other modules have successfully reloaded")
             await ctx.send(embed=embed)
             return
         
@@ -320,7 +320,7 @@ class SpaceCat(commands.Cog):
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
+            colour=constants.EmbedStatus.NO.value,
             description=f"Module `{module}` disabled")
         await ctx.send(embed=embed)
 

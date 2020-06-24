@@ -164,7 +164,9 @@ class Alexa(commands.Cog):
             try:
                 channel = ctx.author.voice.channel
             except AttributeError:
-                embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description=f"You must specify or be in a voice channel")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"You must specify or be in a voice channel")
                 await ctx.send(embed=embed)
                 return
 
@@ -176,7 +178,9 @@ class Alexa(commands.Cog):
 
         # Check if the specified voice channel is the same as the current channel
         if channel == ctx.voice_client.channel:
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description=f"I'm already in that voice channel")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"I'm already in that voice channel")
             await ctx.send(embed=embed)
             return
 
@@ -341,7 +345,9 @@ class Alexa(commands.Cog):
         self.skip_toggle[ctx.guild.id] = True
         self.song_queue[ctx.guild.id].clear()
         ctx.voice_client.stop()
-        embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description="Music has been stopped & queue has been cleared")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description="Music has been stopped & queue has been cleared")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -354,7 +360,9 @@ class Alexa(commands.Cog):
 
         # Check if music is paused
         if not ctx.voice_client.is_paused():
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description="Music isn't paused")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Music isn't paused")
             await ctx.send(embed=embed)
             return
 
@@ -362,7 +370,9 @@ class Alexa(commands.Cog):
         ctx.voice_client.resume()
         self.song_start_time[ctx.guild.id] = time() - self.song_pause_time[ctx.guild.id]
         self.song_pause_time[ctx.guild.id] = None
-        embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description="Music has been resumed")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description="Music has been resumed")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -375,7 +385,9 @@ class Alexa(commands.Cog):
 
         # Check if music is paused
         if ctx.voice_client.is_paused():
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description="Music is already paused")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Music is already paused")
             await ctx.send(embed=embed)
             return
 
@@ -385,7 +397,9 @@ class Alexa(commands.Cog):
             + config['music']['disconnect_time']
         ctx.voice_client.pause()
         self.song_pause_time[ctx.guild.id] = time() - self.song_start_time[ctx.guild.id]
-        embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description="Music has been paused")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description="Music has been paused")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -398,7 +412,9 @@ class Alexa(commands.Cog):
 
         # Check if there's queue is empty
         if len(self.song_queue[ctx.guild.id]) <= 1:
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description="There's nothing in the queue after this")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="There's nothing in the queue after this")
             await ctx.send(embed=embed)
             return
 
@@ -441,13 +457,17 @@ class Alexa(commands.Cog):
         # Disable loop if enabled
         if self.loop_toggle[ctx.guild.id]:
             self.loop_toggle[ctx.guild.id] = False
-            embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description=f"Loop disabled")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.NO.value,
+                description=f"Loop disabled")
             await ctx.send(embed=embed)
             return
 
         # Enable loop if disabled
         self.loop_toggle[ctx.guild.id] = True
-        embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description=f"Loop enabled")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Loop enabled")
         await ctx.send(embed=embed)
         return
 
@@ -468,7 +488,9 @@ class Alexa(commands.Cog):
 
         # Notify user if nothing is in the queue
         if not self.song_queue[ctx.guild.id]:
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description=f"There's nothing in the queue right now")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"There's nothing in the queue right now")
             await ctx.send(embed=embed)
             return
 
@@ -632,7 +654,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         duration = await self._get_duration(song.duration)
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
+            colour=constants.EmbedStatus.NO.value,
             description=f"[{song.title}]({song.webpage_url}) "
             f"`{duration}` has been removed from position #{index} "
             "of the queue")
@@ -657,7 +679,7 @@ class Alexa(commands.Cog):
 
         # Output result to chat
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
+            colour=constants.EmbedStatus.NO.value,
             description=f"All songs have been removed from the queue")
         await ctx.send(embed=embed)
 
@@ -701,7 +723,7 @@ class Alexa(commands.Cog):
         db.close()
 
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
+            colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been created")
         await ctx.send(embed=embed)
 
@@ -733,7 +755,7 @@ class Alexa(commands.Cog):
 
         # Output result to chat
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
+            colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been destroyed")
         await ctx.send(embed=embed)
     
@@ -953,7 +975,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         duration = await self._get_duration(selected_song[2])
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
+            colour=constants.EmbedStatus.NO.value,
             description=f"[{selected_song[1]}]({selected_song[3]}) "
             f"`{duration}` has been removed from `{playlist_name}`")
         await ctx.send(embed=embed)
