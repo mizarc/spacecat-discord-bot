@@ -37,21 +37,9 @@ class Linkle(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         db.row_factory = lambda cursor, row: row[0]
         cursor = db.cursor()
-
-        # Hide linked text channel if leaving a linked voice channel
+        
         try:
-            query = (member.guild.id, before.channel.id)
-            cursor.execute('SELECT text_channel FROM linked_channel '
-                'WHERE server_id=? AND voice_channel=?', query)
-            text_channel_id = cursor.fetchall()
-            if text_channel_id:
-                text_channel = await self.bot.fetch_channel(text_channel_id[0])
-                await text_channel.set_permissions(member, read_messages=False)
-        except AttributeError:
-            pass
-
-        # Show linked text channel if joining a linked voice channel
-        try:
+            # Show linked text channel if joining a linked voice channel
             query = (member.guild.id, after.channel.id)
             cursor.execute('SELECT text_channel FROM linked_channel '
                 'WHERE server_id=? AND voice_channel=?', query)
@@ -59,6 +47,24 @@ class Linkle(commands.Cog):
             if text_channel_id:
                 text_channel = await self.bot.fetch_channel(text_channel_id[0])
                 await text_channel.set_permissions(member, read_messages=True)
+        except AttributeError:
+            pass
+
+        try:
+            # Hide linked text channel if leaving a linked voice channel
+            query = (member.guild.id, before.channel.id)
+            cursor.execute('SELECT text_channel FROM linked_channel '
+                'WHERE server_id=? AND voice_channel=?', query)
+            text_channel_id = cursor.fetchall()
+            if text_channel_id:
+                text_channel = await self.bot.fetch_channel(text_channel_id[0])
+                await text_channel.set_permissions(member, read_messages=None)
+                text_channel = await self.bot.fetch_channel(text_channel_id[0])
+                
+                # Remove user from the perm overwrites list entirely if they
+                # do not have any other permission overwrites
+                if text_channel.overwrites_for(member).is_empty():
+                    await text_channel.set_permissions(member, overwrite=None, reason="he was a bitch")
         except AttributeError:
             pass
 
