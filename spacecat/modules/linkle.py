@@ -73,7 +73,7 @@ class Linkle(commands.Cog):
     async def linkchannels(self, ctx, voice_channel: discord.VoiceChannel,
             text_channel: discord.TextChannel):
         """
-        Reveal a text channel when a user joins a voice channel
+        Reveal a text channel when a user joins a voice channel.
         On a user joining a linked voice channel, the associated text
         channel will be revealed to them, and will subsequently hide
         itself when the user leaves. Ensure that the linked text channel
@@ -91,6 +91,32 @@ class Linkle(commands.Cog):
             colour=constants.EMBED_TYPE['accept'],
             description=f"Voice channel `{voice_channel.name}` has been "
                 f"linked to text channel `{text_channel.name}`")
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    @perms.check()
+    async def unlinkchannels(self, ctx, voice_channel: discord.VoiceChannel,
+            text_channel: discord.TextChannel):
+        """
+        Remove the connection between a text and voice channel.
+        If a text and voice channel were linked together with the linkchannels
+        command, this command can be used to unlink the channels stopping it
+        from being dynamically shown and hidden on voice connects.
+        """
+        # Add linked values to database
+        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+        cursor = db.cursor()
+        value = (voice_channel.id, text_channel.id)
+        cursor.execute(
+            'DELETE FROM linked_channel'
+            'WHERE voice_channel=? AND text_channel=?', value)
+        db.commit()
+        db.close()
+
+        embed = discord.Embed(
+            colour=constants.EMBED_TYPE['accept'],
+            description=f"Voice channel `{voice_channel.name}` has been "
+                f"unlinked to text channel `{text_channel.name}`")
         await ctx.send(embed=embed)
 
 
