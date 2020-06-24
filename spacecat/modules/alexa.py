@@ -257,8 +257,10 @@ class Alexa(commands.Cog):
 
         # Query youtube with a search term and grab the title, duration and url
         # of all videos on the page
-        source = requests.get(search_url).text
-        soup = bs(source, 'html.parser')
+        headers = {'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; "\
+            "+http://www.google.com/bot.html)'}
+        source = requests.get(search_url, headers=headers)
+        soup = bs(source.text, 'lxml')
         titles = soup.find_all('a', attrs={'class':'yt-uix-tile-link'})
         durations = soup.find_all('span', attrs={'class':'video-time'})
         urls = []
