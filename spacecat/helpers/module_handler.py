@@ -1,10 +1,9 @@
 import glob
-import os
 
-import discord
 import toml
 
 from spacecat.helpers import constants
+
 
 def get():
     # Get all modules that are present in the folder
@@ -14,6 +13,7 @@ def get():
             continue
         modulelist.append(module[17:-3])
     return modulelist
+
 
 def get_enabled():
     # Fetch all modules and disabled modules
@@ -28,8 +28,9 @@ def get_enabled():
                 enabled_modules.append(module)
     except TypeError:
         enabled_modules = modules
-        
+
     return enabled_modules
+
 
 def get_disabled():
     # Fetch disabled modules from config file
@@ -39,4 +40,3 @@ def get_disabled():
         return disabled_modules
     except (KeyError, FileNotFoundError):
         return None
-

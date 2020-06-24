@@ -1,19 +1,15 @@
 import asyncio
-import configparser
-import logging
 import os
 import shutil
 import sqlite3
-import sys
 import time
 
 import discord
 from discord.ext import commands
+
 import toml
 
-from spacecat.helpers import constants
-import spacecat.helpers.module_handler as module_handler
-import spacecat.helpers.perms as perms
+from spacecat.helpers import constants, module_handler, perms
 
 
 class SpaceCat(commands.Cog):
