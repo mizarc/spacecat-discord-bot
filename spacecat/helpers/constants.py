@@ -1,9 +1,6 @@
 import enum
-import importlib.resources
 
 import discord
-
-from .. import resources
 
 
 MAIN_DIR = __package__.split('.')[0]
@@ -36,20 +33,3 @@ class EmbedIcon(enum.Enum):
 
     def __str__(self):
         return self.value
-
-
-NUM_TO_EMOJI = {
-    1: "1\u20e3",
-    2: "2\u20e3",
-    3: "3\u20e3",
-    4: "4\u20e3",
-    5: "5\u20e3"
-}
-
-EMOJI_TO_NUM = {
-    "1\u20e3": 1,
-    "2\u20e3": 2,
-    "3\u20e3": 3,
-    "4\u20e3": 4,
-    "5\u20e3": 5
-}
