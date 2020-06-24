@@ -1,7 +1,7 @@
-import shutil
 import os
+import shutil
 
-from spacecat.helpers import config, constants
+from spacecat.helpers import constants
 
 
 def get_all():

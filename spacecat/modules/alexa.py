@@ -1,21 +1,23 @@
 import asyncio
-from itertools import islice
-import os
 import random
-import re
-import shutil
 import sqlite3
+from itertools import islice
 from time import gmtime, strftime, time
+
+from bs4 import BeautifulSoup as bs
 
 import discord
 from discord.ext import commands, tasks
-import youtube_dl
-from bs4 import BeautifulSoup as bs
+
 import requests
+
 import toml
+
+import youtube_dl
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
+from spacecat.helpers import reaction_buttons
 
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -162,7 +164,9 @@ class Alexa(commands.Cog):
             try:
                 channel = ctx.author.voice.channel
             except AttributeError:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"You must specify or be in a voice channel")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"You must specify or be in a voice channel")
                 await ctx.send(embed=embed)
                 return
 
@@ -174,7 +178,9 @@ class Alexa(commands.Cog):
 
         # Check if the specified voice channel is the same as the current channel
         if channel == ctx.voice_client.channel:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"I'm already in that voice channel")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"I'm already in that voice channel")
             await ctx.send(embed=embed)
             return
 
@@ -219,13 +225,13 @@ class Alexa(commands.Cog):
                 source, song_name = await self._process_song(ctx, url)
             except VideoTooLongError:
                 embed = discord.Embed(
-                    colour=constants.EMBED_TYPE['warn'],
+                    colour=constants.EmbedStatus.FAIL.value,
                     description="Woops, that video is too long")
                 await ctx.send(embed=embed)
                 return
             except VideoUnavailableError:
                 embed = discord.Embed(
-                    colour=constants.EMBED_TYPE['warn'],
+                    colour=constants.EmbedStatus.FAIL.value,
                     description="Woops, that video is unavailable")
                 await ctx.send(embed=embed)
                 return
@@ -233,7 +239,7 @@ class Alexa(commands.Cog):
             self.song_start_time[ctx.guild.id] = time()
             ctx.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['accept'],
+                colour=constants.EmbedStatus.YES.value,
                 description=f"Now playing {song_name}")
 
         await ctx.send(embed=embed)
@@ -256,8 +262,10 @@ class Alexa(commands.Cog):
 
         # Query youtube with a search term and grab the title, duration and url
         # of all videos on the page
-        source = requests.get(search_url).text
-        soup = bs(source, 'html.parser')
+        headers = {'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; "\
+            "+http://www.google.com/bot.html)'}
+        source = requests.get(search_url, headers=headers)
+        soup = bs(source.text, 'lxml')
         titles = soup.find_all('a', attrs={'class':'yt-uix-tile-link'})
         durations = soup.find_all('span', attrs={'class':'video-time'})
         urls = []
@@ -267,7 +275,7 @@ class Alexa(commands.Cog):
         # Alert user if search term returns no results
         if not titles:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Search query returned no results")
             await ctx.send(embed=embed)
             return
@@ -286,19 +294,19 @@ class Alexa(commands.Cog):
             results_format.append(f"{index}. [{title.get_text()}]({url}) `{duration.get_text()}`")
 
         # Output results to chat
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EMBED_ICON["music"], filename="image.png")
-        embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.MUSIC} Search Query")
         results_output = '\n'.join(results_format)
         embed.add_field(
             name=f"Results for '{search}'",
             value=results_output, inline=False)
-        msg = await ctx.send(file=image, embed=embed)
+        msg = await ctx.send(embed=embed)
 
         # Add reaction button for every result
         reactions = []
         for index in range(len(results_format)):
-            emoji = constants.NUM_TO_EMOJI[index + 1]
+            emoji = reaction_buttons.number_to_emoji(index + 1)
             await msg.add_reaction(emoji)
             reactions.append(emoji)
 
@@ -312,7 +320,7 @@ class Alexa(commands.Cog):
                 'reaction_add', timeout=30.0, check=reaction_check)
         except asyncio.TimeoutError:
             embed = discord.Embed(
-                    colour=constants.EMBED_TYPE['warn'],
+                    colour=constants.EmbedStatus.FAIL.value,
                     description=f"Song selection timed out.")
             embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
             await msg.clear_reactions()
@@ -320,7 +328,7 @@ class Alexa(commands.Cog):
             return
 
         # Play selected song
-        number = constants.EMOJI_TO_NUM[str(reaction)]
+        number = reaction_buttons.emoji_to_number(str(reaction))
         selected_song = urls[number - 1]
         await ctx.invoke(self.play, url=selected_song)
         
@@ -337,7 +345,9 @@ class Alexa(commands.Cog):
         self.skip_toggle[ctx.guild.id] = True
         self.song_queue[ctx.guild.id].clear()
         ctx.voice_client.stop()
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description="Music has been stopped & queue has been cleared")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description="Music has been stopped & queue has been cleared")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -350,7 +360,9 @@ class Alexa(commands.Cog):
 
         # Check if music is paused
         if not ctx.voice_client.is_paused():
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Music isn't paused")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Music isn't paused")
             await ctx.send(embed=embed)
             return
 
@@ -358,7 +370,9 @@ class Alexa(commands.Cog):
         ctx.voice_client.resume()
         self.song_start_time[ctx.guild.id] = time() - self.song_pause_time[ctx.guild.id]
         self.song_pause_time[ctx.guild.id] = None
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description="Music has been resumed")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description="Music has been resumed")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -371,7 +385,9 @@ class Alexa(commands.Cog):
 
         # Check if music is paused
         if ctx.voice_client.is_paused():
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Music is already paused")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Music is already paused")
             await ctx.send(embed=embed)
             return
 
@@ -381,7 +397,9 @@ class Alexa(commands.Cog):
             + config['music']['disconnect_time']
         ctx.voice_client.pause()
         self.song_pause_time[ctx.guild.id] = time() - self.song_start_time[ctx.guild.id]
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description="Music has been paused")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description="Music has been paused")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -394,7 +412,9 @@ class Alexa(commands.Cog):
 
         # Check if there's queue is empty
         if len(self.song_queue[ctx.guild.id]) <= 1:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="There's nothing in the queue after this")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="There's nothing in the queue after this")
             await ctx.send(embed=embed)
             return
 
@@ -409,7 +429,7 @@ class Alexa(commands.Cog):
         # Alert if queue is empty
         if len(self.song_queue[ctx.guild.id]) < 2:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"There's nothing in the queue to shuffle")
             await ctx.send(embed=embed)
             return
@@ -421,7 +441,7 @@ class Alexa(commands.Cog):
 
         # Output result to chat
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Queue has been shuffled")
         await ctx.send(embed=embed)
         return
@@ -437,13 +457,17 @@ class Alexa(commands.Cog):
         # Disable loop if enabled
         if self.loop_toggle[ctx.guild.id]:
             self.loop_toggle[ctx.guild.id] = False
-            embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Loop disabled")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.NO.value,
+                description=f"Loop disabled")
             await ctx.send(embed=embed)
             return
 
         # Enable loop if disabled
         self.loop_toggle[ctx.guild.id] = True
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Loop enabled")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Loop enabled")
         await ctx.send(embed=embed)
         return
 
@@ -464,14 +488,16 @@ class Alexa(commands.Cog):
 
         # Notify user if nothing is in the queue
         if not self.song_queue[ctx.guild.id]:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"There's nothing in the queue right now")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"There's nothing in the queue right now")
             await ctx.send(embed=embed)
             return
 
         # Output first in queue as currently playing
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EMBED_ICON["music"], filename="image.png")
-        embed.set_author(name="Music Queue", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.MUSIC} Music Queue")
         duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
         if not self.song_pause_time[ctx.guild.id]:
             current_time = int(time() - self.song_start_time[ctx.guild.id])
@@ -513,7 +539,7 @@ class Alexa(commands.Cog):
             # Alert if no songs are on the specified page
             if page > 0 and not queue_info:
                 embed = discord.Embed(
-                    colour=constants.EMBED_TYPE['warn'],
+                    colour=constants.EmbedStatus.FAIL.value,
                     description=f"There are no songs on that page")
                 await ctx.send(embed=embed)
                 return
@@ -528,7 +554,7 @@ class Alexa(commands.Cog):
             embed.add_field(
                 name=f"Queue  `{duration}`",
                 value=queue_output, inline=False)
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @queue.command(name='move')
     @perms.check()
@@ -545,7 +571,7 @@ class Alexa(commands.Cog):
             song = self.song_queue[ctx.guild.id][original_pos]
         except IndexError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"There's no song at that position")
             await ctx.send(embed=embed)
             return
@@ -553,7 +579,7 @@ class Alexa(commands.Cog):
         # Move song into new position in queue
         if not 1 <= new_pos < len(self.song_queue[ctx.guild.id]):
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"You can't move the song into that position")
             await ctx.send(embed=embed)
             return
@@ -563,7 +589,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         duration = await self._get_duration(song.duration)
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"[{song.title}]({song.webpage_url}) "
             f"`{duration}` has been moved from position #{original_pos} "
             f"to position #{new_pos}")
@@ -576,7 +602,7 @@ class Alexa(commands.Cog):
         # Alert if too many songs in queue
         if len(self.song_queue[ctx.guild.id]) > 100:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Too many songs in queue. Calm down.")
             await ctx.send(embed=embed)
             return
@@ -586,19 +612,19 @@ class Alexa(commands.Cog):
             source, song_name = await self._process_song(ctx, url)
         except VideoTooLongError:
                 embed = discord.Embed(
-                    colour=constants.EMBED_TYPE['warn'],
+                    colour=constants.EmbedStatus.FAIL.value,
                     description="Woops, that video is too long")
                 await ctx.send(embed=embed)
                 return
         except VideoUnavailableError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Woops, that video is unavailable")
             await ctx.send(embed=embed)
             return
         self.song_queue[ctx.guild.id].append(source)
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Added {song_name} to " 
             f"#{len(self.song_queue[ctx.guild.id]) - 1} in queue")
         await ctx.send(embed=embed)
@@ -620,7 +646,7 @@ class Alexa(commands.Cog):
             self.song_queue[ctx.guild.id].pop(index)
         except IndexError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"That's an invalid queue position")
             await ctx.send(embed=embed)
             return
@@ -628,7 +654,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         duration = await self._get_duration(song.duration)
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.NO.value,
             description=f"[{song.title}]({song.webpage_url}) "
             f"`{duration}` has been removed from position #{index} "
             "of the queue")
@@ -645,7 +671,7 @@ class Alexa(commands.Cog):
         # Try to remove all but the currently playing song from the queue
         if len(self.song_queue[ctx.guild.id]) < 2:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"There's nothing in the queue to clear")
             await ctx.send(embed=embed)
             return
@@ -653,7 +679,7 @@ class Alexa(commands.Cog):
 
         # Output result to chat
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.NO.value,
             description=f"All songs have been removed from the queue")
         await ctx.send(embed=embed)
 
@@ -671,7 +697,7 @@ class Alexa(commands.Cog):
         # Limit playlist name to 30 chars
         if len(playlist_name) > 30:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist name is too long")
             await ctx.send(embed=embed)
             return
@@ -680,7 +706,7 @@ class Alexa(commands.Cog):
         try:
             await self._get_playlist(ctx, playlist_name)
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` already exists")
             await ctx.send(embed=embed)
             return
@@ -697,7 +723,7 @@ class Alexa(commands.Cog):
         db.close()
 
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been created")
         await ctx.send(embed=embed)
 
@@ -710,7 +736,7 @@ class Alexa(commands.Cog):
             playlist = await self._get_playlist(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
@@ -729,7 +755,7 @@ class Alexa(commands.Cog):
 
         # Output result to chat
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been destroyed")
         await ctx.send(embed=embed)
     
@@ -742,7 +768,7 @@ class Alexa(commands.Cog):
             playlist = await self._get_playlist(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
@@ -750,7 +776,7 @@ class Alexa(commands.Cog):
         # Limit playlist description to 300 chars
         if len(playlist_name) > 300:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist name is too long")
             await ctx.send(embed=embed)
             return
@@ -766,7 +792,7 @@ class Alexa(commands.Cog):
 
         # Output result to chat
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Description set for playlist `{playlist_name}`")
         await ctx.send(embed=embed)
 
@@ -779,7 +805,7 @@ class Alexa(commands.Cog):
             playlist = await self._get_playlist(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
@@ -795,7 +821,7 @@ class Alexa(commands.Cog):
 
         # Output result to chat
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Playlist `{playlist}` has been renamed to "
             f"`{new_name}`")
         await ctx.send(embed=embed)
@@ -808,7 +834,7 @@ class Alexa(commands.Cog):
         playlists = await self._get_playlist(ctx)
         if not playlists:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"There are no playlists available")
             await ctx.send(embed=embed)
             return
@@ -830,16 +856,14 @@ class Alexa(commands.Cog):
                 f"{index + 1}. {playlist_name[0]} `{duration}`")
 
         # Output results to chat
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(
-            constants.EMBED_ICON["music"], filename="image.png")
-        embed.set_author(
-            name="Music Playlists", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.MUSIC} Music Playlists")
         playlist_output = '\n'.join(playlist_info)
         embed.add_field(
             name=f"{len(playlists)} available",
             value=playlist_output, inline=False)
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
         
     @playlist.command(name='add')
     @perms.check()
@@ -850,7 +874,7 @@ class Alexa(commands.Cog):
             playlist = await self._get_playlist(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
@@ -858,7 +882,7 @@ class Alexa(commands.Cog):
         songs = await self._get_songs(ctx, playlist_name)
         if len(songs) > 100:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="There's too many songs in the playlist. Remove"
                 "some songs to be able to add more")
             await ctx.send(embed=embed)
@@ -869,13 +893,13 @@ class Alexa(commands.Cog):
             source, _ = await self._process_song(ctx, url)
         except VideoTooLongError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Woops, that video is too long")
             await ctx.send(embed=embed)
             return
         except VideoUnavailableError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Woops, that video is unavailable")
             await ctx.send(embed=embed)
             return
@@ -907,7 +931,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         duration = await self._get_duration(source.duration)
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Added [{source.title}]({source.webpage_url}) "
             f"`{duration}` to position #{len(songs) + 1} "
             f"in playlist `{playlist_name}`")
@@ -922,7 +946,7 @@ class Alexa(commands.Cog):
             songs = await self._get_songs(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
             await ctx.send(embed=embed)
             return
@@ -951,7 +975,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         duration = await self._get_duration(selected_song[2])
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.NO.value,
             description=f"[{selected_song[1]}]({selected_song[3]}) "
             f"`{duration}` has been removed from `{playlist_name}`")
         await ctx.send(embed=embed)
@@ -965,7 +989,7 @@ class Alexa(commands.Cog):
             songs = await self._get_songs(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` does not exist")
             await ctx.send(embed=embed)
             return
@@ -1007,7 +1031,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         duration = await self._get_duration(selected_song[2])
         embed = discord.Embed(
-                colour=constants.EMBED_TYPE['accept'],
+                colour=constants.EmbedStatus.YES.value,
                 description=f"[{selected_song[1]}]({selected_song[3]}) "
                 f"`{duration}` has been moved to position #{new_pos} "
                 f"in playlist `{playlist_name}`")
@@ -1023,7 +1047,7 @@ class Alexa(commands.Cog):
             songs = await self._get_songs(ctx, playlist_name)
         except ValueError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` does not exist")
             await ctx.send(embed=embed)
             return
@@ -1053,17 +1077,15 @@ class Alexa(commands.Cog):
         # Alert if no songs are on the specified page
         if not formatted_songs:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"There are no songs on that page")
             await ctx.send(embed=embed)
             return
 
         # Output results to chat
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EMBED_ICON["music"], filename="image.png")
-        embed.set_author(
-            name=f"Playlist '{playlist_name}' Contents",
-            icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}' Contents")
         if playlist[2] and page == 0:
             embed.description = playlist[2]
         formatted_duration = await self._get_duration(total_duration)
@@ -1071,7 +1093,7 @@ class Alexa(commands.Cog):
         embed.add_field(
             name=f"{len(songs)} songs available `{formatted_duration}`",
             value=playlist_music_output, inline=False)
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @playlist.command(name='play')
     @perms.check()
@@ -1090,7 +1112,7 @@ class Alexa(commands.Cog):
             songs = await self._get_songs(ctx, playlist)
         except TypeError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist}` does not exist")
             await ctx.send(embed=embed)
             return
@@ -1120,13 +1142,13 @@ class Alexa(commands.Cog):
                 self.song_start_time[ctx.guild.id] = time()
                 ctx.voice_client.play(source, after=lambda e: self._next(ctx))
                 embed = discord.Embed(
-                    colour=constants.EMBED_TYPE['accept'],
+                    colour=constants.EmbedStatus.YES.value,
                     description=f"Now playing playlist `{playlist}`")
                 await ctx.send(embed=embed)
                 break
         else:
             embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Added playlist `{playlist}` to queue")
             await ctx.send(embed=embed)
 
@@ -1150,7 +1172,7 @@ class Alexa(commands.Cog):
             for index, song in enumerate(unavailable_songs):
                 song_format = "\n".join(unavailable_songs)
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"These songs in playlist `{playlist}` "
                 f"are unavailable: \n{song_format}")
             await ctx.send(embed=embed)
@@ -1186,7 +1208,7 @@ class Alexa(commands.Cog):
             toml.dump(config, config_file)
 
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Music player auto disconnect {result_text}")
         await ctx.send(embed=embed)
 
@@ -1207,7 +1229,7 @@ class Alexa(commands.Cog):
             toml.dump(config, config_file)
 
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Music player auto disconnect timer set to "
                 f"{seconds} seconds")
         await ctx.send(embed=embed)
@@ -1280,7 +1302,7 @@ class Alexa(commands.Cog):
             return True
         except KeyError:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="I need to be in a voice channel to execute music "
                 "commands. \nUse **!join** or **!play** to connect me to a channel")
             await ctx.send(embed=embed)
