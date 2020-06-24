@@ -73,7 +73,7 @@ class PoliteCat(commands.Cog):
         if self.webp_convert:
             self.webp_convert = False
             embed = discord.Embed(
-                colour=constants.EmbedStatus.YES.value,
+                colour=constants.EmbedStatus.NO.value,
                 description="Automatic WebP conversion has been disabled")
             await ctx.send(embed=embed)
 
@@ -88,7 +88,9 @@ class PoliteCat(commands.Cog):
     @perms.check()
     async def reactcfg(self, ctx):
         "Configure available reaction images"
-        embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description=f"Please specify a valid subcommand: `add/remove`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description=f"Please specify a valid subcommand: `add/remove`")
         await ctx.send(embed=embed) 
 
     @reactcfg.command()
@@ -99,7 +101,9 @@ class PoliteCat(commands.Cog):
         try:
             image = ctx.message.attachments[0]
         except IndexError:
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description=f"There are no attachments in that message")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"There are no attachments in that message")
             await ctx.send(embed=embed) 
             return
 
@@ -110,7 +114,9 @@ class PoliteCat(commands.Cog):
         # Cancel if name already exists
         reactions = await self._get_reactions()
         if name in reactions:
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description=f"Reaction name already in use")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Reaction name already in use")
             await ctx.send(embed=embed)
             return
 
@@ -125,7 +131,9 @@ class PoliteCat(commands.Cog):
                             "webp, png, jpg, bmp or gif")
             return
         
-        embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description=f"Added {name} to reactions")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Added {name} to reactions")
         await ctx.send(embed=embed)
         return
 
@@ -136,7 +144,9 @@ class PoliteCat(commands.Cog):
         # Cancel if image name exists
         reactions = await self._get_reactions()
         if name not in reactions:
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description="Reaction image does not exist")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Reaction image does not exist")
             await ctx.send(embed=embed)
             return
 
@@ -146,7 +156,9 @@ class PoliteCat(commands.Cog):
         except FileNotFoundError:
             os.remove(f"{constants.DATA_DIR}reactions/{name}.gif")
 
-        embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description=f"Removed {name} from reactions")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.NO.value,
+            description=f"Removed {name} from reactions")
         await ctx.send(embed=embed) 
         return
             
@@ -159,7 +171,9 @@ class PoliteCat(commands.Cog):
 
         # Alert if no reactions exist
         if not reactions:
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description="No reactions are available")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="No reactions are available")
             await ctx.send(embed=embed)
             return
 

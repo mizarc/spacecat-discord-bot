@@ -69,7 +69,9 @@ class Configuration(commands.Cog):
         
         # Check if valid status name was used
         if status == None:
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description=f"That's not a valid status")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"That's not a valid status")
             await ctx.send(embed=embed)
             return
 
@@ -94,7 +96,9 @@ class Configuration(commands.Cog):
             status = None
 
         if activity_type == None:
-            embed = discord.Embed(colour=constants.EmbedStatus.FAIL.value, description=f"That's not a valid activity type")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"That's not a valid activity type")
             await ctx.send(embed=embed)
             return
 
@@ -170,7 +174,7 @@ class Configuration(commands.Cog):
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
+            colour=constants.EmbedStatus.NO.value,
             description=f"Deleted permission preset `{name}`")
         await ctx.send(embed=embed)
 
@@ -289,7 +293,7 @@ class Configuration(commands.Cog):
             else:
                 config['permissions'][preset].remove(perm)
                 embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
+                    colour=constants.EmbedStatus.NO.value,
                     description=f"Wildcard permission removed from preset "
                     f"`{preset}`")
                 await ctx.send(embed=embed) 
@@ -307,7 +311,7 @@ class Configuration(commands.Cog):
             # Remove command group permission if it doesn't already exist
             elif cog and perm not in config['permissions'][preset]:
                 embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
+                    colour=constants.EmbedStatus.FAIL.value,
                     description=f"`{preset}` doesn't have the "
                     f"`{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed)
@@ -316,7 +320,7 @@ class Configuration(commands.Cog):
                 config['permissions'][preset].remove(
                     f"{cog.qualified_name}.*")
                 embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
+                    colour=constants.EmbedStatus.NO.value,
                     description=f"Permission group `{cog.qualified_name}` "
                     f"removed from preset `{preset}`")
                 await ctx.send(embed=embed)
@@ -357,7 +361,7 @@ class Configuration(commands.Cog):
                 config['permissions'][preset].remove(
                     f"{command.cog.qualified_name}.{command_perm}")
                 embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
+                    colour=constants.EmbedStatus.NO.value,
                     description=f"Command `{command.cog.qualified_name}."
                     f"{command_perm}` removed from preset `{preset}`")
                 await ctx.send(embed=embed)
