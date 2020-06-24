@@ -1,10 +1,9 @@
-from itertools import islice
-import configparser
-import os
 import sqlite3
+from itertools import islice
 
 import discord
 from discord.ext import commands
+
 import toml
 
 from spacecat.helpers import constants
@@ -64,7 +63,9 @@ class Administration(commands.Cog):
     @perms.check()
     async def alias(self, ctx):
         """Configure command aliases"""
-        embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Please specify a valid subcommand: `add/remove`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description="Please specify a valid subcommand: `add/remove`")
         await ctx.send(embed=embed)
 
     @alias.command(name='add')
@@ -73,14 +74,18 @@ class Administration(commands.Cog):
         """Allows a command to be executed with an alias"""        
         # Limit alias to 15 chars
         if len(alias) > 15:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"Alias name is too long")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Alias name is too long")
             await ctx.send(embed=embed)
             return
 
         # Alert user if alias is already in use
         check = await self._alias_check(ctx, alias)
         if check:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"Alias `{alias}` is already assigned to `{check}`")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Alias `{alias}` is already assigned to `{check}`")
             await ctx.send(embed=embed)
             return
 
@@ -92,7 +97,9 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
 
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Alias `{alias}` has been assigned to `{command}`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Alias `{alias}` has been assigned to `{command}`")
         await ctx.send(embed=embed)
 
     @alias.command(name='remove')
@@ -102,7 +109,9 @@ class Administration(commands.Cog):
         # Alert user if alias is not in use
         check = await self._alias_check(ctx, alias)
         if not check:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"Alias `{alias}` hasn't been assigned to anything")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Alias `{alias}` hasn't been assigned to anything")
             await ctx.send(embed=embed)
             return
 
@@ -114,7 +123,9 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
 
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Alias `{alias}` has been removed`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.NO.value,
+            description=f"Alias `{alias}` has been removed`")
         await ctx.send(embed=embed)
 
     @alias.command(name='list')
@@ -124,13 +135,17 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id,)
-        cursor.execute("SELECT alias, command FROM command_alias WHERE server_id=?", value)
+        cursor.execute(
+            "SELECT alias, command FROM command_alias WHERE server_id=?",
+            value)
         result = cursor.fetchall()
         db.close()
 
         # Tell user if no aliases exist
         if not result:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"No aliases currently exist")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"No aliases currently exist")
             await ctx.send(embed=embed)
             return
 
@@ -151,22 +166,24 @@ class Administration(commands.Cog):
 
         if not aliases:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"There are no aliases on that page")
             await ctx.send(embed=embed)
             return
             
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EMBED_ICON["database"], filename="image.png")
-        embed.set_author(name="Command Aliases", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.DATABASE} Command Aliases")
         embed.add_field(name="Aliases", value='\n'.join(aliases))
-        await ctx.send(embed=embed, file=image)
+        await ctx.send(embed=embed)
 
     @commands.group(invoke_without_command=True)
     @perms.check()
     async def perm(self, ctx):
         """Configure server permissions"""
-        embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Please specify a valid subcommand: `group/user`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description="Please specify a valid subcommand: `group/user`")
         await ctx.send(embed=embed)
 
     @perm.command(name='advanced')
@@ -192,14 +209,14 @@ class Administration(commands.Cog):
         if advanced[0] == 1:
             value = (False, ctx.guild.id)
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['accept'],
+                colour=constants.EmbedStatus.NO.value,
                 description="Advanced permission mode has been disabled. The"
                 "bot's default permissions are now in effect")
             await ctx.send(embed=embed)
         else:
             value = (True, ctx.guild.id)
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['accept'],
+                colour=constants.EmbedStatus.YES.value,
                 description="Advanced permission mode has been enabled. "
                 "Default permission assignment must be configured manually "
                 "so that users are able to use the bot's functions")
@@ -231,7 +248,9 @@ class Administration(commands.Cog):
     @perms.check()
     async def group(self, ctx):
         """Configure server permissions"""
-        embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
         await ctx.send(embed=embed)
 
     @group.command(name='preset')
@@ -247,7 +266,7 @@ class Administration(commands.Cog):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         if preset not in config['permissions']:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Unknown permission preset.")
             await ctx.send(embed=embed)
             return
@@ -263,7 +282,7 @@ class Administration(commands.Cog):
         result = cursor.fetchone()
         if result:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Group {group.name} already has that preset")
             await ctx.send(embed=embed)
             return
@@ -273,7 +292,7 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Group {group.name} now uses the `{preset}` preset")
         await ctx.send(embed=embed)
 
@@ -291,7 +310,7 @@ class Administration(commands.Cog):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         if preset not in config['permissions']:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Unknown permission preset.")
             await ctx.send(embed=embed)
             return
@@ -307,7 +326,7 @@ class Administration(commands.Cog):
         result = cursor.fetchone()
         if not result:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Group {group.name} doesn't have that preset")
             await ctx.send(embed=embed)
             return
@@ -319,7 +338,7 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.NO.value,
             description=f"Group {group.name} no longer uses preset `{preset}`")
         await ctx.send(embed=embed)
 
@@ -335,10 +354,14 @@ class Administration(commands.Cog):
             exists = await self._wildcard_check(ctx, 'group', group.id)
             if exists is False:
                 value = (ctx.guild.id, group.id, "*")   
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Wildcard permission added to group `{group.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Wildcard permission added to group `{group.name}`")
                 skip = True
             else:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Group `{group.name}` already has the wildcard permission")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"Group `{group.name}` already has the wildcard permission")
                 await ctx.send(embed=embed) 
                 return
 
@@ -351,11 +374,15 @@ class Administration(commands.Cog):
             # Check if non-wildcard permission has been chosen
             elif cog and not exists and perm_values[1] == '*':
                 value = (ctx.guild.id, group.id, f"{cog.qualified_name}.*")
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Permission group `{cog.qualified_name}` added to group `{group.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Permission group `{cog.qualified_name}` added to group `{group.name}`")
                 skip = True
             # Already existing wildcard permission
             elif cog and exists:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"`{group.name}` already has the `{cog.qualified_name}` permission group")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"`{group.name}` already has the `{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed) 
                 return
 
@@ -365,15 +392,21 @@ class Administration(commands.Cog):
             command, exists = await self._command_check(ctx, 'group', group.id, perm, cog)
             if command and not exists:
                 value = (ctx.guild.id, group.id, f"{command.cog.qualified_name}.{perm}")
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Command `{perm}` added to group `{group.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Command `{perm}` added to group `{group.name}`")
                 skip = True
             elif command and exists:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"{group.name} already has that permission")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"{group.name} already has that permission")
                 await ctx.send(embed=embed) 
                 return
 
         if not skip:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"Permission does not exist. Please enter a valid permission")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Permission does not exist. Please enter a valid permission")
             await ctx.send(embed=embed) 
             return
 
@@ -398,10 +431,14 @@ class Administration(commands.Cog):
             exists = await self._wildcard_check(ctx, 'group', group.id)
             if exists:
                 query = (ctx.guild.id, group.id, "*")   
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Wildcard permission removed from group `{group.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.NO.value,
+                    description=f"Wildcard permission removed from group `{group.name}`")
                 skip = True
             else:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Group `{group.name}` doesn't have the wildcard permission")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"Group `{group.name}` doesn't have the wildcard permission")
                 await ctx.send(embed=embed) 
                 return
 
@@ -414,11 +451,15 @@ class Administration(commands.Cog):
             # Check if permission group wildcard
             elif cog and exists and perm_values[1] == '*':
                 query = (ctx.guild.id, group.id, f"{cog.qualified_name}.*")
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Permission group `{cog.qualified_name}` removed from group `{group.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.NO.value,
+                    description=f"Permission group `{cog.qualified_name}` removed from group `{group.name}`")
                 skip = True
             # Check if group doesn't have the group permission
             elif cog and not exists:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"`{group.name}` doesn't have the `{cog.qualified_name}` permission group")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"`{group.name}` doesn't have the `{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed) 
                 return
 
@@ -428,15 +469,21 @@ class Administration(commands.Cog):
             command, exists = await self._command_check(ctx, 'group', group.id, perm, cog)
             if command and exists:
                 query = (ctx.guild.id, group.id, f"{command.cog.qualified_name}.{perm}")
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Command `{perm}` removed from group `{group.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.NO.value,
+                    description=f"Command `{perm}` removed from group `{group.name}`")
                 skip = True
             elif command and not exists:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"{group.name} doesn't have that permission")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"{group.name} doesn't have that permission")
                 await ctx.send(embed=embed) 
                 return
 
         if not skip:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"Permission does not exist. Please enter a valid permission")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Permission does not exist. Please enter a valid permission")
             await ctx.send(embed=embed) 
             return
 
@@ -455,7 +502,9 @@ class Administration(commands.Cog):
         # Open server's config file
         check = await self._parent_query(ctx, child_group.id, parent_group.id)
         if check:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Cannot add parent to group as selected parent is already a parent of group")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Cannot add parent to group as selected parent is already a parent of group")
             await ctx.send(embed=embed)
             return
 
@@ -467,14 +516,18 @@ class Administration(commands.Cog):
         check = cursor.fetchall()
         if check:
             db.close()
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Cannot add parent to group as selected parent is a child of group")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Cannot add parent to group as selected parent is a child of group")
             await ctx.send(embed=embed)  
             return
 
         # Remove permission from database and notify user
         values = (ctx.guild.id, parent_group.id, child_group.id)
         cursor.execute("INSERT INTO group_parent VALUES (?,?,?)", values)
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"`{child_group.name}` now inherits permissions from `{parent_group.name}`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"`{child_group.name}` now inherits permissions from `{parent_group.name}`")
         await ctx.send(embed=embed)  
         db.commit()
         db.close()
@@ -485,7 +538,9 @@ class Administration(commands.Cog):
         # Open server's config file
         check = await self._parent_query(ctx, child_group.id, parent_group.id)
         if not check:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Cannot remove parent from group as selected parent isn't a parent of group")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Cannot remove parent from group as selected parent isn't a parent of group")
             await ctx.send(embed=embed) 
             return
 
@@ -494,7 +549,9 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         values = (ctx.guild.id, parent_group.id, child_group.id)
         cursor.execute("DELETE FROM group_parent WHERE server_id=? AND parent_id=? AND child_id=?", values)
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"`{child_group.name}` is no longer inheriting permissions from `{parent_group.name}`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.NO.value,
+            description=f"`{child_group.name}` is no longer inheriting permissions from `{parent_group.name}`")
         await ctx.send(embed=embed) 
         db.commit()
         db.close()
@@ -506,9 +563,12 @@ class Administration(commands.Cog):
         cursor = db.cursor()
 
         # Add user's name to embed
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EMBED_ICON["database"], filename="image.png")
-        embed.set_author(name=f"Group Perms of {group.name}", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.DATABASE} Group Perms of {group.name}")
+        embed.set_author(
+            name=f"Group Perms of {group.name}",
+            icon_url="attachment://image.png")
 
         # Query group's parents
         query = (ctx.guild.id, group.id)
@@ -536,7 +596,7 @@ class Administration(commands.Cog):
                 perms_output.append("`" + perm[0] + "`")
             embed.add_field(name="Permissions", value=', '.join(perms_output), inline=False)
 
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @group.command(name='purge')
     @perms.check()
@@ -546,18 +606,22 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (ctx.guild.id, role.id)
         cursor.execute(
-                'SELECT perm FROM group_permission WHERE server_id=? AND group_id=?', query)
+            'SELECT perm FROM group_permission WHERE server_id=? AND group_id=?', query)
         perms = cursor.fetchall()
 
         # Notify if specified user doesn't have any perms to clear
         if not perms:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"{role.name} doesn't have any permissions")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"{role.name} doesn't have any permissions")
             await ctx.send(embed=embed) 
             return
 
         # Clear all permissions
         cursor.execute("DELETE FROM group_permission WHERE server_id=? AND group_id=?", query)
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"All permissions cleared from `{role.name}`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.NO.value,
+            description=f"All permissions cleared from `{role.name}`")
         await ctx.send(embed=embed) 
         db.commit()
         db.close()
@@ -566,7 +630,9 @@ class Administration(commands.Cog):
     @perms.check()
     async def user(self, ctx):
         """Configure server permissions"""
-        embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description="Please enter a valid subcommand: `add/remove/info`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description="Please enter a valid subcommand: `add/remove/info`")
         await ctx.send(embed=embed) 
 
     @user.command(name='add')
@@ -581,10 +647,14 @@ class Administration(commands.Cog):
             exists = await self._wildcard_check(ctx, 'user', user.id)
             if exists is False:
                 value = (ctx.guild.id, user.id, "*")   
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Wildcard permission added to user `{user.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Wildcard permission added to user `{user.name}`")
                 skip = True
             else:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"User `{user.name}` already has the wildcard permission")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"User `{user.name}` already has the wildcard permission")
                 await ctx.send(embed=embed) 
                 return
 
@@ -599,12 +669,16 @@ class Administration(commands.Cog):
             # Check if non-wildcard permission has been chosen
             elif cog and not exists and perm_values[1] == '*':
                 value = (ctx.guild.id, user.id, f"{cog.qualified_name}.*")
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Permission group `{cog.qualified_name}` added to user `{user.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Permission group `{cog.qualified_name}` added to user `{user.name}`")
                 skip = True
 
             # Already existing wildcard permission
             elif cog and exists:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"{user.name} already has the `{cog.qualified_name}` permission group")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"{user.name} already has the `{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed) 
                 return
 
@@ -616,18 +690,24 @@ class Administration(commands.Cog):
             # Add if user doesn't have command permission
             if command and not exists:
                 value = (ctx.guild.id, user.id, f"{command.cog.qualified_name}.{perm}")
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Command `{perm}` added to user `{user.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Command `{perm}` added to user `{user.name}`")
                 skip = True
 
             # Notify if user already has permission
             elif command and exists:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"`{user.name}` already has that permission")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"`{user.name}` already has that permission")
                 await ctx.send(embed=embed) 
                 return
 
         # Notify if permission doesn't exist
         if not skip:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"Permission does not exist. Please enter a valid permission")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Permission does not exist. Please enter a valid permission")
             await ctx.send(embed=embed) 
             return
 
@@ -652,10 +732,14 @@ class Administration(commands.Cog):
             exists = await self._wildcard_check(ctx, 'user', user.id)
             if exists:
                 query = (ctx.guild.id, user.id, "*")   
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Wildcard permission removed from user `{user.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.NO.value,
+                    description=f"Wildcard permission removed from user `{user.name}`")
                 skip = True
             else:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"User `{user.name}` doesn't have the wildcard permission")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"User `{user.name}` doesn't have the wildcard permission")
                 await ctx.send(embed=embed) 
                 return
 
@@ -668,11 +752,15 @@ class Administration(commands.Cog):
             # Check if permission group wildcard
             elif cog and exists and perm_values[1] == '*':
                 query = (ctx.guild.id, user.id, f"{cog.qualified_name}.*")
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Permission group `{cog.qualified_name}` removed from user `{user.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.NO.value,
+                    description=f"Permission group `{cog.qualified_name}` removed from user `{user.name}`")
                 skip = True
             # Check if user doesn't have the group permission
             elif cog and not exists:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"`{user.name}` doesn't have the `{cog.qualified_name}` permission group")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"`{user.name}` doesn't have the `{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed) 
                 return
 
@@ -682,15 +770,21 @@ class Administration(commands.Cog):
             command, exists = await self._command_check(ctx, 'user', user.id, perm, cog)
             if command and exists:
                 query = (ctx.guild.id, user.id, f"{command.cog.qualified_name}.{perm}")
-                embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"Command `{perm}` removed from user `{user.name}`")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.NO.value,
+                    description=f"Command `{perm}` removed from user `{user.name}`")
                 skip = True
             elif command and not exists:
-                embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"{user.name} doesn't have that permission")
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"{user.name} doesn't have that permission")
                 await ctx.send(embed=embed) 
                 return
 
         if not skip:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"Permission does not exist. Please enter a valid permission")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Permission does not exist. Please enter a valid permission")
             await ctx.send(embed=embed) 
             return
 
@@ -711,9 +805,9 @@ class Administration(commands.Cog):
         cursor = db.cursor()
 
         # Add user's name to embed
-        embed = discord.Embed(colour=constants.EMBED_TYPE['info'])
-        image = discord.File(constants.EMBED_ICON["database"], filename="image.png")
-        embed.set_author(name=f"User Perms of {user.name}", icon_url="attachment://image.png")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.DATABASE} User Perms of {user.name}")
 
         # Output formatted groups list
         groups_output = []
@@ -734,7 +828,7 @@ class Administration(commands.Cog):
                 perms_output.append("`" + perm[0] + "`")
             embed.add_field(name="Permissions", value=', '.join(perms_output), inline=False)
 
-        await ctx.send(file=image, embed=embed)
+        await ctx.send(embed=embed)
 
     @user.command(name='purge')
     @perms.check()
@@ -749,13 +843,17 @@ class Administration(commands.Cog):
 
         # Notify if specified user doesn't have any perms to clear
         if not perms:
-            embed = discord.Embed(colour=constants.EMBED_TYPE['warn'], description=f"`{user.name}` doesn't have any permissions")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"`{user.name}` doesn't have any permissions")
             await ctx.send(embed=embed) 
             return
 
         # Clear all permissions
         cursor.execute("DELETE FROM user_permission WHERE server_id=? AND user_id=?", query)
-        embed = discord.Embed(colour=constants.EMBED_TYPE['accept'], description=f"All permissions cleared from `{user.name}`")
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.NO.value,
+            description=f"All permissions cleared from `{user.name}`")
         await ctx.send(embed=embed) 
         db.commit()
         db.close()
@@ -858,7 +956,7 @@ class Administration(commands.Cog):
         # Deny if specified prefix is too long
         if len(prefix) > 30:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Specified prefix is too long")
             await ctx.send(embed=embed)
             return
@@ -873,7 +971,7 @@ class Administration(commands.Cog):
         db.close()
 
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Command prefix has been set to: `{prefix}`")
         await ctx.send(embed=embed)
         return
@@ -896,7 +994,7 @@ class Administration(commands.Cog):
         prefix = config['base']['prefix']
 
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.NO.value,
             description=f"Command prefix has been reset back to: `{prefix}`")
         await ctx.send(embed=embed)
 
