@@ -16,6 +16,7 @@ import toml
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
+from spacecat.helpers import reaction_buttons
 
 
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -298,7 +299,7 @@ class Alexa(commands.Cog):
         # Add reaction button for every result
         reactions = []
         for index in range(len(results_format)):
-            emoji = constants.NUM_TO_EMOJI[index + 1]
+            emoji = reaction_buttons.number_to_emoji(index + 1)
             await msg.add_reaction(emoji)
             reactions.append(emoji)
 
@@ -320,7 +321,7 @@ class Alexa(commands.Cog):
             return
 
         # Play selected song
-        number = constants.EMOJI_TO_NUM[str(reaction)]
+        number = reaction_buttons.emoji_to_number(str(reaction))
         selected_song = urls[number - 1]
         await ctx.invoke(self.play, url=selected_song)
         
