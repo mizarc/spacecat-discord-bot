@@ -36,11 +36,11 @@ class Dad(commands.Cog):
     async def toggledad(self, ctx):
         if self.toggle:
             self.toggle = False
-            embed = discord.Embed(colour=constants.EmbedStatus.YES, description="Dad has been disabled")
+            embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description="Dad has been disabled")
             await ctx.send(embed=embed) 
         elif not self.toggle:
             self.toggle = True
-            embed = discord.Embed(colour=constants.EmbedStatus.YES, description="Dad has been enabled")
+            embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description="Dad has been enabled")
             await ctx.send(embed=embed) 
 
 

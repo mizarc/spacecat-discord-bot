@@ -3,5 +3,5 @@ def number_to_emoji(num: int):
     return emoji
 
 def emoji_to_number(emoji: str):
-    number = emoji[0]
+    number = int(emoji[0])
     return number
