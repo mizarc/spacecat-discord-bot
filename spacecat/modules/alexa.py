@@ -1,19 +1,19 @@
 import asyncio
-from itertools import islice
-import os
 import random
-import re
-import selenium
-import shutil
 import sqlite3
+from itertools import islice
 from time import gmtime, strftime, time
+
+from bs4 import BeautifulSoup as bs
 
 import discord
 from discord.ext import commands, tasks
-import youtube_dl
-from bs4 import BeautifulSoup as bs
+
 import requests
+
 import toml
+
+import youtube_dl
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms

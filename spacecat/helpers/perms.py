@@ -1,12 +1,9 @@
-import configparser
 import os
 import re
 import sqlite3
-import timeit
 
-import discord
 from discord.ext import commands
-from discord.utils import get
+
 import toml
 
 from spacecat.helpers import constants

@@ -1,10 +1,9 @@
-import configparser
-from itertools import islice
-import os
 import sqlite3
+from itertools import islice
 
 import discord
 from discord.ext import commands
+
 import toml
 
 from spacecat.helpers import constants

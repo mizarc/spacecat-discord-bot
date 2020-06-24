@@ -1,14 +1,12 @@
 import argparse
-import functools
 import logging
 import os
-import shutil
-import sys
+
 import toml
 
-from spacecat import spacecat
-from spacecat import instance
-from spacecat.helpers import constants, config
+import spacecat.instance as instance
+import spacecat.spacecat as spacecat
+from spacecat.helpers import config, constants
 
 
 def logger():
