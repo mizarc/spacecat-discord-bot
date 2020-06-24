@@ -64,7 +64,7 @@ class Linkle(commands.Cog):
                 # Remove user from the perm overwrites list entirely if they
                 # do not have any other permission overwrites
                 if text_channel.overwrites_for(member).is_empty():
-                    await text_channel.set_permissions(member, overwrite=None, reason="he was a bitch")
+                    await text_channel.set_permissions(member, overwrite=None)
         except AttributeError:
             pass
 
