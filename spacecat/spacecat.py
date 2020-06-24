@@ -91,7 +91,7 @@ class SpaceCat(commands.Cog):
 
                 # Info on how to use the bot
                 embed = discord.Embed(
-                    colour=constants.EmbedStatus.INFO,
+                    colour=constants.EmbedStatus.INFO.value,
                     title=f"{constants.EmbedIcon.HELP} Hello There!",
                     description="I'm here to provide a useful set a features")
                 embed.add_field(
@@ -119,7 +119,7 @@ class SpaceCat(commands.Cog):
         bot host and the discord servers.
         """
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES, 
+            colour=constants.EmbedStatus.YES.value, 
             description=f"{self.bot.user.name} is operational at \
             {int(self.bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
@@ -133,7 +133,7 @@ class SpaceCat(commands.Cog):
         version of the bot.
         """
         embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO, 
+            colour=constants.EmbedStatus.INFO.value, 
             description="**Bot is currently using version:**\n"
             "[SpaceCat Discord Bot `v0.3.0`]"
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
@@ -153,7 +153,7 @@ class SpaceCat(commands.Cog):
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-                colour=constants.EmbedStatus.YES,
+                colour=constants.EmbedStatus.YES.value,
                 description=f"Global command prefix changed to: `{prefix}`.\n\
                 Servers with prefix override will not be affected.")
         await ctx.send(embed=embed)
@@ -170,7 +170,7 @@ class SpaceCat(commands.Cog):
 
         # Create embed
         embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO,
+            colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.DEFAULT} {self.bot.user.name} Modules")
 
         # Categorise modules into enabled and disabled fields
@@ -201,7 +201,7 @@ class SpaceCat(commands.Cog):
         if module:
             if module not in module_list:
                 embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL,
+                    colour=constants.EmbedStatus.FAIL.value,
                     description=f"{module} is not a valid or enabled module")
                 await ctx.send(embed=embed)
                 return
@@ -220,14 +220,14 @@ class SpaceCat(commands.Cog):
         # Ouput error messages depending on if only one or multiple modules
         if failed_modules and len(modules_to_load) == 1:
             embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL,
+                    colour=constants.EmbedStatus.FAIL.value,
                     description=f"Failed to reload module \
                     `{module[8:]}`")
             await ctx.send(embed=embed)
             return
         elif failed_modules:
             embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL,
+                    colour=constants.EmbedStatus.FAIL.value,
                     description=f"Failed to reload module(s): \
                     `{', '.join(failed_modules)}`. \
                     Other modules have successfully reloaded")
@@ -237,11 +237,11 @@ class SpaceCat(commands.Cog):
         # Notify user of successful module reloading
         if len(modules_to_load) == 1:
             embed = discord.Embed(
-            colour=constants.EmbedStatus.YES,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Reloaded module `{module[8:]}` successfully")
         else:
             embed = discord.Embed(
-            colour=constants.EmbedStatus.YES,
+            colour=constants.EmbedStatus.YES.value,
             description=f"All modules reloaded successfully")
         
         await ctx.send(embed=embed)
@@ -257,7 +257,7 @@ class SpaceCat(commands.Cog):
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL,
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Module `{module}` does not exist")
             await ctx.send(embed=embed)
             return
@@ -266,7 +266,7 @@ class SpaceCat(commands.Cog):
         disabled_modules = module_handler.get_disabled()
         if disabled_modules is None or module not in disabled_modules:
             embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL,
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Module `{module}` is already enabled")
             await ctx.send(embed=embed)
             return
@@ -278,7 +278,7 @@ class SpaceCat(commands.Cog):
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Module `{module}` enabled")
         await ctx.send(embed=embed)
 
@@ -293,7 +293,7 @@ class SpaceCat(commands.Cog):
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL,
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Module `{module}` does not exist")
             await ctx.send(embed=embed)
             return
@@ -303,7 +303,7 @@ class SpaceCat(commands.Cog):
         try:
             if module in disabled_modules:
                 embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL,
+                    colour=constants.EmbedStatus.FAIL.value,
                     description=f"Module `{module}` is already disabled")
                 await ctx.send(embed=embed)
                 return
@@ -320,7 +320,7 @@ class SpaceCat(commands.Cog):
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Module `{module}` disabled")
         await ctx.send(embed=embed)
 
