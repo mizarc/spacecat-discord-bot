@@ -9,7 +9,7 @@ with open("requirements.txt", "r") as fh:
 
 setuptools.setup(
     name="spacecat",
-    version="0.3.0",
+    version="0.4.0",
     description="A self hostable modular Discord bot.",
     long_description=long_description,
     long_description_content_type="text/markdown",
