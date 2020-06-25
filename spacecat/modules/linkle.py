@@ -1,3 +1,4 @@
+import itertools
 import os
 import sqlite3
 
@@ -122,7 +123,7 @@ class Linkle(commands.Cog):
 
     @commands.command()
     @perms.check()
-    async def listlinkchannels(self, ctx):
+    async def listlinkchannels(self, ctx, page=1):
         """
         List currently linked voice to text channels
         Channels that have been linked together by the linkchannels command
@@ -142,19 +143,23 @@ class Linkle(commands.Cog):
                 description="There are no linked channels")
             return
 
+        # Modify page variable to get every ten results
+        page -= 1
+        if page > 0: page = page * 10
+
         links_display_list = []
-        for link in links:
+        for index, link in enumerate(itertools.islice(links, page, page + 10)):
             voice_channel = self.bot.get_channel(link[1])
             text_channel = self.bot.get_channel(link[2])
             links_display_list.append(
-                f"{voice_channel.mention} = {text_channel.mention}")
+                f"**{page + index + 1}.** {voice_channel.mention} = {text_channel.mention}")
         links_display = '\n'.join(links_display_list)
 
         embed = discord.Embed(
             colour=constants.EMBED_TYPE['info'],
             title="Linked Channels")
         embed.add_field(
-            name=f"There are `{len(links_display_list)}` links",
+            name=f"There are `{len(links)}` links",
             value=links_display, inline=False)
         await ctx.send(embed=embed)
 
