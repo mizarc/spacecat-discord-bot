@@ -60,7 +60,7 @@ class PoliteCat(commands.Cog):
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Failed to convert webp to gif. "
                 "Image may be too large")
-            await message.channel.send(embed=embed) 
+            await message.channel.send(embed=embed)
             return
         finally:
             os.remove(gif)
@@ -91,8 +91,8 @@ class PoliteCat(commands.Cog):
         "Configure available reaction images"
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
-            description=f"Please specify a valid subcommand: `add/remove`")
-        await ctx.send(embed=embed) 
+            description="Please specify a valid subcommand: `add/remove`")
+        await ctx.send(embed=embed)
 
     @reactcfg.command()
     @perms.check()
@@ -160,7 +160,7 @@ class PoliteCat(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Removed {name} from reactions")
-        await ctx.send(embed=embed) 
+        await ctx.send(embed=embed)
         return
 
 
@@ -202,7 +202,7 @@ class PoliteCat(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
             description=f"Reaction `{name}` does not exist")
-        await ctx.send(embed=embed) 
+        await ctx.send(embed=embed)
 
     async def _get_reactions(self):
         # Get all images from directoy and add to list
