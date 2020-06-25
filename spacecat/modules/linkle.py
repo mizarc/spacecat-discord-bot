@@ -1,11 +1,9 @@
 import itertools
 import math
-import os
 import sqlite3
 
 import discord
 from discord.ext import commands
-import toml
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
