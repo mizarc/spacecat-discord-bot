@@ -22,15 +22,15 @@ setuptools.setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Intended Audience :: System Administrators",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "Environment :: Console",
         "Topic :: Communications :: Chat"
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     install_requires=install_requires
 )
