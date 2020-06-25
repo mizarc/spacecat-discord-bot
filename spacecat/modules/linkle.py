@@ -1,4 +1,5 @@
 import itertools
+import math
 import os
 import sqlite3
 
@@ -169,6 +170,12 @@ class Linkle(commands.Cog):
             text_channel = self.bot.get_channel(link[2])
             links_display_list.append(
                 f"**{page + index + 1}.** {voice_channel.mention} = {text_channel.mention}")
+        
+
+        if page + 10 < len(links):
+            prefix = await self.bot.get_prefix(ctx.message)
+            links_display_list.append(
+                f"`For more results, type {prefix[2]}{ctx.command.name} {math.floor((page + 20) / 10)}`")
         links_display = '\n'.join(links_display_list)
 
         embed = discord.Embed(
