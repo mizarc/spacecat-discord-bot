@@ -81,6 +81,14 @@ class Linkle(commands.Cog):
         itself when the user leaves. Ensure that the linked text channel
         is hidden to users by default.
         """
+        exists = await self._query_channel_links(voice_channel.id, text_channel.id)
+        if exists:
+            embed = discord.Embed(
+                colour=constants.EMBED_TYPE['warn'],
+                description=f"Those channels are already linked")
+            await ctx.send(embed=embed)
+            return
+
         # Add linked values to database
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
@@ -105,12 +113,20 @@ class Linkle(commands.Cog):
         command, this command can be used to unlink the channels stopping it
         from being dynamically shown and hidden on voice connects.
         """
+        exists = await self._query_channel_links(voice_channel.id, text_channel.id)
+        if not exists:
+            embed = discord.Embed(
+                colour=constants.EMBED_TYPE['warn'],
+                description=f"Those channels aren't linked")
+            await ctx.send(embed=embed)
+            return
+
         # Remove linked value from database
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         value = (voice_channel.id, text_channel.id)
         cursor.execute(
-            'DELETE FROM linked_channel'
+            'DELETE FROM linked_channel '
             'WHERE voice_channel=? AND text_channel=?', value)
         db.commit()
         db.close()
@@ -163,6 +179,17 @@ class Linkle(commands.Cog):
             value=links_display, inline=False)
         await ctx.send(embed=embed)
 
+    async def _query_channel_links(self, voice_channel, text_channel):
+        """Check database to see if link already exists"""
+        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+        cursor = db.cursor()
+        query = (voice_channel, text_channel)
+        cursor.execute(
+            'SELECT * FROM linked_channel WHERE voice_channel=? AND text_channel=?', query)
+        link = cursor.fetchall()
+        db.close()
+
+        return link
 
 def setup(bot):
     bot.add_cog(Linkle(bot))
