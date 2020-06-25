@@ -6,7 +6,6 @@ file readability for manual editing. Functions found here provide
 a consistent way to handle the data that the bot can read from.
 """
 
-import os
 import toml
 
 from spacecat.helpers import constants
