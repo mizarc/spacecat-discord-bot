@@ -63,7 +63,7 @@ class Linkle(commands.Cog):
                 text_channel = await self.bot.fetch_channel(text_channel_id[0])
                 await text_channel.set_permissions(member, read_messages=None)
                 text_channel = await self.bot.fetch_channel(text_channel_id[0])
-                
+
                 # Remove user from the perm overwrites list entirely if they
                 # do not have any other permission overwrites
                 if text_channel.overwrites_for(member).is_empty():
@@ -170,7 +170,7 @@ class Linkle(commands.Cog):
             text_channel = self.bot.get_channel(link[2])
             links_display_list.append(
                 f"**{page + index + 1}.** {voice_channel.mention} = {text_channel.mention}")
-        
+
 
         if page + 10 < len(links):
             prefix = await self.bot.get_prefix(ctx.message)

@@ -26,7 +26,7 @@ class SpaceCat(commands.Cog):
             os.mkdir(constants.CACHE_DIR)
         except FileExistsError:
             pass
-        
+
         # Run initial configurator as long as values are missing
         if 'adminuser' not in config['base']:
             await self._set_admin()
@@ -69,7 +69,7 @@ class SpaceCat(commands.Cog):
             await self.bot.change_presence(activity=activity)
         except (KeyError, TypeError):
             pass
-            
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         # Run automatic permission assignment based on presets
@@ -229,7 +229,7 @@ class SpaceCat(commands.Cog):
                 Other modules have successfully reloaded")
             await ctx.send(embed=embed)
             return
-        
+
         # Notify user of successful module reloading
         if len(modules_to_load) == 1:
             embed = discord.Embed(
@@ -239,7 +239,7 @@ class SpaceCat(commands.Cog):
             embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"All modules reloaded successfully")
-        
+
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -333,7 +333,7 @@ class SpaceCat(commands.Cog):
             shutil.rmtree(constants.CACHE_DIR)
         except:
             pass
-        
+
         await self.bot.logout()
 
     async def _set_admin(self):
@@ -372,7 +372,7 @@ class SpaceCat(commands.Cog):
                 time.sleep(1)
                 continue
             time.sleep(1)
-            
+
             # Ask for confirmation
             while True:
                 print(
@@ -458,7 +458,7 @@ def introduction(config):
         "3. Select 'Create a Bot' and confirm.\n"
         "4. Click on 'Copy' under Token.\n"
         "(Don't ever reveal this token to anyone you don't trust)\n")
-    
+
     keyinput = input("Paste your token right here: ")
     print('--------------------\n')
 
@@ -469,7 +469,7 @@ def introduction(config):
         toml.dump(config, config_file)
     return True
 
-    
+
 def load_modules(bot):
     """Loads all modules from the modules folder for the bot"""
     # Enable enabled modules from list

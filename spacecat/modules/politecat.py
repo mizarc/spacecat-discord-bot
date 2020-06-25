@@ -65,7 +65,7 @@ class PoliteCat(commands.Cog):
         finally:
             os.remove(gif)
             os.remove(webp)
-        
+
         return
 
     @commands.command()
@@ -131,7 +131,7 @@ class PoliteCat(commands.Cog):
             await ctx.send("Image must be formatted in " +
                             "webp, png, jpg, bmp or gif")
             return
-        
+
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Added {name} to reactions")
@@ -162,7 +162,7 @@ class PoliteCat(commands.Cog):
             description=f"Removed {name} from reactions")
         await ctx.send(embed=embed) 
         return
-            
+
 
     @commands.command()
     @perms.check()

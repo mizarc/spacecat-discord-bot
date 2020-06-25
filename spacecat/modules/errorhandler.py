@@ -49,5 +49,6 @@ class ErrorHandler(commands.Cog):
             print(error)
             return
 
+
 def setup(bot):
     bot.add_cog(ErrorHandler(bot))
