@@ -39,7 +39,7 @@ def check():
         module = ctx.command.cog.qualified_name
         command = ctx.command.qualified_name
         command_values = command.split(' ')
-        
+
         # Add queries for the global, module, and command wildcards,
         # plus the command on its own
         perm = command_values[0]
@@ -49,7 +49,7 @@ def check():
             perm = f"{perm}.{command_value}"
             checks.add(f'{module}.{perm}.*')
         checks.add(f'{module}.{perm}')
-        
+
         # Query database to allow if user has the required permission
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         db.row_factory = lambda cursor, row: row[0]
@@ -135,7 +135,7 @@ def check():
 
     return commands.check(predicate)
 
-        
+
 def exclusive():
     def predicate(ctx):
         # Open global config file

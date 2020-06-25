@@ -170,7 +170,7 @@ class Administration(commands.Cog):
                 description=f"There are no aliases on that page")
             await ctx.send(embed=embed)
             return
-            
+  
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.DATABASE} Command Aliases")
@@ -416,7 +416,7 @@ class Administration(commands.Cog):
         cursor.execute("INSERT INTO group_permission VALUES (?,?,?)", value)
         db.commit()
         db.close()
-        
+
         await ctx.send(embed=embed) 
 
     @group.command(name='remove')
@@ -717,7 +717,7 @@ class Administration(commands.Cog):
         cursor.execute("INSERT INTO user_permission VALUES (?,?,?)", value)
         db.commit()
         db.close()
-        
+
         await ctx.send(embed=embed) 
 
     @user.command(name='remove')

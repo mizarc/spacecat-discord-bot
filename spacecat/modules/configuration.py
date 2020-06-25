@@ -65,7 +65,7 @@ class Configuration(commands.Cog):
                 name=config['base']['activity_name'])
         except KeyError:
             activity = None
-        
+
         # Check if valid status name was used
         if status == None:
             embed = discord.Embed(
@@ -127,7 +127,7 @@ class Configuration(commands.Cog):
     async def permpreset_create(self, ctx, name):
         """Creates a new permission preset list"""
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        
+
         try:
             config['permissions'][name]
             embed = discord.Embed(
@@ -211,7 +211,7 @@ class Configuration(commands.Cog):
             # the next section for command level perm handling
             if cog and perm_values[1] != '*':
                 perm_values.pop(0)
-     
+
             # Add permission group permission if it doesn't already exist
             elif cog and perm in config['permissions'][preset]:
                 embed = discord.Embed(
@@ -233,7 +233,7 @@ class Configuration(commands.Cog):
         # Check if permission is a command
         if not skip:
             command_perm = '.'.join(perm_values)
-            
+
             # Exclude subcommand wildcard when checking if command exists
             if command_perm[-1] == '*':
                 command = self.bot.get_command(command_perm[:-2].replace('.', ' '))
@@ -252,7 +252,7 @@ class Configuration(commands.Cog):
                     return
             except UnboundLocalError:
                 pass
-                
+
             # Add command permission if it doesn't already exist
             full_permission = f"{command.cog.qualified_name}.{command_perm}"
             if full_permission in config['permissions'][preset]:
@@ -268,7 +268,7 @@ class Configuration(commands.Cog):
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Command `{command.cog.qualified_name}.{command_perm}` added to preset `{preset}`")
                 await ctx.send(embed=embed)
-            
+
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
@@ -364,7 +364,7 @@ class Configuration(commands.Cog):
                     description=f"Command `{command.cog.qualified_name}."
                     f"{command_perm}` removed from preset `{preset}`")
                 await ctx.send(embed=embed)
-            
+
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 

@@ -50,7 +50,7 @@ class Help(commands.Cog):
                 cmd = check
             await self.command_info(ctx, cmd)
             return
-        
+
         # Output alert if argument is neither a valid module or command
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
@@ -86,7 +86,7 @@ class Help(commands.Cog):
                 name=f"**Commands**",
                 value="\n".join(command_output),
                 inline=False)
-            
+
         await ctx.send(embed=embed)
 
     async def command_info(self, ctx, command):
@@ -145,7 +145,7 @@ class Help(commands.Cog):
                 embed.add_field(
                     name="Subcommand Groups",
                     value='\n'.join(subcommand_group_output))
-            
+
             if subcommand_output:
                 embed.add_field(
                     name="Subcommands",
@@ -187,7 +187,7 @@ class Help(commands.Cog):
             except AttributeError:
                 command_output.append(command_format)
         return command_output, command_group_output
-    
+
 
 
 def setup(bot):

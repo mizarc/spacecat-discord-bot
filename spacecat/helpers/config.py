@@ -29,7 +29,7 @@ def create():
 
 def apply_arguments(config, args):
     """Apply and return the cmd arguments to the config file
-    
+
     Arguments specified through argsparse can be forwarded to the config
     file to manually change data before the bot runs.
     """

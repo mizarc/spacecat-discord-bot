@@ -48,7 +48,7 @@ def rename(index, name):
         f'{constants.GLOBAL_DATA_DIR}{instance}',
         f'{constants.GLOBAL_DATA_DIR}{name}')
     return True
-    
+
 
 def destroy(index):
     """Deletes an instance folder by the index"""

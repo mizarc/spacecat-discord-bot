@@ -48,7 +48,7 @@ def select_instance():
             'd': destroy_instance_menu,
             'x': quit
         }
-    
+
     while True:
         display_instances(options)
         instances = instance.get_all()
@@ -81,7 +81,7 @@ def select_instance():
 def display_instances(options):
     """Prints a list of instances and other instance editing options"""
     instances = instance.get_all()
-    
+
     # Add list of instances, plus extra options
     print("[Available Instances]")
     formatted_instances = []
