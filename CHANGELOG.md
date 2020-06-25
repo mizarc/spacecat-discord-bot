@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `presets` to allow server admins to list and view presets set by the bot admin
     - `group preset` to assign a preset to a group
     - `group unpreset` to remove a preset from a group
+- Add module to handle the automatic showing and hiding of text channels on voice connects and disconnects
+    - `linkchannels` to link a voice and text channel
+    - `unlinkchannels` to unlink a voice and text channel
+    - `listlinkchannels` to list the currently linked text and voice channels
 - Permissions in the default preset are assigned to every user
 - Presets assigned to a group read permissions from the config on command checks
 - Extended descriptions to the `SpaceCat` module commands
@@ -29,15 +33,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto voice channel disconnection when no users are in the voice channel
 - Auto voice channel disconnection when nothing has been playing for a specified amount of time
 - New section to the config pertaining to holding variables of music features
+- Flake8 linter now used to better confirm to PEP8
 
 ### Changed
 - Revamp the `help` menu to use embeds for pretty formatting
 - `help` command without arguments now only shows modules to reduce clutter
 - Disallow users to view module and command `help` pages they don't have permission for
 - `playlist` command now defaults to `playlist list` subcommand
+- Negative successful embed results to use an orange colour to better distinguish embed results
+- Large embeds now use emojis instead of image icons
+- Embed number buttons to dynamically convert numbers to emojis and vice versa
 
 ### Fixed
 - New servers not being added to the database
+- Playsearch result fetching due to change on youtube's end
 
 ## [0.3.1] - 2020-02-23
 ### Fixed
