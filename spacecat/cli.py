@@ -157,7 +157,7 @@ def destroy_instance_menu():
             print(f"Instance '{instance_name}' has been deleted.\n")
             return
         elif confirm == 'n':
-            print(f"Instance deletion has been cancelled.\n")
+            print("Instance deletion has been cancelled.\n")
             return
         else:
             print("Invalid option.")

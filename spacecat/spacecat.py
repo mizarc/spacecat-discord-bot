@@ -91,17 +91,17 @@ class SpaceCat(commands.Cog):
                     title=f"{constants.EmbedIcon.DEFAULT} Hello There!",
                     description="I'm here to provide a useful set a features")
                 embed.add_field(
-                    name=f"Current Prefix",
-                    value=f"`{prefix[2]}`", inline=False)
+                    name="Current Prefix",
+                    value="`{prefix[2]}`", inline=False)
                 embed.add_field(
-                    name=f"Need Help?",
+                    name="Need Help?",
                     value=f"Type `{prefix[2]}help` to get a list of commands",
-                    inline=False) 
+                    inline=False)
                 embed.add_field(
-                    name=f"Want more features added?",
-                    value=f"[Request them here]"
+                    name="Want more features added?",
+                    value="[Request them here]"
                     "(https://gitlab.com/Mizarc/spacecat-discord-bot/issues)",
-                    inline=False) 
+                    inline=False)
                 await message.channel.send(embed=embed)
                 return
 
@@ -115,7 +115,7 @@ class SpaceCat(commands.Cog):
         bot host and the discord servers.
         """
         embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO.value, 
+            colour=constants.EmbedStatus.INFO.value,
             description=f"{self.bot.user.name} is operational at \
             {int(self.bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
@@ -129,7 +129,7 @@ class SpaceCat(commands.Cog):
         version of the bot.
         """
         embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO.value, 
+            colour=constants.EmbedStatus.INFO.value,
             description="**Bot is currently using version:**\n"
             "[SpaceCat Discord Bot `v0.3.0`]"
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")

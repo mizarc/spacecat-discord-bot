@@ -218,7 +218,7 @@ class Configuration(commands.Cog):
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"`{preset}` already has the"
                     f"`{cog.qualified_name}` permission group")
-                await ctx.send(embed=embed) 
+                await ctx.send(embed=embed)
                 return
             elif cog and perm not in config['permissions'][preset]:
                 config['permissions'][preset].append(
@@ -259,7 +259,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"`{preset}` already has that permission")
-                await ctx.send(embed=embed) 
+                await ctx.send(embed=embed)
                 return
             else:
                 config['permissions'][preset].append(
@@ -287,7 +287,7 @@ class Configuration(commands.Cog):
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"Preset `{preset}` doesn't have the "
                     "wildcard permission")
-                await ctx.send(embed=embed) 
+                await ctx.send(embed=embed)
                 return
             else:
                 config['permissions'][preset].remove(perm)
@@ -295,7 +295,7 @@ class Configuration(commands.Cog):
                     colour=constants.EmbedStatus.NO.value,
                     description=f"Wildcard permission removed from preset "
                     f"`{preset}`")
-                await ctx.send(embed=embed) 
+                await ctx.send(embed=embed)
                 skip = True
 
         # Check if permission starts with a cog
@@ -343,7 +343,7 @@ class Configuration(commands.Cog):
                         colour=constants.EmbedStatus.FAIL.value,
                         description=f"Permission does not exist. "
                         "Please enter a valid permission")
-                    await ctx.send(embed=embed) 
+                    await ctx.send(embed=embed)
                     return
             except UnboundLocalError:
                 pass
@@ -354,7 +354,7 @@ class Configuration(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"`{preset}` doesn't have that permission")
-                await ctx.send(embed=embed) 
+                await ctx.send(embed=embed)
                 return
             else:
                 config['permissions'][preset].remove(
