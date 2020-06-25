@@ -85,7 +85,7 @@ class Linkle(commands.Cog):
         exists = await self._query_channel_links(voice_channel.id, text_channel.id)
         if exists:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Those channels are already linked")
             await ctx.send(embed=embed)
             return
@@ -99,7 +99,7 @@ class Linkle(commands.Cog):
         db.close()
 
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.YES.value,
             description=f"Voice channel `{voice_channel.name}` has been "
                 f"linked to text channel `{text_channel.name}`")
         await ctx.send(embed=embed)
@@ -117,7 +117,7 @@ class Linkle(commands.Cog):
         exists = await self._query_channel_links(voice_channel.id, text_channel.id)
         if not exists:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description=f"Those channels aren't linked")
             await ctx.send(embed=embed)
             return
@@ -133,7 +133,7 @@ class Linkle(commands.Cog):
         db.close()
 
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['accept'],
+            colour=constants.EmbedStatus.NO.value,
             description=f"Voice channel `{voice_channel.name}` has been "
                 f"unlinked to text channel `{text_channel.name}`")
         await ctx.send(embed=embed)
@@ -156,7 +156,7 @@ class Linkle(commands.Cog):
 
         if not links:
             embed = discord.Embed(
-                colour=constants.EMBED_TYPE['warn'],
+                colour=constants.EmbedStatus.FAIL.value,
                 description="There are no linked channels")
             return
 
@@ -179,8 +179,8 @@ class Linkle(commands.Cog):
         links_display = '\n'.join(links_display_list)
 
         embed = discord.Embed(
-            colour=constants.EMBED_TYPE['info'],
-            title="Linked Channels")
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.DATABASE} Linked Channels")
         embed.add_field(
             name=f"There are `{len(links)}` links",
             value=links_display, inline=False)
