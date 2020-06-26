@@ -22,10 +22,10 @@ class Dad(commands.Cog):
 
                 # Reply if first word starts with trigger word
                 if x in words[:1]:
-                    qualitycontent = f"Hi {' '.join(words[1:])}, I'm a Cat!"
+                    qualitycontent = f'Hi {" ".join(words[1:])}, I\'m a Cat!'
 
                     # Different reply if next words start with "a cat"
-                    if "a cat" in ' '.join(words[1:3]):
+                    if 'a cat' in ' '.join(words[1:3]):
                         qualitycontent = "No you're not, I'm a cat."
 
                     await message.channel.send(qualitycontent)
