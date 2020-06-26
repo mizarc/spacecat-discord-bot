@@ -50,22 +50,22 @@ class PoliteCat(commands.Cog):
                 spoiler = True
 
             await message.channel.send(
-            f"**{message.author.display_name} sent:**\n{message.content}",
-            file=discord.File(gif, spoiler=spoiler))
+                f"**{message.author.display_name} sent:**\n{message.content}",
+                file=discord.File(gif, spoiler=spoiler))
             await message.delete()
 
         # Notify if conversion failed
         except discord.errors.HTTPException:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Failed to convert webp to gif. "
+                description="Failed to convert webp to gif. "
                 "Image may be too large")
-            await message.channel.send(embed=embed) 
+            await message.channel.send(embed=embed)
             return
         finally:
             os.remove(gif)
             os.remove(webp)
-        
+
         return
 
     @commands.command()
@@ -88,24 +88,24 @@ class PoliteCat(commands.Cog):
     @commands.group(invoke_without_command=True)
     @perms.check()
     async def reactcfg(self, ctx):
-        "Configure available reaction images"
+        """Configure available reaction images"""
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
-            description=f"Please specify a valid subcommand: `add/remove`")
-        await ctx.send(embed=embed) 
+            description="Please specify a valid subcommand: `add/remove`")
+        await ctx.send(embed=embed)
 
     @reactcfg.command()
     @perms.check()
     async def add(self, ctx, name):
-        "Add a reaction image"
+        """Add a reaction image"""
         # Check if attachment exists in message
         try:
             image = ctx.message.attachments[0]
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"There are no attachments in that message")
-            await ctx.send(embed=embed) 
+                description="There are no attachments in that message")
+            await ctx.send(embed=embed)
             return
 
         # Create reactions folder if it doesn't exist
@@ -117,7 +117,7 @@ class PoliteCat(commands.Cog):
         if name in reactions:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Reaction name already in use")
+                description="Reaction name already in use")
             await ctx.send(embed=embed)
             return
 
@@ -128,10 +128,10 @@ class PoliteCat(commands.Cog):
         elif ext == "jpg" or ext == "jpeg" or ext == "bmp" or ext == "png":
             await image.save(f'{constants.DATA_DIR}reactions/{name}.webp')
         else:
-            await ctx.send("Image must be formatted in " +
-                            "webp, png, jpg, bmp or gif")
+            await ctx.send(
+                "Image must be formatted in webp, png, jpg, bmp or gif")
             return
-        
+
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Added {name} to reactions")
@@ -141,7 +141,7 @@ class PoliteCat(commands.Cog):
     @reactcfg.command()
     @perms.check()
     async def remove(self, ctx, name):
-        "Remove a reaction image"
+        """Remove a reaction image"""
         # Cancel if image name exists
         reactions = await self._get_reactions()
         if name not in reactions:
@@ -160,14 +160,13 @@ class PoliteCat(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Removed {name} from reactions")
-        await ctx.send(embed=embed) 
+        await ctx.send(embed=embed)
         return
-            
 
     @commands.command()
     @perms.check()
     async def reactlist(self, ctx):
-        "List all reaction images"
+        """List all reaction images"""
         reactions = self._get_reactions()
 
         # Alert if no reactions exist
@@ -181,7 +180,7 @@ class PoliteCat(commands.Cog):
     @commands.command()
     @perms.check()
     async def react(self, ctx, name):
-        "Use an image/gif as a reaction"
+        """Use an image/gif as a reaction"""
         # Try sending WebP
         try:
             await ctx.send(
@@ -202,7 +201,7 @@ class PoliteCat(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
             description=f"Reaction `{name}` does not exist")
-        await ctx.send(embed=embed) 
+        await ctx.send(embed=embed)
 
     async def _get_reactions(self):
         # Get all images from directoy and add to list

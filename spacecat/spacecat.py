@@ -26,7 +26,7 @@ class SpaceCat(commands.Cog):
             os.mkdir(constants.CACHE_DIR)
         except FileExistsError:
             pass
-        
+
         # Run initial configurator as long as values are missing
         if 'adminuser' not in config['base']:
             await self._set_admin()
@@ -65,11 +65,11 @@ class SpaceCat(commands.Cog):
             activity = discord.Activity(
                 type=activity_type,
                 name=config['base']['activity_name'],
-                url="https://www.twitch.tv/monstercat")
+                url='https://www.twitch.tv/monstercat')
             await self.bot.change_presence(activity=activity)
         except (KeyError, TypeError):
             pass
-            
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         # Run automatic permission assignment based on presets
@@ -91,17 +91,17 @@ class SpaceCat(commands.Cog):
                     title=f"{constants.EmbedIcon.DEFAULT} Hello There!",
                     description="I'm here to provide a useful set a features")
                 embed.add_field(
-                    name=f"Current Prefix",
+                    name="Current Prefix",
                     value=f"`{prefix[2]}`", inline=False)
                 embed.add_field(
-                    name=f"Need Help?",
+                    name="Need Help?",
                     value=f"Type `{prefix[2]}help` to get a list of commands",
-                    inline=False) 
+                    inline=False)
                 embed.add_field(
-                    name=f"Want more features added?",
-                    value=f"[Request them here]"
+                    name="Want more features added?",
+                    value="[Request them here]"
                     "(https://gitlab.com/Mizarc/spacecat-discord-bot/issues)",
-                    inline=False) 
+                    inline=False)
                 await message.channel.send(embed=embed)
                 return
 
@@ -115,7 +115,7 @@ class SpaceCat(commands.Cog):
         bot host and the discord servers.
         """
         embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO.value, 
+            colour=constants.EmbedStatus.INFO.value,
             description=f"{self.bot.user.name} is operational at \
             {int(self.bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
@@ -129,7 +129,7 @@ class SpaceCat(commands.Cog):
         version of the bot.
         """
         embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO.value, 
+            colour=constants.EmbedStatus.INFO.value,
             description="**Bot is currently using version:**\n"
             "[SpaceCat Discord Bot `v0.3.0`]"
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
@@ -146,7 +146,7 @@ class SpaceCat(commands.Cog):
         # Changes the prefix entry in the config
         config = toml.load(constants.DATA_DIR + 'config.toml')
         config['base']['prefix'] = prefix
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -210,7 +210,7 @@ class SpaceCat(commands.Cog):
             try:
                 module = 'modules.' + module
                 self.bot.reload_extension(module)
-            except:
+            except commands.ExtensionNotLoaded:
                 failed_modules.append(module[8:])
 
         # Ouput error messages depending on if only one or multiple modules
@@ -229,17 +229,17 @@ class SpaceCat(commands.Cog):
                 Other modules have successfully reloaded")
             await ctx.send(embed=embed)
             return
-        
+
         # Notify user of successful module reloading
         if len(modules_to_load) == 1:
             embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"Reloaded module `{module[8:]}` successfully")
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Reloaded module `{module[8:]}` successfully")
         else:
             embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"All modules reloaded successfully")
-        
+                colour=constants.EmbedStatus.YES.value,
+                description="All modules reloaded successfully")
+
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -271,7 +271,7 @@ class SpaceCat(commands.Cog):
         self.bot.load_extension(f'{constants.MAIN_DIR}.modules.{module}')
         config = toml.load(constants.DATA_DIR + 'config.toml')
         config['base']['disabled_modules'].remove(module)
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -295,7 +295,7 @@ class SpaceCat(commands.Cog):
             return
 
         # Check config to see if module is already disabled
-        disabled_modules = module_handler.get_disabled()   
+        disabled_modules = module_handler.get_disabled()
         try:
             if module in disabled_modules:
                 embed = discord.Embed(
@@ -309,11 +309,11 @@ class SpaceCat(commands.Cog):
             config['base']['disabled_modules'].append(module)
         except TypeError:
             config = toml.load(constants.DATA_DIR + 'config.toml')
-            config['base']['disabled_modules'] = [module]   
+            config['base']['disabled_modules'] = [module]
 
         # Disable module and write to config
         self.bot.unload_extension(f'{constants.MAIN_DIR}.modules.{module}')
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
@@ -331,9 +331,9 @@ class SpaceCat(commands.Cog):
         # Clear the cache folder if it exists
         try:
             shutil.rmtree(constants.CACHE_DIR)
-        except:
+        except FileNotFoundError:
             pass
-        
+
         await self.bot.logout()
 
     async def _set_admin(self):
@@ -372,7 +372,7 @@ class SpaceCat(commands.Cog):
                 time.sleep(1)
                 continue
             time.sleep(1)
-            
+
             # Ask for confirmation
             while True:
                 print(
@@ -391,7 +391,7 @@ class SpaceCat(commands.Cog):
                 else:
                     continue
 
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         time.sleep(1)
 
@@ -409,7 +409,7 @@ class SpaceCat(commands.Cog):
         # Save prefix to config
         config = toml.load(constants.DATA_DIR + 'config.toml')
         config['base']['prefix'] = prefix_input
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         time.sleep(1)
 
@@ -431,7 +431,7 @@ class SpaceCat(commands.Cog):
         config['base']['status'] = 'online'
         config['base']['activity_type'] = None
         config['base']['activity_name'] = None
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         await asyncio.sleep(1)
 
@@ -458,18 +458,18 @@ def introduction(config):
         "3. Select 'Create a Bot' and confirm.\n"
         "4. Click on 'Copy' under Token.\n"
         "(Don't ever reveal this token to anyone you don't trust)\n")
-    
+
     keyinput = input("Paste your token right here: ")
     print('--------------------\n')
 
     # Add API key to config file
     config = toml.load(constants.DATA_DIR + 'config.toml')
     config['base']['apikey'] = keyinput
-    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+    with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
         toml.dump(config, config_file)
     return True
 
-    
+
 def load_modules(bot):
     """Loads all modules from the modules folder for the bot"""
     # Enable enabled modules from list
@@ -489,11 +489,14 @@ def load_modules(bot):
 def get_prefix(bot, message):
     # Access database if it exists and fetch server's custom prefix if set
     try:
-        db = sqlite3.connect(f'file:{constants.DATA_DIR}spacecat.db?mode=ro', uri=True)
+        db = sqlite3.connect(
+            f'file:{constants.DATA_DIR}spacecat.db?mode=ro',
+            uri=True)
         cursor = db.cursor()
         query = (message.guild.id,)
         cursor.execute(
-            "SELECT prefix FROM server_settings WHERE server_id=?", query)
+            'SELECT prefix FROM server_settings '
+            'WHERE server_id=?', query)
         prefix = cursor.fetchone()[0]
         db.close()
 
@@ -523,7 +526,7 @@ def run(firstrun=False):
             print(
                 "Looks like that API key didn't work.\n"
                 "Run the program again and use the correct key.")
-            os.remove(constants.DATA_DIR + "config.toml")
+            os.remove(constants.DATA_DIR + 'config.toml')
             return
         print(
             "[Error]\n"

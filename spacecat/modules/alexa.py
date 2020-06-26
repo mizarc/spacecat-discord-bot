@@ -76,8 +76,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url(cls, url):
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
-        before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5" 
+        data = await loop.run_in_executor(
+            None, lambda: ytdl.extract_info(url, download=False))
+        before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
 
         try:
             if 'entries' in data:
@@ -86,7 +87,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
         except TypeError:
             return
 
-        return cls(discord.FFmpegPCMAudio(data['url'], **ffmpeg_options, before_options=before_args), data=data)
+        audio_data = discord.FFmpegPCMAudio(
+            data['url'], **ffmpeg_options, before_options=before_args)
+        return cls(audio_data, data=data)
 
 
 class Alexa(commands.Cog):
@@ -111,9 +114,9 @@ class Alexa(commands.Cog):
             config['music']['auto_disconnect'] = True
         if 'disconnect_time' not in config['music']:
             config['music']['disconnect_time'] = 300
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
-        
+
         # Create playlist table if it don't exist
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
@@ -121,8 +124,7 @@ class Alexa(commands.Cog):
 
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS playlist'
-            '(id INTEGER PRIMARY KEY, name TEXT, description TEXT,'
-            'server_id INTEGER)')
+            '(id INTEGER PRIMARY KEY, name TEXT, description TEXT, server_id INTEGER)')
 
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS playlist_music'
@@ -160,13 +162,13 @@ class Alexa(commands.Cog):
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
         """Joins a voice channel"""
         # Get user's current channel if no channel is specified
-        if channel == None:
+        if channel is None:
             try:
                 channel = ctx.author.voice.channel
             except AttributeError:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
-                    description=f"You must specify or be in a voice channel")
+                    description="You must specify or be in a voice channel")
                 await ctx.send(embed=embed)
                 return
 
@@ -180,7 +182,7 @@ class Alexa(commands.Cog):
         if channel == ctx.voice_client.channel:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"I'm already in that voice channel")
+                description="I'm already in that voice channel")
             await ctx.send(embed=embed)
             return
 
@@ -266,8 +268,8 @@ class Alexa(commands.Cog):
             "+http://www.google.com/bot.html)'}
         source = requests.get(search_url, headers=headers)
         soup = bs(source.text, 'lxml')
-        titles = soup.find_all('a', attrs={'class':'yt-uix-tile-link'})
-        durations = soup.find_all('span', attrs={'class':'video-time'})
+        titles = soup.find_all('a', attrs={'class': 'yt-uix-tile-link'})
+        durations = soup.find_all('span', attrs={'class': 'video-time'})
         urls = []
         for title in titles:
             urls.append(f"{base_url}{title.attrs['href']}")
@@ -279,7 +281,7 @@ class Alexa(commands.Cog):
                 description="Search query returned no results")
             await ctx.send(embed=embed)
             return
-        
+
         # Format the data to be in a usable list
         index = 0
         results_format = []
@@ -321,8 +323,8 @@ class Alexa(commands.Cog):
         except asyncio.TimeoutError:
             embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
-                    description=f"Song selection timed out.")
-            embed.set_author(name=f"Search Query", icon_url="attachment://image.png")
+                    description="Song selection timed out.")
+            embed.set_author(name="Search Query", icon_url="attachment://image.png")
             await msg.clear_reactions()
             await msg.edit(file=None, embed=embed)
             return
@@ -331,7 +333,7 @@ class Alexa(commands.Cog):
         number = reaction_buttons.emoji_to_number(str(reaction))
         selected_song = urls[number - 1]
         await ctx.invoke(self.play, url=selected_song)
-        
+
     @commands.command()
     @perms.check()
     async def stop(self, ctx):
@@ -430,7 +432,7 @@ class Alexa(commands.Cog):
         if len(self.song_queue[ctx.guild.id]) < 2:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"There's nothing in the queue to shuffle")
+                description="There's nothing in the queue to shuffle")
             await ctx.send(embed=embed)
             return
 
@@ -442,7 +444,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Queue has been shuffled")
+            description="Queue has been shuffled")
         await ctx.send(embed=embed)
         return
 
@@ -459,7 +461,7 @@ class Alexa(commands.Cog):
             self.loop_toggle[ctx.guild.id] = False
             embed = discord.Embed(
                 colour=constants.EmbedStatus.NO.value,
-                description=f"Loop disabled")
+                description="Loop disabled")
             await ctx.send(embed=embed)
             return
 
@@ -467,20 +469,20 @@ class Alexa(commands.Cog):
         self.loop_toggle[ctx.guild.id] = True
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Loop enabled")
+            description="Loop enabled")
         await ctx.send(embed=embed)
         return
 
     @commands.group(invoke_without_command=True)
     @perms.check()
-    async def queue(self, ctx, arg: int=1):
+    async def queue(self, ctx, arg: int = 1):
         """View and modify the current song queue. Defaults to the list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
         await ctx.invoke(self.queue_list, arg)
 
     @queue.command(name='list')
     @perms.check()
-    async def queue_list(self, ctx, page: int=1):
+    async def queue_list(self, ctx, page: int = 1):
         """List the current song queue"""
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
@@ -490,7 +492,7 @@ class Alexa(commands.Cog):
         if not self.song_queue[ctx.guild.id]:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"There's nothing in the queue right now")
+                description="There's nothing in the queue right now")
             await ctx.send(embed=embed)
             return
 
@@ -517,8 +519,9 @@ class Alexa(commands.Cog):
         else:
             spacer = ""
         embed.add_field(
-        name=header,
-        value=f"{self.song_queue[ctx.guild.id][0].title} `{current_time}/{duration}` \n{spacer}")
+            name=header,
+            value=f"{self.song_queue[ctx.guild.id][0].title} "
+            f"`{current_time}/{duration}` \n{spacer}")
 
         # List remaining songs in queue plus total duration
         if queue_status:
@@ -526,13 +529,15 @@ class Alexa(commands.Cog):
 
             # Modify page variable to get every ten results
             page -= 1
-            if page > 0: page = page * 10
+            if page > 0:
+                page = page * 10
 
             total_duration = -self.song_queue[ctx.guild.id][0].duration
             for song in self.song_queue[ctx.guild.id]:
                 total_duration += song.duration
 
-            for index, song in enumerate(islice(self.song_queue[ctx.guild.id], page + 1, page + 11)):
+            for index, song in enumerate(
+                    islice(self.song_queue[ctx.guild.id], page + 1, page + 11)):
                 duration = await self._get_duration(song.duration)
                 queue_info.append(f"{page + index + 1}. {song.title} `{duration}`")
 
@@ -540,13 +545,14 @@ class Alexa(commands.Cog):
             if page > 0 and not queue_info:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
-                    description=f"There are no songs on that page")
+                    description="There are no songs on that page")
                 await ctx.send(embed=embed)
                 return
 
             # Omit songs past 10 and just display amount instead
             if len(self.song_queue[ctx.guild.id]) > page + 11:
-                queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11 - page} more in queue`")
+                queue_info.append(
+                    f"`+{len(self.song_queue[ctx.guild.id]) - 11 - page} more in queue`")
 
             # Output results to chat
             duration = await self._get_duration(total_duration)
@@ -567,12 +573,12 @@ class Alexa(commands.Cog):
         # Try to remove song from queue using the specified index
         try:
             if original_pos < 1:
-                raise IndexError('Position can\'t be be less than 1')
+                raise IndexError("Position can\'t be be less than 1")
             song = self.song_queue[ctx.guild.id][original_pos]
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"There's no song at that position")
+                description="There's no song at that position")
             await ctx.send(embed=embed)
             return
 
@@ -580,12 +586,12 @@ class Alexa(commands.Cog):
         if not 1 <= new_pos < len(self.song_queue[ctx.guild.id]):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"You can't move the song into that position")
+                description="You can't move the song into that position")
             await ctx.send(embed=embed)
             return
         self.song_queue[ctx.guild.id].pop(original_pos)
         self.song_queue[ctx.guild.id].insert(new_pos, song)
-            
+
         # Output result to chat
         duration = await self._get_duration(song.duration)
         embed = discord.Embed(
@@ -606,16 +612,16 @@ class Alexa(commands.Cog):
                 description="Too many songs in queue. Calm down.")
             await ctx.send(embed=embed)
             return
-            
+
         # Add the song to the queue and output result
         try:
             source, song_name = await self._process_song(ctx, url)
         except VideoTooLongError:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
-                    description="Woops, that video is too long")
-                await ctx.send(embed=embed)
-                return
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Woops, that video is too long")
+            await ctx.send(embed=embed)
+            return
         except VideoUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -625,11 +631,11 @@ class Alexa(commands.Cog):
         self.song_queue[ctx.guild.id].append(source)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Added {song_name} to " 
+            description=f"Added {song_name} to "
             f"#{len(self.song_queue[ctx.guild.id]) - 1} in queue")
         await ctx.send(embed=embed)
         return
-        
+
     @queue.command(name='remove')
     @perms.check()
     async def queue_remove(self, ctx, index: int):
@@ -647,10 +653,10 @@ class Alexa(commands.Cog):
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"That's an invalid queue position")
+                description="That's an invalid queue position")
             await ctx.send(embed=embed)
             return
-        
+
         # Output result to chat
         duration = await self._get_duration(song.duration)
         embed = discord.Embed(
@@ -672,7 +678,7 @@ class Alexa(commands.Cog):
         if len(self.song_queue[ctx.guild.id]) < 2:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"There's nothing in the queue to clear")
+                description="There's nothing in the queue to clear")
             await ctx.send(embed=embed)
             return
         self.song_queue[ctx.guild.id] = [self.song_queue[ctx.guild.id][0]]
@@ -680,7 +686,7 @@ class Alexa(commands.Cog):
         # Output result to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
-            description=f"All songs have been removed from the queue")
+            description="All songs have been removed from the queue")
         await ctx.send(embed=embed)
 
     @commands.group(invoke_without_command=True)
@@ -698,7 +704,7 @@ class Alexa(commands.Cog):
         if len(playlist_name) > 30:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist name is too long")
+                description="Playlist name is too long")
             await ctx.send(embed=embed)
             return
 
@@ -746,10 +752,12 @@ class Alexa(commands.Cog):
         cursor = db.cursor()
         values = (playlist[0],)
         cursor.execute(
-            'DELETE FROM playlist_music WHERE playlist_id=?', values)
+            'DELETE FROM playlist_music '
+            'WHERE playlist_id=?', values)
         values = (playlist_name, ctx.guild.id)
         cursor.execute(
-            'DELETE FROM playlist WHERE name=? AND server_id=?', values)
+            'DELETE FROM playlist '
+            'WHERE name=? AND server_id=?', values)
         db.commit()
         db.close()
 
@@ -758,7 +766,7 @@ class Alexa(commands.Cog):
             colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been destroyed")
         await ctx.send(embed=embed)
-    
+
     @playlist.command(name='description')
     @perms.check()
     async def playlist_description(self, ctx, playlist_name, *, description):
@@ -777,7 +785,7 @@ class Alexa(commands.Cog):
         if len(playlist_name) > 300:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist name is too long")
+                description="Playlist name is too long")
             await ctx.send(embed=embed)
             return
 
@@ -814,8 +822,7 @@ class Alexa(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         values = (new_name, playlist[0],)
-        cursor.execute(
-            'UPDATE playlist SET name=? WHERE id=?', values)
+        cursor.execute('UPDATE playlist SET name=? WHERE id=?', values)
         db.commit()
         db.close()
 
@@ -835,7 +842,7 @@ class Alexa(commands.Cog):
         if not playlists:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"There are no playlists available")
+                description="There are no playlists available")
             await ctx.send(embed=embed)
             return
 
@@ -864,7 +871,7 @@ class Alexa(commands.Cog):
             name=f"{len(playlists)} available",
             value=playlist_output, inline=False)
         await ctx.send(embed=embed)
-        
+
     @playlist.command(name='add')
     @perms.check()
     async def playlist_add(self, ctx, playlist_name, *, url):
@@ -903,7 +910,7 @@ class Alexa(commands.Cog):
                 description="Woops, that video is unavailable")
             await ctx.send(embed=embed)
             return
-        
+
         # Set previous song as the last song in the playlist
         if not songs:
             previous_song = None
@@ -922,8 +929,7 @@ class Alexa(commands.Cog):
             source.title, source.duration, source.webpage_url,
             previous_song, playlist[0])
         cursor.execute(
-            'INSERT INTO playlist_music'
-            '(title, duration, url, previous_song, playlist_id) '
+            'INSERT INTO playlist_music(title, duration, url, previous_song, playlist_id) '
             'VALUES (?,?,?,?,?)', values)
         db.commit()
         db.close()
@@ -955,20 +961,20 @@ class Alexa(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         selected_song = songs[int(index) - 1]
-        
+
         # Edit next song's previous song id if it exists
         try:
             next_song = songs[int(index)]
             values = (selected_song[4], next_song[0],)
             cursor.execute(
-                'UPDATE playlist_music SET previous_song=? WHERE id=?', values)
+                'UPDATE playlist_music SET previous_song=? '
+                'WHERE id=?', values)
         except IndexError:
             pass
-        
+
         # Remove selected song from playlist
         values = (selected_song[0],)
-        cursor.execute(
-            'DELETE FROM playlist_music WHERE id=?', values)
+        cursor.execute('DELETE FROM playlist_music WHERE id=?', values)
         db.commit()
         db.close()
 
@@ -997,7 +1003,7 @@ class Alexa(commands.Cog):
         # Edit db to put selected song in other song's position
         selected_song = songs[int(original_pos) - 1]
         other_song = songs[int(new_pos) - 1]
-        
+
         # If moving down, shift other song down the list
         if new_pos > original_pos:
             values = [(other_song[0], selected_song[0])]
@@ -1018,13 +1024,14 @@ class Alexa(commands.Cog):
             values.append((selected_song[4], after_selected_song[0]))
         except IndexError:
             pass
-        
+
         # Execute all those values
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         for value in values:
             cursor.execute(
-                'UPDATE playlist_music SET previous_song=? WHERE id=?', value)
+                'UPDATE playlist_music SET previous_song=? '
+                'WHERE id=?', value)
         db.commit()
         db.close()
 
@@ -1036,7 +1043,7 @@ class Alexa(commands.Cog):
                 f"`{duration}` has been moved to position #{new_pos} "
                 f"in playlist `{playlist_name}`")
         await ctx.send(embed=embed)
-        
+
     @playlist.command(name='view')
     @perms.check()
     async def playlist_view(self, ctx, playlist_name, page=1):
@@ -1054,7 +1061,8 @@ class Alexa(commands.Cog):
 
         # Modify page variable to get every ten results
         page -= 1
-        if page > 0: page = page * 10
+        if page > 0:
+            page = page * 10
 
         # Get total duration
         total_duration = 0
@@ -1066,7 +1074,7 @@ class Alexa(commands.Cog):
         for index, song in enumerate(islice(songs, page, page + 10)):
             # Cut off song name to 90 chars
             if len(song[1]) > 90:
-                song_name = f"{song[1][:87]}..." 
+                song_name = f"{song[1][:87]}..."
             else:
                 song_name = song[1]
 
@@ -1078,7 +1086,7 @@ class Alexa(commands.Cog):
         if not formatted_songs:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"There are no songs on that page")
+                description="There are no songs on that page")
             await ctx.send(embed=embed)
             return
 
@@ -1124,8 +1132,8 @@ class Alexa(commands.Cog):
         next_song = song_links.get(None)
         unavailable_songs = []
         index = 0
-        if len(self.song_queue[ctx.guild.id]) == 0: 
-            # Loop until available playlist song is found  
+        if len(self.song_queue[ctx.guild.id]) == 0:
+            # Loop until available playlist song is found
             while True:
                 index += 1
                 try:
@@ -1148,8 +1156,8 @@ class Alexa(commands.Cog):
                 break
         else:
             embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"Added playlist `{playlist}` to queue")
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Added playlist `{playlist}` to queue")
             await ctx.send(embed=embed)
 
         # Add remaining songs to queue
@@ -1204,7 +1212,7 @@ class Alexa(commands.Cog):
             config['music']['auto_disconnect'] = True
             result_text = "enabled"
 
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
         embed = discord.Embed(
@@ -1225,13 +1233,12 @@ class Alexa(commands.Cog):
 
         # Set disconnect_time config variable
         config['music']['disconnect_time'] = seconds
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Music player auto disconnect timer set to "
-                f"{seconds} seconds")
+            description=f"Music player auto disconnect timer set to {seconds} seconds")
         await ctx.send(embed=embed)
         return
 
@@ -1261,7 +1268,8 @@ class Alexa(commands.Cog):
         # Play the new first song in list
         if self.song_queue[ctx.guild.id]:
             self.song_start_time[ctx.guild.id] = time()
-            ctx.voice_client.play(self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
+            ctx.voice_client.play(
+                self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
             return
 
     # Format duration based on what values there are
@@ -1275,7 +1283,7 @@ class Alexa(commands.Cog):
             elif len(duration) < 3:
                 duration = f"0:{duration}"
             return duration
-        except:
+        except ValueError:
             return "N/A"
 
     async def _add_server_keys(self, server):
@@ -1285,8 +1293,7 @@ class Alexa(commands.Cog):
         self.skip_toggle = {server.id: False}
         self.song_start_time = {server.id: None}
         self.song_pause_time = {server.id: None}
-        self.disconnect_time = {server.id: time() +
-            config['music']['disconnect_time']}
+        self.disconnect_time = {server.id: time() + config['music']['disconnect_time']}
 
     async def _remove_server_keys(self, server):
         self.song_queue.pop(server.id, None)
@@ -1316,16 +1323,16 @@ class Alexa(commands.Cog):
         # Fetch all or specific playlist depending on argument
         if not playlist_name:
             values = (ctx.guild.id,)
-            cursor.execute(
-                'SELECT * FROM playlist WHERE server_id=?', values)
+            cursor.execute('SELECT * FROM playlist WHERE server_id=?', values)
             playlist = cursor.fetchall()
         else:
             values = (playlist_name, ctx.guild.id)
             cursor.execute(
-                'SELECT * FROM playlist WHERE name=? AND server_id=?', values)
+                'SELECT * FROM playlist '
+                'WHERE name=? AND server_id=?', values)
             playlist = cursor.fetchone()
             if playlist is None:
-                raise ValueError('That playlist is unavailable')
+                raise ValueError("That playlist is unavailable")
 
         db.close()
         return playlist
@@ -1334,17 +1341,18 @@ class Alexa(commands.Cog):
         """Gets playlist songs from name"""
         playlist = await self._get_playlist(ctx, playlist_name)
         if playlist is None:
-            raise ValueError('That playlist is unavailable')
+            raise ValueError("That playlist is unavailable")
 
         # Get list of all songs in playlist
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         values = (playlist[0],)
         cursor.execute(
-            'SELECT * FROM playlist_music WHERE playlist_id=?', values)
+            'SELECT * FROM playlist_music '
+            'WHERE playlist_id=?', values)
         songs = cursor.fetchall()
         db.close()
-        
+
         # Use dictionary to pair songs with the next song
         song_links = {}
         for song in songs:
@@ -1364,11 +1372,11 @@ class Alexa(commands.Cog):
         source = await YTDLSource.from_url(url)
 
         if not source:
-            raise VideoUnavailableError('Specified song is unavailable')
+            raise VideoUnavailableError("Specified song is unavailable")
 
         if source.duration >= 10800:
-            raise VideoTooLongError('Specified song is longer than 3 hours')
-            
+            raise VideoTooLongError("Specified song is longer than 3 hours")
+
         duration = await self._get_duration(source.duration)
         name = f"[{source.title}]({source.webpage_url}) `{duration}`"
         return source, name
