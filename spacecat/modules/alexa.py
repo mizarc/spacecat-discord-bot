@@ -163,7 +163,7 @@ class Alexa(commands.Cog):
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
         """Joins a voice channel"""
         # Get user's current channel if no channel is specified
-        if channel == None:
+        if channel is None:
             try:
                 channel = ctx.author.voice.channel
             except AttributeError:
@@ -269,8 +269,8 @@ class Alexa(commands.Cog):
             "+http://www.google.com/bot.html)'}
         source = requests.get(search_url, headers=headers)
         soup = bs(source.text, 'lxml')
-        titles = soup.find_all('a', attrs={'class':'yt-uix-tile-link'})
-        durations = soup.find_all('span', attrs={'class':'video-time'})
+        titles = soup.find_all('a', attrs={'class': 'yt-uix-tile-link'})
+        durations = soup.find_all('span', attrs={'class': 'video-time'})
         urls = []
         for title in titles:
             urls.append(f"{base_url}{title.attrs['href']}")
@@ -476,14 +476,14 @@ class Alexa(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     @perms.check()
-    async def queue(self, ctx, arg: int=1):
+    async def queue(self, ctx, arg: int = 1):
         """View and modify the current song queue. Defaults to the list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
         await ctx.invoke(self.queue_list, arg)
 
     @queue.command(name='list')
     @perms.check()
-    async def queue_list(self, ctx, page: int=1):
+    async def queue_list(self, ctx, page: int = 1):
         """List the current song queue"""
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
