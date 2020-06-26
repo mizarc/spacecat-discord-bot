@@ -1283,7 +1283,7 @@ class Alexa(commands.Cog):
             elif len(duration) < 3:
                 duration = f"0:{duration}"
             return duration
-        except:
+        except ValueError:
             return "N/A"
 
     async def _add_server_keys(self, server):

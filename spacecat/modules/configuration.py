@@ -159,7 +159,7 @@ class Configuration(commands.Cog):
         # Alert if there's no preset with that name
         try:
             del config['permissions'][name]
-        except:
+        except KeyError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"There is no preset with the name `{name}`")
