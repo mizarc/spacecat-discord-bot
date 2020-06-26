@@ -71,7 +71,7 @@ class Administration(commands.Cog):
     @alias.command(name='add')
     @perms.check()
     async def addalias(self, ctx, alias, *, command):
-        """Allows a command to be executed with an alias""" 
+        """Allows a command to be executed with an alias"""
         # Limit alias to 15 chars
         if len(alias) > 15:
             embed = discord.Embed(

@@ -69,7 +69,7 @@ class Configuration(commands.Cog):
             activity = None
 
         # Check if valid status name was used
-        if status == None:
+        if status is None:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="That's not a valid status")
@@ -99,7 +99,7 @@ class Configuration(commands.Cog):
         except KeyError:
             status = None
 
-        if activity_type == None:
+        if activity_type is None:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="That's not a valid activity type")
