@@ -20,7 +20,8 @@ class Help(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.INFO.value,
                 title=f"{constants.EmbedIcon.HELP} Help Menu",
-                description=f"Type !help <module> to list all commands in the module (case sensitive)")
+                description="Type !help <module> "
+                "to list all commands in the module (case sensitive)")
 
             # Add all modules to the embed
             modules = self.bot.cogs
@@ -54,7 +55,7 @@ class Help(commands.Cog):
         # Output alert if argument is neither a valid module or command
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
-            description=f"There is no module or command with that name")
+            description="There is no module or command with that name")
         await ctx.send(embed=embed)
 
     async def command_list(self, ctx, module):
@@ -65,7 +66,7 @@ class Help(commands.Cog):
         if not commands:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"You don't have permission to view that module's help page")
+                description="You don't have permission to view that module's help page")
             await ctx.send(embed=embed)
             return
         command_output, command_group_output = await self.get_formatted_command_list(commands)
@@ -74,16 +75,16 @@ class Help(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.HELP} {module.qualified_name} Commands",
-            description=f"Type !help <command> for more info on a command")
+            description="Type !help <command> for more info on a command")
 
         if command_group_output:
             embed.add_field(
-                name=f"**Command Groups**",
+                name="**Command Groups**",
                 value="\n".join(command_group_output))
 
         if command_output:
             embed.add_field(
-                name=f"**Commands**",
+                name="**Commands**",
                 value="\n".join(command_output),
                 inline=False)
 
@@ -96,7 +97,7 @@ class Help(commands.Cog):
         if not check:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"You don't have permission to view that command's help page")
+                description="You don't have permission to view that command's help page")
             await ctx.send(embed=embed)
             return
 
@@ -139,7 +140,8 @@ class Help(commands.Cog):
         try:
             subcommands = await self.filter_commands(
                 ctx, command.all_commands.values())
-            subcommand_output, subcommand_group_output = await self.get_formatted_command_list(subcommands)
+            subcommand_output, subcommand_group_output = await self.get_formatted_command_list(
+                subcommands)
 
             if subcommand_group_output:
                 embed.add_field(
@@ -187,7 +189,6 @@ class Help(commands.Cog):
             except AttributeError:
                 command_output.append(command_format)
         return command_output, command_group_output
-
 
 
 def setup(bot):

@@ -233,12 +233,12 @@ class SpaceCat(commands.Cog):
         # Notify user of successful module reloading
         if len(modules_to_load) == 1:
             embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"Reloaded module `{module[8:]}` successfully")
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Reloaded module `{module[8:]}` successfully")
         else:
             embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"All modules reloaded successfully")
+                colour=constants.EmbedStatus.YES.value,
+                description="All modules reloaded successfully")
 
         await ctx.send(embed=embed)
 
@@ -295,7 +295,7 @@ class SpaceCat(commands.Cog):
             return
 
         # Check config to see if module is already disabled
-        disabled_modules = module_handler.get_disabled()   
+        disabled_modules = module_handler.get_disabled()
         try:
             if module in disabled_modules:
                 embed = discord.Embed(
@@ -309,7 +309,7 @@ class SpaceCat(commands.Cog):
             config['base']['disabled_modules'].append(module)
         except TypeError:
             config = toml.load(constants.DATA_DIR + 'config.toml')
-            config['base']['disabled_modules'] = [module]   
+            config['base']['disabled_modules'] = [module]
 
         # Disable module and write to config
         self.bot.unload_extension(f'{constants.MAIN_DIR}.modules.{module}')
@@ -489,7 +489,9 @@ def load_modules(bot):
 def get_prefix(bot, message):
     # Access database if it exists and fetch server's custom prefix if set
     try:
-        db = sqlite3.connect(f'file:{constants.DATA_DIR}spacecat.db?mode=ro', uri=True)
+        db = sqlite3.connect(
+            f'file:{constants.DATA_DIR}spacecat.db?mode=ro',
+            uri=True)
         cursor = db.cursor()
         query = (message.guild.id,)
         cursor.execute(

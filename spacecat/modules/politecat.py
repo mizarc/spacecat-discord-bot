@@ -50,15 +50,15 @@ class PoliteCat(commands.Cog):
                 spoiler = True
 
             await message.channel.send(
-            f"**{message.author.display_name} sent:**\n{message.content}",
-            file=discord.File(gif, spoiler=spoiler))
+                f"**{message.author.display_name} sent:**\n{message.content}",
+                file=discord.File(gif, spoiler=spoiler))
             await message.delete()
 
         # Notify if conversion failed
         except discord.errors.HTTPException:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Failed to convert webp to gif. "
+                description="Failed to convert webp to gif. "
                 "Image may be too large")
             await message.channel.send(embed=embed)
             return
@@ -104,8 +104,8 @@ class PoliteCat(commands.Cog):
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"There are no attachments in that message")
-            await ctx.send(embed=embed) 
+                description="There are no attachments in that message")
+            await ctx.send(embed=embed)
             return
 
         # Create reactions folder if it doesn't exist
@@ -117,7 +117,7 @@ class PoliteCat(commands.Cog):
         if name in reactions:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Reaction name already in use")
+                description="Reaction name already in use")
             await ctx.send(embed=embed)
             return
 
@@ -128,8 +128,8 @@ class PoliteCat(commands.Cog):
         elif ext == "jpg" or ext == "jpeg" or ext == "bmp" or ext == "png":
             await image.save(f'{constants.DATA_DIR}reactions/{name}.webp')
         else:
-            await ctx.send("Image must be formatted in " +
-                            "webp, png, jpg, bmp or gif")
+            await ctx.send(
+                "Image must be formatted in webp, png, jpg, bmp or gif")
             return
 
         embed = discord.Embed(
@@ -162,7 +162,6 @@ class PoliteCat(commands.Cog):
             description=f"Removed {name} from reactions")
         await ctx.send(embed=embed)
         return
-
 
     @commands.command()
     @perms.check()

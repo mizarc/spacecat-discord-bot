@@ -44,7 +44,9 @@ class Configuration(commands.Cog):
             db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
             cursor = db.cursor()
             query = (ctx.guild.id, cmd_name)
-            cursor.execute(f"SELECT command FROM command_alias WHERE server_id=? AND alias=?", query)
+            cursor.execute(
+                "SELECT command FROM command_alias "
+                "WHERE server_id=? AND alias=?", query)
             result = cursor.fetchall()
             db.close()
 
@@ -70,7 +72,7 @@ class Configuration(commands.Cog):
         if status == None:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"That's not a valid status")
+                description="That's not a valid status")
             await ctx.send(embed=embed)
             return
 
@@ -88,7 +90,10 @@ class Configuration(commands.Cog):
     async def activity(self, ctx, activity_name, *, name):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         activity_type = discord.ActivityType[activity_name]
-        activity = discord.Activity(type=activity_type, name=name, url="https://www.twitch.tv/yeet")
+        activity = discord.Activity(
+            type=activity_type,
+            name=name,
+            url="https://www.twitch.tv/yeet")
         try:
             status = config['base']['status']
         except KeyError:
@@ -97,7 +102,7 @@ class Configuration(commands.Cog):
         if activity_type == None:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"That's not a valid activity type")
+                description="That's not a valid activity type")
             await ctx.send(embed=embed)
             return
 
@@ -105,7 +110,6 @@ class Configuration(commands.Cog):
             await self.bot.change_presence(activity=activity, status=status)
         else:
             await self.bot.change_presence(activity=activity)
-
 
         config['base']['activity_type'] = activity_type
         config['base']['activity_name'] = name
@@ -165,7 +169,7 @@ class Configuration(commands.Cog):
         if name == 'default':
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"You cannot remove the default preset")
+                description="You cannot remove the default preset")
             await ctx.send(embed=embed)
             return
 
@@ -246,9 +250,9 @@ class Configuration(commands.Cog):
                 if not command or command.cog != cog:
                     embed = discord.Embed(
                         colour=constants.EmbedStatus.FAIL.value,
-                        description=f"Permission does not exist. "
+                        description="Permission does not exist. "
                         "Please enter a valid permission")
-                    await ctx.send(embed=embed) 
+                    await ctx.send(embed=embed)
                     return
             except UnboundLocalError:
                 pass
@@ -266,7 +270,8 @@ class Configuration(commands.Cog):
                     f"{command.cog.qualified_name}.{command_perm}")
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Command `{command.cog.qualified_name}.{command_perm}` added to preset `{preset}`")
+                    description=f"Command `{command.cog.qualified_name}.{command_perm}` "
+                    f"added to preset `{preset}`")
                 await ctx.send(embed=embed)
 
         with open(constants.DATA_DIR + "config.toml", "w") as config_file:
@@ -341,7 +346,7 @@ class Configuration(commands.Cog):
                 if not command or command.cog != cog:
                     embed = discord.Embed(
                         colour=constants.EmbedStatus.FAIL.value,
-                        description=f"Permission does not exist. "
+                        description="Permission does not exist. "
                         "Please enter a valid permission")
                     await ctx.send(embed=embed)
                     return

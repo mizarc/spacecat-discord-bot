@@ -76,7 +76,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url(cls, url):
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
+        data = await loop.run_in_executor(
+            None, lambda: ytdl.extract_info(url, download=False))
         before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
 
         try:
@@ -86,7 +87,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
         except TypeError:
             return
 
-        return cls(discord.FFmpegPCMAudio(data['url'], **ffmpeg_options, before_options=before_args), data=data)
+        audio_data = discord.FFmpegPCMAudio(
+            data['url'], **ffmpeg_options, before_options=before_args)
+        return cls(audio_data, data=data)
 
 
 class Alexa(commands.Cog):
@@ -517,8 +520,9 @@ class Alexa(commands.Cog):
         else:
             spacer = ""
         embed.add_field(
-        name=header,
-        value=f"{self.song_queue[ctx.guild.id][0].title} `{current_time}/{duration}` \n{spacer}")
+            name=header,
+            value=f"{self.song_queue[ctx.guild.id][0].title} "
+            f"`{current_time}/{duration}` \n{spacer}")
 
         # List remaining songs in queue plus total duration
         if queue_status:
@@ -526,13 +530,15 @@ class Alexa(commands.Cog):
 
             # Modify page variable to get every ten results
             page -= 1
-            if page > 0: page = page * 10
+            if page > 0:
+                page = page * 10
 
             total_duration = -self.song_queue[ctx.guild.id][0].duration
             for song in self.song_queue[ctx.guild.id]:
                 total_duration += song.duration
 
-            for index, song in enumerate(islice(self.song_queue[ctx.guild.id], page + 1, page + 11)):
+            for index, song in enumerate(
+                    islice(self.song_queue[ctx.guild.id], page + 1, page + 11)):
                 duration = await self._get_duration(song.duration)
                 queue_info.append(f"{page + index + 1}. {song.title} `{duration}`")
 
@@ -540,13 +546,14 @@ class Alexa(commands.Cog):
             if page > 0 and not queue_info:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
-                    description=f"There are no songs on that page")
+                    description="There are no songs on that page")
                 await ctx.send(embed=embed)
                 return
 
             # Omit songs past 10 and just display amount instead
             if len(self.song_queue[ctx.guild.id]) > page + 11:
-                queue_info.append(f"`+{len(self.song_queue[ctx.guild.id]) - 11 - page} more in queue`")
+                queue_info.append(
+                    f"`+{len(self.song_queue[ctx.guild.id]) - 11 - page} more in queue`")
 
             # Output results to chat
             duration = await self._get_duration(total_duration)
@@ -611,11 +618,11 @@ class Alexa(commands.Cog):
         try:
             source, song_name = await self._process_song(ctx, url)
         except VideoTooLongError:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
-                    description="Woops, that video is too long")
-                await ctx.send(embed=embed)
-                return
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Woops, that video is too long")
+            await ctx.send(embed=embed)
+            return
         except VideoUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -672,7 +679,7 @@ class Alexa(commands.Cog):
         if len(self.song_queue[ctx.guild.id]) < 2:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"There's nothing in the queue to clear")
+                description="There's nothing in the queue to clear")
             await ctx.send(embed=embed)
             return
         self.song_queue[ctx.guild.id] = [self.song_queue[ctx.guild.id][0]]
@@ -1054,7 +1061,8 @@ class Alexa(commands.Cog):
 
         # Modify page variable to get every ten results
         page -= 1
-        if page > 0: page = page * 10
+        if page > 0:
+            page = page * 10
 
         # Get total duration
         total_duration = 0
@@ -1148,8 +1156,8 @@ class Alexa(commands.Cog):
                 break
         else:
             embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"Added playlist `{playlist}` to queue")
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Added playlist `{playlist}` to queue")
             await ctx.send(embed=embed)
 
         # Add remaining songs to queue
@@ -1230,8 +1238,7 @@ class Alexa(commands.Cog):
 
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Music player auto disconnect timer set to "
-                f"{seconds} seconds")
+            description=f"Music player auto disconnect timer set to {seconds} seconds")
         await ctx.send(embed=embed)
         return
 
@@ -1261,7 +1268,8 @@ class Alexa(commands.Cog):
         # Play the new first song in list
         if self.song_queue[ctx.guild.id]:
             self.song_start_time[ctx.guild.id] = time()
-            ctx.voice_client.play(self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
+            ctx.voice_client.play(
+                self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
             return
 
     # Format duration based on what values there are
@@ -1285,8 +1293,7 @@ class Alexa(commands.Cog):
         self.skip_toggle = {server.id: False}
         self.song_start_time = {server.id: None}
         self.song_pause_time = {server.id: None}
-        self.disconnect_time = {server.id: time() +
-            config['music']['disconnect_time']}
+        self.disconnect_time = {server.id: time() + config['music']['disconnect_time']}
 
     async def _remove_server_keys(self, server):
         self.song_queue.pop(server.id, None)
