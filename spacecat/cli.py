@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import sys
 
 import toml
 
@@ -46,7 +47,7 @@ def select_instance():
             'n': create_instance_menu,
             'r': rename_instance_menu,
             'd': destroy_instance_menu,
-            'x': quit
+            'x': sys.exit
         }
 
     while True:
