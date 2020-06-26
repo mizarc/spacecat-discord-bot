@@ -6,7 +6,6 @@ file readability for manual editing. Functions found here provide
 a consistent way to handle the data that the bot can read from.
 """
 
-import os
 import toml
 
 from spacecat.helpers import constants
@@ -22,14 +21,14 @@ def create():
     # Create config with just the base header
     config = {}
     config['base'] = {}
-    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+    with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
         toml.dump(config, config_file)
     return config
 
 
 def apply_arguments(config, args):
     """Apply and return the cmd arguments to the config file
-    
+
     Arguments specified through argsparse can be forwarded to the config
     file to manually change data before the bot runs.
     """
@@ -45,6 +44,6 @@ def apply_arguments(config, args):
         except KeyError:
             config['base']['adminuser'] = [args.user]
 
-    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+    with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
         toml.dump(config, config_file)
     return config

@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import sys
 
 import toml
 
@@ -46,9 +47,9 @@ def select_instance():
             'n': create_instance_menu,
             'r': rename_instance_menu,
             'd': destroy_instance_menu,
-            'x': quit
+            'x': sys.exit
         }
-    
+
     while True:
         display_instances(options)
         instances = instance.get_all()
@@ -81,7 +82,7 @@ def select_instance():
 def display_instances(options):
     """Prints a list of instances and other instance editing options"""
     instances = instance.get_all()
-    
+
     # Add list of instances, plus extra options
     print("[Available Instances]")
     formatted_instances = []
@@ -157,7 +158,7 @@ def destroy_instance_menu():
             print(f"Instance '{instance_name}' has been deleted.\n")
             return
         elif confirm == 'n':
-            print(f"Instance deletion has been cancelled.\n")
+            print("Instance deletion has been cancelled.\n")
             return
         else:
             print("Invalid option.")
@@ -165,10 +166,10 @@ def destroy_instance_menu():
 
 def main():
     print(
-        " ___  ___   ___  _                   _   ___      _\n"
-        "/ __|/ __| |   \(_)___ __ ___ _ _ __| | | _ ) ___| |_\n"
-        "\__ \ (__  | |) | (_-</ _/ _ \ '_/ _` | | _ \/ _ \  _|\n"
-        "|___/\___| |___/|_/__/\__\___/_| \__,_| |___/\___/\__|\n"
+        r" ___  ___   ___  _                   _   ___      _" + "\n"
+        r"/ __|/ __| |   \(_)___ __ ___ _ _ __| | | _ ) ___| |_" + "\n"
+        r"\__ \ (__  | |) | (_-</ _/ _ \ '_/ _` | | _ \/ _ \  _|" + "\n"
+        r"|___/\___| |___/|_/__/\__\___/_| \__,_| |___/\___/\__|" + "\n"
     )
     logger()
     args = parse_args()
