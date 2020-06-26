@@ -45,8 +45,8 @@ class Configuration(commands.Cog):
             cursor = db.cursor()
             query = (ctx.guild.id, cmd_name)
             cursor.execute(
-                "SELECT command FROM command_alias "
-                "WHERE server_id=? AND alias=?", query)
+                'SELECT command FROM command_alias '
+                'WHERE server_id=? AND alias=?', query)
             result = cursor.fetchall()
             db.close()
 

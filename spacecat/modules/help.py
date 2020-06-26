@@ -121,7 +121,9 @@ class Help(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id, command.name)
-        cursor.execute("SELECT alias FROM command_alias WHERE server_id=? AND command=?", value)
+        cursor.execute(
+            'SELECT alias FROM command_alias '
+            'WHERE server_id=? AND command=?', value)
         aliases = cursor.fetchall()
         db.close()
 
