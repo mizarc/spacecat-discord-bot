@@ -94,7 +94,8 @@ class Linkle(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id, voice_channel.id, text_channel.id)
-        cursor.execute("INSERT INTO linked_channel VALUES (?,?,?)", value)
+        cursor.execute(
+            'INSERT INTO linked_channel VALUES (?,?,?)', value)
         db.commit()
         db.close()
 
@@ -150,7 +151,8 @@ class Linkle(commands.Cog):
         cursor = db.cursor()
         value = (ctx.guild.id,)
         cursor.execute(
-            'SELECT * FROM linked_channel WHERE server_id=?', value)
+            'SELECT * FROM linked_channel '
+            'WHERE server_id=?', value)
         links = cursor.fetchall()
         db.close()
 
@@ -193,7 +195,8 @@ class Linkle(commands.Cog):
         cursor = db.cursor()
         query = (voice_channel, text_channel)
         cursor.execute(
-            'SELECT * FROM linked_channel WHERE voice_channel=? AND text_channel=?', query)
+            'SELECT * FROM linked_channel '
+            'WHERE voice_channel=? AND text_channel=?', query)
         link = cursor.fetchall()
         db.close()
 

@@ -495,7 +495,8 @@ def get_prefix(bot, message):
         cursor = db.cursor()
         query = (message.guild.id,)
         cursor.execute(
-            "SELECT prefix FROM server_settings WHERE server_id=?", query)
+            'SELECT prefix FROM server_settings '
+            'WHERE server_id=?', query)
         prefix = cursor.fetchone()[0]
         db.close()
 

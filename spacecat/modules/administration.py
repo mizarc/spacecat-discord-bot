@@ -24,8 +24,7 @@ class Administration(commands.Cog):
         # Create tables if they don't exist
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS server_settings'
-            '(server_id INTEGER PRIMARY KEY, prefix TEXT, '
-            'advanced_permission BOOLEAN)')
+            '(server_id INTEGER PRIMARY KEY, prefix TEXT, advanced_permission BOOLEAN)')
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS command_alias'
             '(server_id INTEGER, alias TEXT, command TEXT)')
@@ -41,7 +40,7 @@ class Administration(commands.Cog):
 
         # Compare bot servers and database servers to check if the bot was
         # added to servers while the bot was offline
-        cursor.execute("SELECT server_id FROM server_settings")
+        cursor.execute('SELECT server_id FROM server_settings')
         servers = self.bot.guilds
         server_ids = {server.id for server in servers}
         db_servers = cursor.fetchall()
@@ -93,7 +92,8 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id, alias, command)
-        cursor.execute("INSERT INTO command_alias VALUES (?,?,?)", value)
+        cursor.execute(
+            'INSERT INTO command_alias VALUES (?,?,?)', value)
         db.commit()
         db.close()
 
@@ -120,8 +120,7 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         value = (ctx.guild.id, alias)
         cursor.execute(
-            "DELETE FROM command_alias WHERE server_id=? AND alias=?",
-            value)
+            'DELETE FROM command_alias WHERE server_id=? AND alias=?', value)
         db.commit()
         db.close()
 
@@ -138,8 +137,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         value = (ctx.guild.id,)
         cursor.execute(
-            "SELECT alias, command FROM command_alias WHERE server_id=?",
-            value)
+            'SELECT alias, command FROM command_alias'
+            'WHERE server_id=?', value)
         result = cursor.fetchall()
         db.close()
 
@@ -291,7 +290,7 @@ class Administration(commands.Cog):
             return
 
         # Assign the preset to the group's list of permissions
-        cursor.execute("INSERT INTO group_permission VALUES (?,?,?)", query)
+        cursor.execute('INSERT INTO group_permission VALUES (?,?,?)', query)
         db.commit()
         db.close()
         embed = discord.Embed(
@@ -419,7 +418,7 @@ class Administration(commands.Cog):
         # Add permission to database
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
-        cursor.execute("INSERT INTO group_permission VALUES (?,?,?)", value)
+        cursor.execute('INSERT INTO group_permission VALUES (?,?,?)', value)
         db.commit()
         db.close()
 
@@ -499,8 +498,8 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         cursor.execute(
-            "DELETE FROM group_permission"
-            "WHERE server_id=? AND group_id=? AND permission=?", query)
+            'DELETE FROM group_permission'
+            'WHERE server_id=? AND group_id=? AND permission=?', query)
         db.commit()
         db.close()
 
@@ -524,8 +523,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (parent_group.id, child_group.id)
         cursor.execute(
-            "SELECT child_id FROM group_parent "
-            "WHERE parent_id=? AND child_id=?", query)
+            'SELECT child_id FROM group_parent '
+            'WHERE parent_id=? AND child_id=?', query)
         check = cursor.fetchall()
         if check:
             db.close()
@@ -537,7 +536,7 @@ class Administration(commands.Cog):
 
         # Remove permission from database and notify user
         values = (ctx.guild.id, parent_group.id, child_group.id)
-        cursor.execute("INSERT INTO group_parent VALUES (?,?,?)", values)
+        cursor.execute('INSERT INTO group_parent VALUES (?,?,?)', values)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"`{child_group.name}` now inherits "
@@ -564,8 +563,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         values = (ctx.guild.id, parent_group.id, child_group.id)
         cursor.execute(
-            "DELETE FROM group_parent "
-            "WHERE server_id=? AND parent_id=? AND child_id=?", values)
+            'DELETE FROM group_parent '
+            'WHERE server_id=? AND parent_id=? AND child_id=?', values)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"`{child_group.name}` is no longer inheriting "
@@ -591,7 +590,8 @@ class Administration(commands.Cog):
         # Query group's parents
         query = (ctx.guild.id, group.id)
         cursor.execute(
-                'SELECT parent_id FROM group_parent WHERE server_id=? AND child_id=?', query)
+                'SELECT parent_id FROM group_parent '
+                'WHERE server_id=? AND child_id=?', query)
         parents = cursor.fetchall()
 
         # Output formatted parents list
@@ -604,7 +604,8 @@ class Administration(commands.Cog):
 
         # Query group's perms
         cursor.execute(
-                'SELECT permission FROM group_permission WHERE server_id=? AND group_id=?', query)
+            'SELECT permission FROM group_permission '
+            'WHERE server_id=? AND group_id=?', query)
         perms = cursor.fetchall()
 
         # Output formatted perms list
@@ -624,7 +625,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (ctx.guild.id, role.id)
         cursor.execute(
-            'SELECT perm FROM group_permission WHERE server_id=? AND group_id=?', query)
+            'SELECT perm FROM group_permission '
+            'WHERE server_id=? AND group_id=?', query)
         perms = cursor.fetchall()
 
         # Notify if specified user doesn't have any perms to clear
@@ -636,7 +638,9 @@ class Administration(commands.Cog):
             return
 
         # Clear all permissions
-        cursor.execute("DELETE FROM group_permission WHERE server_id=? AND group_id=?", query)
+        cursor.execute(
+            'DELETE FROM group_permission '
+            'WHERE server_id=? AND group_id=?', query)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"All permissions cleared from `{role.name}`")
@@ -735,7 +739,8 @@ class Administration(commands.Cog):
         # Add permission to database
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
-        cursor.execute("INSERT INTO user_permission VALUES (?,?,?)", value)
+        cursor.execute(
+            'INSERT INTO user_permission VALUES (?,?,?)', value)
         db.commit()
         db.close()
 
@@ -815,8 +820,8 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         cursor.execute(
-            "DELETE FROM user_permission "
-            "WHERE server_id=? AND user_id=? AND permission=?", query)
+            'DELETE FROM user_permission '
+            'WHERE server_id=? AND user_id=? AND permission=?', query)
         db.commit()
         db.close()
 
@@ -864,7 +869,7 @@ class Administration(commands.Cog):
         query = (ctx.guild.id, user.id)
         cursor.execute(
             'SELECT permission FROM user_permission '
-            ' WHERE server_id=? AND user_id=?', query)
+            'WHERE server_id=? AND user_id=?', query)
         perms = cursor.fetchall()
 
         # Notify if specified user doesn't have any perms to clear
@@ -891,8 +896,7 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         value = (guild, None, None)
         cursor.execute(
-            "INSERT OR IGNORE INTO server_settings VALUES (?,?,?)",
-            value)
+            'INSERT OR IGNORE INTO server_settings VALUES (?,?,?)', value)
         db.commit()
         db.close()
 
@@ -902,8 +906,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (ctx.guild.id, alias)
         cursor.execute(
-            "SELECT command FROM command_alias "
-            "WHERE server_id=? AND alias=?", query)
+            'SELECT command FROM command_alias '
+            'WHERE server_id=? AND alias=?', query)
         result = cursor.fetchall()
         db.close()
 
@@ -917,8 +921,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (id_, "*")
         cursor.execute(
-            f"SELECT permission FROM {type_}_permission "
-            f"WHERE {type_}_id=? AND permission=?", query)
+            f'SELECT permission FROM {type_}_permission '
+            f'WHERE {type_}_id=? AND permission=?', query)
         result = cursor.fetchall()
         db.close()
 
@@ -937,8 +941,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (id_, f"{cog.qualified_name}.*")
         cursor.execute(
-            f"SELECT permission FROM {type_}_permission "
-            f"WHERE {type_}_id=? AND permission=?", query)
+            f'SELECT permission FROM {type_}_permission '
+            f'WHERE {type_}_id=? AND permission=?', query)
         result = cursor.fetchall()
         db.close()
 
@@ -962,8 +966,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (id_, f"{command.cog.qualified_name}.{perm}")
         cursor.execute(
-            f"SELECT permission FROM {type_}_permission "
-            f"WHERE {type_}_id=? AND permission=?", query)
+            f'SELECT permission FROM {type_}_permission '
+            f'WHERE {type_}_id=? AND permission=?', query)
         result = cursor.fetchall()
         db.close()
 
@@ -977,8 +981,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (parent, child)
         cursor.execute(
-            "SELECT parent_id FROM group_parent "
-            "WHERE parent_id=? AND child_id=?", query)
+            'SELECT parent_id FROM group_parent '
+            'WHERE parent_id=? AND child_id=?', query)
         result = cursor.fetchall()
         if result:
             db.close()
@@ -1004,7 +1008,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (prefix, ctx.guild.id)
         cursor.execute(
-            "UPDATE server_settings SET prefix=? WHERE server_id=?", query)
+            'UPDATE server_settings SET prefix=? '
+            'WHERE server_id=?', query)
         db.commit()
         db.close()
 
@@ -1023,7 +1028,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (None, ctx.guild.id)
         cursor.execute(
-            "UPDATE server_settings SET prefix=? WHERE server_id=?", query)
+            'UPDATE server_settings SET prefix=? '
+            'WHERE server_id=?', query)
         db.commit()
         db.close()
 
@@ -1051,7 +1057,8 @@ class Administration(commands.Cog):
         # Add advanced_permission key if it doesn't exist
         if 'advanced_permission' not in key_names:
             cursor.execute(
-                'ALTER TABLE server_settings ADD advanced_permission BOOLEAN')
+                'ALTER TABLE server_settings '
+                'ADD advanced_permission BOOLEAN')
         db.commit()
         db.close()
 

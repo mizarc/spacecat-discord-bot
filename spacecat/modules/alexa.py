@@ -124,8 +124,7 @@ class Alexa(commands.Cog):
 
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS playlist'
-            '(id INTEGER PRIMARY KEY, name TEXT, description TEXT,'
-            'server_id INTEGER)')
+            '(id INTEGER PRIMARY KEY, name TEXT, description TEXT, server_id INTEGER)')
 
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS playlist_music'
@@ -753,10 +752,12 @@ class Alexa(commands.Cog):
         cursor = db.cursor()
         values = (playlist[0],)
         cursor.execute(
-            'DELETE FROM playlist_music WHERE playlist_id=?', values)
+            'DELETE FROM playlist_music '
+            'WHERE playlist_id=?', values)
         values = (playlist_name, ctx.guild.id)
         cursor.execute(
-            'DELETE FROM playlist WHERE name=? AND server_id=?', values)
+            'DELETE FROM playlist '
+            'WHERE name=? AND server_id=?', values)
         db.commit()
         db.close()
 
@@ -821,8 +822,7 @@ class Alexa(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         values = (new_name, playlist[0],)
-        cursor.execute(
-            'UPDATE playlist SET name=? WHERE id=?', values)
+        cursor.execute('UPDATE playlist SET name=? WHERE id=?', values)
         db.commit()
         db.close()
 
@@ -929,8 +929,7 @@ class Alexa(commands.Cog):
             source.title, source.duration, source.webpage_url,
             previous_song, playlist[0])
         cursor.execute(
-            'INSERT INTO playlist_music'
-            '(title, duration, url, previous_song, playlist_id) '
+            'INSERT INTO playlist_music(title, duration, url, previous_song, playlist_id) '
             'VALUES (?,?,?,?,?)', values)
         db.commit()
         db.close()
@@ -968,14 +967,14 @@ class Alexa(commands.Cog):
             next_song = songs[int(index)]
             values = (selected_song[4], next_song[0],)
             cursor.execute(
-                'UPDATE playlist_music SET previous_song=? WHERE id=?', values)
+                'UPDATE playlist_music SET previous_song=? '
+                'WHERE id=?', values)
         except IndexError:
             pass
 
         # Remove selected song from playlist
         values = (selected_song[0],)
-        cursor.execute(
-            'DELETE FROM playlist_music WHERE id=?', values)
+        cursor.execute('DELETE FROM playlist_music WHERE id=?', values)
         db.commit()
         db.close()
 
@@ -1031,7 +1030,8 @@ class Alexa(commands.Cog):
         cursor = db.cursor()
         for value in values:
             cursor.execute(
-                'UPDATE playlist_music SET previous_song=? WHERE id=?', value)
+                'UPDATE playlist_music SET previous_song=? '
+                'WHERE id=?', value)
         db.commit()
         db.close()
 
@@ -1323,13 +1323,13 @@ class Alexa(commands.Cog):
         # Fetch all or specific playlist depending on argument
         if not playlist_name:
             values = (ctx.guild.id,)
-            cursor.execute(
-                'SELECT * FROM playlist WHERE server_id=?', values)
+            cursor.execute('SELECT * FROM playlist WHERE server_id=?', values)
             playlist = cursor.fetchall()
         else:
             values = (playlist_name, ctx.guild.id)
             cursor.execute(
-                'SELECT * FROM playlist WHERE name=? AND server_id=?', values)
+                'SELECT * FROM playlist '
+                'WHERE name=? AND server_id=?', values)
             playlist = cursor.fetchone()
             if playlist is None:
                 raise ValueError('That playlist is unavailable')
@@ -1348,7 +1348,8 @@ class Alexa(commands.Cog):
         cursor = db.cursor()
         values = (playlist[0],)
         cursor.execute(
-            'SELECT * FROM playlist_music WHERE playlist_id=?', values)
+            'SELECT * FROM playlist_music '
+            'WHERE playlist_id=?', values)
         songs = cursor.fetchall()
         db.close()
 
