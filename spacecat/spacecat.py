@@ -210,7 +210,7 @@ class SpaceCat(commands.Cog):
             try:
                 module = 'modules.' + module
                 self.bot.reload_extension(module)
-            except:
+            except commands.ExtensionNotLoaded:
                 failed_modules.append(module[8:])
 
         # Ouput error messages depending on if only one or multiple modules
@@ -331,7 +331,7 @@ class SpaceCat(commands.Cog):
         # Clear the cache folder if it exists
         try:
             shutil.rmtree(constants.CACHE_DIR)
-        except:
+        except FileNotFoundError:
             pass
 
         await self.bot.logout()
