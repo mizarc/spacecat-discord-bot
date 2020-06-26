@@ -65,7 +65,7 @@ class SpaceCat(commands.Cog):
             activity = discord.Activity(
                 type=activity_type,
                 name=config['base']['activity_name'],
-                url="https://www.twitch.tv/monstercat")
+                url='https://www.twitch.tv/monstercat')
             await self.bot.change_presence(activity=activity)
         except (KeyError, TypeError):
             pass
@@ -92,7 +92,7 @@ class SpaceCat(commands.Cog):
                     description="I'm here to provide a useful set a features")
                 embed.add_field(
                     name="Current Prefix",
-                    value="`{prefix[2]}`", inline=False)
+                    value=f"`{prefix[2]}`", inline=False)
                 embed.add_field(
                     name="Need Help?",
                     value=f"Type `{prefix[2]}help` to get a list of commands",
@@ -146,7 +146,7 @@ class SpaceCat(commands.Cog):
         # Changes the prefix entry in the config
         config = toml.load(constants.DATA_DIR + 'config.toml')
         config['base']['prefix'] = prefix
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -271,7 +271,7 @@ class SpaceCat(commands.Cog):
         self.bot.load_extension(f'{constants.MAIN_DIR}.modules.{module}')
         config = toml.load(constants.DATA_DIR + 'config.toml')
         config['base']['disabled_modules'].remove(module)
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -313,7 +313,7 @@ class SpaceCat(commands.Cog):
 
         # Disable module and write to config
         self.bot.unload_extension(f'{constants.MAIN_DIR}.modules.{module}')
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
@@ -391,7 +391,7 @@ class SpaceCat(commands.Cog):
                 else:
                     continue
 
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         time.sleep(1)
 
@@ -409,7 +409,7 @@ class SpaceCat(commands.Cog):
         # Save prefix to config
         config = toml.load(constants.DATA_DIR + 'config.toml')
         config['base']['prefix'] = prefix_input
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         time.sleep(1)
 
@@ -431,7 +431,7 @@ class SpaceCat(commands.Cog):
         config['base']['status'] = 'online'
         config['base']['activity_type'] = None
         config['base']['activity_name'] = None
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         await asyncio.sleep(1)
 
@@ -465,7 +465,7 @@ def introduction(config):
     # Add API key to config file
     config = toml.load(constants.DATA_DIR + 'config.toml')
     config['base']['apikey'] = keyinput
-    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+    with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
         toml.dump(config, config_file)
     return True
 
@@ -526,7 +526,7 @@ def run(firstrun=False):
             print(
                 "Looks like that API key didn't work.\n"
                 "Run the program again and use the correct key.")
-            os.remove(constants.DATA_DIR + "config.toml")
+            os.remove(constants.DATA_DIR + 'config.toml')
             return
         print(
             "[Error]\n"

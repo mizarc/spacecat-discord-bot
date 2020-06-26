@@ -29,7 +29,7 @@ class Configuration(commands.Cog):
         except KeyError:
             config['permissions']['default'] = []
 
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
     @commands.Cog.listener()
@@ -82,7 +82,7 @@ class Configuration(commands.Cog):
             await self.bot.change_presence(status=status)
 
         config['base']['status'] = status_name
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
     @commands.command()
@@ -93,7 +93,7 @@ class Configuration(commands.Cog):
         activity = discord.Activity(
             type=activity_type,
             name=name,
-            url="https://www.twitch.tv/yeet")
+            url='https://www.twitch.tv/yeet')
         try:
             status = config['base']['status']
         except KeyError:
@@ -113,7 +113,7 @@ class Configuration(commands.Cog):
 
         config['base']['activity_type'] = activity_type
         config['base']['activity_name'] = name
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
     @commands.group(invoke_without_command=True)
@@ -143,7 +143,7 @@ class Configuration(commands.Cog):
             pass
 
         config['permissions'][name] = []
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -174,7 +174,7 @@ class Configuration(commands.Cog):
             return
 
         # Apply changes and output result to user
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
@@ -274,7 +274,7 @@ class Configuration(commands.Cog):
                     f"added to preset `{preset}`")
                 await ctx.send(embed=embed)
 
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
     @permpreset.command(name='remove')
@@ -370,7 +370,7 @@ class Configuration(commands.Cog):
                     f"{command_perm}` removed from preset `{preset}`")
                 await ctx.send(embed=embed)
 
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
     @permpreset.command(name='list')

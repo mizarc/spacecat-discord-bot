@@ -114,7 +114,7 @@ class Alexa(commands.Cog):
             config['music']['auto_disconnect'] = True
         if 'disconnect_time' not in config['music']:
             config['music']['disconnect_time'] = 300
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
         # Create playlist table if it don't exist
@@ -573,7 +573,7 @@ class Alexa(commands.Cog):
         # Try to remove song from queue using the specified index
         try:
             if original_pos < 1:
-                raise IndexError('Position can\'t be be less than 1')
+                raise IndexError("Position can\'t be be less than 1")
             song = self.song_queue[ctx.guild.id][original_pos]
         except IndexError:
             embed = discord.Embed(
@@ -1212,7 +1212,7 @@ class Alexa(commands.Cog):
             config['music']['auto_disconnect'] = True
             result_text = "enabled"
 
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
         embed = discord.Embed(
@@ -1233,7 +1233,7 @@ class Alexa(commands.Cog):
 
         # Set disconnect_time config variable
         config['music']['disconnect_time'] = seconds
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
         embed = discord.Embed(
@@ -1332,7 +1332,7 @@ class Alexa(commands.Cog):
                 'WHERE name=? AND server_id=?', values)
             playlist = cursor.fetchone()
             if playlist is None:
-                raise ValueError('That playlist is unavailable')
+                raise ValueError("That playlist is unavailable")
 
         db.close()
         return playlist
@@ -1341,7 +1341,7 @@ class Alexa(commands.Cog):
         """Gets playlist songs from name"""
         playlist = await self._get_playlist(ctx, playlist_name)
         if playlist is None:
-            raise ValueError('That playlist is unavailable')
+            raise ValueError("That playlist is unavailable")
 
         # Get list of all songs in playlist
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
@@ -1372,10 +1372,10 @@ class Alexa(commands.Cog):
         source = await YTDLSource.from_url(url)
 
         if not source:
-            raise VideoUnavailableError('Specified song is unavailable')
+            raise VideoUnavailableError("Specified song is unavailable")
 
         if source.duration >= 10800:
-            raise VideoTooLongError('Specified song is longer than 3 hours')
+            raise VideoTooLongError("Specified song is longer than 3 hours")
 
         duration = await self._get_duration(source.duration)
         name = f"[{source.title}]({source.webpage_url}) `{duration}`"

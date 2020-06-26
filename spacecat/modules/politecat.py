@@ -88,7 +88,7 @@ class PoliteCat(commands.Cog):
     @commands.group(invoke_without_command=True)
     @perms.check()
     async def reactcfg(self, ctx):
-        "Configure available reaction images"
+        """Configure available reaction images"""
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
             description="Please specify a valid subcommand: `add/remove`")
@@ -97,7 +97,7 @@ class PoliteCat(commands.Cog):
     @reactcfg.command()
     @perms.check()
     async def add(self, ctx, name):
-        "Add a reaction image"
+        """Add a reaction image"""
         # Check if attachment exists in message
         try:
             image = ctx.message.attachments[0]
@@ -141,7 +141,7 @@ class PoliteCat(commands.Cog):
     @reactcfg.command()
     @perms.check()
     async def remove(self, ctx, name):
-        "Remove a reaction image"
+        """Remove a reaction image"""
         # Cancel if image name exists
         reactions = await self._get_reactions()
         if name not in reactions:
@@ -166,7 +166,7 @@ class PoliteCat(commands.Cog):
     @commands.command()
     @perms.check()
     async def reactlist(self, ctx):
-        "List all reaction images"
+        """List all reaction images"""
         reactions = self._get_reactions()
 
         # Alert if no reactions exist
@@ -180,7 +180,7 @@ class PoliteCat(commands.Cog):
     @commands.command()
     @perms.check()
     async def react(self, ctx, name):
-        "Use an image/gif as a reaction"
+        """Use an image/gif as a reaction"""
         # Try sending WebP
         try:
             await ctx.send(

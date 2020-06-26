@@ -21,7 +21,7 @@ def create():
     # Create config with just the base header
     config = {}
     config['base'] = {}
-    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+    with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
         toml.dump(config, config_file)
     return config
 
@@ -44,6 +44,6 @@ def apply_arguments(config, args):
         except KeyError:
             config['base']['adminuser'] = [args.user]
 
-    with open(constants.DATA_DIR + "config.toml", "w") as config_file:
+    with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
         toml.dump(config, config_file)
     return config
