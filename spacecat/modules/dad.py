@@ -39,13 +39,13 @@ class Dad(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.NO.value,
                 description="Dad has been disabled")
-            await ctx.send(embed=embed) 
+            await ctx.send(embed=embed)
         elif not self.toggle:
             self.toggle = True
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description="Dad has been enabled")
-            await ctx.send(embed=embed) 
+            await ctx.send(embed=embed)
 
 
 def setup(bot):

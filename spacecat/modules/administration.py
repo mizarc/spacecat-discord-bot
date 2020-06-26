@@ -39,7 +39,7 @@ class Administration(commands.Cog):
             'CREATE TABLE IF NOT EXISTS group_parent'
             '(server_id INTEGER, parent_id INTEGER, child_id INTEGER)')
 
-        # Compare bot servers and database servers to check if the bot was 
+        # Compare bot servers and database servers to check if the bot was
         # added to servers while the bot was offline
         cursor.execute("SELECT server_id FROM server_settings")
         servers = self.bot.guilds
@@ -71,7 +71,7 @@ class Administration(commands.Cog):
     @alias.command(name='add')
     @perms.check()
     async def addalias(self, ctx, alias, *, command):
-        """Allows a command to be executed with an alias"""        
+        """Allows a command to be executed with an alias""" 
         # Limit alias to 15 chars
         if len(alias) > 15:
             embed = discord.Embed(
@@ -119,7 +119,9 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id, alias)
-        cursor.execute("DELETE FROM command_alias WHERE server_id=? AND alias=?", value)
+        cursor.execute(
+            "DELETE FROM command_alias WHERE server_id=? AND alias=?",
+            value)
         db.commit()
         db.close()
 
@@ -151,14 +153,15 @@ class Administration(commands.Cog):
 
         # Modify page variable to get every ten results
         page -= 1
-        if page > 0: page = page * 10
+        if page > 0:
+            page = page * 10
 
         # Get a list of 10 aliases
         aliases = []
         for index, alias in enumerate(islice(result, page, page + 10)):
             # Cut off the linked command to 70 chars
             if len(alias[1]) > 70:
-                command = f"{alias[1][:67]}..." 
+                command = f"{alias[1][:67]}..."
             else:
                 command = alias[1]
 
@@ -170,7 +173,7 @@ class Administration(commands.Cog):
                 description="There are no aliases on that page")
             await ctx.send(embed=embed)
             return
-  
+
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.DATABASE} Command Aliases")
@@ -272,7 +275,7 @@ class Administration(commands.Cog):
             return
 
         # Alert if the preset has already been assigned to the group
-        db_preset = f'Preset.{preset}' 
+        db_preset = f'Preset.{preset}'
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         query = (ctx.guild.id, group.id, db_preset)
@@ -367,7 +370,8 @@ class Administration(commands.Cog):
 
         # Check if permission starts with a cog
         if not skip and len(perm_values) > 1:
-            cog, exists = await self._module_check(ctx, 'group', group.id, perm_values[0])
+            cog, exists = await self._module_check(
+                ctx, 'group', group.id, perm_values[0])
             # Add a cog wildcard permission to give groups all cog permissions
             if cog and perm_values[1] != '*':
                 perm_values.pop(0)
@@ -376,13 +380,15 @@ class Administration(commands.Cog):
                 value = (ctx.guild.id, group.id, f"{cog.qualified_name}.*")
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Permission group `{cog.qualified_name}` added to group `{group.name}`")
+                    description=f"Permission group `{cog.qualified_name}` "
+                    f"added to group `{group.name}`")
                 skip = True
             # Already existing wildcard permission
             elif cog and exists:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
-                    description=f"`{group.name}` already has the `{cog.qualified_name}` permission group")
+                    description=f"`{group.name}` already has the "
+                    f"`{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed)
                 return
 
@@ -417,7 +423,7 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
 
-        await ctx.send(embed=embed) 
+        await ctx.send(embed=embed)
 
     @group.command(name='remove')
     @perms.check()
@@ -453,13 +459,15 @@ class Administration(commands.Cog):
                 query = (ctx.guild.id, group.id, f"{cog.qualified_name}.*")
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.NO.value,
-                    description=f"Permission group `{cog.qualified_name}` removed from group `{group.name}`")
+                    description=f"Permission group `{cog.qualified_name}`"
+                    f"removed from group `{group.name}`")
                 skip = True
             # Check if group doesn't have the group permission
             elif cog and not exists:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
-                    description=f"`{group.name}` doesn't have the `{cog.qualified_name}` permission group")
+                    description=f"`{group.name}` doesn't have the "
+                    f"`{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed)
                 return
 
@@ -490,7 +498,9 @@ class Administration(commands.Cog):
         # Remove permission from database
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
-        cursor.execute("DELETE FROM group_permission WHERE server_id=? AND group_id=? AND permission=?", query)
+        cursor.execute(
+            "DELETE FROM group_permission"
+            "WHERE server_id=? AND group_id=? AND permission=?", query)
         db.commit()
         db.close()
 
@@ -504,7 +514,8 @@ class Administration(commands.Cog):
         if check:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Cannot add parent to group as selected parent is already a parent of group")
+                description="Cannot add parent to group as "
+                "selected parent is already a parent of group")
             await ctx.send(embed=embed)
             return
 
@@ -512,7 +523,9 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         query = (parent_group.id, child_group.id)
-        cursor.execute("SELECT child_id FROM group_parent WHERE parent_id=? AND child_id=?", query)
+        cursor.execute(
+            "SELECT child_id FROM group_parent "
+            "WHERE parent_id=? AND child_id=?", query)
         check = cursor.fetchall()
         if check:
             db.close()
@@ -527,8 +540,9 @@ class Administration(commands.Cog):
         cursor.execute("INSERT INTO group_parent VALUES (?,?,?)", values)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"`{child_group.name}` now inherits permissions from `{parent_group.name}`")
-        await ctx.send(embed=embed)  
+            description=f"`{child_group.name}` now inherits "
+            "permissions from `{parent_group.name}`")
+        await ctx.send(embed=embed)
         db.commit()
         db.close()
 
@@ -540,18 +554,22 @@ class Administration(commands.Cog):
         if not check:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Cannot remove parent from group as selected parent isn't a parent of group")
-            await ctx.send(embed=embed) 
+                description="Cannot remove parent from group as "
+                "selected parent isn't a parent of group")
+            await ctx.send(embed=embed)
             return
 
         # Remove permission from database and notify user
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         values = (ctx.guild.id, parent_group.id, child_group.id)
-        cursor.execute("DELETE FROM group_parent WHERE server_id=? AND parent_id=? AND child_id=?", values)
+        cursor.execute(
+            "DELETE FROM group_parent "
+            "WHERE server_id=? AND parent_id=? AND child_id=?", values)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
-            description=f"`{child_group.name}` is no longer inheriting permissions from `{parent_group.name}`")
+            description=f"`{child_group.name}` is no longer inheriting "
+            f"permissions from `{parent_group.name}`")
         await ctx.send(embed=embed)
         db.commit()
         db.close()
@@ -655,7 +673,7 @@ class Administration(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"User `{user.name}` already has the wildcard permission")
-                await ctx.send(embed=embed) 
+                await ctx.send(embed=embed)
                 return
 
         # Check if permission starts with a cog
@@ -671,21 +689,24 @@ class Administration(commands.Cog):
                 value = (ctx.guild.id, user.id, f"{cog.qualified_name}.*")
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Permission group `{cog.qualified_name}` added to user `{user.name}`")
+                    description=f"Permission group `{cog.qualified_name}` "
+                    f"added to user `{user.name}`")
                 skip = True
 
             # Already existing wildcard permission
             elif cog and exists:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
-                    description=f"{user.name} already has the `{cog.qualified_name}` permission group")
+                    description=f"{user.name} already has the "
+                    f"`{cog.qualified_name}` permission group")
                 await ctx.send(embed=embed)
                 return
 
         # Check if permission is a command and if command permission exists
         if not skip:
             perm = '.'.join(perm_values)
-            command, exists = await self._command_check(ctx, 'user', user.id, perm, cog)
+            command, exists = await self._command_check(
+                ctx, 'user', user.id, perm, cog)
 
             # Add if user doesn't have command permission
             if command and not exists:
@@ -700,7 +721,7 @@ class Administration(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"`{user.name}` already has that permission")
-                await ctx.send(embed=embed) 
+                await ctx.send(embed=embed)
                 return
 
         # Notify if permission doesn't exist
@@ -731,7 +752,7 @@ class Administration(commands.Cog):
         if perm == '*':
             exists = await self._wildcard_check(ctx, 'user', user.id)
             if exists:
-                query = (ctx.guild.id, user.id, "*")   
+                query = (ctx.guild.id, user.id, "*")
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.NO.value,
                     description=f"Wildcard permission removed from user `{user.name}`")
@@ -754,14 +775,16 @@ class Administration(commands.Cog):
                 query = (ctx.guild.id, user.id, f"{cog.qualified_name}.*")
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.NO.value,
-                    description=f"Permission group `{cog.qualified_name}` removed from user `{user.name}`")
+                    description=f"Permission group `{cog.qualified_name}` "
+                    f"removed from user `{user.name}`")
                 skip = True
             # Check if user doesn't have the group permission
             elif cog and not exists:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
-                    description=f"`{user.name}` doesn't have the `{cog.qualified_name}` permission group")
-                await ctx.send(embed=embed) 
+                    description=f"`{user.name}` doesn't have the "
+                    f"`{cog.qualified_name}` permission group")
+                await ctx.send(embed=embed)
                 return
 
         # Check if permission is a command and if command permission exists
@@ -791,12 +814,13 @@ class Administration(commands.Cog):
         # Remove permission from database
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
-        cursor.execute("DELETE FROM user_permission WHERE server_id=? AND user_id=? AND permission=?", query)
+        cursor.execute(
+            "DELETE FROM user_permission "
+            "WHERE server_id=? AND user_id=? AND permission=?", query)
         db.commit()
         db.close()
 
         await ctx.send(embed=embed)
-
 
     @user.command(name='info')
     @perms.check()
@@ -818,7 +842,8 @@ class Administration(commands.Cog):
         # Query group's perms
         query = (ctx.guild.id, user.id)
         cursor.execute(
-                'SELECT permission FROM user_permission WHERE server_id=? AND user_id=?', query)
+            'SELECT permission FROM user_permission '
+            'WHERE server_id=? AND user_id=?', query)
         perms = cursor.fetchall()
 
         # Output formatted perms list
@@ -838,7 +863,8 @@ class Administration(commands.Cog):
         cursor = db.cursor()
         query = (ctx.guild.id, user.id)
         cursor.execute(
-                'SELECT permission FROM user_permission WHERE server_id=? AND user_id=?', query)
+            'SELECT permission FROM user_permission '
+            ' WHERE server_id=? AND user_id=?', query)
         perms = cursor.fetchall()
 
         # Notify if specified user doesn't have any perms to clear
@@ -850,7 +876,9 @@ class Administration(commands.Cog):
             return
 
         # Clear all permissions
-        cursor.execute("DELETE FROM user_permission WHERE server_id=? AND user_id=?", query)
+        cursor.execute(
+            "DELETE FROM user_permission "
+            "WHERE server_id=? AND user_id=?", query)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"All permissions cleared from `{user.name}`")
@@ -873,7 +901,9 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         query = (ctx.guild.id, alias)
-        cursor.execute(f"SELECT command FROM command_alias WHERE server_id=? AND alias=?", query)
+        cursor.execute(
+            "SELECT command FROM command_alias "
+            "WHERE server_id=? AND alias=?", query)
         result = cursor.fetchall()
         db.close()
 
@@ -886,7 +916,9 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         query = (id_, "*")
-        cursor.execute(f"SELECT permission FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
+        cursor.execute(
+            f"SELECT permission FROM {type_}_permission "
+            f"WHERE {type_}_id=? AND permission=?", query)
         result = cursor.fetchall()
         db.close()
 
@@ -904,7 +936,9 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         query = (id_, f"{cog.qualified_name}.*")
-        cursor.execute(f"SELECT permission FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
+        cursor.execute(
+            f"SELECT permission FROM {type_}_permission "
+            f"WHERE {type_}_id=? AND permission=?", query)
         result = cursor.fetchall()
         db.close()
 
@@ -921,13 +955,15 @@ class Administration(commands.Cog):
             command = self.bot.get_command(perm.replace('.', ' '))
 
         if command is None:
-                return None, None
+            return None, None
 
         # Query database for group permissions
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         query = (id_, f"{command.cog.qualified_name}.{perm}")
-        cursor.execute(f"SELECT permission FROM {type_}_permission WHERE {type_}_id=? AND permission=?", query)
+        cursor.execute(
+            f"SELECT permission FROM {type_}_permission "
+            f"WHERE {type_}_id=? AND permission=?", query)
         result = cursor.fetchall()
         db.close()
 
@@ -940,7 +976,9 @@ class Administration(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         query = (parent, child)
-        cursor.execute("SELECT parent_id FROM group_parent WHERE parent_id=? AND child_id=?", query)
+        cursor.execute(
+            "SELECT parent_id FROM group_parent "
+            "WHERE parent_id=? AND child_id=?", query)
         result = cursor.fetchall()
         if result:
             db.close()
@@ -1016,7 +1054,6 @@ class Administration(commands.Cog):
                 'ALTER TABLE server_settings ADD advanced_permission BOOLEAN')
         db.commit()
         db.close()
-
 
 
 def setup(bot):

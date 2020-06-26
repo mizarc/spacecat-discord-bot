@@ -42,7 +42,8 @@ class Linkle(commands.Cog):
         try:
             # Show linked text channel if joining a linked voice channel
             query = (member.guild.id, after.channel.id)
-            cursor.execute('SELECT text_channel FROM linked_channel '
+            cursor.execute(
+                'SELECT text_channel FROM linked_channel '
                 'WHERE server_id=? AND voice_channel=?', query)
             text_channel_id = cursor.fetchall()
             if text_channel_id:
@@ -54,7 +55,8 @@ class Linkle(commands.Cog):
         try:
             # Hide linked text channel if leaving a linked voice channel
             query = (member.guild.id, before.channel.id)
-            cursor.execute('SELECT text_channel FROM linked_channel '
+            cursor.execute(
+                'SELECT text_channel FROM linked_channel '
                 'WHERE server_id=? AND voice_channel=?', query)
             text_channel_id = cursor.fetchall()
             if text_channel_id:
@@ -71,8 +73,8 @@ class Linkle(commands.Cog):
 
     @commands.command()
     @perms.check()
-    async def linkchannels(self, ctx, voice_channel: discord.VoiceChannel,
-            text_channel: discord.TextChannel):
+    async def linkchannels(
+            self, ctx, voice_channel: discord.VoiceChannel, text_channel: discord.TextChannel):
         """
         Reveal a text channel when a user joins a voice channel.
         On a user joining a linked voice channel, the associated text
@@ -84,7 +86,7 @@ class Linkle(commands.Cog):
         if exists:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Those channels are already linked")
+                description="Those channels are already linked")
             await ctx.send(embed=embed)
             return
 
@@ -99,13 +101,13 @@ class Linkle(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Voice channel `{voice_channel.name}` has been "
-                f"linked to text channel `{text_channel.name}`")
+            f"linked to text channel `{text_channel.name}`")
         await ctx.send(embed=embed)
 
     @commands.command()
     @perms.check()
-    async def unlinkchannels(self, ctx, voice_channel: discord.VoiceChannel,
-            text_channel: discord.TextChannel):
+    async def unlinkchannels(
+            self, ctx, voice_channel: discord.VoiceChannel, text_channel: discord.TextChannel):
         """
         Remove the connection between a text and voice channel.
         If a text and voice channel were linked together with the linkchannels
@@ -116,7 +118,7 @@ class Linkle(commands.Cog):
         if not exists:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Those channels aren't linked")
+                description="Those channels aren't linked")
             await ctx.send(embed=embed)
             return
 
@@ -133,7 +135,7 @@ class Linkle(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Voice channel `{voice_channel.name}` has been "
-                f"unlinked to text channel `{text_channel.name}`")
+            f"unlinked to text channel `{text_channel.name}`")
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -160,7 +162,8 @@ class Linkle(commands.Cog):
 
         # Modify page variable to get every ten results
         page -= 1
-        if page > 0: page = page * 10
+        if page > 0:
+            page = page * 10
 
         links_display_list = []
         for index, link in enumerate(itertools.islice(links, page, page + 10)):
@@ -169,11 +172,11 @@ class Linkle(commands.Cog):
             links_display_list.append(
                 f"**{page + index + 1}.** {voice_channel.mention} = {text_channel.mention}")
 
-
         if page + 10 < len(links):
             prefix = await self.bot.get_prefix(ctx.message)
             links_display_list.append(
-                f"`For more results, type {prefix[2]}{ctx.command.name} {math.floor((page + 20) / 10)}`")
+                "`For more results, type "
+                f"{prefix[2]}{ctx.command.name} {math.floor((page + 20) / 10)}`")
         links_display = '\n'.join(links_display_list)
 
         embed = discord.Embed(
@@ -195,6 +198,7 @@ class Linkle(commands.Cog):
         db.close()
 
         return link
+
 
 def setup(bot):
     bot.add_cog(Linkle(bot))
