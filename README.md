@@ -1,6 +1,6 @@
 # SpaceCat Discord Bot
 
-The official source code of the Magic Space Cat Discord bot. Everything here is readily available if you want to host your own instance, with full commands and permission customsation.
+The official source code of the Magic Space Cat Discord bot. Everything here is readily available if you want to host your own instance, with full commands and permission customisation.
 
 Official bot invite: https://discord.com/api/oauth2/authorize?client_id=503580226035384340&permissions=8&scope=bot
 
@@ -11,7 +11,8 @@ Official bot invite: https://discord.com/api/oauth2/authorize?client_id=50358022
 
 ## Installation
 1. Open a terminal to the root directory of this project
-2. Run `python -m pip install .`. That's it.
+2. Run `python -m pip install .`
+3. That's it.
 
 ## Running
 1. Navigate to any directory on your filesystem to store bot data in.
