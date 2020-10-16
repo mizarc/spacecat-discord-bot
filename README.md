@@ -10,8 +10,8 @@ Official bot invite: https://discord.com/api/oauth2/authorize?client_id=50358022
 -   [FFmpeg](https://www.ffmpeg.org/)
 
 ## Installation
-1. Open a terminal to the root directory of this project
-2. Run `python -m pip install .`
+1. Open a terminal to the root directory of this project.
+2. Run `python -m pip install .` (Yes the dot is part of the command)
 3. That's it.
 
 ## Running
