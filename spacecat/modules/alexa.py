@@ -175,12 +175,12 @@ class Alexa(commands.Cog):
 
         # Connect if not in a voice channel
         await self._add_server_keys(ctx.guild)
-        if ctx.voice_client is None:
+        if ctx.guild.voice_client is None:
             await channel.connect()
             return
 
         # Check if the specified voice channel is the same as the current channel
-        if channel == ctx.voice_client.channel:
+        if channel == ctx.guild.voice_client.channel:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="I'm already in that voice channel")
@@ -188,7 +188,7 @@ class Alexa(commands.Cog):
             return
 
         # Move to specified channel
-        await ctx.voice_client.move_to(channel)
+        await ctx.guild.voice_client.move_to(channel)
         return
 
     @cog_ext.cog_slash()
@@ -202,7 +202,7 @@ class Alexa(commands.Cog):
 
         # Stop and Disconnect from voice channel
         await ctx.invoke(self.stop)
-        await ctx.voice_client.disconnect()
+        await ctx.guild.voice_client.disconnect()
         await self._remove_server_keys(ctx.guild)
         return
 
@@ -211,11 +211,11 @@ class Alexa(commands.Cog):
     async def play(self, ctx, *, url):
         """Plays from a url (almost anything youtube_dl supports)"""
         # Join user's voice channel if not in one already
-        if ctx.voice_client is None:
+        if ctx.guild.voice_client is None:
             await ctx.invoke(self.join)
 
             # End function if bot failed to join a voice channel.
-            if ctx.voice_client is None:
+            if ctx.guild.voice_client is None:
                 return
 
         # Instantly play song if no song currently playing
@@ -240,7 +240,7 @@ class Alexa(commands.Cog):
                 return
             self.song_queue[ctx.guild.id].append(source)
             self.song_start_time[ctx.guild.id] = time()
-            ctx.voice_client.play(source, after=lambda e: self._next(ctx))
+            ctx.guild.voice_client.play(source, after=lambda e: self._next(ctx))
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Now playing {song_name}")
@@ -252,11 +252,11 @@ class Alexa(commands.Cog):
     @perms.check()
     async def playsearch(self, ctx, *, search):
         # Join user's voice channel if not in one already
-        if ctx.voice_client is None:
+        if ctx.guild.voice_client is None:
             await ctx.invoke(self.join)
 
             # End function if bot failed to join a voice channel.
-            if ctx.voice_client is None:
+            if ctx.guild.voice_client is None:
                 return
 
         # Set urls to be used by the searcher
@@ -347,7 +347,7 @@ class Alexa(commands.Cog):
         # Stops and clears the queue
         self.skip_toggle[ctx.guild.id] = True
         self.song_queue[ctx.guild.id].clear()
-        ctx.voice_client.stop()
+        ctx.guild.voice_client.stop()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Music has been stopped & queue has been cleared")
@@ -362,7 +362,7 @@ class Alexa(commands.Cog):
             return
 
         # Check if music is paused
-        if not ctx.voice_client.is_paused():
+        if not ctx.guild.voice_client.is_paused():
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music isn't paused")
@@ -370,7 +370,7 @@ class Alexa(commands.Cog):
             return
 
         # Resumes music playback
-        ctx.voice_client.resume()
+        ctx.guild.voice_client.resume()
         self.song_start_time[ctx.guild.id] = time() - self.song_pause_time[ctx.guild.id]
         self.song_pause_time[ctx.guild.id] = None
         embed = discord.Embed(
@@ -387,7 +387,7 @@ class Alexa(commands.Cog):
             return
 
         # Check if music is paused
-        if ctx.voice_client.is_paused():
+        if ctx.guild.voice_client.is_paused():
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music is already paused")
@@ -398,7 +398,7 @@ class Alexa(commands.Cog):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         self.disconnect_time[ctx.guild.id] = time() \
             + config['music']['disconnect_time']
-        ctx.voice_client.pause()
+        ctx.guild.voice_client.pause()
         self.song_pause_time[ctx.guild.id] = time() - self.song_start_time[ctx.guild.id]
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -423,7 +423,7 @@ class Alexa(commands.Cog):
 
         # Stop current song and flag that it has been skipped
         self.skip_toggle[ctx.guild.id] = True
-        ctx.voice_client.stop()
+        ctx.guild.voice_client.stop()
 
     @cog_ext.cog_slash()
     @perms.check()
@@ -1109,11 +1109,11 @@ class Alexa(commands.Cog):
     async def playlist_play(self, ctx, playlist):
         """Play from a locally saved playlist"""
         # Join user's voice channel if not in one already
-        if ctx.voice_client is None:
+        if ctx.guild.voice_client is None:
             await ctx.invoke(self.join)
 
             # End function if bot failed to join a voice channel.
-            if ctx.voice_client is None:
+            if ctx.guild.voice_client is None:
                 return
 
         # Get all songs in playlist
@@ -1149,7 +1149,7 @@ class Alexa(commands.Cog):
                     next_song = song_links.get(next_song[0])
                 self.song_queue[ctx.guild.id].append(source)
                 self.song_start_time[ctx.guild.id] = time()
-                ctx.voice_client.play(source, after=lambda e: self._next(ctx))
+                ctx.guild.voice_client.play(source, after=lambda e: self._next(ctx))
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Now playing playlist `{playlist}`")
@@ -1242,7 +1242,7 @@ class Alexa(commands.Cog):
             coroutine = asyncio.run_coroutine_threadsafe(get_source, self.bot.loop)
             source = coroutine.result()
             self.song_start_time[ctx.guild.id] = time()
-            ctx.voice_client.play(source, after=lambda e: self._next(ctx))
+            ctx.guild.voice_client.play(source, after=lambda e: self._next(ctx))
             return
 
         # Disable skip toggle to indicate that a skip has been completed
@@ -1258,7 +1258,7 @@ class Alexa(commands.Cog):
         # Play the new first song in list
         if self.song_queue[ctx.guild.id]:
             self.song_start_time[ctx.guild.id] = time()
-            ctx.voice_client.play(
+            ctx.guild.voice_client.play(
                 self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
             return
 
