@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
+from discord_slash.utils import manage_commands
 
 from spacecat.helpers import perms
 
@@ -19,9 +20,14 @@ class Seethreepio(commands.Cog):
         await ctx.respond()
         await ctx.send(message)
 
-    @commands.command()
+    @cog_ext.cog_slash(name='flip', guild_ids=guild_ids)
     @perms.check()
-    async def flip(self, ctx, member: discord.Member):
+    async def flip(self, ctx: SlashContext, member: discord.Member=None):
+        """Flips a table... Or a person"""
+        if member == None:
+            await ctx.send("(╯°□°）╯︵ ┻━┻")
+            return
+
         if member.id != self.bot.user.id:
             await ctx.send("(╯°□°）╯︵ " + member.mention)
         else:
