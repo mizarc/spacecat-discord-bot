@@ -474,12 +474,12 @@ class Alexa(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @cog_ext.cog_slash()
-    @perms.check()
-    async def queue(self, ctx, arg: int = 1):
-        """View and modify the current song queue. Defaults to the list subcommand."""
+    #@cog_ext.cog_slash()
+    #@perms.check()
+    #async def queue(self, ctx, arg: int = 1):
+    #    """View and modify the current song queue. Defaults to the list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
-        await ctx.invoke(self.queue_list, arg)
+    #    await ctx.invoke(self.queue_list, arg)
 
     @cog_ext.cog_subcommand(base="queue", name="list")
     @perms.check()
@@ -690,12 +690,12 @@ class Alexa(commands.Cog):
             description="All songs have been removed from the queue")
         await ctx.send(embed=embed)
 
-    @cog_ext.cog_slash()
-    @perms.check()
-    async def playlist(self, ctx):
-        """Configure music playlists. Defaults to list subcommand."""
+    #@cog_ext.cog_slash()
+    #@perms.check()
+    #async def playlist(self, ctx):
+    #    """Configure music playlists. Defaults to list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
-        await ctx.invoke(self.playlist_list)
+    #    await ctx.invoke(self.playlist_list)
 
     @cog_ext.cog_subcommand(base="playlist", name="create")
     @perms.check()
