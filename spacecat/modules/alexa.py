@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup as bs
 
 import discord
 from discord.ext import commands, tasks
+from discord_slash import cog_ext, SlashContext
 
 import requests
 
@@ -157,7 +158,7 @@ class Alexa(commands.Cog):
         if len(voice_client.channel.members) < 2:
             await voice_client.disconnect()
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
         """Joins a voice channel"""
@@ -190,7 +191,7 @@ class Alexa(commands.Cog):
         await ctx.voice_client.move_to(channel)
         return
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def leave(self, ctx):
         """Stops and leaves the voice channel"""
@@ -205,7 +206,7 @@ class Alexa(commands.Cog):
         await self._remove_server_keys(ctx.guild)
         return
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def play(self, ctx, *, url):
         """Plays from a url (almost anything youtube_dl supports)"""
@@ -247,7 +248,7 @@ class Alexa(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def playsearch(self, ctx, *, search):
         # Join user's voice channel if not in one already
@@ -334,7 +335,7 @@ class Alexa(commands.Cog):
         selected_song = urls[number - 1]
         await ctx.invoke(self.play, url=selected_song)
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def stop(self, ctx):
         """Stops and clears the queue"""
@@ -352,7 +353,7 @@ class Alexa(commands.Cog):
             description="Music has been stopped & queue has been cleared")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def resume(self, ctx):
         """Resumes music if paused"""
@@ -377,7 +378,7 @@ class Alexa(commands.Cog):
             description="Music has been resumed")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def pause(self, ctx):
         """Pauses the music"""
@@ -404,7 +405,7 @@ class Alexa(commands.Cog):
             description="Music has been paused")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def skip(self, ctx):
         """Skip the current song and play the next song"""
@@ -424,7 +425,7 @@ class Alexa(commands.Cog):
         self.skip_toggle[ctx.guild.id] = True
         ctx.voice_client.stop()
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def shuffle(self, ctx):
         """Randomly moves the contents of the queue around"""
@@ -448,7 +449,7 @@ class Alexa(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def loop(self, ctx):
         """Loop the currently playing song"""
@@ -473,14 +474,14 @@ class Alexa(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @commands.group(invoke_without_command=True)
+    @cog_ext.cog_slash()
     @perms.check()
     async def queue(self, ctx, arg: int = 1):
         """View and modify the current song queue. Defaults to the list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
         await ctx.invoke(self.queue_list, arg)
 
-    @queue.command(name='list')
+    @cog_ext.cog_subcommand(base="queue", name="list")
     @perms.check()
     async def queue_list(self, ctx, page: int = 1):
         """List the current song queue"""
@@ -562,7 +563,7 @@ class Alexa(commands.Cog):
                 value=queue_output, inline=False)
         await ctx.send(embed=embed)
 
-    @queue.command(name='move')
+    @cog_ext.cog_subcommand(base="queue", name="move")
     @perms.check()
     async def queue_move(self, ctx, original_pos: int, new_pos: int):
         """Move a song to a different position in the queue"""
@@ -601,7 +602,7 @@ class Alexa(commands.Cog):
             f"to position #{new_pos}")
         await ctx.send(embed=embed)
 
-    @queue.command(name='add')
+    @cog_ext.cog_subcommand(base="queue", name="add")
     @perms.check()
     async def queue_add(self, ctx, url):
         """Adds a song to the queue"""
@@ -636,7 +637,7 @@ class Alexa(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @queue.command(name='remove')
+    @cog_ext.cog_subcommand(base="queue", name="remove")
     @perms.check()
     async def queue_remove(self, ctx, index: int):
         """Remove a song from the queue"""
@@ -666,7 +667,7 @@ class Alexa(commands.Cog):
             "of the queue")
         await ctx.send(embed=embed)
 
-    @queue.command(name='clear')
+    @cog_ext.cog_subcommand(base="queue", name="clear")
     @perms.check()
     async def queue_clear(self, ctx):
         """Clears the entire queue"""
@@ -689,14 +690,14 @@ class Alexa(commands.Cog):
             description="All songs have been removed from the queue")
         await ctx.send(embed=embed)
 
-    @commands.group(invoke_without_command=True)
+    @cog_ext.cog_slash()
     @perms.check()
     async def playlist(self, ctx):
         """Configure music playlists. Defaults to list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
         await ctx.invoke(self.playlist_list)
 
-    @playlist.command(name='create')
+    @cog_ext.cog_subcommand(base="playlist", name="create")
     @perms.check()
     async def playlist_create(self, ctx, *, playlist_name):
         """Create a new playlist"""
@@ -733,7 +734,7 @@ class Alexa(commands.Cog):
             description=f"Playlist `{playlist_name}` has been created")
         await ctx.send(embed=embed)
 
-    @playlist.command(name='destroy')
+    @cog_ext.cog_subcommand(base="playlist", name="destroy")
     @perms.check()
     async def playlist_destroy(self, ctx, *, playlist_name):
         """Deletes an existing playlist"""
@@ -767,7 +768,7 @@ class Alexa(commands.Cog):
             description=f"Playlist `{playlist_name}` has been destroyed")
         await ctx.send(embed=embed)
 
-    @playlist.command(name='description')
+    @cog_ext.cog_subcommand(base="playlist", name="description")
     @perms.check()
     async def playlist_description(self, ctx, playlist_name, *, description):
         """Sets the description for the playlist"""
@@ -804,7 +805,7 @@ class Alexa(commands.Cog):
             description=f"Description set for playlist `{playlist_name}`")
         await ctx.send(embed=embed)
 
-    @playlist.command(name='rename')
+    @cog_ext.cog_subcommand(base="playlist", name="rename")
     @perms.check()
     async def playlist_rename(self, ctx, playlist_name, new_name):
         """Rename an existing playlist"""
@@ -833,7 +834,7 @@ class Alexa(commands.Cog):
             f"`{new_name}`")
         await ctx.send(embed=embed)
 
-    @playlist.command(name='list')
+    @cog_ext.cog_subcommand(base="playlist", name="list")
     @perms.check()
     async def playlist_list(self, ctx):
         """List all available playlists"""
@@ -872,7 +873,7 @@ class Alexa(commands.Cog):
             value=playlist_output, inline=False)
         await ctx.send(embed=embed)
 
-    @playlist.command(name='add')
+    @cog_ext.cog_subcommand(base="playlist", name="add")
     @perms.check()
     async def playlist_add(self, ctx, playlist_name, *, url):
         """Adds a song to a playlist"""
@@ -943,7 +944,7 @@ class Alexa(commands.Cog):
             f"in playlist `{playlist_name}`")
         await ctx.send(embed=embed)
 
-    @playlist.command(name='remove')
+    @cog_ext.cog_subcommand(base="playlist", name="remove")
     @perms.check()
     async def playlist_remove(self, ctx, playlist_name, index):
         """Removes a song from a playlist"""
@@ -986,7 +987,7 @@ class Alexa(commands.Cog):
             f"`{duration}` has been removed from `{playlist_name}`")
         await ctx.send(embed=embed)
 
-    @playlist.command(name='move')
+    @cog_ext.cog_subcommand(base="playlist", name="move")
     @perms.check()
     async def playlist_move(self, ctx, playlist_name, original_pos, new_pos):
         """Moves a song to a specified position in a playlist"""
@@ -1044,7 +1045,7 @@ class Alexa(commands.Cog):
                 f"in playlist `{playlist_name}`")
         await ctx.send(embed=embed)
 
-    @playlist.command(name='view')
+    @cog_ext.cog_subcommand(base="playlist", name="view")
     @perms.check()
     async def playlist_view(self, ctx, playlist_name, page=1):
         """List all songs in a playlist"""
@@ -1103,7 +1104,7 @@ class Alexa(commands.Cog):
             value=playlist_music_output, inline=False)
         await ctx.send(embed=embed)
 
-    @playlist.command(name='play')
+    @cog_ext.cog_subcommand(base="playlist", name="play")
     @perms.check()
     async def playlist_play(self, ctx, playlist):
         """Play from a locally saved playlist"""
@@ -1185,14 +1186,14 @@ class Alexa(commands.Cog):
                 f"are unavailable: \n{song_format}")
             await ctx.send(embed=embed)
 
-    @commands.group(invoke_without_command=True)
+    @cog_ext.cog_slash()
     @perms.exclusive()
     async def musicsettings(self, ctx):
         """Configure music playlists. Defaults to list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
         await ctx.send("Please specify a valid subcommand.")
 
-    @musicsettings.command(name='autodisconnect')
+    @cog_ext.cog_subcommand(base="musicsettings", name="autodisconnect")
     @perms.exclusive()
     async def musicsettings_autodisconnect(self, ctx):
         """
@@ -1220,7 +1221,7 @@ class Alexa(commands.Cog):
             description=f"Music player auto disconnect {result_text}")
         await ctx.send(embed=embed)
 
-    @musicsettings.command(name='disconnecttime')
+    @cog_ext.cog_subcommand(base="musicsettings", name="disconnecttime")
     @perms.exclusive()
     async def musicsettings_disconnecttime(self, ctx, seconds: int):
         """
