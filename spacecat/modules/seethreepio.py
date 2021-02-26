@@ -5,22 +5,20 @@ from discord_slash.utils import manage_commands
 
 from spacecat.helpers import perms
 
-guild_ids = [287483491032104962]
-
 
 class Seethreepio(commands.Cog):
     """Random text response based features"""
     def __init__(self, bot):
         self.bot = bot
 
-    @cog_ext.cog_slash(name='echo', guild_ids=guild_ids)
+    @cog_ext.cog_slash()
     @perms.check()
     async def echo(self, ctx: SlashContext, *, message):
         """Repeats a given message"""
         await ctx.respond()
         await ctx.send(message)
 
-    @cog_ext.cog_slash(name='flip', guild_ids=guild_ids)
+    @cog_ext.cog_slash()
     @perms.check()
     async def flip(self, ctx: SlashContext, member: discord.Member=None):
         """Flips a table... Or a person"""
@@ -34,7 +32,7 @@ class Seethreepio(commands.Cog):
             await ctx.send("Bitch please. \n'(╯°□°）╯︵ "
                            + ctx.message.author.mention)
 
-    @cog_ext.cog_slash(guild_ids=guild_ids)
+    @cog_ext.cog_slash()
     @perms.check()
     async def throw(self, ctx, member: discord.Member, *, item=None):
         if item is not None:
@@ -47,7 +45,7 @@ class Seethreepio(commands.Cog):
                 await ctx.send("Bitch please. \n'(∩⚆ᗝ⚆)⊃ --==(O)     "
                                + ctx.message.author.mention)
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def stealuserpic(self, ctx, user: discord.User):
         await ctx.send(user.avatar_url)
