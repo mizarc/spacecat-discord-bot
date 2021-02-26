@@ -6,6 +6,7 @@ import time
 
 import discord
 from discord.ext import commands
+from discord_slash import SlashCommand
 
 import toml
 
@@ -519,6 +520,7 @@ def run(firstrun=False):
     try:
         print("Active API Key: " + apikey + "\n")
         bot = commands.Bot(command_prefix=get_prefix)
+        slash = SlashCommand(bot, override_type=True, sync_commands=True)
         bot = load_modules(bot)
         bot.run(apikey)
     except discord.LoginFailure:

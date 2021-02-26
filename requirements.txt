@@ -1,5 +1,6 @@
 beautifulsoup4==4.9.1
 discord.py[voice]
+discord-py-slash-command
 Pillow==7.1.2
 requests==2.24.0
 toml==0.10.1
