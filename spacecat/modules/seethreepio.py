@@ -34,7 +34,7 @@ class Seethreepio(commands.Cog):
             await ctx.send("Bitch please. \n'(╯°□°）╯︵ "
                            + ctx.message.author.mention)
 
-    @commands.command()
+    @cog_ext.cog_slash(guild_ids=guild_ids)
     @perms.check()
     async def throw(self, ctx, member: discord.Member, *, item=None):
         if item is not None:
