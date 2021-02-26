@@ -1,7 +1,10 @@
 import discord
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 
 from spacecat.helpers import perms
+
+guild_ids = [287483491032104962]
 
 
 class Seethreepio(commands.Cog):
@@ -9,10 +12,11 @@ class Seethreepio(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
+    @cog_ext.cog_slash(name='echo', guild_ids=guild_ids)
     @perms.check()
-    async def echo(self, ctx, *, message):
+    async def echo(self, ctx: SlashContext, *, message):
         """Repeats a given message"""
+        await ctx.respond()
         await ctx.send(message)
 
     @commands.command()
