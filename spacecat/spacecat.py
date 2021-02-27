@@ -6,7 +6,7 @@ import time
 
 import discord
 from discord.ext import commands
-from discord_slash import SlashCommand
+from discord_slash import SlashCommand, SlashContext, cog_ext
 
 import toml
 
@@ -107,28 +107,20 @@ class SpaceCat(commands.Cog):
                 return
 
     # Commands
-    @slash.slash()
+    @cog_ext.cog_slash()
     @perms.check()
     async def ping(self, ctx):
-        """
-        A simple ping to check if the bot is responding
-        The ping will show in milliseconds the connection between the
-        bot host and the discord servers.
-        """
+        """A simple ping to check the bot response time"""
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description=f"{self.bot.user.name} is operational at \
             {int(self.bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
 
-    @slash.slash()
+    @cog_ext.cog_slash()
     @perms.check()
     async def version(self, ctx):
-        """
-        Check the current bot version
-        This links to the gitlab source page, showing the most updated
-        version of the bot.
-        """
+        """Check the current bot version and source page"""
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description="**Bot is currently using version:**\n"
@@ -136,14 +128,10 @@ class SpaceCat(commands.Cog):
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
         await ctx.send(embed=embed)
 
-    @slash.slash()
+    @cog_ext.cog_slash()
     @perms.exclusive()
     async def globalprefix(self, ctx, prefix):
-        """
-        Changes the global command prefix
-        Servers with a custom prefix override as specified with the
-        'prefix' command are not affected by this change.
-        """
+        """Changes the global command prefix"""
         # Changes the prefix entry in the config
         config = toml.load(constants.DATA_DIR + 'config.toml')
         config['base']['prefix'] = prefix
@@ -155,13 +143,10 @@ class SpaceCat(commands.Cog):
             Servers with prefix override will not be affected.")
         await ctx.send(embed=embed)
 
-    @slash.slash()
+    @cog_ext.cog_slash()
     @perms.exclusive()
     async def modules(self, ctx):
-        """
-        Lists all currently available modules
-        Will show which modules are currently enabled or disabled.
-        """
+        """Lists all currently available modules"""
         enabled = module_handler.get_enabled()
         disabled = module_handler.get_disabled()
 
@@ -183,13 +168,10 @@ class SpaceCat(commands.Cog):
                 inline=False)
         await ctx.send(embed=embed)
 
-    @slash.slash()
+    @cog_ext.cog_slash()
     @perms.exclusive()
     async def reload(self, ctx, module=None):
-        """
-        Reloads all or specified module
-        Used for applying changes that were done to the source code.
-        """
+        """Reloads all or specified module"""
         module_list = module_handler.get_enabled()
         modules_to_load = []
         failed_modules = []
@@ -243,14 +225,10 @@ class SpaceCat(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @slash.slash()
+    @cog_ext.cog_slash()
     @perms.exclusive()
     async def enable(self, ctx, module):
-        """
-        Enables a module
-        New modules added to the bot in the modules folder can started
-        using this command rather than having to restart the bot.
-        """
+        """Enables a module"""
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
@@ -279,14 +257,10 @@ class SpaceCat(commands.Cog):
             description=f"Module `{module}` enabled")
         await ctx.send(embed=embed)
 
-    @slash.slash()
+    @cog_ext.cog_slash()
     @perms.exclusive()
     async def disable(self, ctx, module):
-        """
-        Disables a module
-        Modules can be safely disabled, which will stop all commands and
-        listeners from functioning.
-        """
+        """Disables a module"""
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
@@ -321,14 +295,10 @@ class SpaceCat(commands.Cog):
             description=f"Module `{module}` disabled")
         await ctx.send(embed=embed)
 
-    @slash.slash()
+    @cog_ext.cog_slash()
     @perms.exclusive()
     async def exit(self, ctx):
-        """
-        Shuts down the bot
-        Ensures that proper shutdown prodedures are done so that issues
-        do not arise during next start.
-        """
+        """Shuts down the bot"""
         # Clear the cache folder if it exists
         try:
             shutil.rmtree(constants.CACHE_DIR)
@@ -520,8 +490,8 @@ def run(firstrun=False):
     try:
         print("Active API Key: " + apikey + "\n")
         bot = commands.Bot(command_prefix=get_prefix)
-        bot.slash = SlashCommand(bot, override_type=True, sync_commands=True)
-        bot = load_modules(bot)
+        slash = SlashCommand(bot, override_type=True, sync_commands=True)
+        load_modules(bot)
         bot.run(apikey)
     except discord.LoginFailure:
         if firstrun:
