@@ -23,7 +23,6 @@ from spacecat.helpers import reaction_buttons
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
-
 class VideoTooLongError(ValueError):
     pass
 
@@ -196,12 +195,12 @@ class Alexa(commands.Cog):
     async def leave(self, ctx):
         """Stops and leaves the voice channel"""
         # Check if in a voice channel
+        await ctx.send("leaving")
         status = await self._check_music_status(ctx, ctx.guild)
         if not status:
             return
-
         # Stop and Disconnect from voice channel
-        await ctx.invoke(self.stop)
+        await self.bot.slash.invoke_command(self.stop, ctx, [])
         await ctx.guild.voice_client.disconnect()
         await self._remove_server_keys(ctx.guild)
         return
@@ -212,7 +211,7 @@ class Alexa(commands.Cog):
         """Plays from a url (almost anything youtube_dl supports)"""
         # Join user's voice channel if not in one already
         if ctx.guild.voice_client is None:
-            await ctx.invoke(self.join)
+            await self.bot.slash.invoke_command(self.join, ctx, [])
 
             # End function if bot failed to join a voice channel.
             if ctx.guild.voice_client is None:
@@ -221,7 +220,7 @@ class Alexa(commands.Cog):
         # Instantly play song if no song currently playing
         # Send to queue_add function if there is a song playing
         if len(self.song_queue[ctx.guild.id]) > 0:
-            await ctx.invoke(self.queue_add, url)
+            await self.bot.slash.invoke_command(self.queue_add, ctx, [url])
             return
         else:
             try:
@@ -253,7 +252,7 @@ class Alexa(commands.Cog):
     async def playsearch(self, ctx, *, search):
         # Join user's voice channel if not in one already
         if ctx.guild.voice_client is None:
-            await ctx.invoke(self.join)
+            await self.bot.slash.invoke_command(self.join, ctx, [])
 
             # End function if bot failed to join a voice channel.
             if ctx.guild.voice_client is None:
@@ -333,7 +332,7 @@ class Alexa(commands.Cog):
         # Play selected song
         number = reaction_buttons.emoji_to_number(str(reaction))
         selected_song = urls[number - 1]
-        await ctx.invoke(self.play, url=selected_song)
+        await self.bot.slash.invoke_command(self.play, ctx, [selected_song])
 
     @cog_ext.cog_slash()
     @perms.check()
@@ -479,7 +478,7 @@ class Alexa(commands.Cog):
     #async def queue(self, ctx, arg: int = 1):
     #    """View and modify the current song queue. Defaults to the list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
-    #    await ctx.invoke(self.queue_list, arg)
+    #    await self.bot.slash.invoke_command(self.queue_list, arg)
 
     @cog_ext.cog_subcommand(base="queue", name="list")
     @perms.check()
@@ -695,7 +694,7 @@ class Alexa(commands.Cog):
     #async def playlist(self, ctx):
     #    """Configure music playlists. Defaults to list subcommand."""
         # Run the queue list subcommand if no subcommand is specified
-    #    await ctx.invoke(self.playlist_list)
+    #    await self.bot.slash.invoke_command(self.playlist_list)
 
     @cog_ext.cog_subcommand(base="playlist", name="create")
     @perms.check()
@@ -1110,7 +1109,7 @@ class Alexa(commands.Cog):
         """Play from a locally saved playlist"""
         # Join user's voice channel if not in one already
         if ctx.guild.voice_client is None:
-            await ctx.invoke(self.join)
+            await self.bot.slash.invoke_command(self.join, ctx, [])
 
             # End function if bot failed to join a voice channel.
             if ctx.guild.voice_client is None:
