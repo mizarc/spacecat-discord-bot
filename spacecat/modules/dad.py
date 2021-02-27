@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
@@ -31,7 +32,7 @@ class Dad(commands.Cog):
                     await message.channel.send(qualitycontent)
                     return
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def toggledad(self, ctx):
         if self.toggle:

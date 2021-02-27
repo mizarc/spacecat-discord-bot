@@ -5,6 +5,7 @@ from PIL import Image
 
 import discord
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
@@ -68,7 +69,7 @@ class PoliteCat(commands.Cog):
 
         return
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def togglewebp(self, ctx):
         if self.webp_convert:
@@ -85,16 +86,16 @@ class PoliteCat(commands.Cog):
                 description="Automatic WebP conversion has been enabled")
             await ctx.send(embed=embed)
 
-    @commands.group(invoke_without_command=True)
-    @perms.check()
-    async def reactcfg(self, ctx):
-        """Configure available reaction images"""
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
-            description="Please specify a valid subcommand: `add/remove`")
-        await ctx.send(embed=embed)
+    #@commands.group(invoke_without_command=True)
+    #@perms.check()
+    #async def reactcfg(self, ctx):
+    #    """Configure available reaction images"""
+    #    embed = discord.Embed(
+    #        colour=constants.EmbedStatus.FAIL.value,
+    #        description="Please specify a valid subcommand: `add/remove`")
+    #    await ctx.send(embed=embed)
 
-    @reactcfg.command()
+    @cog_ext.cog_subcommand(base="reactcfg", name="add")
     @perms.check()
     async def add(self, ctx, name):
         """Add a reaction image"""
@@ -138,7 +139,7 @@ class PoliteCat(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @reactcfg.command()
+    @cog_ext.cog_subcommand(base="reactcfg", name="remove")
     @perms.check()
     async def remove(self, ctx, name):
         """Remove a reaction image"""
@@ -163,7 +164,7 @@ class PoliteCat(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def reactlist(self, ctx):
         """List all reaction images"""
@@ -177,7 +178,7 @@ class PoliteCat(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def react(self, ctx, name):
         """Use an image/gif as a reaction"""
