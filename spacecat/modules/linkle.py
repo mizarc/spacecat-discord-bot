@@ -4,6 +4,7 @@ import sqlite3
 
 import discord
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
@@ -71,17 +72,11 @@ class Linkle(commands.Cog):
         except AttributeError:
             pass
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def linkchannels(
             self, ctx, voice_channel: discord.VoiceChannel, text_channel: discord.TextChannel):
-        """
-        Reveal a text channel when a user joins a voice channel.
-        On a user joining a linked voice channel, the associated text
-        channel will be revealed to them, and will subsequently hide
-        itself when the user leaves. Ensure that the linked text channel
-        is hidden to users by default.
-        """
+        """Reveal a hidden text channel when a user joins a voice channel"""
         exists = await self._query_channel_links(voice_channel.id, text_channel.id)
         if exists:
             embed = discord.Embed(
@@ -105,16 +100,11 @@ class Linkle(commands.Cog):
             f"linked to text channel `{text_channel.name}`")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def unlinkchannels(
             self, ctx, voice_channel: discord.VoiceChannel, text_channel: discord.TextChannel):
-        """
-        Remove the connection between a text and voice channel.
-        If a text and voice channel were linked together with the linkchannels
-        command, this command can be used to unlink the channels stopping it
-        from being dynamically shown and hidden on voice connects.
-        """
+        """Remove the connection between a text and voice channel"""
         exists = await self._query_channel_links(voice_channel.id, text_channel.id)
         if not exists:
             embed = discord.Embed(
@@ -139,14 +129,10 @@ class Linkle(commands.Cog):
             f"unlinked to text channel `{text_channel.name}`")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.check()
     async def listlinkchannels(self, ctx, page=1):
-        """
-        List currently linked voice to text channels
-        Channels that have been linked together by the linkchannels command
-        can be viewed here.
-        """
+        """List currently linked voice to text channels"""
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         value = (ctx.guild.id,)

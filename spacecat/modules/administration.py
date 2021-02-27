@@ -3,6 +3,7 @@ from itertools import islice
 
 import discord
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 
 import toml
 
@@ -58,16 +59,16 @@ class Administration(commands.Cog):
     async def on_guild_join(self, guild):
         await self._add_server_entry(guild.id)
 
-    @commands.group(invoke_without_command=True)
-    @perms.check()
-    async def alias(self, ctx):
-        """Configure command aliases"""
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
-            description="Please specify a valid subcommand: `add/remove`")
-        await ctx.send(embed=embed)
+    #@commands.group(invoke_without_command=True)
+    #@perms.check()
+    #async def alias(self, ctx):
+    #    """Configure command aliases"""
+    #    embed = discord.Embed(
+    #        colour=constants.EmbedStatus.FAIL.value,
+    #        description="Please specify a valid subcommand: `add/remove`")
+    #    await ctx.send(embed=embed)
 
-    @alias.command(name='add')
+    @cog_ext.cog_subcommand(base="alias", name="add")
     @perms.check()
     async def addalias(self, ctx, alias, *, command):
         """Allows a command to be executed with an alias"""
@@ -102,7 +103,7 @@ class Administration(commands.Cog):
             description=f"Alias `{alias}` has been assigned to `{command}`")
         await ctx.send(embed=embed)
 
-    @alias.command(name='remove')
+    @cog_ext.cog_subcommand(base="alias", name="remove")
     @perms.check()
     async def removealias(self, ctx, alias):
         """Removes an existing alias"""
@@ -129,7 +130,7 @@ class Administration(commands.Cog):
             description=f"Alias `{alias}` has been removed`")
         await ctx.send(embed=embed)
 
-    @alias.command(name='list')
+    @cog_ext.cog_subcommand(base="alias", name="list")
     @perms.check()
     async def listalias(self, ctx, page=1):
         # Get all aliases from database
@@ -179,24 +180,19 @@ class Administration(commands.Cog):
         embed.add_field(name="Aliases", value='\n'.join(aliases))
         await ctx.send(embed=embed)
 
-    @commands.group(invoke_without_command=True)
-    @perms.check()
-    async def perm(self, ctx):
-        """Configure server permissions"""
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
-            description="Please specify a valid subcommand: `group/user`")
-        await ctx.send(embed=embed)
+    #@commands.group(invoke_without_command=True)
+    #@perms.check()
+    #async def perm(self, ctx):
+    #    """Configure server permissions"""
+    #    embed = discord.Embed(
+    #        colour=constants.EmbedStatus.FAIL.value,
+    #        description="Please specify a valid subcommand: `group/user`")
+    #    await ctx.send(embed=embed)
 
-    @perm.command(name='advanced')
+    @cog_ext.cog_subcommand(base="perm", name="advanced")
     @perms.check()
     async def perm_advanced(self, ctx):
-        """
-        Sets permissions to advanced mode
-        This mode essentially disables the bot's default permission
-        assignment, meaning that you have to assign default permissions
-        from scratch.
-        """
+        """Sets permissions to advanced mode. This disables the bot's default user permissions."""
         # Connect to the database to fetch the current permission mode
         await self._server_settings_database()
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
@@ -231,39 +227,28 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
 
-    @perm.command(name='presets')
+    @cog_ext.cog_subcommand(base="perm", name="presets")
     @perms.check()
     async def perm_presets(self, ctx, preset=None):
-        """
-        Lists available permission presets
-        Permission presets are sets of permissions used to simplify the
-        process of giving permissions to users. New features that belong
-        to a specific preset will be automatically added, requiring no
-        additional input from the server administrator.
-        """
+        """Lists available permission presets"""
         if preset:
             await ctx.invoke(Configuration.permpreset_view, ctx, preset)
             return
         await ctx.invoke(Configuration.permpreset_list, ctx)
 
-    @perm.group(invoke_without_command=True)
-    @perms.check()
-    async def group(self, ctx):
-        """Configure server permissions"""
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
-            description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
-        await ctx.send(embed=embed)
+    #@cog_ext.cog_subcommand(base="perm", name="group")
+    #@perms.check()
+    #async def group(self, ctx):
+    #    """Configure server permissions"""
+    #    embed = discord.Embed(
+    #        colour=constants.EmbedStatus.FAIL.value,
+    #        description="Please specify a valid subcommand: `add/remove/parent/unparent/info`")
+    #    await ctx.send(embed=embed)
 
-    @group.command(name='preset')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="group", name="preset")
     @perms.check()
     async def perm_group_preset(self, ctx, group: discord.Role, preset):
-        """
-        Add a permission preset to the group
-        Adding a permission preset automatically assigns all the given
-        permissions associated with the preset as specified by the bot
-        administrator.
-        """
+        """Add a permission preset to the group"""
         # Check if the specified permission preset exists
         config = toml.load(constants.DATA_DIR + 'config.toml')
         if preset not in config['permissions']:
@@ -298,16 +283,10 @@ class Administration(commands.Cog):
             description=f"Group {group.name} now uses the `{preset}` preset")
         await ctx.send(embed=embed)
 
-    @group.command(name='unpreset')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="group", name="unpreset")
     @perms.check()
     async def perm_group_unpreset(self, ctx, group: discord.Role, preset):
-        """
-        Removes a permission preset from the group
-        Once a permission preset has been removed, the group will no
-        longer inherent permissions from the preset. Manual assignment
-        will have to be done to ensure that users can still use the
-        commands.
-        """
+        """Removes a permission preset from the group"""
         # Check if the specified permission preset exists
         config = toml.load(constants.DATA_DIR + 'config.toml')
         if preset not in config['permissions']:
@@ -344,7 +323,7 @@ class Administration(commands.Cog):
             description=f"Group {group.name} no longer uses preset `{preset}`")
         await ctx.send(embed=embed)
 
-    @group.command(name='add')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="group", name="add")
     @perms.check()
     async def addgroup(self, ctx, group: discord.Role, perm):
         perm_values = perm.split('.')
@@ -424,7 +403,7 @@ class Administration(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @group.command(name='remove')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="group", name="remove")
     @perms.check()
     async def removegroup(self, ctx, group: discord.Role, perm):
         perm_values = perm.split('.')
@@ -505,7 +484,7 @@ class Administration(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @group.command()
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="group", name="parent")
     @perms.check()
     async def parent(self, ctx, child_group: discord.Role, parent_group: discord.Role):
         # Open server's config file
@@ -545,7 +524,7 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
 
-    @group.command()
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="group", name="unparent")
     @perms.check()
     async def unparent(self, ctx, child_group: discord.Role, parent_group: discord.Role):
         # Open server's config file
@@ -573,7 +552,7 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
 
-    @group.command(name='info')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="group", name="info")
     @perms.check()
     async def infogroup(self, ctx, group: discord.Role):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
@@ -617,7 +596,7 @@ class Administration(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @group.command(name='purge')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="group", name="purge")
     @perms.check()
     async def purgegroup(self, ctx, role: discord.Role):
         # Query database to get all user permissions
@@ -648,16 +627,16 @@ class Administration(commands.Cog):
         db.commit()
         db.close()
 
-    @perm.group(invoke_without_command=True)
-    @perms.check()
-    async def user(self, ctx):
-        """Configure server permissions"""
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
-            description="Please enter a valid subcommand: `add/remove/info`")
-        await ctx.send(embed=embed)
+    #@perm.group(invoke_without_command=True)
+    #@perms.check()
+    #async def user(self, ctx):
+    #    """Configure server permissions"""
+    #    embed = discord.Embed(
+    #        colour=constants.EmbedStatus.FAIL.value,
+    #        description="Please enter a valid subcommand: `add/remove/info`")
+    #    await ctx.send(embed=embed)
 
-    @user.command(name='add')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="user", name="add")
     @perms.check()
     async def adduser(self, ctx, user: discord.User, perm):
         perm_values = perm.split('.')
@@ -746,7 +725,7 @@ class Administration(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @user.command(name='remove')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="user", name="remove")
     @perms.check()
     async def removeuser(self, ctx, user: discord.User, perm):
         perm_values = perm.split('.')
@@ -827,7 +806,7 @@ class Administration(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @user.command(name='info')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="user", name="info")
     @perms.check()
     async def infouser(self, ctx, user: discord.Member):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
@@ -860,7 +839,7 @@ class Administration(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @user.command(name='purge')
+    @cog_ext.cog_subcommand(base="perm", subcommand_group="user", name="purge")
     @perms.check()
     async def purgeuser(self, ctx, user: discord.User):
         # Query database to get all user permissions

@@ -2,6 +2,7 @@ import sqlite3
 
 import discord
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 
 from spacecat.helpers import constants
 
@@ -12,7 +13,7 @@ class Help(commands.Cog):
         self.bot = bot
         bot.remove_command('help')
 
-    @commands.command()
+    @cog_ext.cog_slash()
     async def help(self, ctx, *, command=None):
         """Information on how to use commands"""
         # Generate main help menu

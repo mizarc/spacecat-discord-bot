@@ -3,6 +3,7 @@ from itertools import islice
 
 import discord
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
 
 import toml
 
@@ -55,7 +56,7 @@ class Configuration(commands.Cog):
                 cmd.content = f"{prefix}{result[0][0]} {' '.join(cmd_args)}"
                 await self.bot.process_commands(cmd)
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.exclusive()
     async def status(self, ctx, status_name):
         config = toml.load(constants.DATA_DIR + 'config.toml')
@@ -85,7 +86,7 @@ class Configuration(commands.Cog):
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
-    @commands.command()
+    @cog_ext.cog_slash()
     @perms.exclusive()
     async def activity(self, ctx, activity_name, *, name):
         config = toml.load(constants.DATA_DIR + 'config.toml')
@@ -116,17 +117,17 @@ class Configuration(commands.Cog):
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
-    @commands.group(invoke_without_command=True)
-    @perms.exclusive()
-    async def permpreset(self, ctx):
-        """
-        Configure permission presets
-        Permissions assigned to presets can be utilised by server
-        administrators to simplify permission assignment
-        """
-        await ctx.invoke(self.permpreset_list)
+    #@commands.group(invoke_without_command=True)
+    #@perms.exclusive()
+    #async def permpreset(self, ctx):
+    #    """
+    #    Configure permission presets
+    #    Permissions assigned to presets can be utilised by server
+    #    administrators to simplify permission assignment
+    #    """
+    #    await ctx.invoke(self.permpreset_list)
 
-    @permpreset.command(name='create')
+    @cog_ext.cog_subcommand(base="permpreset", name="create")
     @perms.exclusive()
     async def permpreset_create(self, ctx, name):
         """Creates a new permission preset list"""
@@ -150,7 +151,7 @@ class Configuration(commands.Cog):
             description=f"Added permission preset `{name}`")
         await ctx.send(embed=embed)
 
-    @permpreset.command(name='destroy')
+    @cog_ext.cog_subcommand(base="permpreset", name="destroy")
     @perms.exclusive()
     async def permpreset_destroy(self, ctx, name):
         """Completely deletes a preset and all its contents"""
@@ -181,7 +182,7 @@ class Configuration(commands.Cog):
             description=f"Deleted permission preset `{name}`")
         await ctx.send(embed=embed)
 
-    @permpreset.command(name='add')
+    @cog_ext.cog_subcommand(base="permpreset", name="add")
     @perms.exclusive()
     async def permpreset_add(self, ctx, preset, perm):
         """Adds a valid permission to a permission preset"""
@@ -277,7 +278,7 @@ class Configuration(commands.Cog):
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
-    @permpreset.command(name='remove')
+    @cog_ext.cog_subcommand(base="permpreset", name="remove")
     @perms.exclusive()
     async def permpreset_remove(self, ctx, preset, perm):
         """Removes an existing permission from a preset"""
@@ -373,7 +374,7 @@ class Configuration(commands.Cog):
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
-    @permpreset.command(name='list')
+    @cog_ext.cog_subcommand(base="permpreset", name="list")
     @perms.exclusive()
     async def permpreset_list(self, ctx):
         """List all available presets"""
@@ -394,7 +395,7 @@ class Configuration(commands.Cog):
             value='\n'.join(perm_presets_output), inline=False)
         await ctx.send(embed=embed)
 
-    @permpreset.command(name='view')
+    @cog_ext.cog_subcommand(base="permpreset", name="view")
     @perms.exclusive()
     async def permpreset_view(self, ctx, preset):
         """Lists all the permissions assigned to a preset"""
