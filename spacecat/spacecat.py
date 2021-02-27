@@ -107,7 +107,7 @@ class SpaceCat(commands.Cog):
                 return
 
     # Commands
-    @commands.command()
+    @slash.slash()
     @perms.check()
     async def ping(self, ctx):
         """
@@ -121,7 +121,7 @@ class SpaceCat(commands.Cog):
             {int(self.bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @slash.slash()
     @perms.check()
     async def version(self, ctx):
         """
@@ -136,7 +136,7 @@ class SpaceCat(commands.Cog):
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @slash.slash()
     @perms.exclusive()
     async def globalprefix(self, ctx, prefix):
         """
@@ -155,7 +155,7 @@ class SpaceCat(commands.Cog):
             Servers with prefix override will not be affected.")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @slash.slash()
     @perms.exclusive()
     async def modules(self, ctx):
         """
@@ -183,7 +183,7 @@ class SpaceCat(commands.Cog):
                 inline=False)
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @slash.slash()
     @perms.exclusive()
     async def reload(self, ctx, module=None):
         """
@@ -243,7 +243,7 @@ class SpaceCat(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @slash.slash()
     @perms.exclusive()
     async def enable(self, ctx, module):
         """
@@ -279,7 +279,7 @@ class SpaceCat(commands.Cog):
             description=f"Module `{module}` enabled")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @slash.slash()
     @perms.exclusive()
     async def disable(self, ctx, module):
         """
@@ -321,7 +321,7 @@ class SpaceCat(commands.Cog):
             description=f"Module `{module}` disabled")
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @slash.slash()
     @perms.exclusive()
     async def exit(self, ctx):
         """
