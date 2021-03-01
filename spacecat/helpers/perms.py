@@ -36,9 +36,9 @@ def check():
             return True
 
         # Grab useful command variables
-        module = ctx.command.cog.qualified_name
-        command = ctx.command.qualified_name
-        command_values = command.split(' ')
+        module = ctx.bot.slash.commands.get(ctx.name)
+        command_values = [ctx.name, ctx.subcommand_group, ctx.subcommand_name]
+        #command_values = command.split(' ')
 
         # Add queries for the global, module, and command wildcards,
         # plus the command on its own
