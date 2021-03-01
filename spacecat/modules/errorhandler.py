@@ -13,18 +13,12 @@ class ErrorHandler(commands.Cog):
     @commands.Cog.listener()
     async def on_slash_command_error(self, ctx, error):
         if isinstance(error, dserror.CheckFailure):
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="You don't have permission to use that command")
-            await ctx.send(embed=embed)
+            await ctx.send_hidden(f"**Error:** You don't have permission to use **{ctx.name}**")
             return
 
         if isinstance(error, discord.Forbidden):
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="I don't have the necessary server permission"
-                "to execute that. Contact the server administrator.")
-            await ctx.send(embed=embed)
+            await ctx.send_hidden(f"**Error:** I don't have the necessary server permission"
+                f" to execute **{ctx.name}**. Contact the server administrator for assistance.")
             return
 
 
