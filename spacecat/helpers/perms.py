@@ -22,9 +22,8 @@ def new(guild):
         config['PermsGroups'][str(guild.default_role.id)] = userperms
         config['PermsUsers'] = {}
 
-
 def check():
-    def predicate(ctx):
+    async def predicate(ctx):
         """
         Checks if the user has permission to use the command based on
         if they are a server admin, if they have the required
@@ -36,7 +35,7 @@ def check():
             return True
 
         # Grab useful command variables
-        module = ctx.bot.slash.commands.get(ctx.name)
+        module = ctx.bot.slash.commands.get(ctx.name).cog
         command_values = [ctx.name, ctx.subcommand_group, ctx.subcommand_name]
         #command_values = command.split(' ')
 
@@ -77,7 +76,7 @@ def check():
 
             # Execute recurring parent check
             parent_query = (ctx.guild.id, query[1])
-            parent_check, presets = parent_perms(
+            parent_check, presets = _parent_perms(
                 ctx, cursor, parent_query, checks, presets)
             if parent_check:
                 return True
@@ -101,38 +100,7 @@ def check():
                 config['permissions']['default']).intersection(checks)
             if comparison:
                 return True
-
-    def parent_perms(ctx, cursor, parent_query, checks, presets):
-        """
-        Recursively checks all parents until either all dead ends have
-        been reached, or the appropriate permission has been found.
-        """
-        # Check if group has parents
-        cursor.execute(
-            'SELECT parent_id FROM group_parent '
-            'WHERE server_id=? AND child_id=?', parent_query)
-        parents = cursor.fetchall()
-
-        # Check parent groups for permission
-        for parent in parents:
-            perm_query = (ctx.guild.id, parent)
-            cursor.execute(
-                'SELECT permission FROM group_permission '
-                'WHERE server_id=? AND group_id=?', perm_query)
-            results = cursor.fetchall()
-            regex_query = re.compile('Preset.[a-zA-Z0-9]+')
-            presets = presets + list(filter(regex_query.match, results))
-            if set(results).intersection(checks):
-                return True, presets
-
-            # Check next parent level
-            new_parent_query = (ctx.guild.id, parent)
-            parent_check, presets = parent_perms(
-                ctx, cursor, new_parent_query, checks, presets)
-            if parent_check:
-                return True, presets
-        return False, presets
-
+        return False
     return commands.check(predicate)
 
 
@@ -146,3 +114,35 @@ def exclusive():
             return True
 
     return commands.check(predicate)
+
+
+def _parent_perms(ctx, cursor, parent_query, checks, presets):
+    """
+    Recursively checks all parents until either all dead ends have
+    been reached, or the appropriate permission has been found.
+    """
+    # Check if group has parents
+    cursor.execute(
+        'SELECT parent_id FROM group_parent '
+        'WHERE server_id=? AND child_id=?', parent_query)
+    parents = cursor.fetchall()
+
+    # Check parent groups for permission
+    for parent in parents:
+        perm_query = (ctx.guild.id, parent)
+        cursor.execute(
+            'SELECT permission FROM group_permission '
+            'WHERE server_id=? AND group_id=?', perm_query)
+        results = cursor.fetchall()
+        regex_query = re.compile('Preset.[a-zA-Z0-9]+')
+        presets = presets + list(filter(regex_query.match, results))
+        if set(results).intersection(checks):
+            return True, presets
+
+        # Check next parent level
+        new_parent_query = (ctx.guild.id, parent)
+        parent_check, presets = _parent_perms(
+            ctx, cursor, new_parent_query, checks, presets)
+        if parent_check:
+            return True, presets
+    return False, presets
