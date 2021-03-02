@@ -35,8 +35,12 @@ def check():
             return True
 
         # Grab useful command variables
-        module = ctx.bot.slash.commands.get(ctx.name).cog
-        command_values = [ctx.name, ctx.subcommand_group, ctx.subcommand_name]
+        module = ctx.bot.slash.commands.get(ctx.name).cog.qualified_name
+        command_values = [ctx.name]
+        if ctx.subcommand_group is not None:
+            command_values.append(ctx.subcommand.group)
+        if ctx.subcommand_name is not None:
+            command_values.append(ctx.subcommand.name)
         #command_values = command.split(' ')
 
         # Add queries for the global, module, and command wildcards,
