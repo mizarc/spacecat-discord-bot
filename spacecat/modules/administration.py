@@ -933,9 +933,9 @@ class Administration(commands.Cog):
         command_parents = perm.split('.')
 
         if command_parents[-1] == '*':
-            command = self.bot.get_command(perm[:-2].replace('.', ' '))
+            command = self.bot.slash.commands.get(perm[:-2].replace('.', ' '))
         else:
-            command = self.bot.get_command(perm.replace('.', ' '))
+            command = self.bot.slash.commands.get(perm.replace('.', ' '))
 
         if command is None:
             return None, None
