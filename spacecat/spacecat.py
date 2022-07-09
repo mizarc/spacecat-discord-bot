@@ -6,7 +6,6 @@ import time
 
 import discord
 from discord.ext import commands
-from discord_slash import SlashCommand, SlashContext, cog_ext
 
 import toml
 
@@ -107,7 +106,7 @@ class SpaceCat(commands.Cog):
                 return
 
     # Commands
-    @cog_ext.cog_slash()
+    @commands.command()
     @perms.check()
     async def ping(self, ctx):
         """A simple ping to check the bot response time"""
@@ -117,7 +116,7 @@ class SpaceCat(commands.Cog):
             {int(self.bot.latency * 1000)}ms")
         await ctx.send(embed=embed)
 
-    @cog_ext.cog_slash()
+    @commands.command()
     @perms.check()
     async def version(self, ctx):
         """Check the current bot version and source page"""
@@ -128,7 +127,7 @@ class SpaceCat(commands.Cog):
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
         await ctx.send(embed=embed)
 
-    @cog_ext.cog_slash()
+    @commands.command()
     @perms.exclusive()
     async def globalprefix(self, ctx, prefix):
         """Changes the global command prefix"""
@@ -143,7 +142,7 @@ class SpaceCat(commands.Cog):
             Servers with prefix override will not be affected.")
         await ctx.send(embed=embed)
 
-    @cog_ext.cog_slash()
+    @commands.command()
     @perms.exclusive()
     async def modules(self, ctx):
         """Lists all currently available modules"""
@@ -168,7 +167,7 @@ class SpaceCat(commands.Cog):
                 inline=False)
         await ctx.send(embed=embed)
 
-    @cog_ext.cog_slash()
+    @commands.command()
     @perms.exclusive()
     async def reload(self, ctx, module=None):
         """Reloads all or specified module"""
@@ -225,7 +224,7 @@ class SpaceCat(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @cog_ext.cog_slash()
+    @commands.command()
     @perms.exclusive()
     async def enable(self, ctx, module):
         """Enables a module"""
@@ -257,7 +256,7 @@ class SpaceCat(commands.Cog):
             description=f"Module `{module}` enabled")
         await ctx.send(embed=embed)
 
-    @cog_ext.cog_slash()
+    @commands.command()
     @perms.exclusive()
     async def disable(self, ctx, module):
         """Disables a module"""
@@ -295,7 +294,7 @@ class SpaceCat(commands.Cog):
             description=f"Module `{module}` disabled")
         await ctx.send(embed=embed)
 
-    @cog_ext.cog_slash()
+    @commands.command()
     @perms.exclusive()
     async def exit(self, ctx):
         """Shuts down the bot"""
@@ -332,7 +331,7 @@ class SpaceCat(commands.Cog):
             try:
                 idinput = int(input("Paste your ID right here: "))
                 print('--------------------\n')
-                user = self.bot.get_user(idinput)
+                user = await self.bot.fetch_user(idinput)
                 await user.send("Hello there!")
             except (ValueError, AttributeError):
                 print(
@@ -489,8 +488,11 @@ def run(firstrun=False):
     # Attempt to use API key from config and output error if unable to run
     try:
         print("Active API Key: " + apikey + "\n")
-        bot = commands.Bot(command_prefix=get_prefix)
-        slash = SlashCommand(bot, override_type=True, sync_commands=True)
+        intents = discord.Intents.default()
+        intents.members = True
+        intents.message_content = True
+        bot = commands.Bot(command_prefix=get_prefix, intents=intents)
+        #slash = SlashCommand(bot, override_type=True, sync_commands=True)
         load_modules(bot)
         bot.run(apikey)
     except discord.LoginFailure:
