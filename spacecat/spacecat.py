@@ -126,30 +126,30 @@ class Core(commands.Cog):
                 return
 
     # Commands
-    @commands.command()
+    @app_commands.command()
     @perms.check()
-    async def ping(self, ctx):
+    async def ping(self, interaction):
         """A simple ping to check the bot response time"""
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description=f"{self.bot.user.name} is operational at \
             {int(self.bot.latency * 1000)}ms")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.check()
-    async def version(self, ctx):
+    async def version(self, interaction):
         """Check the current bot version and source page"""
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description="**Bot is currently using version:**\n"
-            "[SpaceCat Discord Bot `v0.3.0`]"
+            "[SpaceCat Discord Bot `v0.4.0 Experimental`]"
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def globalprefix(self, ctx, prefix):
+    async def globalprefix(self, interaction, prefix: str):
         """Changes the global command prefix"""
         # Changes the prefix entry in the config
         config = toml.load(constants.DATA_DIR + 'config.toml')
@@ -160,11 +160,11 @@ class Core(commands.Cog):
             colour=constants.EmbedStatus.YES.value,
             description=f"Global command prefix changed to: `{prefix}`.\n\
             Servers with prefix override will not be affected.")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def modules(self, ctx):
+    async def modules(self, interaction):
         """Lists all currently available modules"""
         enabled = module_handler.get_enabled()
         disabled = module_handler.get_disabled()
@@ -185,11 +185,11 @@ class Core(commands.Cog):
                 name="Disabled",
                 value=', '.join(disabled),
                 inline=False)
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def reload(self, ctx, module=None):
+    async def reload(self, interaction, module: str = None):
         """Reloads all or specified module"""
         module_list = module_handler.get_enabled()
         modules_to_load = []
@@ -201,7 +201,7 @@ class Core(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"{module} is not a valid or enabled module")
-                await ctx.send(embed=embed)
+                await interaction.response.send_message(embed=embed)
                 return
             modules_to_load = [module]
         else:
@@ -221,7 +221,7 @@ class Core(commands.Cog):
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Failed to reload module \
                 `{module[8:]}`")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
         elif failed_modules:
             embed = discord.Embed(
@@ -229,7 +229,7 @@ class Core(commands.Cog):
                 description=f"Failed to reload module(s): \
                 `{', '.join(failed_modules)}`. \
                 Other modules have successfully reloaded")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Notify user of successful module reloading
@@ -242,18 +242,18 @@ class Core(commands.Cog):
                 colour=constants.EmbedStatus.YES.value,
                 description="All modules reloaded successfully")
 
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def enable(self, ctx, module):
+    async def enable(self, interaction, module:str):
         """Enables a module"""
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Module `{module}` does not exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Check config to see if module is already enabled
@@ -262,7 +262,7 @@ class Core(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Module `{module}` is already enabled")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Enable module and write to config
@@ -274,18 +274,18 @@ class Core(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Module `{module}` enabled")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def disable(self, ctx, module):
+    async def disable(self, interaction, module:str):
         """Disables a module"""
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Module `{module}` does not exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Check config to see if module is already disabled
@@ -295,7 +295,7 @@ class Core(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"Module `{module}` is already disabled")
-                await ctx.send(embed=embed)
+                await interaction.response.send_message(embed=embed)
                 return
 
         # Add to list if list exists or create list if it doesn't
@@ -312,11 +312,11 @@ class Core(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Module `{module}` disabled")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def exit(self, ctx):
+    async def exit(self, interaction):
         """Shuts down the bot"""
         # Clear the cache folder if it exists
         try:
