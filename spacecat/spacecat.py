@@ -5,6 +5,7 @@ import sqlite3
 import time
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 import toml
@@ -12,7 +13,26 @@ import toml
 from spacecat.helpers import constants, module_handler, perms
 
 
-class SpaceCat(commands.Cog):
+class SpaceCat(commands.Bot):
+    async def setup_hook(self):
+        await self.load_modules()
+
+    async def load_modules(self):
+        """Loads all modules from the modules folder for the bot"""
+        # Enable enabled modules from list
+        await self.add_cog(Core(self))
+        modules = module_handler.get_enabled()
+        for module in modules:
+            module = f'{constants.MAIN_DIR}.modules.' + module
+            try:
+                await self.load_extension(module)
+            except Exception as exception:
+                print(
+                    f"Failed to load extension {module}\n"
+                    f"{type(exception).__name__}: {exception}\n")
+
+
+class Core(commands.Cog):
     """The bare minimum for bot functionality"""
     def __init__(self, bot):
         self.bot = bot
@@ -440,22 +460,6 @@ def introduction(config):
     return True
 
 
-def load_modules(bot):
-    """Loads all modules from the modules folder for the bot"""
-    # Enable enabled modules from list
-    bot.add_cog(SpaceCat(bot))
-    modules = module_handler.get_enabled()
-    for module in modules:
-        module = f'{constants.MAIN_DIR}.modules.' + module
-        try:
-            bot.load_extension(module)
-        except Exception as exception:
-            print(
-                f"Failed to load extension {module}\n"
-                f"{type(exception).__name__}: {exception}\n")
-    return bot
-
-
 def get_prefix(bot, message):
     # Access database if it exists and fetch server's custom prefix if set
     try:
@@ -491,9 +495,7 @@ def run(firstrun=False):
         intents = discord.Intents.default()
         intents.members = True
         intents.message_content = True
-        bot = commands.Bot(command_prefix=get_prefix, intents=intents)
-        #slash = SlashCommand(bot, override_type=True, sync_commands=True)
-        load_modules(bot)
+        bot = SpaceCat(command_prefix=get_prefix, intents=intents)
         bot.run(apikey)
     except discord.LoginFailure:
         if firstrun:
