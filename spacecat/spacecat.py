@@ -50,8 +50,6 @@ class Core(commands.Cog):
         # Run initial configurator as long as values are missing
         if 'adminuser' not in config['base']:
             await self._set_admin()
-        if 'prefix' not in config['base']:
-            await self._set_prefix()
         servers = self.bot.guilds
         if not servers:
             await self._send_invite()
@@ -111,9 +109,6 @@ class Core(commands.Cog):
                     title=f"{constants.EmbedIcon.DEFAULT} Hello There!",
                     description="I'm here to provide a useful set a features")
                 embed.add_field(
-                    name="Current Prefix",
-                    value=f"`{prefix[2]}`", inline=False)
-                embed.add_field(
                     name="Need Help?",
                     value=f"Type `{prefix[2]}help` to get a list of commands",
                     inline=False)
@@ -145,21 +140,6 @@ class Core(commands.Cog):
             description="**Bot is currently using version:**\n"
             "[SpaceCat Discord Bot `v0.4.0 Experimental`]"
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
-        await interaction.response.send_message(embed=embed)
-
-    @app_commands.command()
-    @perms.exclusive()
-    async def globalprefix(self, interaction, prefix: str):
-        """Changes the global command prefix"""
-        # Changes the prefix entry in the config
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        config['base']['prefix'] = prefix
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
-            toml.dump(config, config_file)
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"Global command prefix changed to: `{prefix}`.\n\
-            Servers with prefix override will not be affected.")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
@@ -381,24 +361,6 @@ class Core(commands.Cog):
                 else:
                     continue
 
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
-            toml.dump(config, config_file)
-        time.sleep(1)
-
-    async def _set_prefix(self):
-        # Ask to set a command prefix
-        print(
-            "[Prefix]\n"
-            "Your bot will need a prefix in order to run commands.\n"
-            "You can set it to be whatever you want,\n"
-            "though I recommend you keep it short\n")
-
-        prefix_input = input("Enter your bot prefix here: ")
-        print('--------------------\n')
-
-        # Save prefix to config
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        config['base']['prefix'] = prefix_input
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         time.sleep(1)
