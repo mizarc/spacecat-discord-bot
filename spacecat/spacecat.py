@@ -130,7 +130,7 @@ class Core(commands.Cog):
 
     async def process_sync(self, message):
         ctx = await self.bot.get_context(message)
-        await ctx.bot.tree.sync(guild=ctx.guild)
+        await ctx.bot.tree.sync()
         await message.channel.send(f"Commands have been synced")
 
     # Commands
