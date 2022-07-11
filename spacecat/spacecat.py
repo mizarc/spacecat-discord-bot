@@ -97,28 +97,41 @@ class Core(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        # Check for both nickname and non nickname mentions
+        words = message.content.split()
         mentions = [f'<@{self.bot.user.id}>', f'<@!{self.bot.user.id}>']
         for mention in mentions:
             if mention == message.content:
-                prefix = await self.bot.get_prefix(message)
-
-                # Info on how to use the bot
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.INFO.value,
-                    title=f"{constants.EmbedIcon.DEFAULT} Hello There!",
-                    description="I'm here to provide a useful set a features")
-                embed.add_field(
-                    name="Need Help?",
-                    value=f"Type `{prefix[2]}help` to get a list of commands",
-                    inline=False)
-                embed.add_field(
-                    name="Want more features added?",
-                    value="[Request them here]"
-                    "(https://gitlab.com/Mizarc/spacecat-discord-bot/issues)",
-                    inline=False)
-                await message.channel.send(embed=embed)
+                await self.process_info(message)
                 return
+            elif words[0] == mention and words[1] == "sync":
+                await self.process_sync(message)
+                return
+
+    async def process_info(self, message):
+        # Check for both nickname and non nickname mentions
+        prefix = await self.bot.get_prefix(message)
+
+        # Info on how to use the bot
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.DEFAULT} Hello There!",
+            description="I'm here to provide a useful set a features")
+        embed.add_field(
+            name="Need Help?",
+            value=f"Type `{prefix[2]}help` to get a list of commands",
+            inline=False)
+        embed.add_field(
+            name="Want more features added?",
+            value="[Request them here]"
+                  "(https://gitlab.com/Mizarc/spacecat-discord-bot/issues)",
+            inline=False)
+        await message.channel.send(embed=embed)
+        return
+
+    async def process_sync(self, message):
+        ctx = await self.bot.get_context(message)
+        await ctx.bot.tree.sync(guild=ctx.guild)
+        await message.channel.send(f"Commands have been synced")
 
     # Commands
     @app_commands.command()
