@@ -58,9 +58,8 @@ class Configuration(commands.Cog):
 
     @app_commands.command()
     @perms.exclusive()
-    async def status(self, interaction, status_name: str):
+    async def status(self, interaction, status: discord.Status):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        status = discord.Status[status_name]
         activity_name = config['base']['activity_type']
         try:
             activity = discord.Activity(
@@ -82,15 +81,14 @@ class Configuration(commands.Cog):
         else:
             await self.bot.change_presence(status=status)
 
-        config['base']['status'] = status_name
+        config['base']['status'] = status.name
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
     @app_commands.command()
     @perms.exclusive()
-    async def activity(self, interaction, activity_name: str, *, name: str):
+    async def activity(self, interaction, activity_type: discord.ActivityType, *, name: str):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        activity_type = discord.ActivityType[activity_name]
         activity = discord.Activity(
             type=activity_type,
             name=name,
@@ -112,7 +110,7 @@ class Configuration(commands.Cog):
         else:
             await self.bot.change_presence(activity=activity)
 
-        config['base']['activity_type'] = activity_type
+        config['base']['activity_type'] = activity_type.name
         config['base']['activity_name'] = name
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
