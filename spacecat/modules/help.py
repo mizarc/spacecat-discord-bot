@@ -140,6 +140,10 @@ class Help(commands.Cog):
         aliases = cursor.fetchall()
         db.close()
 
+        # Add commnand description field
+        if command.help:
+            embed.add_field(name="Description", value=command.help, inline=False)
+
         # Add command alias field
         if aliases:
             alias_output = []
@@ -147,16 +151,11 @@ class Help(commands.Cog):
                 alias_output.append(f"`{alias[0]}`")
             embed.add_field(name="Aliases", value=", ".join(alias_output))
 
-        # Add commnand description field
-        if command.help:
-            embed.add_field(name="Description", value=command.help, inline=False)
-
         # Add command subcommand field
         try:
-            subcommands = await self.filter_commands(
-                ctx, command.all_commands.values())
-            subcommand_output, subcommand_group_output = await self.get_formatted_command_list(
-                subcommands)
+            #subcommands = await self.filter_commands(
+            #    ctx, command.all_commands.values())
+            subcommand_output, subcommand_group_output = await self.get_formatted_command_list(command.commands)
 
             if subcommand_group_output:
                 embed.add_field(
@@ -190,24 +189,24 @@ class Help(commands.Cog):
         command_group_output = []
         command_output = []
         for command in commands:
-            # Check if command has arguments
-            if len(command._params) > 0:
-                arguments = ''
-                for param in command._params.values():
-                    if param.required:
-                        arguments += f' <{param.name}>'
-                    else:
-                        arguments += f' [{param.name}]'
-            else:
-                arguments = ''
-
-            # Categorise commands and command groups
-            command_format = f"`{command.name}{arguments}`: {command.description}"
+            # Add as command if it is not a group
             try:
-                command.commands
-                command_group_output.append(command_format)
+                # Add arguments if any exists
+                if len(command._params) > 0:
+                    arguments = ''
+                    for param in command._params.values():
+                        if param.required:
+                            arguments += f' <{param.name}>'
+                        else:
+                            arguments += f' [{param.name}]'
+                else:
+                    arguments = ''
+                command_output.append(f"`{command.name}{arguments}`: {command.description}")
+
+            # Add as group
             except AttributeError:
-                command_output.append(command_format)
+                command_group_output.append(f"`{command.name}`: {command.description}")
+
         return command_output, command_group_output
 
 
