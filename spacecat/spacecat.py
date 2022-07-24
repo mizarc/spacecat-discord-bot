@@ -97,6 +97,9 @@ class Core(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        if message.author.bot:
+            return
+
         words = message.content.split()
         mentions = [f'<@{self.bot.user.id}>', f'<@!{self.bot.user.id}>']
         for mention in mentions:
