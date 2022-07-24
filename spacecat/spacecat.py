@@ -103,7 +103,7 @@ class Core(commands.Cog):
             if mention == message.content:
                 await self.process_info(message)
                 return
-            elif words[0] == mention and words[1] == "sync":
+            elif len(words) > 0 and words[0] == mention and words[1] == "sync":
                 await self.process_sync(message)
                 return
 
