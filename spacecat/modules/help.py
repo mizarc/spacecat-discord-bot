@@ -57,7 +57,7 @@ class Help(commands.Cog):
         cmd = self.bot.tree.get_command(cmds[0])
         if cmd:
             for subcmd in cmds[1:]:
-                check = cmd.all_commands.get(subcmd)
+                check = cmd.get_command(subcmd)
                 if not check:
                     break
                 cmd = check
@@ -120,47 +120,53 @@ class Help(commands.Cog):
         #else:
         #    parents = ''
         # Add arguments if any exists
-        if len(command._params) > 0:
-            arguments = ''
-            for param in command._params.values():
-                if param.required:
-                    arguments += f' <{param.name}>'
-                else:
-                    arguments += f' [{param.name}]'
-        else:
-            arguments = ''
+        try:
+            if len(command._params) > 0:
+                arguments = ''
+                for param in command._params.values():
+                    if param.required:
+                        arguments += f' <{param.name}>'
+                    else:
+                        arguments += f' [{param.name}]'
+            else:
+                arguments = ''
 
-        # Add base command entry with command name and usage
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.HELP} {command.qualified_name.title()}",
-            description=f"```{command.qualified_name}{arguments}```")
+            # Add base command entry with command name and usage
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.INFO.value,
+                title=f"{constants.EmbedIcon.HELP} {command.qualified_name.title()} Usage",
+                description=f"```{command.qualified_name}{arguments}```")
 
-        # Get all aliases of command from database
-        #db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        #cursor = db.cursor()
-        #value = (ctx.guild.id, command.name)
-        #cursor.execute(
-        #    'SELECT alias FROM command_alias '
-        #    'WHERE server_id=? AND command=?', value)
-        #aliases = cursor.fetchall()
-        #db.close()
+            # Get all aliases of command from database
+            #db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+            #cursor = db.cursor()
+            #value = (ctx.guild.id, command.name)
+            #cursor.execute(
+            #    'SELECT alias FROM command_alias '
+            #    'WHERE server_id=? AND command=?', value)
+            #aliases = cursor.fetchall()
+            #db.close()
 
-        # Add commnand description field
-        if command.description:
-            embed.add_field(name="Description", value=command.description, inline=False)
+            # Add commnand description field
+            if command.description:
+                embed.add_field(name="Description", value=command.description, inline=False)
 
-        # Add command alias field
-        #if aliases:
-        #    alias_output = []
-        #    for alias in aliases:
-        #        alias_output.append(f"`{alias[0]}`")
-        #    embed.add_field(name="Aliases", value=", ".join(alias_output))
+            # Add command alias field
+            #if aliases:
+            #    alias_output = []
+            #    for alias in aliases:
+            #        alias_output.append(f"`{alias[0]}`")
+            #    embed.add_field(name="Aliases", value=", ".join(alias_output))
 
         # Add command subcommand field
-        try:
             #subcommands = await self.filter_commands(
             #    ctx, command.all_commands.values())
+        except AttributeError:
+            # Add base command entry with command name and usage
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.INFO.value,
+                title=f"{constants.EmbedIcon.HELP} {command.qualified_name.title()} Subcommands")
+
             subcommand_output, subcommand_group_output = await self.get_formatted_command_list(command.commands)
 
             if subcommand_group_output:
@@ -173,8 +179,6 @@ class Help(commands.Cog):
                     name="Subcommands",
                     value='\n'.join(subcommand_output),
                     inline=False)
-        except AttributeError:
-            pass
 
         return embed
 
