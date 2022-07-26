@@ -54,7 +54,7 @@ class Help(commands.Cog):
 
         # Check if specified argument is a command
         cmds = command.split(' ')
-        cmd = self.bot.all_commands.get(cmds[0])
+        cmd = self.bot.tree.get_command(cmds[0])
         if cmd:
             for subcmd in cmds[1:]:
                 check = cmd.all_commands.get(subcmd)
@@ -115,41 +115,47 @@ class Help(commands.Cog):
         #    return
 
         # Check for command parents to use as prefix and signature as suffix
-        if command.full_parent_name:
-            parents = f'{command.full_parent_name} '
-        else:
-            parents = ''
-        if command.signature:
-            arguments = f' {command.signature}'
+        #if command.qualified_Name:
+        #    parents = f'{command.full_parent_name} '
+        #else:
+        #    parents = ''
+        # Add arguments if any exists
+        if len(command._params) > 0:
+            arguments = ''
+            for param in command._params.values():
+                if param.required:
+                    arguments += f' <{param.name}>'
+                else:
+                    arguments += f' [{param.name}]'
         else:
             arguments = ''
 
         # Add base command entry with command name and usage
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.HELP} {parents.title()}{command.name.title()}",
-            description=f"```{parents}{command.name}{arguments}```")
+            title=f"{constants.EmbedIcon.HELP} {command.qualified_name.title()}",
+            description=f"```{command.qualified_name}{arguments}```")
 
         # Get all aliases of command from database
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        value = (ctx.guild.id, command.name)
-        cursor.execute(
-            'SELECT alias FROM command_alias '
-            'WHERE server_id=? AND command=?', value)
-        aliases = cursor.fetchall()
-        db.close()
+        #db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+        #cursor = db.cursor()
+        #value = (ctx.guild.id, command.name)
+        #cursor.execute(
+        #    'SELECT alias FROM command_alias '
+        #    'WHERE server_id=? AND command=?', value)
+        #aliases = cursor.fetchall()
+        #db.close()
 
         # Add commnand description field
-        if command.help:
-            embed.add_field(name="Description", value=command.help, inline=False)
+        if command.description:
+            embed.add_field(name="Description", value=command.description, inline=False)
 
         # Add command alias field
-        if aliases:
-            alias_output = []
-            for alias in aliases:
-                alias_output.append(f"`{alias[0]}`")
-            embed.add_field(name="Aliases", value=", ".join(alias_output))
+        #if aliases:
+        #    alias_output = []
+        #    for alias in aliases:
+        #        alias_output.append(f"`{alias[0]}`")
+        #    embed.add_field(name="Aliases", value=", ".join(alias_output))
 
         # Add command subcommand field
         try:
