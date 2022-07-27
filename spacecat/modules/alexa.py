@@ -23,6 +23,7 @@ from spacecat.helpers import reaction_buttons
 
 youtube_dl.utils.bug_reports_message = lambda: ''
 
+
 class VideoTooLongError(ValueError):
     pass
 
@@ -91,8 +92,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
             data['url'], **ffmpeg_options, before_options=before_args)
         return cls(audio_data, data=data)
 
-class ServerMusic():
-    def __init__(self, bot):
+
+class MusicPlayer:
+    def __init__(self, voice_client):
+        self.voice_client = voice_client
         self.song_queue = []
         self.song_start_time = 0
         self.song_pause_time = 0
@@ -101,12 +104,48 @@ class ServerMusic():
         self.disconnect_time = 0
         self._disconnect_timer.start()
 
+    async def play(self, source):
+        self.voice_client.play(source, after=lambda e: self.play_next())
+
+    async def play_next(self):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        self.disconnect_time = time() + config['music']['disconnect_time']
+
+        # If looping, grab source from url again
+        if self.loop_toggle and not self.skip_toggle:
+            get_source = YTDLSource.from_url(self.song_queue[0].url)
+            coroutine = asyncio.run_coroutine_threadsafe(get_source, self.bot.loop)
+            source = coroutine.result()
+            self.song_start_time = time()
+            self.voice_client.play(source, after=lambda e: self.play_next())
+            return
+
+        # Disable skip toggle to indicate that a skip has been completed
+        if self.skip_toggle:
+            self.skip_toggle = False
+
+        # Remove next in queue. Stop player if no more songs.
+        try:
+            self.song_queue.pop(0)
+        except IndexError:
+            return
+
+        # Play the new first song in list
+        if self.song_queue:
+            self.song_start_time = time()
+            self.voice_client.play(
+                self.song_queue[0], after=lambda e: self.play_next())
+            return
+
+    async def stop(self):
+        self.song_queue.clear()
+        self.voice_client.stop()
 
 class Alexa(commands.Cog):
     """Play some funky music in a voice chat"""
     def __init__(self, bot):
         self.bot = bot
-        self.servers = {}
+        self.music_players = {}
 
     @commands.Cog.listener()
     async def on_ready(self):
