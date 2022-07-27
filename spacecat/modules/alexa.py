@@ -7,8 +7,8 @@ from time import gmtime, strftime, time
 from bs4 import BeautifulSoup as bs
 
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
-from discord_slash import cog_ext, SlashContext
 
 import requests
 
@@ -91,18 +91,22 @@ class YTDLSource(discord.PCMVolumeTransformer):
             data['url'], **ffmpeg_options, before_options=before_args)
         return cls(audio_data, data=data)
 
+class ServerMusic():
+    def __init__(self, bot):
+        self.song_queue = []
+        self.song_start_time = 0
+        self.song_pause_time = 0
+        self.loop_toggle = False
+        self.skip_toggle = False
+        self.disconnect_time = 0
+        self._disconnect_timer.start()
+
 
 class Alexa(commands.Cog):
     """Play some funky music in a voice chat"""
     def __init__(self, bot):
         self.bot = bot
-        self.song_queue = {}
-        self.song_start_time = {}
-        self.song_pause_time = {}
-        self.loop_toggle = {}
-        self.skip_toggle = {}
-        self.disconnect_time = {}
-        self._disconnect_timer.start()
+        self.servers = {}
 
     @commands.Cog.listener()
     async def on_ready(self):
