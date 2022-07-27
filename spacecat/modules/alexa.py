@@ -88,8 +88,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         except TypeError:
             return
 
-        audio_data = discord.FFmpegPCMAudio(
-            data['url'], **ffmpeg_options, before_options=before_args)
+        audio_data = discord.FFmpegPCMAudio(data['url'], **ffmpeg_options, before_options=before_args)
         return cls(audio_data, data=data)
 
 
@@ -105,6 +104,8 @@ class MusicPlayer:
         self._disconnect_timer.start()
 
     async def play(self, source):
+        self.song_queue.insert(0, source)
+        self.song_start_time = time()
         self.voice_client.play(source, after=lambda e: self.play_next())
 
     async def play_next(self):
@@ -124,7 +125,7 @@ class MusicPlayer:
         if self.skip_toggle:
             self.skip_toggle = False
 
-        # Remove next in queue. Stop player if no more songs.
+        # Remove next in queue
         try:
             self.song_queue.pop(0)
         except IndexError:
@@ -133,8 +134,7 @@ class MusicPlayer:
         # Play the new first song in list
         if self.song_queue:
             self.song_start_time = time()
-            self.voice_client.play(
-                self.song_queue[0], after=lambda e: self.play_next())
+            self.voice_client.play(self.song_queue[0], after=lambda e: self.play_next())
             return
 
     async def stop(self):
