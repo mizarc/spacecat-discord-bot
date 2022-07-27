@@ -101,6 +101,7 @@ class MusicPlayer:
         self.loop_toggle = False
         self.skip_toggle = False
         self.disconnect_time = 0
+
         self._disconnect_timer.start()
 
     async def play(self, source):
@@ -140,6 +141,13 @@ class MusicPlayer:
     async def stop(self):
         self.song_queue.clear()
         self.voice_client.stop()
+
+    @tasks.loop(seconds=30)
+    async def _disconnect_timer(self):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        if time() > self.disconnect_time and not self.voice_client.is_playing() and config['music']['auto_disconnect']:
+            await self.voice_client.disconnect()
+
 
 class Alexa(commands.Cog):
     """Play some funky music in a voice chat"""
@@ -1413,16 +1421,6 @@ class Alexa(commands.Cog):
         name = f"[{source.title}]({source.webpage_url}) `{duration}`"
         return source, name
 
-    @tasks.loop(seconds=30)
-    async def _disconnect_timer(self):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        for server_id in self.disconnect_time:
-            server = await self.bot.fetch_guild(server_id)
-            voice_client = server.voice_client
-            if (time() > self.disconnect_time[server_id] and
-                    not voice_client.is_playing() and
-                    config['music']['auto_disconnect']):
-                await voice_client.disconnect()
 
 
 def setup(bot):
