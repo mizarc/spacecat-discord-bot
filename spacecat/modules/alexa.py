@@ -1422,6 +1422,5 @@ class Alexa(commands.Cog):
         return source, name
 
 
-
-def setup(bot):
-    bot.add_cog(Alexa(bot))
+async def setup(bot):
+    await bot.add_cog(Alexa(bot))
