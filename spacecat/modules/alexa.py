@@ -211,35 +211,32 @@ class Alexa(commands.Cog):
 
     @cog_ext.cog_slash()
     @perms.check()
-    async def join(self, ctx, *, channel: discord.VoiceChannel = None):
+    async def join(self, interaction, channel: discord.VoiceChannel = None):
         """Joins a voice channel"""
-        # Get user's current channel if no channel is specified
-        if channel is None:
-            try:
-                channel = ctx.author.voice.channel
-            except AttributeError:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
-                    description="You must specify or be in a voice channel")
-                await ctx.send(embed=embed)
-                return
-
-        # Connect if not in a voice channel
-        await self._add_server_keys(ctx.guild)
-        if ctx.guild.voice_client is None:
-            await channel.connect()
+        # Alert if user is not in a voice channel and no channel is specified
+        if channel is None and not interaction.user.voice:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="You must specify or be in a voice channel")
+            await interaction.response.send_message(embed=embed)
             return
 
-        # Check if the specified voice channel is the same as the current channel
-        if channel == ctx.guild.voice_client.channel:
+        # Alert if the specified voice channel is the same as the current channel
+        if interaction.guild.voice_client and channel == interaction.guild.voice_client.channel:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="I'm already in that voice channel")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
-        # Move to specified channel
-        await ctx.guild.voice_client.move_to(channel)
+        # Joins player's current voice channel
+        if interaction.guild.voice_client is None:
+            await interaction.user.voice.channel.connect()
+            self.music_players[interaction.guild_id] = MusicPlayer(interaction.guild.voice_client, self.bot)
+            return
+
+        # Move to specified channel if already connected
+        await interaction.guild.voice_client.move_to(channel)
         return
 
     @cog_ext.cog_slash()
