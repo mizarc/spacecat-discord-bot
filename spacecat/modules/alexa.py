@@ -209,7 +209,11 @@ class Alexa(commands.Cog):
         if len(voice_client.channel.members) < 2:
             await voice_client.disconnect()
 
-    @cog_ext.cog_slash()
+    queue_group = app_commands.Group(name="queue", description="Handles songs that will be played next.")
+    playlist_group = app_commands.Group(name="playlist", description="Saved songs that can be played later.")
+    musicsettings_group = app_commands.Group(name="musicsettings", description="Modify music settings.")
+
+    @app_commands.command()
     @perms.check()
     async def join(self, interaction, channel: discord.VoiceChannel = None):
         """Joins a voice channel"""
