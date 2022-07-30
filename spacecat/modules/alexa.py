@@ -93,7 +93,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 
 class MusicPlayer:
-    def __init__(self, voice_client):
+    def __init__(self, voice_client, bot):
+        self.bot = bot
         self.voice_client = voice_client
         self.song_queue = []
         self.song_start_time = 0
@@ -107,7 +108,7 @@ class MusicPlayer:
     async def play(self, source):
         self.song_queue.insert(0, source)
         self.song_start_time = time()
-        self.voice_client.play(source, after=lambda e: self.play_next())
+        self.voice_client.play(source, after=lambda e: self.bot.loop.create_task(self.play_next()))
 
     async def play_next(self):
         config = toml.load(constants.DATA_DIR + 'config.toml')
@@ -119,7 +120,7 @@ class MusicPlayer:
             coroutine = asyncio.run_coroutine_threadsafe(get_source, self.bot.loop)
             source = coroutine.result()
             self.song_start_time = time()
-            self.voice_client.play(source, after=lambda e: self.play_next())
+            self.voice_client.play(source, after=lambda e: self.bot.loop.create_task(self.play_next()))
             return
 
         # Disable skip toggle to indicate that a skip has been completed
@@ -135,7 +136,7 @@ class MusicPlayer:
         # Play the new first song in list
         if self.song_queue:
             self.song_start_time = time()
-            self.voice_client.play(self.song_queue[0], after=lambda e: self.play_next())
+            self.voice_client.play(self.song_queue[0], after=lambda e: self.bot.loop.create_task(self.play_next()))
             return
 
     async def stop(self):
