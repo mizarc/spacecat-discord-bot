@@ -101,8 +101,9 @@ class MusicPlayer:
         self.song_pause_time = 0
         self.loop_toggle = False
         self.skip_toggle = False
-        self.disconnect_time = 0
 
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        self.disconnect_time = time() + config['music']['disconnect_time']
         self._disconnect_timer.start()
 
     async def play(self, source):
