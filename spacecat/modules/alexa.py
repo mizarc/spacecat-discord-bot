@@ -278,46 +278,49 @@ class Alexa(commands.Cog):
         await interaction.response.send_message(embed=embed)
         return
 
-    @cog_ext.cog_slash()
+    @app_commands.command()
     @perms.check()
-    async def play(self, ctx, *, url):
+    async def play(self, interaction, url: str):
         """Plays from a url (almost anything youtube_dl supports)"""
-        # Join user's voice channel if not in one already
-        if ctx.guild.voice_client is None:
-            await self.bot.slash.invoke_command(self.join, ctx, [])
+        # Create music player instance if not exist and join channel
+        try:
+            music_player = self.music_players[interaction.guild_id]
+        except KeyError:
+            await interaction.user.voice.channel.connect()
+            music_player = MusicPlayer(interaction.guild.voice_client, self.bot)
+            self.music_players[interaction.guild_id] = music_player
 
-            # End function if bot failed to join a voice channel.
-            if ctx.guild.voice_client is None:
-                return
-
-        # Instantly play song if no song currently playing
-        # Send to queue_add function if there is a song playing
-        if len(self.song_queue[ctx.guild.id]) > 0:
-            await self.bot.slash.invoke_command(self.queue_add, ctx, [url])
+        await interaction.response.defer()
+        try:
+            source, song_name = await self._fetch_song(url)
+        except VideoTooLongError:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Woops, that video is too long")
+            await interaction.followup.send(embed=embed)
             return
-        else:
-            try:
-                source, song_name = await self._process_song(ctx, url)
-            except VideoTooLongError:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
-                    description="Woops, that video is too long")
-                await ctx.send(embed=embed)
-                return
-            except VideoUnavailableError:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
-                    description="Woops, that video is unavailable")
-                await ctx.send(embed=embed)
-                return
-            self.song_queue[ctx.guild.id].append(source)
-            self.song_start_time[ctx.guild.id] = time()
-            ctx.guild.voice_client.play(source, after=lambda e: self._next(ctx))
+        except VideoUnavailableError:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Woops, that video is unavailable")
+            await interaction.followup.send(embed=embed)
+            return
+
+        # Send to queue_add function if there is a song playing
+        if len(music_player.song_queue) > 0:
+            music_player.song_queue.append(source)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Now playing {song_name}")
+                description=f"Song {song_name} added to #{len(music_player.song_queue) - 1} in queue")
+            await interaction.followup.send(embed=embed)
+            return
 
-        await ctx.send(embed=embed)
+        # Instantly play song if no song currently playing
+        await music_player.play(source)
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Now playing {song_name}")
+        await interaction.followup.send(embed=embed)
         return
 
     @cog_ext.cog_slash()
