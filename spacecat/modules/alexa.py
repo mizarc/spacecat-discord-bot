@@ -238,10 +238,20 @@ class Alexa(commands.Cog):
         if interaction.guild.voice_client is None:
             await interaction.user.voice.channel.connect()
             self.music_players[interaction.guild_id] = MusicPlayer(interaction.guild.voice_client, self.bot)
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Joined voice channel `{interaction.guild.voice_client.channel.name}`")
+            await interaction.response.send_message(embed=embed)
             return
 
         # Move to specified channel if already connected
+        previous_channel_name = interaction.guild.voice_client.channel.name
         await interaction.guild.voice_client.move_to(channel)
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Moved from voice channel `{previous_channel_name}` to "
+                        f"voice channel `{channel.name}`")
+        await interaction.response.send_message(embed=embed)
         return
 
     @cog_ext.cog_slash()
