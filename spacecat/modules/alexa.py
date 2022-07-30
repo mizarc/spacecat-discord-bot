@@ -153,6 +153,11 @@ class MusicPlayer:
 
 class Alexa(commands.Cog):
     """Play some funky music in a voice chat"""
+    NOT_CONNECTED_EMBED = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description="I need to be in a voice channel to execute music "
+                    "commands. \nUse **/join** or **/play** to connect me to a channel")
+
     def __init__(self, bot):
         self.bot = bot
         self.music_players = {}
@@ -254,19 +259,23 @@ class Alexa(commands.Cog):
         await interaction.response.send_message(embed=embed)
         return
 
-    @cog_ext.cog_slash()
+    @app_commands.command()
     @perms.check()
-    async def leave(self, ctx):
+    async def leave(self, interaction):
         """Stops and leaves the voice channel"""
-        # Check if in a voice channel
-        await ctx.send("leaving")
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        # Alert of not in voice channel
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+
         # Stop and Disconnect from voice channel
-        await self.bot.slash.invoke_command(self.stop, ctx, [])
-        await ctx.guild.voice_client.disconnect()
-        await self._remove_server_keys(ctx.guild)
+        voice_channel_name = interaction.guild.voice_client.channel.name
+        self.music_players.pop(interaction.guild_id)
+        await interaction.guild.voice_client.disconnect()
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Disconnected from voice channel `{voice_channel_name}`")
+        await interaction.response.send_message(embed=embed)
         return
 
     @cog_ext.cog_slash()
