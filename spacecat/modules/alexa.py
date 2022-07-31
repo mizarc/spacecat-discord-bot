@@ -151,12 +151,12 @@ class MusicPlayer:
             await self.voice_client.disconnect()
 
 
-class Playlist():
-    def __init__(self, name, description, guild_id, songs=None):
+class Playlist:
+    def __init__(self, id_, name, description, guild_id):
+        self.id = id_
         self.name = name
         self.description = description
         self.guild_id = guild_id
-        self.songs = songs
 
 class Alexa(commands.Cog):
     """Play some funky music in a voice chat"""
@@ -1358,70 +1358,45 @@ class Alexa(commands.Cog):
         except ValueError:
             return "N/A"
 
-    async def _add_server_keys(self, server):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        self.song_queue = {server.id: []}
-        self.loop_toggle = {server.id: False}
-        self.skip_toggle = {server.id: False}
-        self.song_start_time = {server.id: None}
-        self.song_pause_time = {server.id: None}
-        self.disconnect_time = {server.id: time() + config['music']['disconnect_time']}
+    async def _get_all_playlists(self, guild):
+        """Get list of all playlists for a guild"""
+        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+        cursor = db.cursor()
+        values = guild.id
+        cursor.execute('SELECT * FROM playlist WHERE server_id=?', values)
+        rows = cursor.fetchall()
+        db.close()
 
-    async def _remove_server_keys(self, server):
-        self.song_queue.pop(server.id, None)
-        self.loop_toggle.pop(server.id, None)
-        self.skip_toggle.pop(server.id, None)
-        self.song_start_time.pop(server.id, None)
-        self.song_pause_time.pop(server.id, None)
-        self.disconnect_time = {server.id, None}
+        playlists = []
+        for row in rows:
+            playlists.append(Playlist(row[0], row[1], row[2], row[3]))
+        return playlists
 
-    async def _check_music_status(self, ctx, server):
-        try:
-            self.loop_toggle[server.id]
-            return True
-        except KeyError:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="I need to be in a voice channel to execute music "
-                "commands. \nUse **!join** or **!play** to connect me to a channel")
-            await ctx.send(embed=embed)
-            return False
-
-    async def _get_playlist(self, ctx, playlist_name=None):
+    async def _get_playlist(self, guild, playlist_name=None):
         """Gets playlist data from name"""
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
-
-        # Fetch all or specific playlist depending on argument
-        if not playlist_name:
-            values = (ctx.guild.id,)
-            cursor.execute('SELECT * FROM playlist WHERE server_id=?', values)
-            playlist = cursor.fetchall()
-        else:
-            values = (playlist_name, ctx.guild.id)
-            cursor.execute(
-                'SELECT * FROM playlist '
-                'WHERE name=? AND server_id=?', values)
-            playlist = cursor.fetchone()
-            if playlist is None:
-                raise ValueError("That playlist is unavailable")
-
+        values = (playlist_name, guild.id)
+        cursor.execute('SELECT * FROM playlist WHERE name=? AND server_id=?', values)
+        row = cursor.fetchone()
         db.close()
-        return playlist
 
-    async def _get_songs(self, ctx, playlist_name):
-        """Gets playlist songs from name"""
-        playlist = await self._get_playlist(ctx, playlist_name)
-        if playlist is None:
+        if row is None:
             raise ValueError("That playlist is unavailable")
+        return Playlist(row[0], row[1], row[2], row[3])
+
+    async def _get_playlist_songs(self, guild, playlist_name):
+        """Gets playlist songs from name"""
+        # Alert if playlist doesn't exist
+        playlist = await self._get_playlist(guild, playlist_name)
+        if playlist is None:
+            raise ValueError("That playlist doesn't exist")
 
         # Get list of all songs in playlist
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
-        values = (playlist[0],)
-        cursor.execute(
-            'SELECT * FROM playlist_music '
-            'WHERE playlist_id=?', values)
+        values = (playlist.id,)
+        cursor.execute('SELECT * FROM playlist_music WHERE playlist_id=?', values)
         songs = cursor.fetchall()
         db.close()
 
@@ -1430,7 +1405,7 @@ class Alexa(commands.Cog):
         for song in songs:
             song_links[song[4]] = [song[0], song]
 
-        # Order playlist songs
+        # Order playlist songs into list
         ordered_songs = []
         next_song = song_links.get(None)
         while next_song is not None:
