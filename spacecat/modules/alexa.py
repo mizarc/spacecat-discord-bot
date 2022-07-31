@@ -151,6 +151,13 @@ class MusicPlayer:
             await self.voice_client.disconnect()
 
 
+class Playlist():
+    def __init__(self, name, description, guild_id, songs=None):
+        self.name = name
+        self.description = description
+        self.guild_id = guild_id
+        self.songs = songs
+
 class Alexa(commands.Cog):
     """Play some funky music in a voice chat"""
     NOT_CONNECTED_EMBED = discord.Embed(
