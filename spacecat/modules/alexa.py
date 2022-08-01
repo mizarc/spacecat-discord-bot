@@ -20,7 +20,6 @@ from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers import reaction_buttons
 
-
 youtube_dl.utils.bug_reports_message = lambda: ''
 
 
@@ -77,8 +76,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url(cls, url):
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(
-            None, lambda: ytdl.extract_info(url, download=False))
+        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
         before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
 
         try:
@@ -203,6 +201,14 @@ class Alexa(commands.Cog):
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         """Disconnect the bot if the last user leaves the channel"""
+        # If bot disconnects from voice, remove music player
+        if member.id == self.bot.user.id and after.channel is None:
+            try:
+                pass
+                self.music_players.pop(member.guild.id)
+            except KeyError:
+                pass
+
         # Check if bot voice client isn't active
         voice_client = member.guild.voice_client
         if not voice_client:
@@ -214,8 +220,7 @@ class Alexa(commands.Cog):
             return
 
         # Check if user isn't in same channel or not a disconnect/move event
-        if (voice_client.channel != before.channel or
-                before.channel == after.channel):
+        if voice_client.channel != before.channel or before.channel == after.channel:
             return
 
         # Disconnect if the bot is the only user left
@@ -252,7 +257,7 @@ class Alexa(commands.Cog):
             self.music_players[interaction.guild_id] = MusicPlayer(interaction.guild.voice_client, self.bot)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Joined voice channel `{interaction.guild.voice_client.channel.name}`")
+                description=f"Joined voice channel `{interaction.user.voice.channel.name}`")
             await interaction.response.send_message(embed=embed)
             return
 
@@ -289,14 +294,12 @@ class Alexa(commands.Cog):
     @perms.check()
     async def play(self, interaction, url: str):
         """Plays from a url (almost anything youtube_dl supports)"""
-        # Create music player instance if not exist and join channel
-        try:
-            music_player = self.music_players[interaction.guild_id]
-        except KeyError:
+        # Join channel and create music player instance if it doesn't exist
+        if not interaction.guild.voice_client:
             await interaction.user.voice.channel.connect()
-            music_player = MusicPlayer(interaction.guild.voice_client, self.bot)
-            self.music_players[interaction.guild_id] = music_player
+        music_player = await self._get_music_player(interaction.guild)
 
+        # Alert due to song errors
         await interaction.response.defer()
         try:
             source, song_name = await self._fetch_song(url)
