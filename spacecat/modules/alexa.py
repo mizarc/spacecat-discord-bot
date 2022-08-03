@@ -126,6 +126,7 @@ class MusicPlayer:
         self.song_queue.insert(0, song)
         self.song_start_time = time()
         stream = await song.create_stream()
+        loop = asyncio.get_event_loop()
         self.voice_client.play(stream, after=lambda e: loop.create_task(self.play_next()))
 
     async def play_next(self):
@@ -381,15 +382,15 @@ class Alexa(commands.Cog):
         await interaction.followup.send(embed=embed)
         return
 
-    @cog_ext.cog_slash()
+    @app_commands.command()
     @perms.check()
-    async def playsearch(self, ctx, *, search):
+    async def playsearch(self, interaction, search: str):
         # Join user's voice channel if not in one already
-        if ctx.guild.voice_client is None:
-            await self.bot.slash.invoke_command(self.join, ctx, [])
+        if interaction.guild.voice_client is None:
+            await interaction.user.voice.channel.connect()
 
             # End function if bot failed to join a voice channel.
-            if ctx.guild.voice_client is None:
+            if interaction.guild.voice_client is None:
                 return
 
         # Set urls to be used by the searcher
@@ -413,7 +414,7 @@ class Alexa(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Search query returned no results")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Format the data to be in a usable list
@@ -437,7 +438,7 @@ class Alexa(commands.Cog):
         embed.add_field(
             name=f"Results for '{search}'",
             value=results_output, inline=False)
-        msg = await ctx.send(embed=embed)
+        msg = await interaction.response.send_message(embed=embed)
 
         # Add reaction button for every result
         reactions = []
@@ -448,7 +449,7 @@ class Alexa(commands.Cog):
 
         # Check if the requester selects a valid reaction
         def reaction_check(reaction, user):
-            return user == ctx.author and str(reaction) in reactions
+            return user == interaction.user and str(reaction) in reactions
 
         # Request reaction within timeframe
         try:
@@ -456,8 +457,8 @@ class Alexa(commands.Cog):
                 'reaction_add', timeout=30.0, check=reaction_check)
         except asyncio.TimeoutError:
             embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
-                    description="Song selection timed out.")
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Song selection timed out.")
             embed.set_author(name="Search Query", icon_url="attachment://image.png")
             await msg.clear_reactions()
             await msg.edit(file=None, embed=embed)
@@ -468,194 +469,204 @@ class Alexa(commands.Cog):
         selected_song = urls[number - 1]
         await self.bot.slash.invoke_command(self.play, ctx, [selected_song])
 
-    @cog_ext.cog_slash()
+    @app_commands.command()
     @perms.check()
-    async def stop(self, ctx):
+    async def stop(self, interaction):
         """Stops and clears the queue"""
-        # Check if in a voice channel
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Stops and clears the queue
-        self.skip_toggle[ctx.guild.id] = True
-        self.song_queue[ctx.guild.id].clear()
-        ctx.guild.voice_client.stop()
+        music_player.skip_toggle = True
+        music_player.song_queue.clear()
+        interaction.guild.voice_client.stop()
+
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Music has been stopped & queue has been cleared")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_slash()
+    @app_commands.command()
     @perms.check()
-    async def resume(self, ctx):
+    async def resume(self, interaction):
         """Resumes music if paused"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.guild)
 
-        # Check if music is paused
-        if not ctx.guild.voice_client.is_paused():
+        # Alert if music isn't paused
+        if not interaction.guild.voice_client.is_paused():
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music isn't paused")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Resumes music playback
-        ctx.guild.voice_client.resume()
-        self.song_start_time[ctx.guild.id] = time() - self.song_pause_time[ctx.guild.id]
-        self.song_pause_time[ctx.guild.id] = None
+        interaction.guild.voice_client.resume()
+        music_player.song_start_time = time() - music_player.song_pause_time
+        music_player.song_pause_time = None
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Music has been resumed")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_slash()
+    @app_commands.command()
     @perms.check()
-    async def pause(self, ctx):
+    async def pause(self, interaction):
         """Pauses the music"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Check if music is paused
-        if ctx.guild.voice_client.is_paused():
+        if interaction.guild.voice_client.is_paused():
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music is already paused")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Pauses music playback
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        self.disconnect_time[ctx.guild.id] = time() \
-            + config['music']['disconnect_time']
-        ctx.guild.voice_client.pause()
-        self.song_pause_time[ctx.guild.id] = time() - self.song_start_time[ctx.guild.id]
+        music_player.disconnect_time = time() + config['music']['disconnect_time']
+        music_player.song_pause_time = time() - music_player.song_start_time
+        interaction.guild.voice_client.pause()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Music has been paused")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_slash()
+    @app_commands.command()
     @perms.check()
-    async def skip(self, ctx):
+    async def skip(self, interaction):
         """Skip the current song and play the next song"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Check if there's queue is empty
-        if len(self.song_queue[ctx.guild.id]) <= 1:
+        if len(music_player.song_queue) <= 1:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue after this")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Stop current song and flag that it has been skipped
-        self.skip_toggle[ctx.guild.id] = True
-        ctx.guild.voice_client.stop()
+        music_player.skip_toggle = True
+        interaction.guild.voice_client.stop()
 
-    @cog_ext.cog_slash()
+    @app_commands.command()
     @perms.check()
-    async def shuffle(self, ctx):
+    async def shuffle(self, interaction):
         """Randomly moves the contents of the queue around"""
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            return
+        music_player = await self._get_music_player(interaction.guild)
+
         # Alert if queue is empty
-        if len(self.song_queue[ctx.guild.id]) < 2:
+        if len(music_player.song_queue) < 2:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue to shuffle")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Create temp queue excluding currently playing song to shuffle
-        temp_queue = self.song_queue[ctx.guild.id][1:]
+        temp_queue = music_player.song_queue[1:]
         random.shuffle(temp_queue)
-        self.song_queue[ctx.guild.id][1:] = temp_queue
+        music_player.song_queue[1:] = temp_queue
 
         # Output result to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Queue has been shuffled")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
         return
 
-    @cog_ext.cog_slash()
+    @app_commands.command()
     @perms.check()
-    async def loop(self, ctx):
+    async def loop(self, interaction):
         """Loop the currently playing song"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Disable loop if enabled
-        if self.loop_toggle[ctx.guild.id]:
-            self.loop_toggle[ctx.guild.id] = False
+        if music_player.loop_toggle:
+            music_player.loop_toggle = False
             embed = discord.Embed(
                 colour=constants.EmbedStatus.NO.value,
                 description="Loop disabled")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Enable loop if disabled
-        self.loop_toggle[ctx.guild.id] = True
+        music_player.loop_toggle = True
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Loop enabled")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
         return
 
-    #@cog_ext.cog_slash()
-    #@perms.check()
-    #async def queue(self, ctx, arg: int = 1):
-    #    """View and modify the current song queue. Defaults to the list subcommand."""
-        # Run the queue list subcommand if no subcommand is specified
-    #    await self.bot.slash.invoke_command(self.queue_list, arg)
-
-    @cog_ext.cog_subcommand(base="queue", name="list")
+    @queue_group.command(name="list")
     @perms.check()
-    async def queue_list(self, ctx, page: int = 1):
+    async def queue_list(self, interaction, page: int = 1):
         """List the current song queue"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Notify user if nothing is in the queue
-        if not self.song_queue[ctx.guild.id]:
+        if not music_player.song_queue:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue right now")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Output first in queue as currently playing
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Music Queue")
-        duration = await self._get_duration(self.song_queue[ctx.guild.id][0].duration)
-        if not self.song_pause_time[ctx.guild.id]:
-            current_time = int(time() - self.song_start_time[ctx.guild.id])
+        duration = await self._get_duration(music_player.song_queue[0].duration)
+        if not music_player.song_pause_time:
+            current_time = int(time() - music_player.song_start_time)
         else:
-            current_time = int(self.song_pause_time[ctx.guild.id])
+            current_time = int(music_player.song_pause_time)
         current_time = await self._get_duration(current_time)
 
         # Set header depending on if looping or not, and whether to add a spacer
         queue_status = False
-        if self.loop_toggle[ctx.guild.id]:
+        if music_player.loop_toggle:
             header = "Currently Playing (Looping)"
         else:
             header = "Currently Playing"
-        if len(self.song_queue[ctx.guild.id]) > 1:
+        if len(music_player.song_queue) > 1:
             queue_status = True
             spacer = "\u200B"
         else:
             spacer = ""
         embed.add_field(
             name=header,
-            value=f"{self.song_queue[ctx.guild.id][0].title} "
-            f"`{current_time}/{duration}` \n{spacer}")
+            value=f"{music_player.song_queue[0].title} "
+                  f"`{current_time}/{duration}` \n{spacer}")
 
         # List remaining songs in queue plus total duration
         if queue_status:
@@ -666,12 +677,12 @@ class Alexa(commands.Cog):
             if page > 0:
                 page = page * 10
 
-            total_duration = -self.song_queue[ctx.guild.id][0].duration
-            for song in self.song_queue[ctx.guild.id]:
+            total_duration = -music_player.song_queue[0].duration
+            for song in music_player.song_queue:
                 total_duration += song.duration
 
             for index, song in enumerate(
-                    islice(self.song_queue[ctx.guild.id], page + 1, page + 11)):
+                    islice(music_player.song_queue, page + 1, page + 11)):
                 duration = await self._get_duration(song.duration)
                 queue_info.append(f"{page + index + 1}. {song.title} `{duration}`")
 
@@ -680,13 +691,13 @@ class Alexa(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
                     description="There are no songs on that page")
-                await ctx.send(embed=embed)
+                await interaction.response.send_message(embed=embed)
                 return
 
             # Omit songs past 10 and just display amount instead
-            if len(self.song_queue[ctx.guild.id]) > page + 11:
+            if len(music_player.song_queue) > page + 11:
                 queue_info.append(
-                    f"`+{len(self.song_queue[ctx.guild.id]) - 11 - page} more in queue`")
+                    f"`+{len(music_player.song_queue) - 11 - page} more in queue`")
 
             # Output results to chat
             duration = await self._get_duration(total_duration)
@@ -694,161 +705,165 @@ class Alexa(commands.Cog):
             embed.add_field(
                 name=f"Queue  `{duration}`",
                 value=queue_output, inline=False)
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="queue", name="move")
+    @queue_group.command(name="move")
     @perms.check()
-    async def queue_move(self, ctx, original_pos: int, new_pos: int):
+    async def queue_move(self, interaction, original_pos: int, new_pos: int):
         """Move a song to a different position in the queue"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Try to remove song from queue using the specified index
         try:
             if original_pos < 1:
                 raise IndexError("Position can\'t be be less than 1")
-            song = self.song_queue[ctx.guild.id][original_pos]
+            song = music_player.song_queue[original_pos]
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's no song at that position")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Move song into new position in queue
-        if not 1 <= new_pos < len(self.song_queue[ctx.guild.id]):
+        if not 1 <= new_pos < len(music_player.song_queue):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="You can't move the song into that position")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
-        self.song_queue[ctx.guild.id].pop(original_pos)
-        self.song_queue[ctx.guild.id].insert(new_pos, song)
+        music_player.song_queue.pop(original_pos)
+        music_player.song_queue.insert(new_pos, song)
 
         # Output result to chat
         duration = await self._get_duration(song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"[{song.title}]({song.webpage_url}) "
-            f"`{duration}` has been moved from position #{original_pos} "
-            f"to position #{new_pos}")
-        await ctx.send(embed=embed)
+                        f"`{duration}` has been moved from position #{original_pos} "
+                        f"to position #{new_pos}")
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="queue", name="add")
+    @queue_group.command(name="add")
     @perms.check()
-    async def queue_add(self, ctx, url):
+    async def queue_add(self, interaction, url: str):
         """Adds a song to the queue"""
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            return
+        music_player = await self._get_music_player(interaction.guild)
+
         # Alert if too many songs in queue
-        if len(self.song_queue[ctx.guild.id]) > 100:
+        if len(music_player.song_queue) > 100:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Too many songs in queue. Calm down.")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Add the song to the queue and output result
         try:
-            source, song_name = await self._process_song(ctx, url)
+            source, song_name = await self._fetch_song(url)
         except VideoTooLongError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Woops, that video is too long")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
         except VideoUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Woops, that video is unavailable")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
-        self.song_queue[ctx.guild.id].append(source)
+
+        music_player.song_queue[interaction.guild_id].append(source)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Added {song_name} to "
-            f"#{len(self.song_queue[ctx.guild.id]) - 1} in queue")
-        await ctx.send(embed=embed)
+                        f"#{len(music_player.song_queue[interaction.guild_id]) - 1} in queue")
+        await interaction.response.send_message(embed=embed)
         return
 
-    @cog_ext.cog_subcommand(base="queue", name="remove")
+    @queue_group.command(name="remove")
     @perms.check()
-    async def queue_remove(self, ctx, index: int):
+    async def queue_remove(self, interaction, index: int):
         """Remove a song from the queue"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Try to remove song from queue using the specified index
         try:
             if index < 1:
                 raise IndexError('Position can\'t be less than 1')
-            song = self.song_queue[ctx.guild.id][index]
-            self.song_queue[ctx.guild.id].pop(index)
+            song = music_player.song_queue[index]
+            music_player.song_queue.pop(index)
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="That's an invalid queue position")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Output result to chat
         duration = await self._get_duration(song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
-            description=f"[{song.title}]({song.webpage_url}) "
-            f"`{duration}` has been removed from position #{index} "
-            "of the queue")
-        await ctx.send(embed=embed)
+            description=f"[{song.title}]({song.webpage_url}) `{duration}` "
+                        f"has been removed from position #{index} of the queue")
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="queue", name="clear")
+    @queue_group.command(name="clear")
     @perms.check()
-    async def queue_clear(self, ctx):
+    async def queue_clear(self, interaction):
         """Clears the entire queue"""
-        status = await self._check_music_status(ctx, ctx.guild)
-        if not status:
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Try to remove all but the currently playing song from the queue
-        if len(self.song_queue[ctx.guild.id]) < 2:
+        if len(music_player.song_queue) < 2:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue to clear")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
-        self.song_queue[ctx.guild.id] = [self.song_queue[ctx.guild.id][0]]
+        music_player.song_queue = [music_player.song_queue[0]]
 
         # Output result to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description="All songs have been removed from the queue")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    #@cog_ext.cog_slash()
-    #@perms.check()
-    #async def playlist(self, ctx):
-    #    """Configure music playlists. Defaults to list subcommand."""
-        # Run the queue list subcommand if no subcommand is specified
-    #    await self.bot.slash.invoke_command(self.playlist_list)
-
-    @cog_ext.cog_subcommand(base="playlist", name="create")
+    @playlist_group.command(name='create')
     @perms.check()
-    async def playlist_create(self, ctx, *, playlist_name):
+    async def playlist_create(self, interaction, playlist_name: str):
         """Create a new playlist"""
         # Limit playlist name to 30 chars
         if len(playlist_name) > 30:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Playlist name is too long")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Alert if playlist with specified name already exists
         try:
-            await self._get_playlist(ctx, playlist_name)
+            await self._get_playlist(interaction.guild, playlist_name)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` already exists")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
         except ValueError:
             pass
@@ -856,7 +871,7 @@ class Alexa(commands.Cog):
         # Add playlist to database
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
-        values = (playlist_name, ctx.guild.id)
+        values = (playlist_name, interaction.guild_id)
         cursor.execute(
             'INSERT INTO playlist(name, server_id) VALUES (?,?)', values)
         db.commit()
@@ -865,20 +880,20 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been created")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="playlist", name="destroy")
+    @playlist_group.command(name='destroy')
     @perms.check()
-    async def playlist_destroy(self, ctx, *, playlist_name):
+    async def playlist_destroy(self, interaction, playlist_name: str):
         """Deletes an existing playlist"""
         # Alert if playlist doesn't exist in db
         try:
-            playlist = await self._get_playlist(ctx, playlist_name)
+            playlist = await self._get_playlist(interaction.guild, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Remove playlist from database and all songs linked to it
@@ -888,7 +903,7 @@ class Alexa(commands.Cog):
         cursor.execute(
             'DELETE FROM playlist_music '
             'WHERE playlist_id=?', values)
-        values = (playlist_name, ctx.guild.id)
+        values = (playlist_name, interaction.guild_id)
         cursor.execute(
             'DELETE FROM playlist '
             'WHERE name=? AND server_id=?', values)
@@ -899,20 +914,20 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been destroyed")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="playlist", name="description")
+    @playlist_group.command(name='description')
     @perms.check()
-    async def playlist_description(self, ctx, playlist_name, *, description):
+    async def playlist_description(self, interaction, playlist_name: str, description: str):
         """Sets the description for the playlist"""
         # Alert if playlist doesn't exist
         try:
-            playlist = await self._get_playlist(ctx, playlist_name)
+            playlist = await self._get_playlist(interaction.guild, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Limit playlist description to 300 chars
@@ -920,7 +935,7 @@ class Alexa(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Playlist name is too long")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Rename playlist in database
@@ -936,20 +951,20 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Description set for playlist `{playlist_name}`")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="playlist", name="rename")
+    @playlist_group.command(name='rename')
     @perms.check()
-    async def playlist_rename(self, ctx, playlist_name, new_name):
+    async def playlist_rename(self, interaction, playlist_name: str, new_name: str):
         """Rename an existing playlist"""
         # Alert if playlist doesn't exist
         try:
-            playlist = await self._get_playlist(ctx, playlist_name)
+            playlist = await self._get_playlist(interaction.guild, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Rename playlist in database
@@ -964,26 +979,26 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Playlist `{playlist}` has been renamed to "
-            f"`{new_name}`")
-        await ctx.send(embed=embed)
+                        f"`{new_name}`")
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="playlist", name="list")
+    @playlist_group.command(name='list')
     @perms.check()
-    async def playlist_list(self, ctx):
+    async def playlist_list(self, interaction):
         """List all available playlists"""
         # Alert if no playlists exist
-        playlists = await self._get_playlist(ctx)
+        playlists = await self._get_playlist(interaction.guild)
         if not playlists:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There are no playlists available")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Get all playlist names and duration
         playlist_names = []
         for playlist in playlists:
-            songs = await self._get_songs(ctx, playlist[1])
+            songs = await self._get_playlist_songs(interaction.guild, playlist[1])
             song_duration = 0
             for song in songs:
                 song_duration += song[2]
@@ -1004,45 +1019,45 @@ class Alexa(commands.Cog):
         embed.add_field(
             name=f"{len(playlists)} available",
             value=playlist_output, inline=False)
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="playlist", name="add")
+    @playlist_group.command(name='add')
     @perms.check()
-    async def playlist_add(self, ctx, playlist_name, *, url):
+    async def playlist_add(self, interaction, playlist_name: str, url: str):
         """Adds a song to a playlist"""
         # Alert if playlist doesn't exist in db
         try:
-            playlist = await self._get_playlist(ctx, playlist_name)
+            playlist = await self._get_playlist(interaction.guild, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
-        songs = await self._get_songs(ctx, playlist_name)
+        songs = await self._get_playlist_songs(interaction.guild, playlist_name)
         if len(songs) > 100:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's too many songs in the playlist. Remove"
-                "some songs to be able to add more")
-            await ctx.send(embed=embed)
+                            "some songs to be able to add more")
+            await interaction.response.send_message(embed=embed)
             return
 
         # Get song source to add to song list
         try:
-            source, _ = await self._process_song(ctx, url)
+            source, _ = await self._fetch_song(url)
         except VideoTooLongError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Woops, that video is too long")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
         except VideoUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Woops, that video is unavailable")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Set previous song as the last song in the playlist
@@ -1073,22 +1088,22 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Added [{source.title}]({source.webpage_url}) "
-            f"`{duration}` to position #{len(songs) + 1} "
-            f"in playlist `{playlist_name}`")
-        await ctx.send(embed=embed)
+                        f"`{duration}` to position #{len(songs) + 1} "
+                        f"in playlist `{playlist_name}`")
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="playlist", name="remove")
+    @playlist_group.command(name='remove')
     @perms.check()
-    async def playlist_remove(self, ctx, playlist_name, index):
+    async def playlist_remove(self, interaction, playlist_name: str, index: int):
         """Removes a song from a playlist"""
         # Fetch songs from playlist if it exists
         try:
-            songs = await self._get_songs(ctx, playlist_name)
+            songs = await self._get_playlist_songs(interaction.guild, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Fetch selected song and the song after
@@ -1117,21 +1132,21 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"[{selected_song[1]}]({selected_song[3]}) "
-            f"`{duration}` has been removed from `{playlist_name}`")
-        await ctx.send(embed=embed)
+                        f"`{duration}` has been removed from `{playlist_name}`")
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="playlist", name="move")
+    @playlist_group.command(name='move')
     @perms.check()
-    async def playlist_move(self, ctx, playlist_name, original_pos, new_pos):
+    async def playlist_move(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
         """Moves a song to a specified position in a playlist"""
         # Fetch songs from playlist if it exists
         try:
-            songs = await self._get_songs(ctx, playlist_name)
+            songs = await self._get_playlist_songs(interaction.guild, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` does not exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Edit db to put selected song in other song's position
@@ -1172,25 +1187,25 @@ class Alexa(commands.Cog):
         # Output result to chat
         duration = await self._get_duration(selected_song[2])
         embed = discord.Embed(
-                colour=constants.EmbedStatus.YES.value,
-                description=f"[{selected_song[1]}]({selected_song[3]}) "
-                f"`{duration}` has been moved to position #{new_pos} "
-                f"in playlist `{playlist_name}`")
-        await ctx.send(embed=embed)
+            colour=constants.EmbedStatus.YES.value,
+            description=f"[{selected_song[1]}]({selected_song[3]}) "
+                        f"`{duration}` has been moved to position #{new_pos} "
+                        f"in playlist `{playlist_name}`")
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="playlist", name="view")
+    @playlist_group.command(name='view')
     @perms.check()
-    async def playlist_view(self, ctx, playlist_name, page=1):
+    async def playlist_view(self, interaction, playlist_name: str, page: int = 1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
         try:
-            playlist = await self._get_playlist(ctx, playlist_name)
-            songs = await self._get_songs(ctx, playlist_name)
+            playlist = await self._get_playlist(interaction.guild, playlist_name)
+            songs = await self._get_playlist_songs(interaction.guild, playlist_name)
         except ValueError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` does not exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Modify page variable to get every ten results
@@ -1213,92 +1228,81 @@ class Alexa(commands.Cog):
                 song_name = song[1]
 
             duration = await self._get_duration(song[2])
-            formatted_songs.append(
-                f"{page + index + 1}. [{song_name}]({song[3]}) `{duration}`")
+            formatted_songs.append(f"{page + index + 1}. [{song_name}]({song[3]}) `{duration}`")
 
         # Alert if no songs are on the specified page
         if not formatted_songs:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There are no songs on that page")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}' Contents")
-        if playlist[2] and page == 0:
-            embed.description = playlist[2]
+            title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}' Songs")
+        if playlist.description and page == 0:
+            embed.description = playlist.description
         formatted_duration = await self._get_duration(total_duration)
         playlist_music_output = '\n'.join(formatted_songs)
         embed.add_field(
             name=f"{len(songs)} songs available `{formatted_duration}`",
             value=playlist_music_output, inline=False)
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="playlist", name="play")
+    @playlist_group.command(name='play')
     @perms.check()
-    async def playlist_play(self, ctx, playlist):
+    async def playlist_play(self, interaction, playlist: str):
         """Play from a locally saved playlist"""
-        # Join user's voice channel if not in one already
-        if ctx.guild.voice_client is None:
-            await self.bot.slash.invoke_command(self.join, ctx, [])
-
-            # End function if bot failed to join a voice channel.
-            if ctx.guild.voice_client is None:
-                return
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Get all songs in playlist
         try:
-            songs = await self._get_songs(ctx, playlist)
+            songs = await self._get_playlist_songs(interaction.guild, playlist)
         except TypeError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist}` does not exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
-        song_links = {}
-        for song in songs:
-            song_links[song[4]] = [song[0], song]
 
         # Play first song if no song is currently playing
-        next_song = song_links.get(None)
         unavailable_songs = []
         index = 0
-        if len(self.song_queue[ctx.guild.id]) == 0:
+        if len(music_player.song_queue) == 0:
             # Loop until available playlist song is found
             while True:
                 index += 1
                 try:
-                    source, _ = await self._process_song(ctx, next_song[1][3])
+                    source, _ = await self._fetch_song(songs[0])
                 except VideoUnavailableError:
                     duration = await self._get_duration(next_song[1][2])
-                    unavailable_songs.append(
-                        f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
-                        f"`{duration}`")
+                    unavailable_songs.append(f"{index}. [{next_song[1][1]}]({next_song[1][3]}) `{duration}`")
                     continue
-                finally:
-                    next_song = song_links.get(next_song[0])
-                self.song_queue[ctx.guild.id].append(source)
-                self.song_start_time[ctx.guild.id] = time()
-                ctx.guild.voice_client.play(source, after=lambda e: self._next(ctx))
+                music_player.song_queue.append(source)
+                music_player.song_start_time = time()
+                interaction.guild.voice_client.play(source, after=lambda e: self._next(interaction.guild))
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Now playing playlist `{playlist}`")
-                await ctx.send(embed=embed)
+                await interaction.response.send_message(embed=embed)
                 break
         else:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added playlist `{playlist}` to queue")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
 
         # Add remaining songs to queue
-        while next_song:
+        while songs:
             index += 1
             try:
-                source, _ = await self._process_song(ctx, next_song[1][3])
+                source, _ = await self._fetch_song(next_song[1][3])
             except VideoUnavailableError:
                 duration = await self._get_duration(next_song[1][2])
                 unavailable_songs.append(
@@ -1307,7 +1311,7 @@ class Alexa(commands.Cog):
                 continue
             finally:
                 next_song = song_links.get(next_song[0])
-            self.song_queue[ctx.guild.id].append(source)
+            self.song_queue[interaction.guild_id].append(source)
 
         # Alert user of unavailable songs
         if unavailable_songs:
@@ -1316,19 +1320,12 @@ class Alexa(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"These songs in playlist `{playlist}` "
-                f"are unavailable: \n{song_format}")
-            await ctx.send(embed=embed)
+                            f"are unavailable: \n{song_format}")
+            await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_slash()
+    @musicsettings_group.command(name='autodisconnect')
     @perms.exclusive()
-    async def musicsettings(self, ctx):
-        """Configure music playlists. Defaults to list subcommand."""
-        # Run the queue list subcommand if no subcommand is specified
-        await ctx.send("Please specify a valid subcommand.")
-
-    @cog_ext.cog_subcommand(base="musicsettings", name="autodisconnect")
-    @perms.exclusive()
-    async def musicsettings_autodisconnect(self, ctx):
+    async def musicsettings_autodisconnect(self, interaction):
         """Toggles if the bot should auto disconnect from a voice channel."""
         config = toml.load(constants.DATA_DIR + 'config.toml')
 
@@ -1346,11 +1343,11 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Music player auto disconnect {result_text}")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @cog_ext.cog_subcommand(base="musicsettings", name="disconnecttime")
+    @musicsettings_group.command(name='disconnecttime')
     @perms.exclusive()
-    async def musicsettings_disconnecttime(self, ctx, seconds: int):
+    async def musicsettings_disconnecttime(self, interaction, seconds: int):
         """Sets a time for when the bot should auto disconnect from voice if not playing"""
         config = toml.load(constants.DATA_DIR + 'config.toml')
 
@@ -1362,7 +1359,7 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Music player auto disconnect timer set to {seconds} seconds")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
         return
 
     async def _get_music_player(self, guild):
