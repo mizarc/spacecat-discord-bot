@@ -69,6 +69,7 @@ class YTDLStream:
         self.title = metadata.get('title')
         self.duration = metadata.get('duration')
         self.webpage_url = metadata.get('webpage_url')
+        self.playlist = metadata.get('playlist')
 
     async def create_steam(self):
         before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
@@ -273,11 +274,16 @@ class Alexa(commands.Cog):
 
         # Joins player's current voice channel
         if interaction.guild.voice_client is None:
-            await interaction.user.voice.channel.connect()
+            self.music_players[interaction.guild_id] = MusicPlayer(interaction.guild.voice_client, self.bot)
+
+            if channel is None:
+                channel = interaction.user.voice.channel
+
+            await channel.connect()
             self.music_players[interaction.guild_id] = MusicPlayer(interaction.guild.voice_client, self.bot)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Joined voice channel `{interaction.user.voice.channel.name}`")
+                description=f"Joined voice channel `{channel.name}`")
             await interaction.response.send_message(embed=embed)
             return
 
@@ -353,7 +359,7 @@ class Alexa(commands.Cog):
             music_player.song_queue.extend(songs[1:])
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Now playing playlist {songs[0].title}")
+                description=f"Now playing playlist {songs[0].playlist}")
             await interaction.followup.send(embed=embed)
             return
 
