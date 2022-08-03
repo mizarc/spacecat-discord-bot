@@ -71,7 +71,7 @@ class YTDLStream:
         self.webpage_url = metadata.get('webpage_url')
         self.playlist = metadata.get('playlist')
 
-    async def create_steam(self):
+    async def create_stream(self):
         before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
         loop = asyncio.get_event_loop()
         metadata = await loop.run_in_executor(None, lambda: ytdl.extract_info(self.webpage_url, download=False))
@@ -110,8 +110,7 @@ class SourceFactory:
         return song_metadatas
 
 class MusicPlayer:
-    def __init__(self, voice_client, bot):
-        self.bot = bot
+    def __init__(self, voice_client):
         self.voice_client = voice_client
         self.song_queue = []
         self.song_start_time = 0
@@ -120,24 +119,25 @@ class MusicPlayer:
         self.skip_toggle = False
 
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        #self.disconnect_time = time() + config['music']['disconnect_time']
-        #self._disconnect_timer.start()
+        self.disconnect_time = time() + config['music']['disconnect_time']
+        self._disconnect_timer.start()
 
     async def play(self, song):
         self.song_queue.insert(0, song)
         self.song_start_time = time()
-        stream = await song.create_steam()
-        self.voice_client.play(stream, after=lambda e: self.bot.loop.create_task(self.play_next()))
+        stream = await song.create_stream()
+        self.voice_client.play(stream, after=lambda e: loop.create_task(self.play_next()))
 
     async def play_next(self):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         self.disconnect_time = time() + config['music']['disconnect_time']
+        loop = asyncio.get_event_loop()
         # If looping, grab source from url again
         if self.loop_toggle and not self.skip_toggle:
-            coroutine = asyncio.run_coroutine_threadsafe(self.song_queue[0].create_stream(), self.bot.loop)
-            audio_stream = coroutine.result()
+            loop = asyncio.get_event_loop()
+            audio_stream = await loop.run_in_executor(None, lambda: self.song_queue[0].create_stream())
             self.song_start_time = time()
-            self.voice_client.play(audio_stream, after=lambda e: self.bot.loop.create_task(self.play_next()))
+            self.voice_client.play(audio_stream, after=lambda e: loop.create_task(self.play_next()))
             return
 
         # Disable skip toggle to indicate that a skip has been completed
@@ -153,9 +153,8 @@ class MusicPlayer:
         # Play the new first song in list
         if self.song_queue:
             self.song_start_time = time()
-            coroutine = asyncio.run_coroutine_threadsafe(self.song_queue[0].create_stream(), self.bot.loop)
-            audio_stream = coroutine.result()
-            self.voice_client.play(audio_stream, after=lambda e: self.bot.loop.create_task(self.play_next()))
+            audio_stream = await self.song_queue[0].create_stream()
+            self.voice_client.play(audio_stream, after=lambda e: loop.create_task(self.play_next()))
             return
 
     async def stop(self):
