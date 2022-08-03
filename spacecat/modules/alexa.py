@@ -45,7 +45,7 @@ class YTDLLogger(object):
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'restrictfilenames': True,
-    'noplaylist': True,
+    'noplaylist': False,
     'nocheckcertificate': True,
     'ignoreerrors': True,
     'logtostderr': False,
@@ -64,31 +64,49 @@ ffmpeg_options = {
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 
-class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.5):
-        super().__init__(source, volume)
-        self.data = data
-        self.title = data.get('title')
-        self.url = data.get('url')
-        self.duration = data.get('duration')
-        self.webpage_url = data.get('webpage_url')
+class YTDLStream:
+    def __init__(self, metadata):
+        self.title = metadata.get('title')
+        self.duration = metadata.get('duration')
+        self.webpage_url = metadata.get('webpage_url')
+
+    async def create_steam(self):
+        before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+        loop = asyncio.get_event_loop()
+        metadata = await loop.run_in_executor(None, lambda: ytdl.extract_info(self.webpage_url, download=False))
+        return discord.PCMVolumeTransformer(
+            discord.FFmpegPCMAudio(metadata['url'], **ffmpeg_options, before_options=before_args), 0.5)
 
     @classmethod
-    async def from_url(cls, url):
+    async def from_url(cls, webpage_url):
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=False))
-        before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
-
+        metadata = await loop.run_in_executor(None, lambda: ytdl.extract_info(webpage_url, download=False))
+        songs = []
         try:
-            if 'entries' in data:
-                # take first item from a playlist
-                data = data['entries'][0]
+            if 'entries' in metadata:
+                for entry in metadata['entries']:
+                    try:
+                        songs.append(YTDLStream(entry))
+                    except AttributeError:
+                        continue
+            else:
+                songs.append(YTDLStream(metadata))
         except TypeError:
             return
 
-        audio_data = discord.FFmpegPCMAudio(data['url'], **ffmpeg_options, before_options=before_args)
-        return cls(audio_data, data=data)
+        return songs
 
+
+class SourceFactory:
+    async def from_url(self, webpage_url):
+        if " " in webpage_url:
+            song_metadatas = await YTDLStream.from_url(webpage_url)
+        elif "youtube" in webpage_url or "youtu.be" in webpage_url:
+            song_metadatas = await YTDLStream.from_url(webpage_url)
+        else:
+            song_metadatas = await YTDLStream.from_url(webpage_url)
+
+        return song_metadatas
 
 class MusicPlayer:
     def __init__(self, voice_client, bot):
@@ -101,25 +119,24 @@ class MusicPlayer:
         self.skip_toggle = False
 
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        self.disconnect_time = time() + config['music']['disconnect_time']
-        self._disconnect_timer.start()
+        #self.disconnect_time = time() + config['music']['disconnect_time']
+        #self._disconnect_timer.start()
 
-    async def play(self, source):
-        self.song_queue.insert(0, source)
+    async def play(self, song):
+        self.song_queue.insert(0, song)
         self.song_start_time = time()
-        self.voice_client.play(source, after=lambda e: self.bot.loop.create_task(self.play_next()))
+        stream = await song.create_steam()
+        self.voice_client.play(stream, after=lambda e: self.bot.loop.create_task(self.play_next()))
 
     async def play_next(self):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         self.disconnect_time = time() + config['music']['disconnect_time']
-
         # If looping, grab source from url again
         if self.loop_toggle and not self.skip_toggle:
-            get_source = YTDLSource.from_url(self.song_queue[0].url)
-            coroutine = asyncio.run_coroutine_threadsafe(get_source, self.bot.loop)
-            source = coroutine.result()
+            coroutine = asyncio.run_coroutine_threadsafe(self.song_queue[0].create_stream(), self.bot.loop)
+            audio_stream = coroutine.result()
             self.song_start_time = time()
-            self.voice_client.play(source, after=lambda e: self.bot.loop.create_task(self.play_next()))
+            self.voice_client.play(audio_stream, after=lambda e: self.bot.loop.create_task(self.play_next()))
             return
 
         # Disable skip toggle to indicate that a skip has been completed
@@ -135,7 +152,9 @@ class MusicPlayer:
         # Play the new first song in list
         if self.song_queue:
             self.song_start_time = time()
-            self.voice_client.play(self.song_queue[0], after=lambda e: self.bot.loop.create_task(self.play_next()))
+            coroutine = asyncio.run_coroutine_threadsafe(self.song_queue[0].create_stream(), self.bot.loop)
+            audio_stream = coroutine.result()
+            self.voice_client.play(audio_stream, after=lambda e: self.bot.loop.create_task(self.play_next()))
             return
 
     async def stop(self):
@@ -155,6 +174,7 @@ class Playlist:
         self.name = name
         self.description = description
         self.guild_id = guild_id
+
 
 class Alexa(commands.Cog):
     """Play some funky music in a voice chat"""
@@ -302,7 +322,7 @@ class Alexa(commands.Cog):
         # Alert due to song errors
         await interaction.response.defer()
         try:
-            source, song_name = await self._fetch_song(url)
+            songs = await self._fetch_songs(url)
         except VideoTooLongError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -316,9 +336,32 @@ class Alexa(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
+        # Playlists
+        if len(songs) > 1:
+            # Add to queue if song already playing
+            if len(music_player.song_queue) > 0:
+                music_player.song_queue.append(songs)
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Added `{len(songs)}` songs from playlist {songs} to "
+                                f"#{len(music_player.song_queue) - 1} in queue")
+                await interaction.followup.send(embed=embed)
+                return
+
+            # Instantly play song if no song currently playing
+            await music_player.play(songs[0])
+            music_player.song_queue.extend(songs[1:])
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Now playing playlist {songs[0].title}")
+            await interaction.followup.send(embed=embed)
+            return
+
         # Send to queue_add function if there is a song playing
+        duration = await self._get_duration(songs[0].duration)
+        song_name = f"[{songs[0].title}]({songs[0].webpage_url}) `{duration}`"
         if len(music_player.song_queue) > 0:
-            music_player.song_queue.append(source)
+            music_player.song_queue.extend(songs)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Song {song_name} added to #{len(music_player.song_queue) - 1} in queue")
@@ -326,7 +369,7 @@ class Alexa(commands.Cog):
             return
 
         # Instantly play song if no song currently playing
-        await music_player.play(source)
+        await music_player.play(songs[0])
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Now playing {song_name}")
@@ -1317,35 +1360,13 @@ class Alexa(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    def _next(self, ctx):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        self.disconnect_time[ctx.guild.id] = time() \
-            + config['music']['disconnect_time']
-        # If looping, grab source from url again
-        if self.loop_toggle[ctx.guild.id] and not self.skip_toggle[ctx.guild.id]:
-            get_source = YTDLSource.from_url(self.song_queue[ctx.guild.id][0].url)
-            coroutine = asyncio.run_coroutine_threadsafe(get_source, self.bot.loop)
-            source = coroutine.result()
-            self.song_start_time[ctx.guild.id] = time()
-            ctx.guild.voice_client.play(source, after=lambda e: self._next(ctx))
-            return
-
-        # Disable skip toggle to indicate that a skip has been completed
-        if self.skip_toggle[ctx.guild.id]:
-            self.skip_toggle[ctx.guild.id] = False
-
-        # Remove first in queue. Exception used for stop command clearing queue.
+    async def _get_music_player(self, guild):
         try:
-            self.song_queue[ctx.guild.id].pop(0)
-        except IndexError:
-            return
-
-        # Play the new first song in list
-        if self.song_queue[ctx.guild.id]:
-            self.song_start_time[ctx.guild.id] = time()
-            ctx.guild.voice_client.play(
-                self.song_queue[ctx.guild.id][0], after=lambda e: self._next(ctx))
-            return
+            music_player = self.music_players[guild.id]
+        except KeyError:
+            music_player = MusicPlayer(guild.voice_client, self.bot)
+            self.music_players[guild.id] = music_player
+        return music_player
 
     # Format duration based on what values there are
     async def _get_duration(self, seconds):
@@ -1417,19 +1438,18 @@ class Alexa(commands.Cog):
 
         return ordered_songs
 
-    async def _process_song(self, ctx, url):
+    async def _fetch_songs(self, url):
         """Grab audio source from YouTube and check if longer than 3 hours"""
-        source = await YTDLSource.from_url(url)
+        source_factory = SourceFactory()
+        songs = await source_factory.from_url(url)
 
-        if not source:
-            raise VideoUnavailableError("Specified song is unavailable")
+        #if not songs:
+        #    raise VideoUnavailableError("Specified song is unavailable")
 
-        if source.duration >= 10800:
-            raise VideoTooLongError("Specified song is longer than 3 hours")
+        #if songs.duration >= 10800:
+        #    raise VideoTooLongError("Specified song is longer than 3 hours")
 
-        duration = await self._get_duration(source.duration)
-        name = f"[{source.title}]({source.webpage_url}) `{duration}`"
-        return source, name
+        return songs
 
 
 async def setup(bot):
