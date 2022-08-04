@@ -1402,7 +1402,7 @@ class Alexa(commands.Cog):
         try:
             music_player = self.music_players[guild.id]
         except KeyError:
-            music_player = MusicPlayer(guild.voice_client, self.bot)
+            music_player = MusicPlayer(guild.voice_client)
             self.music_players[guild.id] = music_player
         return music_player
 
@@ -1471,7 +1471,7 @@ class Alexa(commands.Cog):
         ordered_songs = []
         next_song = song_links.get(None)
         while next_song is not None:
-            ordered_songs.append(next_song[1])
+            ordered_songs.append(YTDLStream(next_song[1], next_song[2], next_song[3]))
             next_song = song_links.get(next_song[0])
 
         return ordered_songs
