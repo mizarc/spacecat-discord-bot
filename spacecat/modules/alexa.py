@@ -309,13 +309,11 @@ class Alexa(commands.Cog):
 
         # Joins player's current voice channel
         if interaction.guild.voice_client is None:
-            self.music_players[interaction.guild_id] = MusicPlayer(interaction.guild.voice_client, self.bot)
-
             if channel is None:
                 channel = interaction.user.voice.channel
 
             await channel.connect()
-            self.music_players[interaction.guild_id] = MusicPlayer(interaction.guild.voice_client, self.bot)
+            self.music_players[interaction.guild_id] = MusicPlayer(interaction.guild.voice_client)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Joined voice channel `{channel.name}`")
