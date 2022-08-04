@@ -10,6 +10,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
+from enum import Enum
+
 import requests
 
 import toml
@@ -64,12 +66,17 @@ ffmpeg_options = {
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 
+class PlayerResult(Enum):
+    PLAYING = 0
+    QUEUEING = 1
+
+
 class YTDLStream:
-    def __init__(self, metadata):
-        self.title = metadata.get('title')
-        self.duration = metadata.get('duration')
-        self.webpage_url = metadata.get('webpage_url')
-        self.playlist = metadata.get('playlist')
+    def __init__(self, title, duration, webpage_url, playlist=None):
+        self.title = title
+        self.duration = duration
+        self.webpage_url = webpage_url
+        self.playlist = playlist
 
     async def create_stream(self):
         before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
@@ -77,6 +84,11 @@ class YTDLStream:
         metadata = await loop.run_in_executor(None, lambda: ytdl.extract_info(self.webpage_url, download=False))
         return discord.PCMVolumeTransformer(
             discord.FFmpegPCMAudio(metadata['url'], **ffmpeg_options, before_options=before_args), 0.5)
+
+    @classmethod
+    async def from_metadata(cls, metadata):
+        return cls(metadata.get('title'), metadata.get('duration'),
+                   metadata.get('webpage_url'), metadata.get('playlist'))
 
     @classmethod
     async def from_url(cls, webpage_url):
@@ -87,11 +99,11 @@ class YTDLStream:
             if 'entries' in metadata:
                 for entry in metadata['entries']:
                     try:
-                        songs.append(YTDLStream(entry))
+                        songs.append(await YTDLStream.from_metadata(entry))
                     except AttributeError:
                         continue
             else:
-                songs.append(YTDLStream(metadata))
+                songs.append(await YTDLStream.from_metadata(metadata))
         except TypeError:
             return
 
@@ -108,6 +120,7 @@ class SourceFactory:
             song_metadatas = await YTDLStream.from_url(webpage_url)
 
         return song_metadatas
+
 
 class MusicPlayer:
     def __init__(self, voice_client):
@@ -128,6 +141,28 @@ class MusicPlayer:
         stream = await song.create_stream()
         loop = asyncio.get_event_loop()
         self.voice_client.play(stream, after=lambda e: loop.create_task(self.play_next()))
+
+    async def add(self, song):
+        self.song_queue.append(song)
+
+        if len(self.song_queue) <= 1:
+            stream = await song.create_stream()
+            loop = asyncio.get_event_loop()
+            self.voice_client.play(stream, after=lambda e: loop.create_task(self.play_next()))
+            self.song_start_time = time()
+            return PlayerResult.PLAYING
+        return PlayerResult.QUEUEING
+
+    async def add_multiple(self, songs):
+        self.song_queue.extend(songs[1:])
+
+        if len(self.song_queue) <= len(songs):
+            stream = await songs[0].create_stream()
+            loop = asyncio.get_event_loop()
+            self.voice_client.play(stream, after=lambda e: loop.create_task(self.play_next()))
+            self.song_start_time = time()
+            return PlayerResult.PLAYING
+        return PlayerResult.QUEUEING
 
     async def play_next(self):
         config = toml.load(constants.DATA_DIR + 'config.toml')
@@ -342,11 +377,16 @@ class Alexa(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
-        # Playlists
+        # Add playlist
         if len(songs) > 1:
-            # Add to queue if song already playing
-            if len(music_player.song_queue) > 0:
-                music_player.song_queue.append(songs)
+            result = await music_player.add_multiple(songs)
+            if result == PlayerResult.PLAYING:
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Now playing playlist {songs[0].playlist}")
+                await interaction.followup.send(embed=embed)
+                return
+            elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist {songs} to "
@@ -354,19 +394,17 @@ class Alexa(commands.Cog):
                 await interaction.followup.send(embed=embed)
                 return
 
-            # Instantly play song if no song currently playing
-            await music_player.play(songs[0])
-            music_player.song_queue.extend(songs[1:])
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.YES.value,
-                description=f"Now playing playlist {songs[0].playlist}")
-            await interaction.followup.send(embed=embed)
-            return
-
-        # Send to queue_add function if there is a song playing
+        # Add song
+        result = await music_player.add(songs[0])
         duration = await self._get_duration(songs[0].duration)
         song_name = f"[{songs[0].title}]({songs[0].webpage_url}) `{duration}`"
-        if len(music_player.song_queue) > 0:
+        if result.PLAYING:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Now playing {song_name}")
+            await interaction.followup.send(embed=embed)
+            return
+        elif result.QUEUEING:
             music_player.song_queue.extend(songs)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
