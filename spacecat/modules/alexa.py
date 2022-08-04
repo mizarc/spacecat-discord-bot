@@ -154,7 +154,7 @@ class MusicPlayer:
         return PlayerResult.QUEUEING
 
     async def add_multiple(self, songs):
-        self.song_queue.extend(songs[1:])
+        self.song_queue.extend(songs)
 
         if len(self.song_queue) <= len(songs):
             stream = await songs[0].create_stream()
