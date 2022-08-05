@@ -204,6 +204,34 @@ class MusicPlayer:
             await self.voice_client.disconnect()
 
 
+class PlaylistRepository:
+    def get_by_guild(self, guild):
+        # Get list of all songs in playlist
+        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+        cursor = db.cursor()
+        values = (guild.id,)
+        cursor.execute('SELECT * FROM playlist WHERE server_id=?', values)
+        results = cursor.fetchall()
+        db.close()
+
+        playlists = []
+        for result in results:
+            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+        return playlists
+
+    def get_by_name(self, guild, name):
+        # Get list of all songs in playlist
+        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+        cursor = db.cursor()
+        values = (guild.id, name)
+        cursor.execute('SELECT * FROM playlist WHERE server_id=? AND name=?', values)
+        results = cursor.fetchall()
+        db.close()
+
+        for result in results:
+            return Playlist(result[0], result[1], result[2], result[3])
+
+
 class Playlist:
     def __init__(self, id_, name, description, guild_id):
         self.id = id_
