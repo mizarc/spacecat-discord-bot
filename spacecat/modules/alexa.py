@@ -231,6 +231,21 @@ class PlaylistRepository:
         for result in results:
             return Playlist(result[0], result[1], result[2], result[3])
 
+    def add(self, playlist):
+        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+        cursor = db.cursor()
+        values = (playlist.id, playlist.name, playlist.description, playlist.guild_id)
+        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?)', values)
+        db.commit()
+        db.close()
+
+    def remove(self, playlist):
+        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+        cursor = db.cursor()
+        values = (playlist.id,)
+        cursor.execute('DELETE FROM playlist WHERE id=?', values)
+        db.commit()
+        db.close()
 
 class Playlist:
     def __init__(self, id_, name, description, guild_id):
