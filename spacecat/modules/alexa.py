@@ -204,10 +204,18 @@ class MusicPlayer:
             await self.voice_client.disconnect()
 
 
+class Playlist:
+    def __init__(self, id_, name, description, guild_id):
+        self.id = id_
+        self.name = name
+        self.description = description
+        self.guild_id = guild_id
+
+
 class PlaylistRepository:
     def __init__(self, database):
         self.db = database
-        #self.db = sqlite3.connect(constants.DATA_DIR + database_name)
+        # self.db = sqlite3.connect(constants.DATA_DIR + database_name)
 
     def get_all(self):
         """Get list of all playlists"""
@@ -247,12 +255,56 @@ class PlaylistRepository:
         self.db.commit()
 
 
-class Playlist:
-    def __init__(self, id_, name, description, guild_id):
+class PlaylistSong:
+    def __init__(self, id_, title, playlist_id, previous_song_id, webpage_url, duration):
         self.id = id_
-        self.name = name
-        self.description = description
-        self.guild_id = guild_id
+        self.title = title
+        self.playlist_id = playlist_id
+        self.previous_song_id = previous_song_id
+        self.webpage_url = webpage_url
+        self.duration = duration
+
+
+class PlaylistSongRepository:
+    def __init__(self, database):
+        self.db = database
+
+    def get_all(self):
+        """Get list of all playlists"""
+        results = self.db.cursor().execute('SELECT * FROM playlist_music').fetchall()
+        playlists = []
+        for result in results:
+            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+        return playlists
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM playlist_music WHERE id=?', (id_,)).fetchone()
+        return Playlist(result[0], result[1], result[2], result[3])
+
+    def get_by_playlist(self, playlist):
+        # Get list of all songs in playlist
+        cursor = self.db.cursor()
+        values = (playlist.id,)
+        cursor.execute('SELECT * FROM playlist WHERE playlist_id=?', values)
+        results = cursor.fetchall()
+
+        songs = []
+        for result in results:
+            songs.append(PlaylistSong(result[0], result[1], result[2], result[3], result[4], result[5]))
+        return songs
+
+    def add(self, playlist):
+        cursor = self.db.cursor()
+        values = (playlist.id, playlist.name, playlist.description, playlist.guild_id)
+        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?)', values)
+        self.db.commit()
+        self.db.close()
+
+    def remove(self, playlist):
+        cursor = self.db.cursor()
+        values = (playlist.id,)
+        cursor.execute('DELETE FROM playlist WHERE id=?', values)
+        self.db.commit()
 
 
 class Alexa(commands.Cog):
