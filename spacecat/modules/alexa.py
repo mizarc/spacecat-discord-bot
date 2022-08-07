@@ -205,47 +205,47 @@ class MusicPlayer:
 
 
 class PlaylistRepository:
+    def __init__(self, database):
+        self.db = database
+        #self.db = sqlite3.connect(constants.DATA_DIR + database_name)
+
+    def get_all(self):
+        """Get list of all playlists"""
+        results = self.db.cursor().execute('SELECT * FROM playlist').fetchall()
+        playlists = []
+        for result in results:
+            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+        return playlists
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM playlist WHERE id=?', (id_,)).fetchone()
+        return Playlist(result[0], result[1], result[2], result[3])
+
     def get_by_guild(self, guild):
         # Get list of all songs in playlist
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
+        cursor = self.db.cursor()
         values = (guild.id,)
         cursor.execute('SELECT * FROM playlist WHERE server_id=?', values)
         results = cursor.fetchall()
-        db.close()
 
         playlists = []
         for result in results:
             playlists.append(Playlist(result[0], result[1], result[2], result[3]))
         return playlists
 
-    def get_by_name(self, guild, name):
-        # Get list of all songs in playlist
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        values = (guild.id, name)
-        cursor.execute('SELECT * FROM playlist WHERE server_id=? AND name=?', values)
-        results = cursor.fetchall()
-        db.close()
-
-        for result in results:
-            return Playlist(result[0], result[1], result[2], result[3])
-
     def add(self, playlist):
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
+        cursor = self.db.cursor()
         values = (playlist.id, playlist.name, playlist.description, playlist.guild_id)
         cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?)', values)
-        db.commit()
-        db.close()
+        self.db.commit()
+        self.db.close()
 
     def remove(self, playlist):
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
+        cursor = self.db.cursor()
         values = (playlist.id,)
         cursor.execute('DELETE FROM playlist WHERE id=?', values)
-        db.commit()
-        db.close()
+        self.db.commit()
+
 
 class Playlist:
     def __init__(self, id_, name, description, guild_id):
