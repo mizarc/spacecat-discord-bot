@@ -332,9 +332,11 @@ class Alexa(commands.Cog):
         description="I need to be in a voice channel to execute music "
                     "commands. \nUse **/join** or **/play** to connect me to a channel")
 
-    def __init__(self, bot):
+    def __init__(self, bot, database):
         self.bot = bot
         self.music_players = {}
+        self.playlists = PlaylistRepository(database)
+        self.playlist_songs = PlaylistSongRepository(database)
 
     @commands.Cog.listener()
     async def on_ready(self):
