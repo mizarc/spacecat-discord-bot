@@ -236,10 +236,22 @@ class PlaylistRepository:
         return Playlist(result[0], result[1], result[2], result[3])
 
     def get_by_guild(self, guild):
-        # Get list of all songs in playlist
+        # Get list of all playlists in a guild
         cursor = self.db.cursor()
         values = (guild.id,)
         cursor.execute('SELECT * FROM playlist WHERE server_id=?', values)
+        results = cursor.fetchall()
+
+        playlists = []
+        for result in results:
+            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+        return playlists
+
+    def get_by_guild_and_name(self, guild, name):
+        # Get playlist by guild and playlist name
+        cursor = self.db.cursor()
+        values = (guild.id, name)
+        cursor.execute('SELECT * FROM playlist WHERE server_id=? AND name=?', values)
         results = cursor.fetchall()
 
         playlists = []
