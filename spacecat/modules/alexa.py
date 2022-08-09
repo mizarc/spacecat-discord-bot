@@ -16,6 +16,8 @@ import requests
 
 import toml
 
+import uuid
+
 import youtube_dl
 
 from spacecat.helpers import constants
@@ -205,11 +207,15 @@ class MusicPlayer:
 
 
 class Playlist:
-    def __init__(self, id_, name, description, guild_id):
+    def __init__(self, id_, guild_id, name, description=None):
         self.id = id_
+        self.guild_id = guild_id
         self.name = name
         self.description = description
-        self.guild_id = guild_id
+
+    @classmethod
+    def create_new(cls, guild, name):
+        return cls(uuid.uuid4(), guild.id, name)
 
 
 class PlaylistRepository:
