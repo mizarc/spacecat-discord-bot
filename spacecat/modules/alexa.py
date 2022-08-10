@@ -266,6 +266,13 @@ class PlaylistRepository:
         self.db.commit()
         self.db.close()
 
+    def update(self, playlist):
+        cursor = self.db.cursor()
+        values = (playlist.guild_id, playlist.name, playlist.description, playlist.id)
+        cursor.execute('UPDATE playlist SET server_id=?, name=?, description=? WHERE id=?', values)
+        self.db.commit()
+        self.db.close()
+
     def remove(self, playlist):
         cursor = self.db.cursor()
         values = (playlist.id,)
