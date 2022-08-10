@@ -221,7 +221,6 @@ class Playlist:
 class PlaylistRepository:
     def __init__(self, database):
         self.db = database
-        # self.db = sqlite3.connect(constants.DATA_DIR + database_name)
 
     def get_all(self):
         """Get list of all playlists"""
@@ -288,6 +287,10 @@ class PlaylistSong:
         self.previous_song_id = previous_song_id
         self.webpage_url = webpage_url
         self.duration = duration
+
+    @classmethod
+    def create_new(cls, title, playlist_id, previous_song_id, webpage_url, duration):
+        return cls(uuid.uuid4(), title, playlist_id, previous_song_id, webpage_url, duration)
 
 
 class PlaylistSongRepository:
