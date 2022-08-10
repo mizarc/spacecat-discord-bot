@@ -1016,25 +1016,15 @@ class Alexa(commands.Cog):
             return
 
         # Alert if playlist with specified name already exists
-        try:
-            await self._get_playlist(interaction.guild, playlist_name)
+        if self.playlists.get_by_guild_and_name(interaction.guild, playlist_name):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` already exists")
             await interaction.response.send_message(embed=embed)
             return
-        except ValueError:
-            pass
 
         # Add playlist to database
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        values = (playlist_name, interaction.guild_id)
-        cursor.execute(
-            'INSERT INTO playlist(name, server_id) VALUES (?,?)', values)
-        db.commit()
-        db.close()
-
+        self.playlists.add(Playlist.create_new(interaction.guild, playlist_name))
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been created")
@@ -1045,9 +1035,8 @@ class Alexa(commands.Cog):
     async def playlist_destroy(self, interaction, playlist_name: str):
         """Deletes an existing playlist"""
         # Alert if playlist doesn't exist in db
-        try:
-            playlist = await self._get_playlist(interaction.guild, playlist_name)
-        except ValueError:
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
@@ -1055,20 +1044,10 @@ class Alexa(commands.Cog):
             return
 
         # Remove playlist from database and all songs linked to it
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        values = (playlist[0],)
-        cursor.execute(
-            'DELETE FROM playlist_music '
-            'WHERE playlist_id=?', values)
-        values = (playlist_name, interaction.guild_id)
-        cursor.execute(
-            'DELETE FROM playlist '
-            'WHERE name=? AND server_id=?', values)
-        db.commit()
-        db.close()
-
-        # Output result to chat
+        self.playlists.remove(playlist)
+        playlist_songs = self.playlist_songs.get_by_playlist(playlist)
+        for song in playlist_songs:
+            self.playlist_songs.remove(song)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been destroyed")
@@ -1079,9 +1058,8 @@ class Alexa(commands.Cog):
     async def playlist_description(self, interaction, playlist_name: str, description: str):
         """Sets the description for the playlist"""
         # Alert if playlist doesn't exist
-        try:
-            playlist = await self._get_playlist(interaction.guild, playlist_name)
-        except ValueError:
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        if playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
@@ -1089,23 +1067,16 @@ class Alexa(commands.Cog):
             return
 
         # Limit playlist description to 300 chars
-        if len(playlist_name) > 300:
+        if len(description) > 300:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Playlist name is too long")
+                description="Description is too long")
             await interaction.response.send_message(embed=embed)
             return
 
-        # Rename playlist in database
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        values = (description, playlist[0],)
-        cursor.execute(
-            'UPDATE playlist SET description=? WHERE id=?', values)
-        db.commit()
-        db.close()
-
-        # Output result to chat
+        # Update playlist description
+        playlist.description = description
+        self.playlists.update(playlist)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Description set for playlist `{playlist_name}`")
@@ -1115,29 +1086,21 @@ class Alexa(commands.Cog):
     @perms.check()
     async def playlist_rename(self, interaction, playlist_name: str, new_name: str):
         """Rename an existing playlist"""
-        # Alert if playlist doesn't exist
-        try:
-            playlist = await self._get_playlist(interaction.guild, playlist_name)
-        except ValueError:
+        # Get the playlist
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        if playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
             await interaction.response.send_message(embed=embed)
             return
 
-        # Rename playlist in database
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        values = (new_name, playlist[0],)
-        cursor.execute('UPDATE playlist SET name=? WHERE id=?', values)
-        db.commit()
-        db.close()
-
-        # Output result to chat
+        # Update playlist name
+        playlist.name = new_name
+        self.playlists.update(playlist)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Playlist `{playlist}` has been renamed to "
-                        f"`{new_name}`")
+            description=f"Playlist `{playlist}` has been renamed to `{new_name}`")
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name='list')
