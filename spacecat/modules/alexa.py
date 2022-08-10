@@ -307,13 +307,13 @@ class PlaylistSongRepository:
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM playlist_music WHERE id=?', (id_,)).fetchone()
-        return Playlist(result[0], result[1], result[2], result[3])
+        return PlaylistSong(result[0], result[1], result[2], result[3], result[4], result[5])
 
     def get_by_playlist(self, playlist):
         # Get list of all songs in playlist
         cursor = self.db.cursor()
         values = (playlist.id,)
-        cursor.execute('SELECT * FROM playlist WHERE playlist_id=?', values)
+        cursor.execute('SELECT * FROM playlist_music WHERE playlist_id=?', values)
         results = cursor.fetchall()
 
         songs = []
@@ -321,17 +321,27 @@ class PlaylistSongRepository:
             songs.append(PlaylistSong(result[0], result[1], result[2], result[3], result[4], result[5]))
         return songs
 
-    def add(self, playlist):
+    def add(self, playlist_song: PlaylistSong):
         cursor = self.db.cursor()
-        values = (playlist.id, playlist.name, playlist.description, playlist.guild_id)
-        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?)', values)
+        values = (playlist_song.id, playlist_song.title, playlist_song.playlist_id,
+                  playlist_song.previous_song_id, playlist_song.webpage_url, playlist_song.duration)
+        cursor.execute('INSERT INTO playlist_music VALUES (?, ?, ?, ?, ?, ?)', values)
+        self.db.commit()
+        self.db.close()
+
+    def update(self, playlist_song: PlaylistSong):
+        cursor = self.db.cursor()
+        values = (playlist_song.title, playlist_song.playlist_id, playlist_song.previous_song_id,
+                  playlist_song.webpage_url, playlist_song.duration, playlist_song.id)
+        cursor.execute('UPDATE playlist_music SET title=?, playlist_id=?, '
+                       'previous_song_id=?, webpage_url=?, duration=? WHERE id=?', values)
         self.db.commit()
         self.db.close()
 
     def remove(self, playlist):
         cursor = self.db.cursor()
         values = (playlist.id,)
-        cursor.execute('DELETE FROM playlist WHERE id=?', values)
+        cursor.execute('DELETE FROM playlist_music WHERE id=?', values)
         self.db.commit()
 
 
