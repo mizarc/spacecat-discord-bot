@@ -1121,8 +1121,8 @@ class Alexa(commands.Cog):
     @perms.check()
     async def playlist_list(self, interaction):
         """List all available playlists"""
-        # Alert if no playlists exist
-        playlists = await self._get_playlist(interaction.guild)
+        # Get playlist from repo
+        playlists = self.playlists.get_by_guild(interaction.guild_id)
         if not playlists:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1133,11 +1133,11 @@ class Alexa(commands.Cog):
         # Get all playlist names and duration
         playlist_names = []
         for playlist in playlists:
-            songs = await self._get_playlist_songs(interaction.guild, playlist[1])
+            songs = self.playlist_songs.get_by_playlist(playlist)
             song_duration = 0
             for song in songs:
-                song_duration += song[2]
-            playlist_names.append([playlist[1], song_duration])
+                song_duration += song.duration
+            playlist_names.append([playlist.name, song_duration])
 
         # Format playlist songs into pretty list
         playlist_info = []
@@ -1160,18 +1160,17 @@ class Alexa(commands.Cog):
     @perms.check()
     async def playlist_add(self, interaction, playlist_name: str, url: str):
         """Adds a song to a playlist"""
-        # Alert if playlist doesn't exist in db
-        try:
-            playlist = await self._get_playlist(interaction.guild, playlist_name)
-        except ValueError:
+        # Get playlist from repo
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild_id, playlist_name)[0]
+        if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` doesn't exist")
+                description="There are no playlists available")
             await interaction.response.send_message(embed=embed)
             return
 
-        songs = await self._get_playlist_songs(interaction.guild, playlist_name)
-        if len(songs) > 100:
+        playlist_songs = self.playlist_songs.get_by_playlist(playlist)
+        if len(playlist_songs) > 100:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's too many songs in the playlist. Remove"
@@ -1181,7 +1180,7 @@ class Alexa(commands.Cog):
 
         # Get song source to add to song list
         try:
-            source, _ = await self._fetch_song(url)
+            songs = await self._fetch_songs(url)
         except VideoTooLongError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1196,33 +1195,23 @@ class Alexa(commands.Cog):
             return
 
         # Set previous song as the last song in the playlist
-        if not songs:
+        if not playlist_songs:
             previous_song = None
         else:
             song_ids = []
             previous_ids = []
-            for song in songs:
-                song_ids.append(song[0])
-                previous_ids.append(song[4])
+            for playlist_song in playlist_songs:
+                song_ids.append(playlist_song.id)
+                previous_ids.append(playlist_song.previous_song_id)
             previous_song = list(set(song_ids) - set(previous_ids))[0]
 
         # Add song to playlist
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        values = (
-            source.title, source.duration, source.webpage_url,
-            previous_song, playlist[0])
-        cursor.execute(
-            'INSERT INTO playlist_music(title, duration, url, previous_song, playlist_id) '
-            'VALUES (?,?,?,?,?)', values)
-        db.commit()
-        db.close()
-
-        # Output result to chat
-        duration = await self._get_duration(source.duration)
+        self.playlist_songs.add(PlaylistSong.create_new(
+            songs[0].title, playlist.id, previous_song, songs[0].webpage_url, songs[0].duration))
+        duration = await self._get_duration(songs[0].duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Added [{source.title}]({source.webpage_url}) "
+            description=f"Added [{songs[0].title}]({songs[0].webpage_url}) "
                         f"`{duration}` to position #{len(songs) + 1} "
                         f"in playlist `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
@@ -1231,10 +1220,9 @@ class Alexa(commands.Cog):
     @perms.check()
     async def playlist_remove(self, interaction, playlist_name: str, index: int):
         """Removes a song from a playlist"""
-        # Fetch songs from playlist if it exists
-        try:
-            songs = await self._get_playlist_songs(interaction.guild, playlist_name)
-        except ValueError:
+        # Get playlist from repo
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild_id, playlist_name)[0]
+        if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
@@ -1242,31 +1230,23 @@ class Alexa(commands.Cog):
             return
 
         # Fetch selected song and the song after
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
+        songs: list[PlaylistSong] = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist))
         selected_song = songs[int(index) - 1]
 
         # Edit next song's previous song id if it exists
         try:
             next_song = songs[int(index)]
-            values = (selected_song[4], next_song[0],)
-            cursor.execute(
-                'UPDATE playlist_music SET previous_song=? '
-                'WHERE id=?', values)
+            next_song.previous_song_id = selected_song.previous_song_id
+            self.playlist_songs.update(next_song)
         except IndexError:
             pass
 
         # Remove selected song from playlist
-        values = (selected_song[0],)
-        cursor.execute('DELETE FROM playlist_music WHERE id=?', values)
-        db.commit()
-        db.close()
-
-        # Output result to chat
-        duration = await self._get_duration(selected_song[2])
+        self.playlist_songs.remove(selected_song)
+        duration = await self._get_duration(selected_song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
-            description=f"[{selected_song[1]}]({selected_song[3]}) "
+            description=f"[{selected_song.title}]({selected_song.webpage_url}) "
                         f"`{duration}` has been removed from `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
 
@@ -1274,38 +1254,38 @@ class Alexa(commands.Cog):
     @perms.check()
     async def playlist_move(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
         """Moves a song to a specified position in a playlist"""
-        # Fetch songs from playlist if it exists
-        try:
-            songs = await self._get_playlist_songs(interaction.guild, playlist_name)
-        except ValueError:
+        # Get playlist from repo
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild_id, playlist_name)[0]
+        if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` does not exist")
+                description=f"Playlist `{playlist_name}` doesn't exist")
             await interaction.response.send_message(embed=embed)
             return
 
         # Edit db to put selected song in other song's position
+        songs = self.playlist_songs.get_by_playlist(playlist)
         selected_song = songs[int(original_pos) - 1]
         other_song = songs[int(new_pos) - 1]
 
         # If moving down, shift other song down the list
         if new_pos > original_pos:
-            values = [(other_song[0], selected_song[0])]
+            values = [(other_song.id, selected_song.id)]
             try:
                 after_new_song = songs[int(new_pos)]
-                values.append((selected_song[0], after_new_song[0]))
+                values.append((selected_song.id, after_new_song.id))
             except IndexError:
                 pass
         # If moving up, shift other song up the list
         else:
             values = [
-                (other_song[4], selected_song[0]),
-                (selected_song[0], other_song[0])]
+                (other_song.previous_song_id, selected_song.id),
+                (selected_song.id, other_song.id)]
 
         # Connect the two songs beside the original song position
         try:
             after_selected_song = songs[int(original_pos)]
-            values.append((selected_song[4], after_selected_song[0]))
+            values.append((selected_song.previous_song_id, after_selected_song.id))
         except IndexError:
             pass
 
@@ -1313,17 +1293,15 @@ class Alexa(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         for value in values:
-            cursor.execute(
-                'UPDATE playlist_music SET previous_song=? '
-                'WHERE id=?', value)
+            cursor.execute('UPDATE playlist_music SET previous_song=? WHERE id=?', value)
         db.commit()
         db.close()
 
         # Output result to chat
-        duration = await self._get_duration(selected_song[2])
+        duration = await self._get_duration(selected_song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"[{selected_song[1]}]({selected_song[3]}) "
+            description=f"[{selected_song.title}]({selected_song.webpage_url}) "
                         f"`{duration}` has been moved to position #{new_pos} "
                         f"in playlist `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
@@ -1333,15 +1311,15 @@ class Alexa(commands.Cog):
     async def playlist_view(self, interaction, playlist_name: str, page: int = 1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
-        try:
-            playlist = await self._get_playlist(interaction.guild, playlist_name)
-            songs = await self._get_playlist_songs(interaction.guild, playlist_name)
-        except ValueError:
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` does not exist")
             await interaction.response.send_message(embed=embed)
             return
+
+        songs = self.playlist_songs.get_by_playlist(playlist)
 
         # Modify page variable to get every ten results
         page -= 1
@@ -1351,19 +1329,19 @@ class Alexa(commands.Cog):
         # Get total duration
         total_duration = 0
         for song in songs:
-            total_duration += song[2]
+            total_duration += song.duration
 
         # Make a formatted list of 10 aliases based on the page
         formatted_songs = []
         for index, song in enumerate(islice(songs, page, page + 10)):
             # Cut off song name to 90 chars
-            if len(song[1]) > 90:
-                song_name = f"{song[1][:87]}..."
+            if len(song.title) > 90:
+                song_name = f"{song.title[:87]}..."
             else:
-                song_name = song[1]
+                song_name = song.title
 
-            duration = await self._get_duration(song[2])
-            formatted_songs.append(f"{page + index + 1}. [{song_name}]({song[3]}) `{duration}`")
+            duration = await self._get_duration(song.duration)
+            formatted_songs.append(f"{page + index + 1}. [{song_name}]({song.webpage_url}) `{duration}`")
 
         # Alert if no songs are on the specified page
         if not formatted_songs:
@@ -1388,7 +1366,7 @@ class Alexa(commands.Cog):
 
     @playlist_group.command(name='play')
     @perms.check()
-    async def playlist_play(self, interaction, playlist: str):
+    async def playlist_play(self, interaction, playlist_name: str):
         """Play from a locally saved playlist"""
         # Get music player
         if not interaction.guild.voice_client:
@@ -1396,37 +1374,30 @@ class Alexa(commands.Cog):
             return
         music_player = await self._get_music_player(interaction.guild)
 
-        # Get all songs in playlist
-        try:
-            songs = await self._get_playlist_songs(interaction.guild, playlist)
-        except TypeError:
+        # Fetch songs from playlist if it exists
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist}` does not exist")
+                description=f"Playlist `{playlist_name}` does not exist")
             await interaction.response.send_message(embed=embed)
             return
 
-        # Play first song if no song is currently playing
-        unavailable_songs = []
-        index = 0
-        if len(music_player.song_queue) == 0:
+        songs = self.playlist_songs.get_by_playlist(playlist)
+        if not songs:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Playlist `{playlist}` does not contain any songs")
+            await interaction.response.send_message(embed=embed)
+            return
+
             # Loop until available playlist song is found
-            while True:
-                index += 1
-                try:
-                    source, _ = await self._fetch_song(songs[0])
-                except VideoUnavailableError:
-                    duration = await self._get_duration(next_song[1][2])
-                    unavailable_songs.append(f"{index}. [{next_song[1][1]}]({next_song[1][3]}) `{duration}`")
-                    continue
-                music_player.song_queue.append(source)
-                music_player.song_start_time = time()
-                interaction.guild.voice_client.play(source, after=lambda e: self._next(interaction.guild))
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist `{playlist}`")
-                await interaction.response.send_message(embed=embed)
-                break
+        result = await music_player.add(songs[0])
+        if result.PLAYING:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Now playing playlist `{playlist}`")
+            await interaction.response.send_message(embed=embed)
         else:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
@@ -1434,29 +1405,8 @@ class Alexa(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
         # Add remaining songs to queue
-        while songs:
-            index += 1
-            try:
-                source, _ = await self._fetch_song(next_song[1][3])
-            except VideoUnavailableError:
-                duration = await self._get_duration(next_song[1][2])
-                unavailable_songs.append(
-                    f"{index}. [{next_song[1][1]}]({next_song[1][3]}) "
-                    f"`{duration}`")
-                continue
-            finally:
-                next_song = song_links.get(next_song[0])
-            self.song_queue[interaction.guild_id].append(source)
-
-        # Alert user of unavailable songs
-        if unavailable_songs:
-            for index, song in enumerate(unavailable_songs):
-                song_format = "\n".join(unavailable_songs)
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"These songs in playlist `{playlist}` "
-                            f"are unavailable: \n{song_format}")
-            await interaction.response.send_message(embed=embed)
+        for i in range(1, len(songs)):
+            music_player.song_queue.append(songs[i])
 
     @musicsettings_group.command(name='autodisconnect')
     @perms.exclusive()
