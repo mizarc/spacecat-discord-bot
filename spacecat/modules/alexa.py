@@ -1469,59 +1469,19 @@ class Alexa(commands.Cog):
         except ValueError:
             return "N/A"
 
-    async def _get_all_playlists(self, guild):
-        """Get list of all playlists for a guild"""
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        values = guild.id
-        cursor.execute('SELECT * FROM playlist WHERE server_id=?', values)
-        rows = cursor.fetchall()
-        db.close()
-
-        playlists = []
-        for row in rows:
-            playlists.append(Playlist(row[0], row[1], row[2], row[3]))
-        return playlists
-
-    async def _get_playlist(self, guild, playlist_name=None):
-        """Gets playlist data from name"""
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        values = (playlist_name, guild.id)
-        cursor.execute('SELECT * FROM playlist WHERE name=? AND server_id=?', values)
-        row = cursor.fetchone()
-        db.close()
-
-        if row is None:
-            raise ValueError("That playlist is unavailable")
-        return Playlist(row[0], row[1], row[2], row[3])
-
-    async def _get_playlist_songs(self, guild, playlist_name):
+    async def _order_playlist_songs(self, playlist_songs):
         """Gets playlist songs from name"""
-        # Alert if playlist doesn't exist
-        playlist = await self._get_playlist(guild, playlist_name)
-        if playlist is None:
-            raise ValueError("That playlist doesn't exist")
-
-        # Get list of all songs in playlist
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        values = (playlist.id,)
-        cursor.execute('SELECT * FROM playlist_music WHERE playlist_id=?', values)
-        songs = cursor.fetchall()
-        db.close()
-
         # Use dictionary to pair songs with the next song
         song_links = {}
-        for song in songs:
-            song_links[song[4]] = [song[0], song]
+        for song in playlist_songs:
+            song_links[song.previous_song_id] = song
 
         # Order playlist songs into list
         ordered_songs = []
         next_song = song_links.get(None)
         while next_song is not None:
-            ordered_songs.append(YTDLStream(next_song[1], next_song[2], next_song[3]))
-            next_song = song_links.get(next_song[0])
+            ordered_songs.append(next_song)
+            next_song = song_links.get(next_song.id)
 
         return ordered_songs
 
