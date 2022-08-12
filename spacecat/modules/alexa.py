@@ -134,7 +134,6 @@ class MusicPlayer:
 
     async def add(self, song):
         self.song_queue.append(song)
-
         if len(self.song_queue) <= 1:
             stream = await song.create_stream()
             loop = asyncio.get_event_loop()
@@ -518,7 +517,7 @@ class Alexa(commands.Cog):
 
         # Add song
         result = await music_player.add(songs[0])
-        duration = await self._get_duration(songs[0].duration)
+        duration = await self._format_duration(songs[0].duration)
         song_name = f"[{songs[0].title}]({songs[0].webpage_url}) `{duration}`"
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
@@ -796,12 +795,12 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Music Queue")
-        duration = await self._get_duration(music_player.song_queue[0].duration)
+        duration = await self._format_duration(music_player.song_queue[0].duration)
         if not music_player.song_pause_time:
             current_time = int(time() - music_player.song_start_time)
         else:
             current_time = int(music_player.song_pause_time)
-        current_time = await self._get_duration(current_time)
+        current_time = await self._format_duration(current_time)
 
         # Set header depending on if looping or not, and whether to add a spacer
         queue_status = False
@@ -834,7 +833,7 @@ class Alexa(commands.Cog):
 
             for index, song in enumerate(
                     islice(music_player.song_queue, page + 1, page + 11)):
-                duration = await self._get_duration(song.duration)
+                duration = await self._format_duration(song.duration)
                 queue_info.append(f"{page + index + 1}. {song.title} `{duration}`")
 
             # Alert if no songs are on the specified page
@@ -851,7 +850,7 @@ class Alexa(commands.Cog):
                     f"`+{len(music_player.song_queue) - 11 - page} more in queue`")
 
             # Output results to chat
-            duration = await self._get_duration(total_duration)
+            duration = await self._format_duration(total_duration)
             queue_output = '\n'.join(queue_info)
             embed.add_field(
                 name=f"Queue  `{duration}`",
@@ -891,7 +890,7 @@ class Alexa(commands.Cog):
         music_player.song_queue.insert(new_pos, song)
 
         # Output result to chat
-        duration = await self._get_duration(song.duration)
+        duration = await self._format_duration(song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"[{song.title}]({song.webpage_url}) "
@@ -967,7 +966,7 @@ class Alexa(commands.Cog):
             return
 
         # Output result to chat
-        duration = await self._get_duration(song.duration)
+        duration = await self._format_duration(song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"[{song.title}]({song.webpage_url}) `{duration}` "
@@ -1123,7 +1122,7 @@ class Alexa(commands.Cog):
         # Format playlist songs into pretty list
         playlist_info = []
         for index, playlist_name in enumerate(islice(playlist_names, 0, 10)):
-            duration = await self._get_duration(playlist_name[1])
+            duration = await self._format_duration(playlist_name[1])
             playlist_info.append(
                 f"{index + 1}. {playlist_name[0]} `{duration}`")
 
@@ -1189,7 +1188,7 @@ class Alexa(commands.Cog):
         # Add song to playlist
         self.playlist_songs.add(PlaylistSong.create_new(
             songs[0].title, playlist.id, previous_song, songs[0].webpage_url, songs[0].duration))
-        duration = await self._get_duration(songs[0].duration)
+        duration = await self._format_duration(songs[0].duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Added [{songs[0].title}]({songs[0].webpage_url}) "
@@ -1224,7 +1223,7 @@ class Alexa(commands.Cog):
 
         # Remove selected song from playlist
         self.playlist_songs.remove(selected_song)
-        duration = await self._get_duration(selected_song.duration)
+        duration = await self._format_duration(selected_song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"[{selected_song.title}]({selected_song.webpage_url}) "
@@ -1279,7 +1278,7 @@ class Alexa(commands.Cog):
         db.close()
 
         # Output result to chat
-        duration = await self._get_duration(selected_song.duration)
+        duration = await self._format_duration(selected_song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"[{selected_song.title}]({selected_song.webpage_url}) "
@@ -1321,7 +1320,7 @@ class Alexa(commands.Cog):
             else:
                 song_name = song.title
 
-            duration = await self._get_duration(song.duration)
+            duration = await self._format_duration(song.duration)
             formatted_songs.append(f"{page + index + 1}. [{song_name}]({song.webpage_url}) `{duration}`")
 
         # Alert if no songs are on the specified page
@@ -1338,7 +1337,7 @@ class Alexa(commands.Cog):
             title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}' Songs")
         if playlist.description and page == 0:
             embed.description = playlist.description
-        formatted_duration = await self._get_duration(total_duration)
+        formatted_duration = await self._format_duration(total_duration)
         playlist_music_output = '\n'.join(formatted_songs)
         embed.add_field(
             name=f"{len(songs)} songs available `{formatted_duration}`",
@@ -1437,7 +1436,8 @@ class Alexa(commands.Cog):
         return music_player
 
     # Format duration based on what values there are
-    async def _get_duration(self, seconds):
+    @staticmethod
+    async def _format_duration(self, seconds):
         try:
             duration = strftime("%H:%M:%S", gmtime(seconds)).lstrip("0:")
             if len(duration) < 1:
