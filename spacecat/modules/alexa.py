@@ -112,18 +112,6 @@ class YTDLStream:
         return songs
 
 
-class SourceFactory:
-    async def from_url(self, webpage_url):
-        if " " in webpage_url:
-            song_metadatas = await YTDLStream.from_url(webpage_url)
-        elif "youtube" in webpage_url or "youtu.be" in webpage_url:
-            song_metadatas = await YTDLStream.from_url(webpage_url)
-        else:
-            song_metadatas = await YTDLStream.from_url(webpage_url)
-
-        return song_metadatas
-
-
 class MusicPlayer:
     def __init__(self, voice_client):
         self.voice_client = voice_client
@@ -1333,7 +1321,7 @@ class Alexa(commands.Cog):
         for song in songs:
             total_duration += song.duration
 
-        # Make a formatted list of 10 aliases based on the page
+        # Make a formatted list of 10 songs on the page
         formatted_songs = []
         for index, song in enumerate(islice(songs, page, page + 10)):
             # Cut off song name to 90 chars
@@ -1471,7 +1459,8 @@ class Alexa(commands.Cog):
         except ValueError:
             return "N/A"
 
-    async def _order_playlist_songs(self, playlist_songs):
+    @staticmethod
+    async def _order_playlist_songs(playlist_songs):
         """Gets playlist songs from name"""
         # Use dictionary to pair songs with the next song
         song_links = {}
@@ -1487,16 +1476,21 @@ class Alexa(commands.Cog):
 
         return ordered_songs
 
-    async def _fetch_songs(self, url):
+    @staticmethod
+    async def _fetch_songs(query):
         """Grab audio source from YouTube and check if longer than 3 hours"""
-        source_factory = SourceFactory()
-        songs = await source_factory.from_url(url)
+        if " " in query:
+            songs = await YTDLStream.from_url(query)
+        elif "youtube" in query or "youtu.be" in query:
+            songs = await YTDLStream.from_url(query)
+        else:
+            songs = await YTDLStream.from_url(query)
 
-        #if not songs:
-        #    raise VideoUnavailableError("Specified song is unavailable")
+        # if not songs:
+        #     raise VideoUnavailableError("Specified song is unavailable")
 
-        #if songs.duration >= 10800:
-        #    raise VideoTooLongError("Specified song is longer than 3 hours")
+        # if songs.duration >= 10800:
+        #     raise VideoTooLongError("Specified song is longer than 3 hours")
 
         return songs
 
