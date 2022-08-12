@@ -535,13 +535,10 @@ class Alexa(commands.Cog):
     @app_commands.command()
     @perms.check()
     async def playsearch(self, interaction, search: str):
-        # Join user's voice channel if not in one already
-        if interaction.guild.voice_client is None:
+        # Join channel and create music player instance if it doesn't exist
+        if not interaction.guild.voice_client:
             await interaction.user.voice.channel.connect()
-
-            # End function if bot failed to join a voice channel.
-            if interaction.guild.voice_client is None:
-                return
+        music_player = await self._get_music_player(interaction.guild)
 
         # Set urls to be used by the searcher
         base_url = "https://www.youtube.com"
@@ -617,7 +614,7 @@ class Alexa(commands.Cog):
         # Play selected song
         number = reaction_buttons.emoji_to_number(str(reaction))
         selected_song = urls[number - 1]
-        await self.bot.slash.invoke_command(self.play, ctx, [selected_song])
+        await music_player.add(selected_song)
 
     @app_commands.command()
     @perms.check()
