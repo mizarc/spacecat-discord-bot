@@ -1437,7 +1437,7 @@ class Alexa(commands.Cog):
 
     # Format duration based on what values there are
     @staticmethod
-    async def _format_duration(self, seconds):
+    async def _format_duration(seconds):
         try:
             duration = strftime("%H:%M:%S", gmtime(seconds)).lstrip("0:")
             if len(duration) < 1:
