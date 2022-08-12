@@ -922,7 +922,7 @@ class Alexa(commands.Cog):
 
     @queue_group.command(name="add")
     @perms.check()
-    async def queue_add(self, interaction, url: str):
+    async def queue_add(self, interaction, position: int, url: str):
         """Adds a song to the queue"""
         # Get music player
         if not interaction.guild.voice_client:
@@ -940,7 +940,7 @@ class Alexa(commands.Cog):
 
         # Add the song to the queue and output result
         try:
-            source, song_name = await self._fetch_song(url)
+            songs = await self._fetch_songs(url)
         except VideoTooLongError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -954,11 +954,13 @@ class Alexa(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        music_player.song_queue[interaction.guild_id].append(source)
+        music_player.song_queue.insert(position, songs[0])
+        if position > len(music_player.song_queue):
+            position = len(music_player.song_queue) - 1
+
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Added {song_name} to "
-                        f"#{len(music_player.song_queue[interaction.guild_id]) - 1} in queue")
+            description=f"Added {songs[0].title} to #{position} in queue")
         await interaction.response.send_message(embed=embed)
         return
 
