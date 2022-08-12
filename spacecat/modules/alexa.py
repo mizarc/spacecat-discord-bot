@@ -1470,15 +1470,13 @@ class Alexa(commands.Cog):
     @staticmethod
     async def _fetch_songs(query):
         """Grab audio source from YouTube and check if longer than 3 hours"""
-        if " " in query:
-            songs = await YTDLStream.from_url(query)
-        elif "youtube" in query or "youtu.be" in query:
+        if "youtube" in query or "youtu.be" in query:
             songs = await YTDLStream.from_url(query)
         else:
             songs = await YTDLStream.from_url(query)
 
-        # if not songs:
-        #     raise VideoUnavailableError("Specified song is unavailable")
+        if not songs:
+            raise VideoUnavailableError("Specified song is unavailable")
 
         # if songs.duration >= 10800:
         #     raise VideoTooLongError("Specified song is longer than 3 hours")
