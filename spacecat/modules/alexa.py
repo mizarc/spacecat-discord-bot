@@ -520,27 +520,18 @@ class Alexa(commands.Cog):
         result = await music_player.add(songs[0])
         duration = await self._get_duration(songs[0].duration)
         song_name = f"[{songs[0].title}]({songs[0].webpage_url}) `{duration}`"
-        if result.PLAYING:
+        if result == PlayerResult.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Now playing {song_name}")
             await interaction.followup.send(embed=embed)
             return
-        elif result.QUEUEING:
-            music_player.song_queue.extend(songs)
+        elif result == PlayerResult.QUEUEING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Song {song_name} added to #{len(music_player.song_queue) - 1} in queue")
             await interaction.followup.send(embed=embed)
             return
-
-        # Instantly play song if no song currently playing
-        await music_player.play(songs[0])
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"Now playing {song_name}")
-        await interaction.followup.send(embed=embed)
-        return
 
     @app_commands.command()
     @perms.check()
