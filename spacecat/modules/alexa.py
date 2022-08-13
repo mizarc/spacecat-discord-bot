@@ -1127,7 +1127,7 @@ class Alexa(commands.Cog):
     async def playlist_add(self, interaction, playlist_name: str, url: str):
         """Adds a song to a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild_id, playlist_name)[0]
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1187,7 +1187,7 @@ class Alexa(commands.Cog):
     async def playlist_remove(self, interaction, playlist_name: str, index: int):
         """Removes a song from a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild_id, playlist_name)[0]
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1221,7 +1221,7 @@ class Alexa(commands.Cog):
     async def playlist_move(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
         """Moves a song to a specified position in a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild_id, playlist_name)[0]
+        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
