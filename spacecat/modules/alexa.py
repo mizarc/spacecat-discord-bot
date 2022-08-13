@@ -292,8 +292,8 @@ class PlaylistSongRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS playlist_songs (id TEXT PRIMARY KEY, title TEXT, '
-                       'playlist_id TEXT, FOREIGN KEY(playlist_id) REFERENCES playlist(id)), '
-                       'previous_song_id INTEGER, webpage_url TEXT, duration INTEGER')
+                       'playlist_id TEXT, previous_song_id INTEGER, webpage_url TEXT, duration INTEGER, '
+                       'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
         self.db.commit()
         self.db.close()
 
