@@ -213,7 +213,6 @@ class PlaylistRepository:
         cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
                        '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, description TEXT)')
         self.db.commit()
-        self.db.close()
 
     def get_all(self):
         """Get list of all playlists"""
@@ -256,14 +255,12 @@ class PlaylistRepository:
         values = (playlist.id, playlist.name, playlist.description, playlist.guild_id)
         cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?)', values)
         self.db.commit()
-        self.db.close()
 
     def update(self, playlist):
         cursor = self.db.cursor()
         values = (playlist.guild_id, playlist.name, playlist.description, playlist.id)
         cursor.execute('UPDATE playlist SET server_id=?, name=?, description=? WHERE id=?', values)
         self.db.commit()
-        self.db.close()
 
     def remove(self, playlist):
         cursor = self.db.cursor()
@@ -295,7 +292,6 @@ class PlaylistSongRepository:
                        'playlist_id TEXT, previous_song_id INTEGER, webpage_url TEXT, duration INTEGER, '
                        'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
         self.db.commit()
-        self.db.close()
 
     def get_all(self):
         """Get list of all playlists"""
@@ -327,7 +323,6 @@ class PlaylistSongRepository:
                   playlist_song.previous_song_id, playlist_song.webpage_url, playlist_song.duration)
         cursor.execute('INSERT INTO playlist_music VALUES (?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
-        self.db.close()
 
     def update(self, playlist_song: PlaylistSong):
         cursor = self.db.cursor()
@@ -336,7 +331,6 @@ class PlaylistSongRepository:
         cursor.execute('UPDATE playlist_music SET title=?, playlist_id=?, '
                        'previous_song_id=?, webpage_url=?, duration=? WHERE id=?', values)
         self.db.commit()
-        self.db.close()
 
     def remove(self, playlist):
         cursor = self.db.cursor()
@@ -1267,7 +1261,6 @@ class Alexa(commands.Cog):
         for value in values:
             cursor.execute('UPDATE playlist_music SET previous_song=? WHERE id=?', value)
         db.commit()
-        db.close()
 
         # Output result to chat
         duration = await self._format_duration(selected_song.duration)
