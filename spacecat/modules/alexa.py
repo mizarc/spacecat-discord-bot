@@ -1355,8 +1355,8 @@ class Alexa(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-            # Loop until available playlist song is found
-        result = await music_player.add(songs[0])
+        stream = await YTDLStream.from_url(songs[0].webpage_url)
+        result = await music_player.add(stream[0])
         if result.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
@@ -1370,7 +1370,8 @@ class Alexa(commands.Cog):
 
         # Add remaining songs to queue
         for i in range(1, len(songs)):
-            music_player.song_queue.append(songs[i])
+            stream = await YTDLStream.from_url(songs[i].webpage_url)
+            await music_player.add(stream[0])
 
     @musicsettings_group.command(name='autodisconnect')
     @perms.exclusive()
