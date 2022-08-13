@@ -1335,8 +1335,7 @@ class Alexa(commands.Cog):
         """Play from a locally saved playlist"""
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
-            return
+            await interaction.user.voice.channel.connect()
         music_player = await self._get_music_player(interaction.guild)
 
         # Fetch songs from playlist if it exists
