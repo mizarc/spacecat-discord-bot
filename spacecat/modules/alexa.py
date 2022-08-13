@@ -295,21 +295,21 @@ class PlaylistSongRepository:
 
     def get_all(self):
         """Get list of all playlists"""
-        results = self.db.cursor().execute('SELECT * FROM playlist_music').fetchall()
+        results = self.db.cursor().execute('SELECT * FROM playlist_songs').fetchall()
         playlists = []
         for result in results:
             playlists.append(Playlist(result[0], result[1], result[2], result[3]))
         return playlists
 
     def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM playlist_music WHERE id=?', (id_,)).fetchone()
+        result = self.db.cursor().execute('SELECT * FROM playlist_songs WHERE id=?', (id_,)).fetchone()
         return PlaylistSong(result[0], result[1], result[2], result[3], result[4], result[5])
 
     def get_by_playlist(self, playlist):
         # Get list of all songs in playlist
         cursor = self.db.cursor()
         values = (playlist.id,)
-        cursor.execute('SELECT * FROM playlist_music WHERE playlist_id=?', values)
+        cursor.execute('SELECT * FROM playlist_songs WHERE playlist_id=?', values)
         results = cursor.fetchall()
 
         songs = []
@@ -321,21 +321,21 @@ class PlaylistSongRepository:
         cursor = self.db.cursor()
         values = (playlist_song.id, playlist_song.title, playlist_song.playlist_id,
                   playlist_song.previous_song_id, playlist_song.webpage_url, playlist_song.duration)
-        cursor.execute('INSERT INTO playlist_music VALUES (?, ?, ?, ?, ?, ?)', values)
+        cursor.execute('INSERT INTO playlist_songs VALUES (?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, playlist_song: PlaylistSong):
         cursor = self.db.cursor()
         values = (playlist_song.title, playlist_song.playlist_id, playlist_song.previous_song_id,
                   playlist_song.webpage_url, playlist_song.duration, playlist_song.id)
-        cursor.execute('UPDATE playlist_music SET title=?, playlist_id=?, '
+        cursor.execute('UPDATE playlist_songs SET title=?, playlist_id=?, '
                        'previous_song_id=?, webpage_url=?, duration=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, playlist):
         cursor = self.db.cursor()
         values = (playlist.id,)
-        cursor.execute('DELETE FROM playlist_music WHERE id=?', values)
+        cursor.execute('DELETE FROM playlist_songs WHERE id=?', values)
         self.db.commit()
 
 
@@ -1259,7 +1259,7 @@ class Alexa(commands.Cog):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
         for value in values:
-            cursor.execute('UPDATE playlist_music SET previous_song=? WHERE id=?', value)
+            cursor.execute('UPDATE playlist_songs SET previous_song=? WHERE id=?', value)
         db.commit()
 
         # Output result to chat
@@ -1323,10 +1323,10 @@ class Alexa(commands.Cog):
         if playlist.description and page == 0:
             embed.description = playlist.description
         formatted_duration = await self._format_duration(total_duration)
-        playlist_music_output = '\n'.join(formatted_songs)
+        playlist_songs_output = '\n'.join(formatted_songs)
         embed.add_field(
             name=f"{len(songs)} songs available `{formatted_duration}`",
-            value=playlist_music_output, inline=False)
+            value=playlist_songs_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name='play')
