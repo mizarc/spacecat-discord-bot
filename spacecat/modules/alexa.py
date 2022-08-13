@@ -1351,7 +1351,7 @@ class Alexa(commands.Cog):
         if not songs:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist}` does not contain any songs")
+                description=f"Playlist `{playlist.name}` does not contain any songs")
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1360,12 +1360,12 @@ class Alexa(commands.Cog):
         if result.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Now playing playlist `{playlist}`")
+                description=f"Now playing playlist `{playlist.name}`")
             await interaction.response.send_message(embed=embed)
         else:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Added playlist `{playlist}` to queue")
+                description=f"Added playlist `{playlist.name}` to queue")
             await interaction.response.send_message(embed=embed)
 
         # Add remaining songs to queue
