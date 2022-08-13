@@ -230,7 +230,7 @@ class PlaylistRepository:
         # Get list of all playlists in a guild
         cursor = self.db.cursor()
         values = (guild.id,)
-        cursor.execute('SELECT * FROM playlist WHERE server_id=?', values)
+        cursor.execute('SELECT * FROM playlist WHERE guild_id=?', values)
         results = cursor.fetchall()
 
         playlists = []
@@ -242,7 +242,7 @@ class PlaylistRepository:
         # Get playlist by guild and playlist name
         cursor = self.db.cursor()
         values = (guild.id, name)
-        cursor.execute('SELECT * FROM playlist WHERE server_id=? AND name=?', values)
+        cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values)
         results = cursor.fetchall()
 
         playlists = []
@@ -259,7 +259,7 @@ class PlaylistRepository:
     def update(self, playlist):
         cursor = self.db.cursor()
         values = (playlist.guild_id, playlist.name, playlist.description, playlist.id)
-        cursor.execute('UPDATE playlist SET server_id=?, name=?, description=? WHERE id=?', values)
+        cursor.execute('UPDATE playlist SET guild_id=?, name=?, description=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, playlist):
@@ -1088,7 +1088,7 @@ class Alexa(commands.Cog):
     async def playlist_list(self, interaction):
         """List all available playlists"""
         # Get playlist from repo
-        playlists = self.playlists.get_by_guild(interaction.guild_id)
+        playlists = self.playlists.get_by_guild(interaction.guild)
         if not playlists:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
