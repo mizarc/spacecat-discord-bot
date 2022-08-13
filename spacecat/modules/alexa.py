@@ -252,7 +252,7 @@ class PlaylistRepository:
 
     def add(self, playlist):
         cursor = self.db.cursor()
-        values = (playlist.id, playlist.name, playlist.description, playlist.guild_id)
+        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.description)
         cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?)', values)
         self.db.commit()
 
