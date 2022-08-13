@@ -196,13 +196,13 @@ class MusicPlayer:
 class Playlist:
     def __init__(self, id_, guild_id, name, description=None):
         self.id = id_
-        self.guild_id = guild_id
         self.name = name
+        self.guild_id = guild_id
         self.description = description
 
     @classmethod
-    def create_new(cls, guild, name):
-        return cls(uuid.uuid4(), guild.id, name)
+    def create_new(cls, name, guild):
+        return cls(uuid.uuid4(), name, guild.id)
 
 
 class PlaylistRepository:
@@ -211,7 +211,7 @@ class PlaylistRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
-                       '(id INTEGER PRIMARY KEY, name TEXT, description TEXT, server_id INTEGER)')
+                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, description TEXT)')
         self.db.commit()
         self.db.close()
 
@@ -291,11 +291,9 @@ class PlaylistSongRepository:
         self.db = database
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute(
-            'CREATE TABLE IF NOT EXISTS playlist_music'
-            '(id INTEGER PRIMARY KEY, title TEXT, duration INTEGER, url TEXT,'
-            'previous_song INTEGER, playlist_id INTEGER,'
-            'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
+        cursor.execute('CREATE TABLE IF NOT EXISTS playlist_songs (id TEXT PRIMARY KEY, title TEXT, '
+                       'playlist_id TEXT, FOREIGN KEY(playlist_id) REFERENCES playlist(id)), '
+                       'previous_song_id INTEGER, webpage_url TEXT, duration INTEGER')
         self.db.commit()
         self.db.close()
 
@@ -541,7 +539,7 @@ class Alexa(commands.Cog):
         base_url = "https://www.youtube.com"
         search_url = f"https://www.youtube.com/results?search_query={search}"
 
-        # Query youtube with a search term and grab the title, duration and url
+        # Query YouTube with a search term and grab the title, duration and url
         # of all videos on the page
         headers = {'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; "\
             "+http://www.google.com/bot.html)'}
@@ -1012,7 +1010,7 @@ class Alexa(commands.Cog):
             return
 
         # Add playlist to database
-        self.playlists.add(Playlist.create_new(interaction.guild, playlist_name))
+        self.playlists.add(Playlist.create_new(playlist_name, interaction.guild))
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been created")
