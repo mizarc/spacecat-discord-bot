@@ -194,7 +194,7 @@ class MusicPlayer:
 
 
 class Playlist:
-    def __init__(self, id_, guild_id, name, description=None):
+    def __init__(self, id_, name, guild_id, description):
         self.id = id_
         self.name = name
         self.guild_id = guild_id
@@ -202,7 +202,7 @@ class Playlist:
 
     @classmethod
     def create_new(cls, name, guild):
-        return cls(uuid.uuid4(), name, guild.id)
+        return cls(uuid.uuid4(), name, guild.id, "")
 
 
 class PlaylistRepository:
