@@ -319,7 +319,7 @@ class PlaylistSongRepository:
 
     def add(self, playlist_song: PlaylistSong):
         cursor = self.db.cursor()
-        values = (playlist_song.id, playlist_song.title, playlist_song.playlist_id,
+        values = (str(playlist_song.id), playlist_song.title, playlist_song.playlist_id,
                   playlist_song.previous_song_id, playlist_song.webpage_url, playlist_song.duration)
         cursor.execute('INSERT INTO playlist_songs VALUES (?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
