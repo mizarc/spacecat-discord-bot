@@ -208,6 +208,12 @@ class Playlist:
 class PlaylistRepository:
     def __init__(self, database):
         self.db = database
+        cursor = self.db.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
+                       '(id INTEGER PRIMARY KEY, name TEXT, description TEXT, server_id INTEGER)')
+        self.db.commit()
+        self.db.close()
 
     def get_all(self):
         """Get list of all playlists"""
@@ -283,6 +289,15 @@ class PlaylistSong:
 class PlaylistSongRepository:
     def __init__(self, database):
         self.db = database
+        cursor = self.db.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute(
+            'CREATE TABLE IF NOT EXISTS playlist_music'
+            '(id INTEGER PRIMARY KEY, title TEXT, duration INTEGER, url TEXT,'
+            'previous_song INTEGER, playlist_id INTEGER,'
+            'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
+        self.db.commit()
+        self.db.close()
 
     def get_all(self):
         """Get list of all playlists"""
@@ -358,24 +373,6 @@ class Alexa(commands.Cog):
             config['music']['disconnect_time'] = 300
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
-
-        # Create playlist table if it don't exist
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        cursor.execute('PRAGMA foreign_keys = ON')
-
-        cursor.execute(
-            'CREATE TABLE IF NOT EXISTS playlist'
-            '(id INTEGER PRIMARY KEY, name TEXT, description TEXT, server_id INTEGER)')
-
-        cursor.execute(
-            'CREATE TABLE IF NOT EXISTS playlist_music'
-            '(id INTEGER PRIMARY KEY, title TEXT, duration INTEGER, url TEXT,'
-            'previous_song INTEGER, playlist_id INTEGER,'
-            'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
-
-        db.commit()
-        db.close()
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
