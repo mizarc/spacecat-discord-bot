@@ -1,6 +1,7 @@
 import sqlite3
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from spacecat.helpers import constants
@@ -12,64 +13,76 @@ class Help(commands.Cog):
         self.bot = bot
         bot.remove_command('help')
 
-    @commands.command()
-    async def help(self, ctx, *, command=None):
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        for cog in self.bot.cogs.values():
+            return
+
+        if "wah" not in message.content:
+            return
+
+        ctx = await self.bot.get_context(message)
+        await ctx.send(",".join(str(command.name) for command in self.__cog_app_commands__))
+
+    @app_commands.command()
+    async def help(self, interaction, *, command: str = None):
         """Information on how to use commands"""
         # Generate main help menu
         if command is None:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.INFO.value,
                 title=f"{constants.EmbedIcon.HELP} Help Menu",
-                description="Type !help <module> "
-                "to list all commands in the module (case sensitive)")
+                description="Type /help <category> to list all commands in the category (case sensitive)")
 
             # Add all modules to the embed
-            modules = self.bot.cogs
-            for module in modules.values():
-                commands = await self.filter_commands(ctx, module.get_commands())
-                if commands:
+            for cog in self.bot.cogs.values():
+                #commands = await self.filter_commands(ctx, module.get_commands())
+                cog_commands = cog.__cog_app_commands__
+                if cog_commands:
                     embed.add_field(
-                        name=f"**{module.qualified_name}**",
-                        value=f"{module.description}")
-            await ctx.send(embed=embed)
+                        name=f"**{cog.qualified_name}**",
+                        value=f"{cog.description}")
+            await interaction.response.send_message(embed=embed)
             return
 
         # Check if specified argument is actually a module
         module = self.bot.get_cog(command)
         if module:
-            await self.command_list(ctx, module)
+            embed = await self.command_list(module)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Check if specified argument is a command
         cmds = command.split(' ')
-        cmd = self.bot.all_commands.get(cmds[0])
+        cmd = self.bot.tree.get_command(cmds[0])
         if cmd:
             for subcmd in cmds[1:]:
-                check = cmd.all_commands.get(subcmd)
+                check = cmd.get_command(subcmd)
                 if not check:
                     break
                 cmd = check
-            await self.command_info(ctx, cmd)
+            embed = await self.command_info(cmd)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Output alert if argument is neither a valid module or command
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
             description="There is no module or command with that name")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    async def command_list(self, ctx, module):
+    async def command_list(self, module):
         """Get a list of commands from the selected module"""
         # Get all the commands in the module. Alert if user doesn't
         # have permission to view any commands in the module
-        commands = await self.filter_commands(ctx, module.get_commands())
-        if not commands:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="You don't have permission to view that module's help page")
-            await ctx.send(embed=embed)
-            return
-        command_output, command_group_output = await self.get_formatted_command_list(commands)
+        #commands = await self.filter_commands(ctx, module.get_commands())
+        #if not commands:
+        #    embed = discord.Embed(
+        #        colour=constants.EmbedStatus.FAIL.value,
+        #        description="You don't have permission to view that module's help page")
+        #    await ctx.send(embed=embed)
+        #    return
+        command_output, command_group_output = await self.get_formatted_command_list(module.__cog_app_commands__)
 
         # Create embed
         embed = discord.Embed(
@@ -88,62 +101,73 @@ class Help(commands.Cog):
                 value="\n".join(command_output),
                 inline=False)
 
-        await ctx.send(embed=embed)
+        return embed
 
-    async def command_info(self, ctx, command):
+    async def command_info(self, command):
         """Gives you information on how to use a command"""
         # Alert if user doesn't have permission to use that command
-        check = await self.filter_commands(ctx, [command])
-        if not check:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="You don't have permission to view that command's help page")
-            await ctx.send(embed=embed)
-            return
+        #check = await self.filter_commands(ctx, [command])
+        #if not check:
+        #    embed = discord.Embed(
+        #        colour=constants.EmbedStatus.FAIL.value,
+        #        description="You don't have permission to view that command's help page")
+        #    await ctx.send(embed=embed)
+        #    return
 
         # Check for command parents to use as prefix and signature as suffix
-        if command.full_parent_name:
-            parents = f'{command.full_parent_name} '
-        else:
-            parents = ''
-        if command.signature:
-            arguments = f' {command.signature}'
-        else:
-            arguments = ''
+        #if command.qualified_Name:
+        #    parents = f'{command.full_parent_name} '
+        #else:
+        #    parents = ''
+        # Add arguments if any exists
+        try:
+            if len(command._params) > 0:
+                arguments = ''
+                for param in command._params.values():
+                    if param.required:
+                        arguments += f' <{param.name}>'
+                    else:
+                        arguments += f' [{param.name}]'
+            else:
+                arguments = ''
 
-        # Add base command entry with command name and usage
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.HELP} {parents.title()}{command.name.title()}",
-            description=f"```{parents}{command.name}{arguments}```")
+            # Add base command entry with command name and usage
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.INFO.value,
+                title=f"{constants.EmbedIcon.HELP} {command.qualified_name.title()} Usage",
+                description=f"```{command.qualified_name}{arguments}```")
 
-        # Get all aliases of command from database
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        value = (ctx.guild.id, command.name)
-        cursor.execute(
-            'SELECT alias FROM command_alias '
-            'WHERE server_id=? AND command=?', value)
-        aliases = cursor.fetchall()
-        db.close()
+            # Get all aliases of command from database
+            #db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
+            #cursor = db.cursor()
+            #value = (ctx.guild.id, command.name)
+            #cursor.execute(
+            #    'SELECT alias FROM command_alias '
+            #    'WHERE server_id=? AND command=?', value)
+            #aliases = cursor.fetchall()
+            #db.close()
 
-        # Add command alias field
-        if aliases:
-            alias_output = []
-            for alias in aliases:
-                alias_output.append(f"`{alias[0]}`")
-            embed.add_field(name="Aliases", value=", ".join(alias_output))
+            # Add commnand description field
+            if command.description:
+                embed.add_field(name="Description", value=command.description, inline=False)
 
-        # Add commnand description field
-        if command.help:
-            embed.add_field(name="Description", value=command.help, inline=False)
+            # Add command alias field
+            #if aliases:
+            #    alias_output = []
+            #    for alias in aliases:
+            #        alias_output.append(f"`{alias[0]}`")
+            #    embed.add_field(name="Aliases", value=", ".join(alias_output))
 
         # Add command subcommand field
-        try:
-            subcommands = await self.filter_commands(
-                ctx, command.all_commands.values())
-            subcommand_output, subcommand_group_output = await self.get_formatted_command_list(
-                subcommands)
+            #subcommands = await self.filter_commands(
+            #    ctx, command.all_commands.values())
+        except AttributeError:
+            # Add base command entry with command name and usage
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.INFO.value,
+                title=f"{constants.EmbedIcon.HELP} {command.qualified_name.title()} Subcommands")
+
+            subcommand_output, subcommand_group_output = await self.get_formatted_command_list(command.commands)
 
             if subcommand_group_output:
                 embed.add_field(
@@ -155,10 +179,8 @@ class Help(commands.Cog):
                     name="Subcommands",
                     value='\n'.join(subcommand_output),
                     inline=False)
-        except AttributeError:
-            pass
 
-        await ctx.send(embed=embed)
+        return embed
 
     async def filter_commands(self, ctx, commands):
         """Filter out commands that users don't have permission to use"""
@@ -177,21 +199,26 @@ class Help(commands.Cog):
         command_group_output = []
         command_output = []
         for command in commands:
-            # Check if command has arguments
-            if command.signature:
-                arguments = f' {command.signature}'
-            else:
-                arguments = ''
-
-            # Categorise commands and command groups
-            command_format = f"`{command.name}{arguments}`: {command.short_doc}"
+            # Add as command if it is not a group
             try:
-                command.all_commands
-                command_group_output.append(command_format)
+                # Add arguments if any exists
+                if len(command._params) > 0:
+                    arguments = ''
+                    for param in command._params.values():
+                        if param.required:
+                            arguments += f' <{param.name}>'
+                        else:
+                            arguments += f' [{param.name}]'
+                else:
+                    arguments = ''
+                command_output.append(f"`{command.name}{arguments}`: {command.description}")
+
+            # Add as group
             except AttributeError:
-                command_output.append(command_format)
+                command_group_output.append(f"`{command.name}`: {command.description}")
+
         return command_output, command_group_output
 
 
-def setup(bot):
-    bot.add_cog(Help(bot))
+async def setup(bot):
+    await bot.add_cog(Help(bot))

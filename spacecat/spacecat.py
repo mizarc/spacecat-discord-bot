@@ -5,6 +5,7 @@ import sqlite3
 import time
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 import toml
@@ -12,7 +13,26 @@ import toml
 from spacecat.helpers import constants, module_handler, perms
 
 
-class SpaceCat(commands.Cog):
+class SpaceCat(commands.Bot):
+    async def setup_hook(self):
+        await self.load_modules()
+
+    async def load_modules(self):
+        """Loads all modules from the modules folder for the bot"""
+        # Enable enabled modules from list
+        await self.add_cog(Core(self))
+        modules = module_handler.get_enabled()
+        for module in modules:
+            module = f'{constants.MAIN_DIR}.modules.' + module
+            try:
+                await self.load_extension(module)
+            except Exception as exception:
+                print(
+                    f"Failed to load extension {module}\n"
+                    f"{type(exception).__name__}: {exception}\n")
+
+
+class Core(commands.Cog):
     """The bare minimum for bot functionality"""
     def __init__(self, bot):
         self.bot = bot
@@ -30,8 +50,6 @@ class SpaceCat(commands.Cog):
         # Run initial configurator as long as values are missing
         if 'adminuser' not in config['base']:
             await self._set_admin()
-        if 'prefix' not in config['base']:
-            await self._set_prefix()
         servers = self.bot.guilds
         if not servers:
             await self._send_invite()
@@ -79,88 +97,71 @@ class SpaceCat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        # Check for both nickname and non nickname mentions
+        if message.author.bot:
+            return
+
+        words = message.content.split()
         mentions = [f'<@{self.bot.user.id}>', f'<@!{self.bot.user.id}>']
         for mention in mentions:
             if mention == message.content:
-                prefix = await self.bot.get_prefix(message)
-
-                # Info on how to use the bot
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.INFO.value,
-                    title=f"{constants.EmbedIcon.DEFAULT} Hello There!",
-                    description="I'm here to provide a useful set a features")
-                embed.add_field(
-                    name="Current Prefix",
-                    value=f"`{prefix[2]}`", inline=False)
-                embed.add_field(
-                    name="Need Help?",
-                    value=f"Type `{prefix[2]}help` to get a list of commands",
-                    inline=False)
-                embed.add_field(
-                    name="Want more features added?",
-                    value="[Request them here]"
-                    "(https://gitlab.com/Mizarc/spacecat-discord-bot/issues)",
-                    inline=False)
-                await message.channel.send(embed=embed)
+                await self.process_info(message)
+                return
+            elif len(words) > 0 and words[0] == mention and words[1] == "sync":
+                await self.process_sync(message)
                 return
 
+    async def process_info(self, message):
+        # Check for both nickname and non nickname mentions
+        prefix = await self.bot.get_prefix(message)
+
+        # Info on how to use the bot
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.DEFAULT} Hello There!",
+            description="I'm here to provide a useful set a features")
+        embed.add_field(
+            name="Need Help?",
+            value=f"Type `{prefix[2]}help` to get a list of commands",
+            inline=False)
+        embed.add_field(
+            name="Want more features added?",
+            value="[Request them here]"
+                  "(https://gitlab.com/Mizarc/spacecat-discord-bot/issues)",
+            inline=False)
+        await message.channel.send(embed=embed)
+        return
+
+    async def process_sync(self, message):
+        ctx = await self.bot.get_context(message)
+        await ctx.bot.tree.sync()
+        await message.channel.send(f"Commands have been synced")
+
     # Commands
-    @commands.command()
+    @app_commands.command()
     @perms.check()
-    async def ping(self, ctx):
-        """
-        A simple ping to check if the bot is responding
-        The ping will show in milliseconds the connection between the
-        bot host and the discord servers.
-        """
+    async def ping(self, interaction):
+        """A simple ping to check the bot response time"""
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description=f"{self.bot.user.name} is operational at \
             {int(self.bot.latency * 1000)}ms")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.check()
-    async def version(self, ctx):
-        """
-        Check the current bot version
-        This links to the gitlab source page, showing the most updated
-        version of the bot.
-        """
+    async def version(self, interaction):
+        """Check the current bot version and source page"""
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description="**Bot is currently using version:**\n"
-            "[SpaceCat Discord Bot `v0.3.0`]"
+            "[SpaceCat Discord Bot `v0.4.0 Experimental`]"
             "(https://gitlab.com/Mizarc/spacecat-discord-bot)")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def globalprefix(self, ctx, prefix):
-        """
-        Changes the global command prefix
-        Servers with a custom prefix override as specified with the
-        'prefix' command are not affected by this change.
-        """
-        # Changes the prefix entry in the config
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        config['base']['prefix'] = prefix
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
-            toml.dump(config, config_file)
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"Global command prefix changed to: `{prefix}`.\n\
-            Servers with prefix override will not be affected.")
-        await ctx.send(embed=embed)
-
-    @commands.command()
-    @perms.exclusive()
-    async def modules(self, ctx):
-        """
-        Lists all currently available modules
-        Will show which modules are currently enabled or disabled.
-        """
+    async def modules(self, interaction):
+        """Lists all currently available modules"""
         enabled = module_handler.get_enabled()
         disabled = module_handler.get_disabled()
 
@@ -180,15 +181,12 @@ class SpaceCat(commands.Cog):
                 name="Disabled",
                 value=', '.join(disabled),
                 inline=False)
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def reload(self, ctx, module=None):
-        """
-        Reloads all or specified module
-        Used for applying changes that were done to the source code.
-        """
+    async def reload(self, interaction, module: str = None):
+        """Reloads all or specified module"""
         module_list = module_handler.get_enabled()
         modules_to_load = []
         failed_modules = []
@@ -199,7 +197,7 @@ class SpaceCat(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"{module} is not a valid or enabled module")
-                await ctx.send(embed=embed)
+                await interaction.response.send_message(embed=embed)
                 return
             modules_to_load = [module]
         else:
@@ -219,7 +217,7 @@ class SpaceCat(commands.Cog):
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Failed to reload module \
                 `{module[8:]}`")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
         elif failed_modules:
             embed = discord.Embed(
@@ -227,7 +225,7 @@ class SpaceCat(commands.Cog):
                 description=f"Failed to reload module(s): \
                 `{', '.join(failed_modules)}`. \
                 Other modules have successfully reloaded")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Notify user of successful module reloading
@@ -240,22 +238,18 @@ class SpaceCat(commands.Cog):
                 colour=constants.EmbedStatus.YES.value,
                 description="All modules reloaded successfully")
 
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def enable(self, ctx, module):
-        """
-        Enables a module
-        New modules added to the bot in the modules folder can started
-        using this command rather than having to restart the bot.
-        """
+    async def enable(self, interaction, module:str):
+        """Enables a module"""
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Module `{module}` does not exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Check config to see if module is already enabled
@@ -264,7 +258,7 @@ class SpaceCat(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Module `{module}` is already enabled")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Enable module and write to config
@@ -276,22 +270,18 @@ class SpaceCat(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Module `{module}` enabled")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def disable(self, ctx, module):
-        """
-        Disables a module
-        Modules can be safely disabled, which will stop all commands and
-        listeners from functioning.
-        """
+    async def disable(self, interaction, module:str):
+        """Disables a module"""
         # Check if module exists by taking the list of extensions from the bot
         if module not in module_handler.get():
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Module `{module}` does not exist")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         # Check config to see if module is already disabled
@@ -301,7 +291,7 @@ class SpaceCat(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
                     description=f"Module `{module}` is already disabled")
-                await ctx.send(embed=embed)
+                await interaction.response.send_message(embed=embed)
                 return
 
         # Add to list if list exists or create list if it doesn't
@@ -318,16 +308,12 @@ class SpaceCat(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Module `{module}` disabled")
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command()
+    @app_commands.command()
     @perms.exclusive()
-    async def exit(self, ctx):
-        """
-        Shuts down the bot
-        Ensures that proper shutdown prodedures are done so that issues
-        do not arise during next start.
-        """
+    async def exit(self, interaction):
+        """Shuts down the bot"""
         # Clear the cache folder if it exists
         try:
             shutil.rmtree(constants.CACHE_DIR)
@@ -361,7 +347,7 @@ class SpaceCat(commands.Cog):
             try:
                 idinput = int(input("Paste your ID right here: "))
                 print('--------------------\n')
-                user = self.bot.get_user(idinput)
+                user = await self.bot.fetch_user(idinput)
                 await user.send("Hello there!")
             except (ValueError, AttributeError):
                 print(
@@ -391,24 +377,6 @@ class SpaceCat(commands.Cog):
                 else:
                     continue
 
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
-            toml.dump(config, config_file)
-        time.sleep(1)
-
-    async def _set_prefix(self):
-        # Ask to set a command prefix
-        print(
-            "[Prefix]\n"
-            "Your bot will need a prefix in order to run commands.\n"
-            "You can set it to be whatever you want,\n"
-            "though I recommend you keep it short\n")
-
-        prefix_input = input("Enter your bot prefix here: ")
-        print('--------------------\n')
-
-        # Save prefix to config
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        config['base']['prefix'] = prefix_input
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
         time.sleep(1)
@@ -470,22 +438,6 @@ def introduction(config):
     return True
 
 
-def load_modules(bot):
-    """Loads all modules from the modules folder for the bot"""
-    # Enable enabled modules from list
-    bot.add_cog(SpaceCat(bot))
-    modules = module_handler.get_enabled()
-    for module in modules:
-        module = f'{constants.MAIN_DIR}.modules.' + module
-        try:
-            bot.load_extension(module)
-        except Exception as exception:
-            print(
-                f"Failed to load extension {module}\n"
-                f"{type(exception).__name__}: {exception}\n")
-    return bot
-
-
 def get_prefix(bot, message):
     # Access database if it exists and fetch server's custom prefix if set
     try:
@@ -518,8 +470,10 @@ def run(firstrun=False):
     # Attempt to use API key from config and output error if unable to run
     try:
         print("Active API Key: " + apikey + "\n")
-        bot = commands.Bot(command_prefix=get_prefix)
-        bot = load_modules(bot)
+        intents = discord.Intents.default()
+        intents.members = True
+        intents.message_content = True
+        bot = SpaceCat(command_prefix=get_prefix, intents=intents)
         bot.run(apikey)
     except discord.LoginFailure:
         if firstrun:
