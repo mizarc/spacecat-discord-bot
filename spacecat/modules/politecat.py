@@ -4,6 +4,7 @@ import os
 from PIL import Image
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from spacecat.helpers import constants
@@ -68,7 +69,7 @@ class PoliteCat(commands.Cog):
 
         return
 
-    @commands.command()
+    @app_commands.command()
     @perms.check()
     async def togglewebp(self, ctx):
         if self.webp_convert:
@@ -94,9 +95,9 @@ class PoliteCat(commands.Cog):
             description="Please specify a valid subcommand: `add/remove`")
         await ctx.send(embed=embed)
 
-    @reactcfg.command()
+    @reactcfg.group()
     @perms.check()
-    async def add(self, ctx, name):
+    async def add(self, ctx, name: str):
         """Add a reaction image"""
         # Check if attachment exists in message
         try:
@@ -121,7 +122,7 @@ class PoliteCat(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Check if file extention is valid and convert to webp when possible
+        # Check if file extension is valid and convert to webp when possible
         ext = image.filename.split(".")[-1]
         if ext == "webp" or ext == "gif":
             await image.save(f'{constants.DATA_DIR}reactions/{name}.{ext}')
@@ -138,9 +139,9 @@ class PoliteCat(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @reactcfg.command()
+    @reactcfg.group()
     @perms.check()
-    async def remove(self, ctx, name):
+    async def remove(self, ctx, name: str):
         """Remove a reaction image"""
         # Cancel if image name exists
         reactions = await self._get_reactions()
@@ -163,7 +164,7 @@ class PoliteCat(commands.Cog):
         await ctx.send(embed=embed)
         return
 
-    @commands.command()
+    @app_commands.command()
     @perms.check()
     async def reactlist(self, ctx):
         """List all reaction images"""
@@ -177,9 +178,9 @@ class PoliteCat(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-    @commands.command()
+    @app_commands.command()
     @perms.check()
-    async def react(self, ctx, name):
+    async def react(self, ctx, name: str):
         """Use an image/gif as a reaction"""
         # Try sending WebP
         try:
@@ -204,7 +205,7 @@ class PoliteCat(commands.Cog):
         await ctx.send(embed=embed)
 
     async def _get_reactions(self):
-        # Get all images from directoy and add to list
+        # Get all images from directory and add to list
         reactions = []
         for files in glob.glob(constants.DATA_DIR + "reactions/*"):
             existing_image = os.path.basename(os.path.splitext(files)[0])
@@ -212,5 +213,5 @@ class PoliteCat(commands.Cog):
         return reactions
 
 
-def setup(bot):
-    bot.add_cog(PoliteCat(bot))
+async def setup(bot):
+    await bot.add_cog(PoliteCat(bot))

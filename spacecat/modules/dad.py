@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from spacecat.helpers import constants
@@ -31,22 +32,22 @@ class Dad(commands.Cog):
                     await message.channel.send(qualitycontent)
                     return
 
-    @commands.command()
+    @app_commands.command()
     @perms.check()
-    async def toggledad(self, ctx):
+    async def toggledad(self, interaction):
         if self.toggle:
             self.toggle = False
             embed = discord.Embed(
                 colour=constants.EmbedStatus.NO.value,
                 description="Dad has been disabled")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
         elif not self.toggle:
             self.toggle = True
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description="Dad has been enabled")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
 
 
-def setup(bot):
-    bot.add_cog(Dad(bot))
+async def setup(bot):
+    await bot.add_cog(Dad(bot))
