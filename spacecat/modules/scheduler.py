@@ -37,40 +37,40 @@ class ReminderRepository:
         self.db.commit()
 
     def get_all(self):
-        """Get list of all playlists"""
+        """Get list of all reminders"""
         results = self.db.cursor().execute('SELECT * FROM reminders').fetchall()
-        playlists = []
+        reminders = []
         for result in results:
-            playlists.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5]))
-        return playlists
+            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5]))
+        return reminders
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM reminders WHERE id=?', (id_,)).fetchone()
         return Reminder(result[0], result[1], result[2], result[3], result[4], result[5])
 
     def get_by_guild(self, guild):
-        # Get list of all playlists in a guild
+        # Get list of all reminders in a guild
         cursor = self.db.cursor()
         values = (guild.id,)
         cursor.execute('SELECT * FROM reminders WHERE guild_id=?', values)
         results = cursor.fetchall()
 
-        playlists = []
+        reminders = []
         for result in results:
-            playlists.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5]))
-        return playlists
+            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5]))
+        return reminders
 
     def get_by_guild_and_user(self, guild, name):
-        # Get playlist by guild and playlist name
+        # Get reminder by guild and reminder name
         cursor = self.db.cursor()
         values = (guild.id, name)
         cursor.execute('SELECT * FROM reminders WHERE guild_id=? AND user_id=?', values)
         results = cursor.fetchall()
 
-        playlists = []
+        reminders = []
         for result in results:
-            playlists.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5]))
-        return playlists
+            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5]))
+        return reminders
 
     def get_first_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
@@ -80,13 +80,15 @@ class ReminderRepository:
 
     def add(self, reminder):
         cursor = self.db.cursor()
-        values = (str(reminder.id), reminder.name, reminder.guild_id, reminder.description)
+        values = (str(reminder.id), reminder.user_id, reminder.guild_id, reminder.channel_id,
+                  reminder.timestamp, reminder.message)
         cursor.execute('INSERT INTO reminders VALUES (?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, reminder):
         cursor = self.db.cursor()
-        values = (reminder.guild_id, reminder.name, reminder.description, reminder.id)
+        values = (reminder.user_id, reminder.guild_id, reminder.channel_id,
+                  reminder.timestamp, reminder.message, str(reminder.id))
         cursor.execute('UPDATE reminders SET user_id=?, guild_id=?, channel_id=?, '
                        'timestamp=?, message=? WHERE id=?', values)
         self.db.commit()
