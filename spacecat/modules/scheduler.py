@@ -133,7 +133,8 @@ class Scheduler(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.DEFAULT} Reminder!",
-            description=f"{self.bot.get_user(reminder.user_id)}, you asked me to remind you: \n\n {reminder.message}")
+            description=f"{self.bot.get_user(reminder.user_id).mention}, "
+                        f"you asked me to remind you: \n\n {reminder.message}")
         await channel.send(embed=embed)
 
     @app_commands.command()
