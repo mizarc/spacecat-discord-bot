@@ -23,8 +23,8 @@ class Reminder:
         self.message = message
 
     @classmethod
-    def create_new(cls, user, channel, timestamp, message):
-        return cls(uuid.uuid4(), user.id, channel.id, timestamp, message)
+    def create_new(cls, user, guild, channel, timestamp, message):
+        return cls(uuid.uuid4(), user.id, guild.id, channel.id, timestamp, message)
 
 
 class ReminderRepository:
