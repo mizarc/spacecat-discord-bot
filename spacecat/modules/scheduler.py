@@ -103,14 +103,48 @@ class ReminderRepository:
 class Scheduler(commands.Cog):
     """Schedule events to run at a later date"""
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: SpaceCat = bot
+        self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
+        self.reminders = ReminderRepository(self.database)
+        self.reminder_task = bot.loop.create_task(self.reminder_loop())
+
+    async def reminder_loop(self):
+        try:
+            while not self.bot.is_closed():
+                reminder = self.reminders.get_first_before_timestamp(time.time() + 86400)  # Get timers within 24 hours
+                if reminder.timestamp >= time.time():
+                    sleep_duration = (reminder.timestamp - time.time())
+                    await asyncio.sleep(sleep_duration)
+
+                await self.dispatch_reminder(reminder)
+        except asyncio.CancelledError:
+            raise
+        except (OSError, discord.ConnectionClosed):
+            self.reminder_task.cancel()
+            self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+
+    async def dispatch_reminder(self, reminder: Reminder):
+        self.reminders.remove(reminder)
+        self.bot.dispatch("reminder", reminder)
+
+    @commands.Cog.listener()
+    async def on_reminder(self, reminder):
+        channel = self.bot.get_channel(reminder.channel_id)
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.DEFAULT} Reminder!",
+            description=f"{self.bot.get_user(reminder.user_id)}, you asked me to remind you: \n\n {reminder.message}")
+        await channel.send(embed=embed)
 
     @app_commands.command()
     async def remindme(self, interaction, message: str, seconds: int = None, minutes: int = None, hours: int = None,
                        days: int = None, weeks: int = None, months: int = None, years: int = None):
 
         timestamp = await self.to_seconds(seconds, minutes, hours, days, weeks, months, years) + time.time()
-        reminder = Reminder.create_new(interaction.user, interaction.channel, timestamp, message)
+        reminder = Reminder.create_new(interaction.user, interaction.guild, interaction.channel, timestamp, message)
+        self.reminders.add(reminder)
+        self.reminder_task.cancel()
+        self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
 
     @staticmethod
     async def to_seconds(seconds, minutes, hours, days, weeks, months, years) -> int:
