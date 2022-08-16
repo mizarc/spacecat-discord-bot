@@ -137,17 +137,18 @@ class Scheduler(commands.Cog):
         await channel.send(embed=embed)
 
     @app_commands.command()
-    async def remindme(self, interaction, message: str, seconds: int = None, minutes: int = None, hours: int = None,
-                       days: int = None, weeks: int = None, months: int = None, years: int = None):
+    async def remindme(self, interaction, message: str, seconds: int = 0, minutes: int = 0, hours: int = 0,
+                       days: int = 0, weeks: int = 0, months: int = 0, years: int = 0):
 
         timestamp = await self.to_seconds(seconds, minutes, hours, days, weeks, months, years) + time.time()
         reminder = Reminder.create_new(interaction.user, interaction.guild, interaction.channel, timestamp, message)
         self.reminders.add(reminder)
         self.reminder_task.cancel()
         self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+        await interaction.response.send_message("Woop")
 
     @staticmethod
-    async def to_seconds(seconds, minutes, hours, days, weeks, months, years) -> int:
+    async def to_seconds(seconds=0, minutes=0, hours=0, days=0, weeks=0, months=0, years=0) -> int:
         total = seconds
         total += minutes * 60
         total += hours * 3600
