@@ -7,9 +7,10 @@ import uuid
 
 
 class Reminder:
-    def __init__(self, id_, user_id, channel_id, timestamp, message):
+    def __init__(self, id_, user_id, guild_id, channel_id, timestamp, message):
         self.id = id_
         self.user_id = user_id
+        self.guild_id = guild_id
         self.channel_id = channel_id
         self.timestamp = timestamp
         self.message = message
