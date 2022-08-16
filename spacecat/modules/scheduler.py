@@ -158,6 +158,49 @@ class Scheduler(commands.Cog):
         total += years * 31557600
         return total
 
+    @staticmethod
+    async def format_datetime(timedelta: datetime.timedelta) -> str:
+        years = timedelta.days // 365
+        months = (timedelta.days - years * 365) // 30
+        days = (timedelta.days - years * 365 - months * 30)
+
+        hours = timedelta.seconds // 3600
+        minutes = (timedelta.seconds - hours * 3600) // 60
+        seconds = (timedelta.seconds - hours * 3600 - minutes * 60)
+
+        output = ""
+        if years:
+            if years > 1:
+                output += f"{years} years, "
+            else:
+                output += f"{years} year, "
+        if months:
+            if months > 1:
+                output += f"{months} months, "
+            else:
+                output += f"{months} month, "
+        if days:
+            if days > 1:
+                output += f"{days} days, "
+            else:
+                output += f"{days} day, "
+        if hours:
+            if hours > 1:
+                output += f"{hours} hours, "
+            else:
+                output += f"{hours} hour, "
+        if minutes:
+            if minutes > 1:
+                output += f"{minutes} minutes, "
+            else:
+                output += f"{minutes} minute, "
+        if seconds:
+            if seconds > 1:
+                output += f"{seconds} seconds, "
+            else:
+                output += f"{seconds} second, "
+        return output[:-2]
+
 
 async def setup(bot):
     await bot.add_cog(Scheduler(bot))
