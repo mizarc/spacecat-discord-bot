@@ -161,8 +161,8 @@ class Scheduler(commands.Cog):
         total += hours * 3600
         total += days * 86400
         total += weeks * 604800
-        total += months * 2629800
-        total += years * 31557600
+        total += months * 2592000
+        total += years * 31536000
         return total
 
     @staticmethod
