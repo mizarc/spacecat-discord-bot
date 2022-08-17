@@ -169,7 +169,8 @@ class Scheduler(commands.Cog):
     async def format_datetime(timedelta: datetime.timedelta) -> str:
         years = timedelta.days // 365
         months = (timedelta.days - years * 365) // 30
-        days = (timedelta.days - years * 365 - months * 30)
+        weeks = (timedelta.days - years * 365 - months * 30) // 7
+        days = (timedelta.days - years * 365 - months * 30 - weeks * 7)
 
         hours = timedelta.seconds // 3600
         minutes = (timedelta.seconds - hours * 3600) // 60
@@ -186,6 +187,11 @@ class Scheduler(commands.Cog):
                 output += f"{months} months, "
             else:
                 output += f"{months} month, "
+        if weeks:
+            if weeks > 1:
+                output += f"{weeks} weeks, "
+            else:
+                output += f"{weeks} week, "
         if days:
             if days > 1:
                 output += f"{days} days, "
