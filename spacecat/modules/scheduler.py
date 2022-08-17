@@ -155,6 +155,12 @@ class Scheduler(commands.Cog):
                         f"{await self.format_datetime(datetime.timedelta(seconds=timestamp))}")
         await interaction.response.send_message(embed=embed)
 
+        reminder = Reminder.create_new(interaction.user, interaction.guild, interaction.channel,
+                                       await interaction.original_response(), dispatch_time, message)
+        self.reminders.add(reminder)
+        self.reminder_task.cancel()
+        self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+
     @staticmethod
     async def to_seconds(seconds=0, minutes=0, hours=0, days=0, weeks=0, months=0, years=0) -> int:
         total = seconds
