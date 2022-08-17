@@ -14,17 +14,18 @@ from spacecat.spacecat import SpaceCat
 
 
 class Reminder:
-    def __init__(self, id_, user_id, guild_id, channel_id, timestamp, message):
+    def __init__(self, id_, user_id, guild_id, channel_id, message_id, timestamp, message):
         self.id = id_
         self.user_id = user_id
         self.guild_id = guild_id
         self.channel_id = channel_id
+        self.message_id = message_id
         self.timestamp = timestamp
         self.message = message
 
     @classmethod
-    def create_new(cls, user, guild, channel, timestamp, message):
-        return cls(uuid.uuid4(), user.id, guild.id, channel.id, timestamp, message)
+    def create_new(cls, user, guild, channel, confirmation_message, timestamp, message):
+        return cls(uuid.uuid4(), user.id, guild.id, channel.id, confirmation_message.id, timestamp, message)
 
 
 class ReminderRepository:
@@ -33,7 +34,7 @@ class ReminderRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS reminders (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER, '
-                       'channel_id INTEGER, timestamp INTEGER, message TEXT)')
+                       'channel_id INTEGER, message_id INTEGER, timestamp INTEGER, message TEXT)')
         self.db.commit()
 
     def get_all(self):
@@ -41,12 +42,12 @@ class ReminderRepository:
         results = self.db.cursor().execute('SELECT * FROM reminders').fetchall()
         reminders = []
         for result in results:
-            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5]))
+            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6]))
         return reminders
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM reminders WHERE id=?', (id_,)).fetchone()
-        return Reminder(result[0], result[1], result[2], result[3], result[4], result[5])
+        return Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6])
 
     def get_by_guild(self, guild):
         # Get list of all reminders in a guild
@@ -57,7 +58,7 @@ class ReminderRepository:
 
         reminders = []
         for result in results:
-            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5]))
+            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6]))
         return reminders
 
     def get_by_guild_and_user(self, guild, name):
@@ -69,20 +70,20 @@ class ReminderRepository:
 
         reminders = []
         for result in results:
-            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5]))
+            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6]))
         return reminders
 
     def get_first_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
         result = cursor.execute('SELECT * FROM reminders WHERE timestamp < ? ORDER BY timestamp',
                                 (timestamp,)).fetchone()
-        return Reminder(result[0], result[1], result[2], result[3], result[4], result[5])
+        return Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6])
 
     def add(self, reminder):
         cursor = self.db.cursor()
-        values = (str(reminder.id), reminder.user_id, reminder.guild_id, reminder.channel_id,
+        values = (str(reminder.id), reminder.user_id, reminder.guild_id, reminder.channel_id, reminder.message_id,
                   reminder.timestamp, reminder.message)
-        cursor.execute('INSERT INTO reminders VALUES (?, ?, ?, ?, ?, ?)', values)
+        cursor.execute('INSERT INTO reminders VALUES (?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, reminder):
@@ -135,7 +136,11 @@ class Scheduler(commands.Cog):
             title=f"{constants.EmbedIcon.DEFAULT} Reminder!",
             description=f"{self.bot.get_user(reminder.user_id).mention}, "
                         f"you asked me to remind you: \n\n {reminder.message}")
-        await channel.send(embed=embed)
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label='Go to original message',
+                                        url=f'https://discord.com/channels/{reminder.guild_id}/'
+                                            f'{reminder.channel_id}/{reminder.message_id}'))
+        await channel.send(embed=embed, view=view)
 
     @app_commands.command()
     async def remindme(self, interaction, message: str, seconds: int = 0, minutes: int = 0, hours: int = 0,
@@ -143,10 +148,6 @@ class Scheduler(commands.Cog):
 
         timestamp = await self.to_seconds(seconds, minutes, hours, days, weeks, months, years)
         dispatch_time = timestamp + time.time()
-        reminder = Reminder.create_new(interaction.user, interaction.guild, interaction.channel, dispatch_time, message)
-        self.reminders.add(reminder)
-        self.reminder_task.cancel()
-        self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
 
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
