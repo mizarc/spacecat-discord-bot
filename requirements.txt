@@ -1,5 +1,5 @@
 beautifulsoup4==4.11.1
-discord.py[voice] @ git+https://github.com/Rapptz/discord.py
+discord.py[voice]
 Pillow==9.2.0
 requests==2.28.1
 toml==0.10.2
