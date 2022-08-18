@@ -14,18 +14,20 @@ from spacecat.spacecat import SpaceCat
 
 
 class Reminder:
-    def __init__(self, id_, user_id, guild_id, channel_id, message_id, timestamp, message):
+    def __init__(self, id_, user_id, guild_id, channel_id, message_id, creation_time, dispatch_time, message):
         self.id = id_
         self.user_id = user_id
         self.guild_id = guild_id
         self.channel_id = channel_id
         self.message_id = message_id
-        self.timestamp = timestamp
+        self.creation_time = creation_time
+        self.dispatch_time = dispatch_time
         self.message = message
 
     @classmethod
-    def create_new(cls, user, guild, channel, confirmation_message, timestamp, message):
-        return cls(uuid.uuid4(), user.id, guild.id, channel.id, confirmation_message.id, timestamp, message)
+    def create_new(cls, user, guild, channel, confirmation_message, creation_time, dispatch_time, message):
+        return cls(uuid.uuid4(), user.id, guild.id, channel.id, confirmation_message.id, creation_time, dispatch_time,
+                   message)
 
 
 class ReminderRepository:
@@ -34,7 +36,8 @@ class ReminderRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS reminders (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER, '
-                       'channel_id INTEGER, message_id INTEGER, timestamp INTEGER, message TEXT)')
+                       'channel_id INTEGER, message_id INTEGER, creation_time INTEGER, dispatch_time INTEGER, '
+                       'message TEXT)')
         self.db.commit()
 
     def get_all(self):
@@ -42,12 +45,13 @@ class ReminderRepository:
         results = self.db.cursor().execute('SELECT * FROM reminders').fetchall()
         reminders = []
         for result in results:
-            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6]))
+            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6],
+                                      result[7]))
         return reminders
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM reminders WHERE id=?', (id_,)).fetchone()
-        return Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6])
+        return Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7])
 
     def get_by_guild(self, guild):
         # Get list of all reminders in a guild
@@ -58,7 +62,8 @@ class ReminderRepository:
 
         reminders = []
         for result in results:
-            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6]))
+            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6],
+                                      result[7]))
         return reminders
 
     def get_by_guild_and_user(self, guild, name):
@@ -70,28 +75,29 @@ class ReminderRepository:
 
         reminders = []
         for result in results:
-            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6]))
+            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6],
+                                      result[7]))
         return reminders
 
     def get_first_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
-        result = cursor.execute('SELECT * FROM reminders WHERE timestamp < ? ORDER BY timestamp',
+        result = cursor.execute('SELECT * FROM reminders WHERE dispatch_time < ? ORDER BY dispatch_time',
                                 (timestamp,)).fetchone()
-        return Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6])
+        return Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7])
 
     def add(self, reminder):
         cursor = self.db.cursor()
         values = (str(reminder.id), reminder.user_id, reminder.guild_id, reminder.channel_id, reminder.message_id,
-                  reminder.timestamp, reminder.message)
-        cursor.execute('INSERT INTO reminders VALUES (?, ?, ?, ?, ?, ?, ?)', values)
+                  reminder.creation_time, reminder.dispatch_time, reminder.message)
+        cursor.execute('INSERT INTO reminders VALUES (?, ?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, reminder):
         cursor = self.db.cursor()
-        values = (reminder.user_id, reminder.guild_id, reminder.channel_id,
-                  reminder.timestamp, reminder.message, str(reminder.id))
-        cursor.execute('UPDATE reminders SET user_id=?, guild_id=?, channel_id=?, '
-                       'timestamp=?, message=? WHERE id=?', values)
+        values = (reminder.user_id, reminder.guild_id, reminder.channel_id, reminder.message_id,
+                  reminder.creation_time, reminder.dispatch_time, reminder.message, str(reminder.id))
+        cursor.execute('UPDATE reminders SET user_id=?, guild_id=?, channel_id=?, message_id=?'
+                       'creation_time=?, dispatch_time=?, message=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, reminder):
@@ -113,8 +119,8 @@ class Scheduler(commands.Cog):
         try:
             while not self.bot.is_closed():
                 reminder = self.reminders.get_first_before_timestamp(time.time() + 86400)  # Get timers within 24 hours
-                if reminder.timestamp >= time.time():
-                    sleep_duration = (reminder.timestamp - time.time())
+                if reminder.dispatch_time >= time.time():
+                    sleep_duration = (reminder.dispatch_time - time.time())
                     await asyncio.sleep(sleep_duration)
 
                 await self.dispatch_reminder(reminder)
@@ -134,8 +140,8 @@ class Scheduler(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.DEFAULT} Reminder!",
-            description=f"{self.bot.get_user(reminder.user_id).mention}, "
-                        f"you asked me to remind you: \n\n {reminder.message}")
+            description=f"<@{reminder.user_id}>**, <t:{int(reminder.dispatch_time)}:R> "
+                        f"you asked me to remind you:** \n {reminder.message}")
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label='Go to original message',
                                         url=f'https://discord.com/channels/{reminder.guild_id}/'
@@ -156,7 +162,7 @@ class Scheduler(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
         reminder = Reminder.create_new(interaction.user, interaction.guild, interaction.channel,
-                                       await interaction.original_response(), dispatch_time, message)
+                                       await interaction.original_response(), time.time(), dispatch_time, message)
         self.reminders.add(reminder)
         self.reminder_task.cancel()
         self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
