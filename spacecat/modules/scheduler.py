@@ -127,6 +127,79 @@ class ReminderRepository:
         self.db.commit()
 
 
+class Event:
+    def __init__(self, id_, user_id, dispatch_time, repeat_interval, function_name, arguments):
+        self.id = id_
+        self.user_id = user_id
+        self.dispatch_time = dispatch_time
+        self.repeat_interval = repeat_interval
+        self.function_name = function_name
+        self.arguments = arguments
+
+    @classmethod
+    def create_new(cls, user_id, dispatch_time, repeat_interval, function_name, arguments):
+        return cls(uuid.uuid4(), user_id, dispatch_time, repeat_interval, function_name, arguments)
+
+class EventRepository:
+    def __init__(self, database):
+        self.db = database
+        cursor = self.db.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, user_id INTEGER, '
+                       'dispatch_time INTEGER, repeat_interval TEXT, function_name TEXT, arguments TEXT)')
+        self.db.commit()
+
+    def get_all(self):
+        """Get list of all reminders"""
+        results = self.db.cursor().execute('SELECT * FROM events').fetchall()
+        reminders = []
+        for result in results:
+            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], result[5]))
+        return reminders
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (id_,)).fetchone()
+        return Event(result[0], result[1], result[2], result[3], result[4], result[5])
+
+    def get_by_guild(self, guild):
+        # Get list of all reminders in a guild
+        cursor = self.db.cursor()
+        values = (guild.id,)
+        cursor.execute('SELECT * FROM events WHERE guild_id=?', values)
+        results = cursor.fetchall()
+
+        reminders = []
+        for result in results:
+            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], result[5]))
+        return reminders
+
+    def get_first_before_timestamp(self, timestamp):
+        cursor = self.db.cursor()
+        result = cursor.execute('SELECT * FROM events WHERE dispatch_time < ? ORDER BY dispatch_time',
+                                (timestamp,)).fetchone()
+        return Event(result[0], result[1], result[2], result[3], result[4], result[5])
+
+    def add(self, event):
+        cursor = self.db.cursor()
+        values = (str(event.id), event.user_id, event.dispatch_time, event.repeat_interval, event.function_name,
+                  event.arguments)
+        cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?)', values)
+        self.db.commit()
+
+    def update(self, event):
+        cursor = self.db.cursor()
+        values = (event.user_id, event.dispatch_time, event.repeat_interval, event.function_name,
+                  event.arguments, str(event.id))
+        cursor.execute('UPDATE events SET user_id=?, dispatch_time=?, repeat_interval=?, function_name=?, arguments=? '
+                       'WHERE id=?', values)
+        self.db.commit()
+
+    def remove(self, event):
+        cursor = self.db.cursor()
+        values = (event.id,)
+        cursor.execute('DELETE FROM events WHERE id=?', values)
+        self.db.commit()
+
 class Scheduler(commands.Cog):
     """Schedule events to run at a later date"""
     def __init__(self, bot):
