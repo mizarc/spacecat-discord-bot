@@ -1,5 +1,6 @@
 import asyncio
 import sqlite3
+from enum import Enum
 
 import discord
 from discord import app_commands
@@ -11,6 +12,25 @@ import uuid
 
 from spacecat.helpers import constants
 from spacecat.spacecat import SpaceCat
+
+
+class Repeat(Enum):
+    No = 0,
+    Hourly = 1,
+    Daily = 2,
+    Weekly = 3,
+    Monthly = 4,
+    Yearly = 5
+
+
+class Day(Enum):
+    Monday = 0,
+    Tuesday = 2,
+    Wednesday = 3,
+    Thursday = 4,
+    Friday = 5,
+    Saturday = 6,
+    Sunday = 7
 
 
 class Reminder:
