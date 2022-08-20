@@ -142,12 +142,13 @@ class Event:
     def create_new(cls, user_id, guild_id, dispatch_time, repeat_interval, name, function_name, arguments):
         return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, repeat_interval, name, function_name, arguments)
 
+
 class EventRepository:
     def __init__(self, database):
         self.db = database
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER'
+        cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER, '
                        'dispatch_time INTEGER, repeat_interval TEXT, name TEXT, function_name TEXT, arguments TEXT)')
         self.db.commit()
 
@@ -185,14 +186,14 @@ class EventRepository:
 
     def add(self, event):
         cursor = self.db.cursor()
-        values = (str(event.id), event.user_id, event.dispatch_time, event.repeat_interval, event.name,
-                  event.function_name, event.arguments)
+        values = (str(event.id), event.user_id, event.guild_id, event.dispatch_time, event.repeat_interval.name,
+                  event.name, event.function_name, event.arguments)
         cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, event):
         cursor = self.db.cursor()
-        values = (event.user_id, event.guild_id, event.dispatch_time, event.repeat_interval, event.name,
+        values = (event.user_id, event.guild_id, event.dispatch_time, event.repeat_interval.name, event.name,
                   event.function_name, event.arguments, str(event.id))
         cursor.execute('UPDATE events SET user_id=?, guild_id=?, dispatch_time=?, repeat_interval=?, name=?, '
                        'function_name=?, arguments=? WHERE id=?', values)
