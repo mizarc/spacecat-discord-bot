@@ -212,6 +212,7 @@ class Scheduler(commands.Cog):
         self.bot: SpaceCat = bot
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
         self.reminders = ReminderRepository(self.database)
+        self.events = EventRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
 
     async def reminder_loop(self):
