@@ -215,6 +215,9 @@ class Scheduler(commands.Cog):
         self.events = EventRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
 
+    schedule_group = app_commands.Group(
+        name="schedule", description="Allows you to run an function at a scheduled time.")
+
     async def reminder_loop(self):
         try:
             while not self.bot.is_closed():
