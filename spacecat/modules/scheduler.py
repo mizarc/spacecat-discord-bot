@@ -265,6 +265,47 @@ class Scheduler(commands.Cog):
         self.reminder_task.cancel()
         self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
 
+    @schedule_group.command(name="message")
+    async def schedule_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
+                               time_string: str, date_string: str, repeat: Repeat = Repeat.No,
+                               repeat_multiplier: int = 0):
+        time_ = await self.parse_time(time_string)
+        if date_string is None:
+            date = datetime.date.today()
+        else:
+            date = await self.parse_date(date_string)
+
+        combined = datetime.datetime.combine(date, time_)
+        timestamp = combined.timestamp()
+        if timestamp < time.time():
+            combined.replace(day=combined.day + 1)
+        timestamp = combined.timestamp()
+        print(timestamp)
+
+        self.events.add(Event.create_new(
+            interaction.user.id, interaction.guild_id, timestamp, repeat, title, "message", f"{channel.id} {message}"))
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            description=f"A message event has been set for "
+                        f"{combined.day}/{combined.month}/{combined.year} "
+                        f"at {combined.hour}:{combined.minute}"
+                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
+        await interaction.response.send_message(embed=embed)
+
+    @staticmethod
+    async def parse_time(time_string):
+        split = time_string.split(':')
+        return datetime.time(hour=int(split[0]), minute=int(split[1]))
+
+    @staticmethod
+    async def parse_date(date_string):
+        split = date_string.split('/')
+        if not split:
+            split = date_string.split(':')
+        if not split:
+            raise
+        return datetime.date(day=int(split[0]), month=int(split[1]), year=int(split[2]))
+
     @staticmethod
     async def to_seconds(seconds=0, minutes=0, hours=0, days=0, weeks=0, months=0, years=0) -> int:
         total = seconds
@@ -324,6 +365,25 @@ class Scheduler(commands.Cog):
             else:
                 output += f"{seconds} second, "
         return output[:-2]
+
+    @staticmethod
+    async def format_repeat_message(interval: Repeat, multiplier: int):
+        if interval == Repeat.Hourly:
+            interval_string = "hour"
+        elif interval == Repeat.Daily:
+            interval_string = "day"
+        elif interval == Repeat.Weekly:
+            interval_string = "week"
+        elif interval == Repeat.Monthly:
+            interval_string = "month"
+        elif interval == Repeat.Yearly:
+            interval_string = "year"
+        else:
+            return "."
+
+        if multiplier:
+            return f", repeating every {interval_string}."
+        return f", repeating every {multiplier} {interval_string}s."
 
 
 async def setup(bot):
