@@ -214,6 +214,7 @@ class Scheduler(commands.Cog):
         self.reminders = ReminderRepository(self.database)
         self.events = EventRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
+        self.event_task = bot.loop.create_task(self.event_loop())
 
     schedule_group = app_commands.Group(
         name="schedule", description="Allows you to run an function at a scheduled time.")
@@ -237,6 +238,25 @@ class Scheduler(commands.Cog):
         self.reminders.remove(reminder)
         self.bot.dispatch("reminder", reminder)
 
+    async def event_loop(self):
+        try:
+            while not self.bot.is_closed():
+                event = self.events.get_first_before_timestamp(time.time() + 86400)  # Get timers within 24 hours
+                if event.dispatch_time >= time.time():
+                    sleep_duration = (event.dispatch_time - time.time())
+                    await asyncio.sleep(sleep_duration)
+
+                await self.dispatch_event(event)
+        except asyncio.CancelledError:
+            raise
+        except (OSError, discord.ConnectionClosed):
+            self.event_task.cancel()
+            self.event_task = self.bot.loop.create_task(self.event_loop())
+
+    async def dispatch_event(self, event: Event):
+        self.events.remove(event)
+        self.bot.dispatch(f"{event.function_name}_event", event)
+
     @commands.Cog.listener()
     async def on_reminder(self, reminder):
         channel = self.bot.get_channel(reminder.channel_id)
@@ -250,6 +270,15 @@ class Scheduler(commands.Cog):
                                         url=f'https://discord.com/channels/{reminder.guild_id}/'
                                             f'{reminder.channel_id}/{reminder.message_id}'))
         await channel.send(embed=embed, view=view)
+
+    @commands.Cog.listener()
+    async def on_message_event(self, event):
+        channel = self.bot.get_channel(int(event.arguments.split(' ')[0]))
+        await channel.send(embed=discord.Embed(
+            colour=constants.EmbedStatus.SPECIAL.value,
+            title=f"{event.name}",
+            description=f"{event.arguments.split(' ', 1)[1]}"
+        ))
 
     @app_commands.command()
     async def remindme(self, interaction, message: str, seconds: int = 0, minutes: int = 0, hours: int = 0,
@@ -296,6 +325,8 @@ class Scheduler(commands.Cog):
                         f"at {combined.hour}:{combined.minute}"
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
+        self.event_task.cancel()
+        self.event_task = self.bot.loop.create_task(self.event_loop())
 
     @staticmethod
     async def parse_time(time_string):
