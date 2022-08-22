@@ -280,6 +280,19 @@ class Scheduler(commands.Cog):
             description=f"{event.arguments.split(' ', 1)[1]}"
         ))
 
+    @commands.Cog.listener()
+    async def on_voicekick_event(self, event):
+        voice_channel = self.bot.get_channel(int(event.arguments.split(' ')[0]))
+        for member in voice_channel.members:
+            await member.move_to(None)
+
+    @commands.Cog.listener()
+    async def on_voicemove_event(self, event):
+        current_channel = self.bot.get_channel(int(event.arguments.split(' ')[0]))
+        new_channel = self.bot.get_channel(int(event.arguments.split(' ')[1]))
+        for member in current_channel.members:
+            await member.move_to(new_channel)
+
     @app_commands.command()
     async def remindme(self, interaction, message: str, seconds: int = 0, minutes: int = 0, hours: int = 0,
                        days: int = 0, weeks: int = 0, months: int = 0, years: int = 0):
@@ -303,6 +316,40 @@ class Scheduler(commands.Cog):
     async def schedule_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
                                time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                repeat_multiplier: int = 0):
+        selected_datetime = await self.fetch_future_datetime(time_string, date_string)
+
+        self.events.add(Event.create_new(
+            interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
+            repeat, title, "message", f"{channel.id} {message}"))
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            description=f"A message event has been set for "
+                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
+                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
+                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
+        await interaction.response.send_message(embed=embed)
+        self.event_task.cancel()
+        self.event_task = self.bot.loop.create_task(self.event_loop())
+
+    @schedule_group.command(name="voicekick")
+    async def schedule_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel, time_string: str,
+                                 date_string: str, repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
+        selected_datetime = await self.fetch_future_datetime(time_string, date_string)
+
+        self.events.add(Event.create_new(
+            interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
+            repeat, title, "voicekick", f"{voice_channel.id}"))
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            description=f"A voicekick event has been set for "
+                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
+                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
+                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
+        await interaction.response.send_message(embed=embed)
+        self.event_task.cancel()
+        self.event_task = self.bot.loop.create_task(self.event_loop())
+
+    async def fetch_future_datetime(self, time_string: str, date_string: str = None):
         time_ = await self.parse_time(time_string)
         if date_string is None:
             date = datetime.date.today()
@@ -313,20 +360,8 @@ class Scheduler(commands.Cog):
         timestamp = combined.timestamp()
         if timestamp < time.time():
             combined.replace(day=combined.day + 1)
-        timestamp = combined.timestamp()
         print(timestamp)
-
-        self.events.add(Event.create_new(
-            interaction.user.id, interaction.guild_id, timestamp, repeat, title, "message", f"{channel.id} {message}"))
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
-            description=f"A message event has been set for "
-                        f"{combined.day}/{combined.month}/{combined.year} "
-                        f"at {combined.hour}:{combined.minute}"
-                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
-        await interaction.response.send_message(embed=embed)
-        self.event_task.cancel()
-        self.event_task = self.bot.loop.create_task(self.event_loop())
+        return combined
 
     @staticmethod
     async def parse_time(time_string):
