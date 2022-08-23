@@ -5,17 +5,69 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import toml
-
 from spacecat.helpers import constants
 from spacecat.helpers import perms
-from spacecat.modules.configuration import Configuration
+
+
+class ServerSettings:
+    def __init__(self, id_, timezone):
+        self.id = id_
+        self.timezone = timezone
+
+
+class ServerSettingsRepository:
+    def __init__(self, database):
+        self.db = database
+        cursor = self.db.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute('CREATE TABLE IF NOT EXISTS server_settings (server_id INTEGER PRIMARY KEY, timezone TEXT)')
+        self.db.commit()
+
+    def get_all(self):
+        """Get list of all reminders"""
+        results = self.db.cursor().execute('SELECT * FROM server_settings').fetchall()
+        reminders = []
+        for result in results:
+            reminders.append(ServerSettings(result[0], result[1]))
+        return reminders
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM server_settings WHERE id=?', (id_,)).fetchone()
+        return ServerSettings(result[0], result[1])
+
+    def get_by_guild(self, guild):
+        # Get list of all reminders in a guild
+        cursor = self.db.cursor()
+        values = (guild.id,)
+        cursor.execute('SELECT * FROM server_settings WHERE guild_id=?', values)
+        result = cursor.fetchone()
+        return ServerSettings(result[0], result[1])
+
+    def add(self, server_settings):
+        cursor = self.db.cursor()
+        values = (str(server_settings.id), server_settings.timezone)
+        cursor.execute('INSERT INTO server_settings VALUES (?, ?)', values)
+        self.db.commit()
+
+    def update(self, server_settings):
+        cursor = self.db.cursor()
+        values = (server_settings.timezone, str(server_settings.id))
+        cursor.execute('UPDATE server_settings timezone=? WHERE id=?', values)
+        self.db.commit()
+
+    def remove(self, server_settings):
+        cursor = self.db.cursor()
+        values = (server_settings.id,)
+        cursor.execute('DELETE FROM server_settings WHERE id=?', values)
+        self.db.commit()
 
 
 class Administration(commands.Cog):
     """Modify server wide settings"""
     def __init__(self, bot):
         self.bot = bot
+        self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
+        self.server_settings = ServerSettingsRepository(self.database)
 
     alias_group = app_commands.Group(name="alias", description="...")
 
@@ -25,9 +77,6 @@ class Administration(commands.Cog):
         cursor = db.cursor()
 
         # Create tables if they don't exist
-        cursor.execute(
-            'CREATE TABLE IF NOT EXISTS server_settings'
-            '(server_id INTEGER PRIMARY KEY, prefix TEXT, advanced_permission BOOLEAN)')
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS command_alias'
             '(server_id INTEGER, alias TEXT, command TEXT)')
@@ -51,6 +100,14 @@ class Administration(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         await self._add_server_entry(guild.id)
+
+    @app_commands.command()
+    async def timezone(self, interaction: discord.Interaction, region):
+        server_settings = self.server_settings.get_by_guild(interaction.guild)
+        server_settings.timezone = region
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Timezone has been set to {region}. This will apply to time based commands."))
 
     @alias_group.command(name="add")
     @perms.check()
