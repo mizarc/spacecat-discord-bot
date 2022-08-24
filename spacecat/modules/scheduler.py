@@ -4,13 +4,15 @@ from enum import Enum
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 import datetime
+import pytz
 import time
 import uuid
 
 from spacecat.helpers import constants
+from spacecat.modules.administration import ServerSettingsRepository
 from spacecat.spacecat import SpaceCat
 
 
@@ -316,7 +318,7 @@ class Scheduler(commands.Cog):
     async def schedule_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
                                time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                repeat_multiplier: int = 0):
-        selected_datetime = await self.fetch_future_datetime(time_string, date_string)
+        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
 
         self.events.add(Event.create_new(
             interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
@@ -334,7 +336,7 @@ class Scheduler(commands.Cog):
     @schedule_group.command(name="voicekick")
     async def schedule_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel, time_string: str,
                                  date_string: str, repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
-        selected_datetime = await self.fetch_future_datetime(time_string, date_string)
+        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
 
         self.events.add(Event.create_new(
             interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
@@ -349,18 +351,26 @@ class Scheduler(commands.Cog):
         self.event_task.cancel()
         self.event_task = self.bot.loop.create_task(self.event_loop())
 
-    async def fetch_future_datetime(self, time_string: str, date_string: str = None):
+    async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
+        administration = self.bot.get_cog("Administration")
+        servers_settings: ServerSettingsRepository = administration.server_settings
+        server_settings = servers_settings.get_by_guild(guild)
+
+        if server_settings.timezone is not None:
+            timezone = pytz.timezone(server_settings.timezone)
+        else:
+            timezone = pytz.utc
+
         time_ = await self.parse_time(time_string)
         if date_string is None:
             date = datetime.date.today()
         else:
             date = await self.parse_date(date_string)
 
-        combined = datetime.datetime.combine(date, time_)
+        combined = timezone.localize(datetime.datetime.combine(date, time_))
         timestamp = combined.timestamp()
         if timestamp < time.time():
             combined.replace(day=combined.day + 1)
-        print(timestamp)
         return combined
 
     @staticmethod
