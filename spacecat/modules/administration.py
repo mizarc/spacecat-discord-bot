@@ -20,7 +20,7 @@ class ServerSettingsRepository:
         self.db = database
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS server_settings (server_id INTEGER PRIMARY KEY, timezone TEXT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS server_settings (id INTEGER PRIMARY KEY, timezone TEXT)')
         self.db.commit()
 
     def get_all(self):
@@ -31,16 +31,8 @@ class ServerSettingsRepository:
             reminders.append(ServerSettings(result[0], result[1]))
         return reminders
 
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM server_settings WHERE id=?', (id_,)).fetchone()
-        return ServerSettings(result[0], result[1])
-
     def get_by_guild(self, guild):
-        # Get list of all reminders in a guild
-        cursor = self.db.cursor()
-        values = (guild.id,)
-        cursor.execute('SELECT * FROM server_settings WHERE guild_id=?', values)
-        result = cursor.fetchone()
+        result = self.db.cursor().execute('SELECT * FROM server_settings WHERE id=?', (guild.id,)).fetchone()
         return ServerSettings(result[0], result[1])
 
     def add(self, server_settings):
@@ -52,7 +44,7 @@ class ServerSettingsRepository:
     def update(self, server_settings):
         cursor = self.db.cursor()
         values = (server_settings.timezone, str(server_settings.id))
-        cursor.execute('UPDATE server_settings timezone=? WHERE id=?', values)
+        cursor.execute('UPDATE server_settings SET timezone=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, server_settings):
@@ -83,7 +75,7 @@ class Administration(commands.Cog):
 
         # Compare bot servers and database servers to check if the bot was
         # added to servers while the bot was offline
-        cursor.execute('SELECT server_id FROM server_settings')
+        cursor.execute('SELECT id FROM server_settings')
         servers = self.bot.guilds
         server_ids = {server.id for server in servers}
         db_servers = cursor.fetchall()
@@ -102,9 +94,10 @@ class Administration(commands.Cog):
         await self._add_server_entry(guild.id)
 
     @app_commands.command()
-    async def timezone(self, interaction: discord.Interaction, region):
+    async def timezone(self, interaction: discord.Interaction, region: str):
         server_settings = self.server_settings.get_by_guild(interaction.guild)
         server_settings.timezone = region
+        self.server_settings.update(server_settings)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Timezone has been set to {region}. This will apply to time based commands."))
@@ -225,9 +218,9 @@ class Administration(commands.Cog):
     async def _add_server_entry(self, guild):
         db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
         cursor = db.cursor()
-        value = (guild, None, None)
+        value = (guild, None)
         cursor.execute(
-            'INSERT OR IGNORE INTO server_settings VALUES (?,?,?)', value)
+            'INSERT OR IGNORE INTO server_settings VALUES (?,?)', value)
         db.commit()
         db.close()
 
