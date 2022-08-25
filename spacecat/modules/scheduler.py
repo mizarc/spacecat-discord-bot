@@ -164,13 +164,13 @@ class EventRepository:
         results = self.db.cursor().execute('SELECT * FROM events').fetchall()
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], result[5], result[6],
+            reminders.append(Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
                                    result[7], result[8]))
         return reminders
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (id_,)).fetchone()
-        return Event(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8])
+        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6], result[7], result[8])
 
     def get_by_guild(self, guild):
         # Get list of all reminders in a guild
@@ -181,27 +181,29 @@ class EventRepository:
 
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], result[5], result[6],
+            reminders.append(Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
                                    result[7], result[8]))
         return reminders
 
     def get_repeating(self):
         # Get list of all reminders in a guild
         cursor = self.db.cursor()
-        cursor.execute('SELECT * FROM events WHERE NOT repeat_interval="No"')
+        cursor.execute('SELECT * FROM events WHERE NOT repeat_interval=?', ('No',))
         results = cursor.fetchall()
 
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], result[5], result[6],
+            reminders.append(Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
                                    result[7], result[8]))
         return reminders
 
     def get_first_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
-        result = cursor.execute('SELECT * FROM events WHERE dispatch_time < ? ORDER BY dispatch_time',
+        result = cursor.execute('SELECT * FROM events '
+                                'WHERE dispatch_time < ? AND repeat_interval="No" ORDER BY dispatch_time',
                                 (timestamp,)).fetchone()
-        return Event(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8])
+        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6], result[7],
+                     result[8])
 
     def add(self, event):
         cursor = self.db.cursor()
