@@ -238,8 +238,7 @@ class Scheduler(commands.Cog):
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def cog_load(self):
         await self.init_repeating_events()
         await self.repeating_event_loop()
 
