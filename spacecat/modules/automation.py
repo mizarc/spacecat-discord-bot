@@ -228,7 +228,7 @@ class EventRepository:
         self.db.commit()
 
 
-class Scheduler(commands.Cog):
+class Automation(commands.Cog):
     """Schedule events to run at a later date"""
     def __init__(self, bot):
         self.bot: SpaceCat = bot
@@ -527,4 +527,4 @@ class Scheduler(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(Scheduler(bot))
+    await bot.add_cog(Automation(bot))
