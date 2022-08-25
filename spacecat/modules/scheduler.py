@@ -8,6 +8,7 @@ from discord.ext import commands
 
 import datetime
 import pytz
+import schedule
 import time
 import uuid
 
@@ -237,8 +238,29 @@ class Scheduler(commands.Cog):
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        await self.init_repeating_events()
+        await self.repeating_event_loop()
+
     schedule_group = app_commands.Group(
         name="schedule", description="Allows you to run an function at a scheduled time.")
+
+    async def init_repeating_events(self):
+        events = self.events.get_repeating()
+        for event in events:
+            await self.add_repeating_event(event)
+
+    async def add_repeating_event(self, event):
+        dt = datetime.datetime.fromtimestamp(event.dispatch_time)
+        scheduled_event = schedule.every(event.repeat_multiplier)
+        if event.repeat_interval == Repeat.Hourly:
+            scheduled_event.hours.at(f":{dt.time().minute}")
+        elif event.repeat_interval == Repeat.Daily:
+            scheduled_event.days(f"{dt.time().hour}:{dt.time().minute}")
+        # elif event.repeat_interval == Repeat.Weekly:
+        #    scheduled_event.monday()
+        scheduled_event.do(self.bot.dispatch, f"{event.function_name}_event", event)
 
     async def reminder_loop(self):
         try:
@@ -277,6 +299,11 @@ class Scheduler(commands.Cog):
     async def dispatch_event(self, event: Event):
         self.events.remove(event)
         self.bot.dispatch(f"{event.function_name}_event", event)
+
+    async def repeating_event_loop(self):
+        while True:
+            schedule.run_pending()
+            await asyncio.sleep(1)
 
     @commands.Cog.listener()
     async def on_reminder(self, reminder):
@@ -339,9 +366,9 @@ class Scheduler(commands.Cog):
                                repeat_multiplier: int = 0):
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
 
-        self.events.add(Event.create_new(
-            interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
-            repeat, title, "message", f"{channel.id} {message}"))
+        event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
+                                 repeat, repeat_multiplier, title, "message", f"{channel.id} {message}")
+        self.events.add(event)
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description=f"A message event has been set for "
@@ -349,17 +376,21 @@ class Scheduler(commands.Cog):
                         f"at {selected_datetime.hour}:{selected_datetime.minute}"
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
-        self.event_task.cancel()
-        self.event_task = self.bot.loop.create_task(self.event_loop())
+
+        if repeat == Repeat.No:
+            self.event_task.cancel()
+            self.event_task = self.bot.loop.create_task(self.event_loop())
+            return
+        await self.add_repeating_event(event)
 
     @schedule_group.command(name="voicekick")
     async def schedule_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel, time_string: str,
                                  date_string: str, repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
 
-        self.events.add(Event.create_new(
-            interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
-            repeat, title, "voicekick", f"{voice_channel.id}"))
+        event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
+                                 repeat, repeat_multiplier, title, "voicekick", f"{voice_channel.id}")
+        self.events.add(event)
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description=f"A voicekick event has been set for "
@@ -367,8 +398,12 @@ class Scheduler(commands.Cog):
                         f"at {selected_datetime.hour}:{selected_datetime.minute}"
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
-        self.event_task.cancel()
-        self.event_task = self.bot.loop.create_task(self.event_loop())
+
+        if repeat == Repeat.No:
+            self.event_task.cancel()
+            self.event_task = self.bot.loop.create_task(self.event_loop())
+            return
+        await self.add_repeating_event(event)
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
         administration = self.bot.get_cog("Administration")
@@ -484,6 +519,12 @@ class Scheduler(commands.Cog):
         if multiplier:
             return f", repeating every {interval_string}."
         return f", repeating every {multiplier} {interval_string}s."
+
+    @staticmethod
+    async def int_to_schedule_day(numbered_day: int) -> property:
+        days = [schedule.Job.monday, schedule.Job.tuesday, schedule.Job.wednesday, schedule.Job.thursday,
+                schedule.Job.friday, schedule.Job.saturday, schedule.Job.sunday]
+        return days[numbered_day]
 
 
 async def setup(bot):
