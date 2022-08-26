@@ -31,8 +31,8 @@ class ServerSettingsRepository:
             reminders.append(ServerSettings(result[0], result[1]))
         return reminders
 
-    def get_by_guild(self, guild):
-        result = self.db.cursor().execute('SELECT * FROM server_settings WHERE id=?', (guild.id,)).fetchone()
+    def get_by_guild(self, guild_id):
+        result = self.db.cursor().execute('SELECT * FROM server_settings WHERE id=?', (guild_id,)).fetchone()
         return ServerSettings(result[0], result[1])
 
     def add(self, server_settings):
