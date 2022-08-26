@@ -243,7 +243,7 @@ class RepeatJob:
         next_run_time = self.event.dispatch_time
         if self.event.last_run_time:
             next_run_time = self.event.last_run_time
-        while next_run_time <= datetime.datetime.now(tz=self.timezone).timestamp():
+        while next_run_time <= datetime.datetime.now(tz=self.timezone).timestamp() + 1:
             next_run_time += self.interval
         return next_run_time
 
@@ -261,17 +261,14 @@ class RepeatJob:
         while True:
             if self.next_run_time >= time.time():
                 await asyncio.sleep(self.next_run_time - time.time())
-            print("test1")
             await self.dispatch_event()
 
     async def dispatch_event(self):
-        print("test2")
         self.bot.dispatch(f"{self.event.function_name}_event", self.event)
         self.event.last_run_time = self.next_run_time
         self.next_run_time = self.calculate_next_run()
         self.job_task.cancel()
         self.job_task = asyncio.create_task(self.job_loop())
-        print("test3")
 
 
 class Automation(commands.Cog):
