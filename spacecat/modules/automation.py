@@ -230,6 +230,50 @@ class EventRepository:
         self.db.commit()
 
 
+class RepeatJob:
+    def __init__(self, bot: commands.Bot, event: Event, timezone: pytz.tzinfo):
+        self.bot = bot
+        self.event = event
+        self.timezone = timezone
+        self.interval = self.calculate_interval()
+        self.next_run_time = self.calculate_next_run()
+        self.job_task = asyncio.create_task(self.job_loop())
+
+    def calculate_next_run(self):
+        next_run_time = self.event.dispatch_time
+        if self.event.last_run_time:
+            next_run_time = self.event.last_run_time
+        while next_run_time <= datetime.datetime.now(tz=self.timezone).timestamp():
+            next_run_time += self.interval
+        return next_run_time
+
+    def calculate_interval(self):
+        interval = 0
+        if self.event.repeat_interval == Repeat.Hourly:
+            interval = 3600
+        elif self.event.repeat_interval == Repeat.Daily:
+            interval = 86400
+        elif self.event.repeat_interval == Repeat.Weekly:
+            interval = 604800
+        return interval * self.event.repeat_multiplier
+
+    async def job_loop(self):
+        while True:
+            if self.next_run_time >= time.time():
+                await asyncio.sleep(self.next_run_time - time.time())
+            print("test1")
+            await self.dispatch_event()
+
+    async def dispatch_event(self):
+        print("test2")
+        self.bot.dispatch(f"{self.event.function_name}_event", self.event)
+        self.event.last_run_time = self.next_run_time
+        self.next_run_time = self.calculate_next_run()
+        self.job_task.cancel()
+        self.job_task = asyncio.create_task(self.job_loop())
+        print("test3")
+
+
 class Automation(commands.Cog):
     """Schedule events to run at a later date"""
     def __init__(self, bot):
@@ -239,10 +283,10 @@ class Automation(commands.Cog):
         self.events = EventRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
+        self.repeating_events = {}
 
     async def cog_load(self):
         await self.init_repeating_events()
-        await self.repeating_event_loop()
 
     schedule_group = app_commands.Group(
         name="schedule", description="Allows you to run an function at a scheduled time.")
@@ -250,18 +294,9 @@ class Automation(commands.Cog):
     async def init_repeating_events(self):
         events = self.events.get_repeating()
         for event in events:
-            await self.add_repeating_event(event)
-
-    async def add_repeating_event(self, event):
-        dt = datetime.datetime.fromtimestamp(event.dispatch_time)
-        scheduled_event = schedule.every(event.repeat_multiplier)
-        if event.repeat_interval == Repeat.Hourly:
-            scheduled_event.hours.at(f":{dt.time().minute}")
-        elif event.repeat_interval == Repeat.Daily:
-            scheduled_event.days(f"{dt.time().hour}:{dt.time().minute}")
-        # elif event.repeat_interval == Repeat.Weekly:
-        #    scheduled_event.monday()
-        scheduled_event.do(self.bot.dispatch, f"{event.function_name}_event", event)
+            if event.id in self.repeating_events:
+                continue
+            self.repeating_events[event.id] = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
 
     async def reminder_loop(self):
         try:
@@ -382,7 +417,8 @@ class Automation(commands.Cog):
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
             return
-        await self.add_repeating_event(event)
+        self.repeating_events[event.id] = RepeatJob(
+            self.bot, event, await self.get_guild_timezone(interaction.guild_id))
 
     @schedule_group.command(name="voicekick")
     async def schedule_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel, time_string: str,
@@ -404,7 +440,8 @@ class Automation(commands.Cog):
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
             return
-        await self.add_repeating_event(event)
+        self.repeating_events[event.id] = RepeatJob(
+            self.bot, event, await self.get_guild_timezone(interaction.guild_id))
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
         time_ = await self.parse_time(time_string)
