@@ -157,8 +157,8 @@ class EventRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER, '
-                       'dispatch_time INTEGER, repeat_interval TEXT, repeat_multiplier INTEGER, name TEXT, '
-                       'function_name TEXT, arguments TEXT)')
+                       'dispatch_time INTEGER, last_run_time INTEGER, repeat_interval TEXT, repeat_multiplier INTEGER, '
+                       'name TEXT, function_name TEXT, arguments TEXT)')
         self.db.commit()
 
     def get_all(self):
@@ -166,13 +166,13 @@ class EventRepository:
         results = self.db.cursor().execute('SELECT * FROM events').fetchall()
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
+            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
                                    result[7], result[8], result[9]))
         return reminders
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (id_,)).fetchone()
-        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6], result[7],
+        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6], result[7],
                      result[8], result[9])
 
     def get_by_guild(self, guild):
@@ -184,7 +184,7 @@ class EventRepository:
 
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
+            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
                                    result[7], result[8], result[9]))
         return reminders
 
@@ -196,7 +196,7 @@ class EventRepository:
 
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
+            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
                                    result[7], result[8], result[9]))
         return reminders
 
@@ -205,7 +205,7 @@ class EventRepository:
         result = cursor.execute('SELECT * FROM events '
                                 'WHERE dispatch_time < ? AND repeat_interval="No" ORDER BY dispatch_time',
                                 (timestamp,)).fetchone()
-        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6], result[7],
+        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6], result[7],
                      result[8], result[9])
 
     def add(self, event):
