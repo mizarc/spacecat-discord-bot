@@ -407,16 +407,8 @@ class Automation(commands.Cog):
         await self.add_repeating_event(event)
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
-        administration = self.bot.get_cog("Administration")
-        servers_settings: ServerSettingsRepository = administration.server_settings
-        server_settings = servers_settings.get_by_guild(guild)
-
-        if server_settings.timezone is not None:
-            timezone = pytz.timezone(server_settings.timezone)
-        else:
-            timezone = pytz.utc
-
         time_ = await self.parse_time(time_string)
+        timezone = await self.get_guild_timezone(guild.id)
         if date_string is None:
             date = datetime.date.today()
         else:
@@ -427,6 +419,14 @@ class Automation(commands.Cog):
         if timestamp < time.time():
             combined.replace(day=combined.day + 1)
         return combined
+
+    async def get_guild_timezone(self, guild_id):
+        administration = self.bot.get_cog("Administration")
+        servers_settings: ServerSettingsRepository = administration.server_settings
+        server_settings = servers_settings.get_by_guild(guild_id)
+        if server_settings.timezone is not None:
+            return pytz.timezone(server_settings.timezone)
+        return pytz.utc
 
     @staticmethod
     async def parse_time(time_string):
