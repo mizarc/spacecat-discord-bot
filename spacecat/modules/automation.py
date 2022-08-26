@@ -131,12 +131,13 @@ class ReminderRepository:
 
 
 class Event:
-    def __init__(self, id_, user_id, guild_id, dispatch_time, repeat_interval,
+    def __init__(self, id_, user_id, guild_id, dispatch_time, last_run_time, repeat_interval,
                  repeat_multiplier, name, function_name, arguments):
         self.id = id_
         self.user_id = user_id
         self.guild_id = guild_id
         self.dispatch_time = dispatch_time
+        self.last_run_time = last_run_time
         self.repeat_interval = repeat_interval
         self.repeat_multiplier = repeat_multiplier
         self.name = name
@@ -144,9 +145,9 @@ class Event:
         self.arguments = arguments
 
     @classmethod
-    def create_new(cls, user_id, guild_id, dispatch_time, repeat_interval,
+    def create_new(cls, user_id, guild_id, dispatch_time, last_run_time, repeat_interval,
                    repeat_multiplier, name, function_name, arguments):
-        return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, repeat_interval,
+        return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, last_run_time, repeat_interval,
                    repeat_multiplier, name, function_name, arguments)
 
 
@@ -166,12 +167,13 @@ class EventRepository:
         reminders = []
         for result in results:
             reminders.append(Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
-                                   result[7], result[8]))
+                                   result[7], result[8], result[9]))
         return reminders
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (id_,)).fetchone()
-        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6], result[7], result[8])
+        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6], result[7],
+                     result[8], result[9])
 
     def get_by_guild(self, guild):
         # Get list of all reminders in a guild
@@ -183,7 +185,7 @@ class EventRepository:
         reminders = []
         for result in results:
             reminders.append(Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
-                                   result[7], result[8]))
+                                   result[7], result[8], result[9]))
         return reminders
 
     def get_repeating(self):
@@ -195,7 +197,7 @@ class EventRepository:
         reminders = []
         for result in results:
             reminders.append(Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
-                                   result[7], result[8]))
+                                   result[7], result[8], result[9]))
         return reminders
 
     def get_first_before_timestamp(self, timestamp):
@@ -204,19 +206,19 @@ class EventRepository:
                                 'WHERE dispatch_time < ? AND repeat_interval="No" ORDER BY dispatch_time',
                                 (timestamp,)).fetchone()
         return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6], result[7],
-                     result[8])
+                     result[8], result[9])
 
     def add(self, event):
         cursor = self.db.cursor()
-        values = (str(event.id), event.user_id, event.guild_id, event.dispatch_time, event.repeat_interval.name,
-                  event.repeat_multiplier, event.name, event.function_name, event.arguments)
-        cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', values)
+        values = (str(event.id), event.user_id, event.guild_id, event.dispatch_time, event.last_run_time,
+                  event.repeat_interval.name, event.repeat_multiplier, event.name, event.function_name, event.arguments)
+        cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, event):
         cursor = self.db.cursor()
-        values = (event.user_id, event.guild_id, event.dispatch_time, event.repeat_interval.name, event.name,
-                  event.repeat_multiplier, event.function_name, event.arguments, str(event.id))
+        values = (event.user_id, event.guild_id, event.dispatch_time, event.last_run_time, event.repeat_interval.name,
+                  event.name, event.repeat_multiplier, event.function_name, event.arguments, str(event.id))
         cursor.execute('UPDATE events SET user_id=?, guild_id=?, dispatch_time=?, repeat_interval=?, '
                        'repeat_multiplier=?, name=?, function_name=?, arguments=? WHERE id=?', values)
         self.db.commit()
