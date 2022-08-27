@@ -218,8 +218,8 @@ class EventRepository:
     def update(self, event):
         cursor = self.db.cursor()
         values = (event.user_id, event.guild_id, event.dispatch_time, event.last_run_time, event.repeat_interval.name,
-                  event.name, event.repeat_multiplier, event.function_name, event.arguments, str(event.id))
-        cursor.execute('UPDATE events SET user_id=?, guild_id=?, dispatch_time=?, repeat_interval=?, '
+                  event.repeat_multiplier, event.name, event.function_name, event.arguments, str(event.id))
+        cursor.execute('UPDATE events SET user_id=?, guild_id=?, dispatch_time=?, last_run_time=?, repeat_interval=?, '
                        'repeat_multiplier=?, name=?, function_name=?, arguments=? WHERE id=?', values)
         self.db.commit()
 
@@ -354,6 +354,7 @@ class Automation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_event(self, event):
+        self.events.update(event)
         channel = self.bot.get_channel(int(event.arguments.split(' ')[0]))
         await channel.send(embed=discord.Embed(
             colour=constants.EmbedStatus.SPECIAL.value,
@@ -363,6 +364,7 @@ class Automation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voicekick_event(self, event):
+        self.events.update(event)
         voice_channel = self.bot.get_channel(int(event.arguments.split(' ')[0]))
         for member in voice_channel.members:
             await member.move_to(None)
