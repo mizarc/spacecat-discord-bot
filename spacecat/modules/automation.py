@@ -1,6 +1,7 @@
 import asyncio
 import sqlite3
 from enum import Enum
+from itertools import islice
 
 import discord
 from discord import app_commands
@@ -441,6 +442,34 @@ class Automation(commands.Cog):
             return
         self.repeating_events[event.id] = RepeatJob(
             self.bot, event, await self.get_guild_timezone(interaction.guild_id))
+
+    @app_commands.command()
+    async def listevents(self, interaction):
+        events = self.events.get_by_guild(interaction.guild)
+        if not events:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="There are no scheduled events")
+            await interaction.response.send_message(embed=embed)
+            return
+
+        # Format playlist songs into pretty listings
+        event_listings = []
+        for index, event in enumerate(islice(events, 0, 10)):
+            listing = f"{index + 1}. {event.name}"
+            if event.repeat_interval != Repeat.No:
+                listing += f" | `Repeating {event.repeat_interval.name}`"
+            event_listings.append(listing)
+
+        # Output results to chat
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.MUSIC} Events")
+        playlist_output = '\n'.join(event_listings)
+        embed.add_field(
+            name=f"{len(events)} available",
+            value=playlist_output, inline=False)
+        await interaction.response.send_message(embed=embed)
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
         time_ = await self.parse_time(time_string)
