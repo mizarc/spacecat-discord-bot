@@ -401,7 +401,7 @@ class Automation(commands.Cog):
         await self.load_event(event)
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            description=f"A message event has been set for "
+            description=f"A message event named '{title}' has been set for "
                         f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
                         f"at {selected_datetime.hour}:{selected_datetime.minute}"
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
@@ -417,7 +417,7 @@ class Automation(commands.Cog):
         await self.load_event(event)
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            description=f"A voicekick event has been set for "
+            description=f"A voicekick event named '{title}' has been set for "
                         f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
                         f"at {selected_datetime.hour}:{selected_datetime.minute}"
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
