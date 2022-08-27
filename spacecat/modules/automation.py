@@ -333,11 +333,6 @@ class Automation(commands.Cog):
         self.events.remove(event)
         self.bot.dispatch(f"{event.function_name}_event", event)
 
-    async def repeating_event_loop(self):
-        while True:
-            schedule.run_pending()
-            await asyncio.sleep(1)
-
     @commands.Cog.listener()
     async def on_reminder(self, reminder):
         channel = self.bot.get_channel(reminder.channel_id)
