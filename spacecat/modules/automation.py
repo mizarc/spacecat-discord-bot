@@ -339,7 +339,7 @@ class Automation(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.DEFAULT} Reminder!",
-            description=f"<@{reminder.user_id}>**, <t:{int(reminder.dispatch_time)}:R> "
+            description=f"<@{reminder.user_id}>**, <t:{int(reminder.creation_time)}:R> "
                         f"you asked me to remind you:** \n {reminder.message}")
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label='Go to original message',
