@@ -9,7 +9,6 @@ from discord.ext import commands
 
 import datetime
 import pytz
-import schedule
 import time
 import uuid
 
