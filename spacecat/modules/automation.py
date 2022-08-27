@@ -395,10 +395,10 @@ class Automation(commands.Cog):
                                time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                repeat_multiplier: int = 0):
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
-
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
                                  repeat, repeat_multiplier, title, "message", f"{channel.id} {message}")
         self.events.add(event)
+        await self.load_event(event)
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description=f"A message event has been set for "
@@ -407,21 +407,14 @@ class Automation(commands.Cog):
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
 
-        if repeat == Repeat.No:
-            self.event_task.cancel()
-            self.event_task = self.bot.loop.create_task(self.event_loop())
-            return
-        self.repeating_events[event.id] = RepeatJob(
-            self.bot, event, await self.get_guild_timezone(interaction.guild_id))
-
     @schedule_group.command(name="voicekick")
     async def schedule_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel, time_string: str,
                                  date_string: str, repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
-
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
                                  repeat, repeat_multiplier, title, "voicekick", f"{voice_channel.id}")
         self.events.add(event)
+        await self.load_event(event)
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description=f"A voicekick event has been set for "
@@ -429,13 +422,6 @@ class Automation(commands.Cog):
                         f"at {selected_datetime.hour}:{selected_datetime.minute}"
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
-
-        if repeat == Repeat.No:
-            self.event_task.cancel()
-            self.event_task = self.bot.loop.create_task(self.event_loop())
-            return
-        self.repeating_events[event.id] = RepeatJob(
-            self.bot, event, await self.get_guild_timezone(interaction.guild_id))
 
     @app_commands.command()
     async def listevents(self, interaction):
@@ -464,6 +450,14 @@ class Automation(commands.Cog):
             name=f"{len(events)} available",
             value=playlist_output, inline=False)
         await interaction.response.send_message(embed=embed)
+
+    async def load_event(self, event):
+        if event.repeat_interval == Repeat.No:
+            self.event_task.cancel()
+            self.event_task = self.bot.loop.create_task(self.event_loop())
+            return
+        self.repeating_events[event.id] = RepeatJob(
+            self.bot, event, await self.get_guild_timezone(event.guild_id))
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
         time_ = await self.parse_time(time_string)
