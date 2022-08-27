@@ -95,7 +95,7 @@ class Administration(commands.Cog):
 
     @app_commands.command()
     async def timezone(self, interaction: discord.Interaction, region: str):
-        server_settings = self.server_settings.get_by_guild(interaction.guild)
+        server_settings = self.server_settings.get_by_guild(interaction.guild_id)
         server_settings.timezone = region
         self.server_settings.update(server_settings)
         await interaction.response.send_message(embed=discord.Embed(
