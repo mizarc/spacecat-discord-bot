@@ -592,12 +592,6 @@ class Automation(commands.Cog):
             return f", repeating every {interval_string}."
         return f", repeating every {multiplier} {interval_string}s."
 
-    @staticmethod
-    async def int_to_schedule_day(numbered_day: int) -> property:
-        days = [schedule.Job.monday, schedule.Job.tuesday, schedule.Job.wednesday, schedule.Job.thursday,
-                schedule.Job.friday, schedule.Job.saturday, schedule.Job.sunday]
-        return days[numbered_day]
-
 
 async def setup(bot):
     await bot.add_cog(Automation(bot))
