@@ -423,6 +423,24 @@ class Automation(commands.Cog):
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
 
+    @schedule_group.command(name="voicemove")
+    async def schedule_voicemove(self, interaction, title: str, current_channel: discord.VoiceChannel,
+                                 new_channel: discord.VoiceChannel, time_string: str, date_string: str,
+                                 repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
+        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
+                                 repeat, repeat_multiplier, title, "voicemove",
+                                 f"{current_channel.id} {new_channel.id}")
+        self.events.add(event)
+        await self.load_event(event)
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            description=f"A voicemove event named '{title}' has been set for "
+                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
+                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
+                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
+        await interaction.response.send_message(embed=embed)
+
     @app_commands.command()
     async def listevents(self, interaction):
         events = self.events.get_by_guild(interaction.guild)
