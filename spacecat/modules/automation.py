@@ -175,6 +175,13 @@ class EventRepository:
         return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6], result[7],
                      result[8], result[9])
 
+    def get_by_name(self, name):
+        result = self.db.cursor().execute('SELECT * FROM events WHERE name=?', (name,)).fetchone()
+        if not result:
+            return None
+        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6], result[7],
+                     result[8], result[9])
+
     def get_by_guild(self, guild):
         # Get list of all reminders in a guild
         cursor = self.db.cursor()
@@ -443,6 +450,21 @@ class Automation(commands.Cog):
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
 
+    @schedule_group.command(name="remove")
+    async def schedule_remove(self, interaction, name: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist"))
+            return
+
+        self.events.remove(event)
+        await self.unload_event(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description=f"Scheduled event '{name}' has been removed."))
+
     @schedule_group.command()
     async def schedule_list(self, interaction):
         events = self.events.get_by_guild(interaction.guild)
@@ -478,6 +500,13 @@ class Automation(commands.Cog):
             return
         self.repeating_events[event.id] = RepeatJob(
             self.bot, event, await self.get_guild_timezone(event.guild_id))
+
+    async def unload_event(self, event):
+        if event.repeat_interval == Repeat.No:
+            self.event_task.cancel()
+            self.event_task = self.bot.loop.create_task(self.event_loop())
+            return
+        self.repeating_events.pop(event.id)
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
         time_ = await self.parse_time(time_string)
