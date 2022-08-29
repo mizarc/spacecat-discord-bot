@@ -462,7 +462,7 @@ class Automation(commands.Cog):
         self.events.remove(event)
         await self.unload_event(event)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Scheduled event '{name}' has been removed."))
 
     @schedule_group.command(name="list")
