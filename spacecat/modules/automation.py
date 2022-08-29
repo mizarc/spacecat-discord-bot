@@ -132,7 +132,7 @@ class ReminderRepository:
 
 class Event:
     def __init__(self, id_, user_id, guild_id, dispatch_time, last_run_time, repeat_interval,
-                 repeat_multiplier, name, function_name, arguments):
+                 repeat_multiplier, is_paused, name, function_name, arguments):
         self.id = id_
         self.user_id = user_id
         self.guild_id = guild_id
@@ -140,6 +140,7 @@ class Event:
         self.last_run_time = last_run_time
         self.repeat_interval = repeat_interval
         self.repeat_multiplier = repeat_multiplier
+        self.is_paused = is_paused
         self.name = name
         self.function_name = function_name
         self.arguments = arguments
@@ -148,7 +149,7 @@ class Event:
     def create_new(cls, user_id, guild_id, dispatch_time, repeat_interval,
                    repeat_multiplier, name, function_name, arguments):
         return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, None, repeat_interval,
-                   repeat_multiplier, name, function_name, arguments)
+                   repeat_multiplier, False, name, function_name, arguments)
 
 
 class EventRepository:
@@ -158,7 +159,7 @@ class EventRepository:
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER, '
                        'dispatch_time INTEGER, last_run_time INTEGER, repeat_interval TEXT, repeat_multiplier INTEGER, '
-                       'name TEXT, function_name TEXT, arguments TEXT)')
+                       'is_paused INTEGER, name TEXT, function_name TEXT, arguments TEXT)')
         self.db.commit()
 
     def get_all(self):
@@ -167,20 +168,20 @@ class EventRepository:
         reminders = []
         for result in results:
             reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                                   result[7], result[8], result[9]))
+                                   bool(result[7]), result[8], result[9], result[10]))
         return reminders
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (id_,)).fetchone()
-        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6], result[7],
-                     result[8], result[9])
+        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
+                     bool(result[7]), result[8], result[9], result[10])
 
     def get_by_name(self, name):
         result = self.db.cursor().execute('SELECT * FROM events WHERE name=?', (name,)).fetchone()
         if not result:
             return None
-        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6], result[7],
-                     result[8], result[9])
+        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
+                     bool(result[7]), result[8], result[9], result[10])
 
     def get_by_guild(self, guild):
         # Get list of all reminders in a guild
@@ -192,7 +193,7 @@ class EventRepository:
         reminders = []
         for result in results:
             reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                                   result[7], result[8], result[9]))
+                                   bool(result[7]), result[8], result[9], result[10]))
         return reminders
 
     def get_repeating(self):
@@ -204,7 +205,7 @@ class EventRepository:
         reminders = []
         for result in results:
             reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                                   result[7], result[8], result[9]))
+                                   bool(result[7]), result[8], result[9], result[10]))
         return reminders
 
     def get_first_before_timestamp(self, timestamp):
@@ -212,22 +213,24 @@ class EventRepository:
         result = cursor.execute('SELECT * FROM events '
                                 'WHERE dispatch_time < ? AND repeat_interval="No" ORDER BY dispatch_time',
                                 (timestamp,)).fetchone()
-        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6], result[7],
-                     result[8], result[9])
+        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
+                     bool(result[7]), result[8], result[9], result[10])
 
     def add(self, event):
         cursor = self.db.cursor()
         values = (str(event.id), event.user_id, event.guild_id, event.dispatch_time, event.last_run_time,
-                  event.repeat_interval.name, event.repeat_multiplier, event.name, event.function_name, event.arguments)
-        cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', values)
+                  event.repeat_interval.name, event.repeat_multiplier, int(event.is_paused), event.name,
+                  event.function_name, event.arguments)
+        cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, event):
         cursor = self.db.cursor()
         values = (event.user_id, event.guild_id, event.dispatch_time, event.last_run_time, event.repeat_interval.name,
-                  event.repeat_multiplier, event.name, event.function_name, event.arguments, str(event.id))
+                  event.repeat_multiplier, int(event.is_paused), event.name, event.function_name, event.arguments,
+                  str(event.id))
         cursor.execute('UPDATE events SET user_id=?, guild_id=?, dispatch_time=?, last_run_time=?, repeat_interval=?, '
-                       'repeat_multiplier=?, name=?, function_name=?, arguments=? WHERE id=?', values)
+                       'repeat_multiplier=?, is_paused=?, name=?, function_name=?, arguments=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, event):
