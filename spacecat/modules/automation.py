@@ -287,7 +287,7 @@ class Automation(commands.Cog):
         self.events = EventRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
-        self.repeating_events = {}
+        self.repeating_events: dict[str, RepeatJob] = {}
 
     async def cog_load(self):
         await self.init_repeating_events()
