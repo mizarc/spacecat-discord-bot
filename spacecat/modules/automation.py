@@ -497,6 +497,29 @@ class Automation(commands.Cog):
             description=f"Event '{name}' has been paused and will not run on its next scheduled run time."))
         return
 
+    @schedule_group.command(name="resume")
+    async def schedule_resume(self, interaction, name: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
+            return
+
+        if not event.is_paused:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Event '{name}' is not paused."))
+            return
+
+        event.is_paused = False
+        self.events.update(event)
+        await self.load_event(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description=f"Event {name} has now been resumed and will run at the scheduled time."))
+        return
+
     @schedule_group.command(name="list")
     async def schedule_list(self, interaction):
         events = self.events.get_by_guild(interaction.guild)
