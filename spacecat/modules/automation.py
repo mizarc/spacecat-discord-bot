@@ -474,7 +474,7 @@ class Automation(commands.Cog):
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"An event going by the name '{name}' does not exist"))
+                description=f"An event going by the name '{name}' does not exist."))
             return
 
         if event.repeat_interval == Repeat.No:
@@ -483,12 +483,18 @@ class Automation(commands.Cog):
                 description=f"You cannot pause one time events. You may reschedule or remove it instead."))
             return
 
+        if event.is_paused:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Event '{name}' is already paused."))
+            return
+
         event.is_paused = True
         self.events.update(event)
         await self.unload_event(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
-            description=f"Event {name} has been paused and will not run on its next scheduled run time."))
+            description=f"Event '{name}' has been paused and will not run on its next scheduled run time."))
         return
 
     @schedule_group.command(name="list")
