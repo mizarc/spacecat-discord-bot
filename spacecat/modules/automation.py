@@ -465,7 +465,7 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.FAIL.value,
             description=f"Scheduled event '{name}' has been removed."))
 
-    @schedule_group.command()
+    @schedule_group.command(name="list")
     async def schedule_list(self, interaction):
         events = self.events.get_by_guild(interaction.guild)
         if not events:
