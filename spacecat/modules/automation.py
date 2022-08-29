@@ -444,7 +444,7 @@ class Automation(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @schedule_group.command()
-    async def list(self, interaction):
+    async def schedule_list(self, interaction):
         events = self.events.get_by_guild(interaction.guild)
         if not events:
             embed = discord.Embed(
