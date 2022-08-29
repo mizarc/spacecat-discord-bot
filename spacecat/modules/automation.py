@@ -287,6 +287,8 @@ class Automation(commands.Cog):
 
     schedule_group = app_commands.Group(
         name="schedule", description="Allows you to run an function at a scheduled time.")
+    schedule_add_group = app_commands.Group(
+        parent=schedule_group, name="add", description="Add a new scheudled event.")
 
     async def init_repeating_events(self):
         events = self.events.get_repeating()
@@ -390,7 +392,7 @@ class Automation(commands.Cog):
         self.reminder_task.cancel()
         self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
 
-    @schedule_group.command(name="message")
+    @schedule_add_group.command(name="message")
     async def schedule_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
                                time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                repeat_multiplier: int = 0):
@@ -407,7 +409,7 @@ class Automation(commands.Cog):
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
 
-    @schedule_group.command(name="voicekick")
+    @schedule_add_group.command(name="voicekick")
     async def schedule_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel, time_string: str,
                                  date_string: str, repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
@@ -423,7 +425,7 @@ class Automation(commands.Cog):
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
 
-    @schedule_group.command(name="voicemove")
+    @schedule_add_group.command(name="voicemove")
     async def schedule_voicemove(self, interaction, title: str, current_channel: discord.VoiceChannel,
                                  new_channel: discord.VoiceChannel, time_string: str, date_string: str,
                                  repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
@@ -441,8 +443,8 @@ class Automation(commands.Cog):
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
         await interaction.response.send_message(embed=embed)
 
-    @app_commands.command()
-    async def listevents(self, interaction):
+    @schedule_group.command()
+    async def list(self, interaction):
         events = self.events.get_by_guild(interaction.guild)
         if not events:
             embed = discord.Embed(
