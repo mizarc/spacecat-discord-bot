@@ -468,6 +468,29 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.YES.value,
             description=f"Scheduled event '{name}' has been removed."))
 
+    @schedule_group.command(name="pause")
+    async def schedule_pause(self, interaction, name: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist"))
+            return
+
+        if event.repeat_interval == Repeat.No:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"You cannot pause one time events. You may reschedule or remove it instead."))
+            return
+
+        event.is_paused = True
+        self.events.update(event)
+        await self.unload_event(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description=f"Event {name} has been paused and will not run on its next scheduled run time."))
+        return
+
     @schedule_group.command(name="list")
     async def schedule_list(self, interaction):
         events = self.events.get_by_guild(interaction.guild)
