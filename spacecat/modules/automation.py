@@ -199,7 +199,7 @@ class EventRepository:
     def get_repeating(self):
         # Get list of all reminders in a guild
         cursor = self.db.cursor()
-        cursor.execute('SELECT * FROM events WHERE NOT repeat_interval=?', ('No',))
+        cursor.execute('SELECT * FROM events WHERE NOT repeat_interval=? AND is_paused=0', ('No',))
         results = cursor.fetchall()
 
         reminders = []
