@@ -599,6 +599,22 @@ class Automation(commands.Cog):
             description=f"Event {name} has now been resumed and will run at the scheduled time."))
         return
 
+    @schedule_group.command(name="description")
+    async def schedule_description(self, interaction, name: str, description: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
+            return
+
+        event.description = description
+        self.events.update(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Description has been set for event {name}."))
+        return
+
     async def load_event(self, event):
         if event.repeat_interval == Repeat.No:
             self.event_task.cancel()
@@ -607,7 +623,6 @@ class Automation(commands.Cog):
         repeat_job = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
         repeat_job.run_task()
         self.repeating_events[event.id] = repeat_job
-
 
     async def unload_event(self, event):
         if event.repeat_interval == Repeat.No:
