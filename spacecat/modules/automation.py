@@ -627,8 +627,9 @@ class Automation(commands.Cog):
         event.dispatch_time = self.fetch_future_datetime(interaction.guild, time_, date)
         self.events.update(event)
 
-        await self.unload_event(event)
-        await self.load_event(event)
+        if self.repeating_events.get(event.id):
+            await self.unload_event(event)
+            await self.load_event(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Dispatch time has been set for event {name}."))
@@ -647,8 +648,9 @@ class Automation(commands.Cog):
         event.repeat_multiplier = multiplier
         self.events.update(event)
 
-        await self.unload_event(event)
-        await self.load_event(event)
+        if self.repeating_events.get(event.id):
+            await self.unload_event(event)
+            await self.load_event(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Interval has been changed for event {name}."))
