@@ -615,6 +615,25 @@ class Automation(commands.Cog):
             description=f"Description has been set for event {name}."))
         return
 
+    @schedule_group.command(name="reschedule")
+    async def schedule_reschedule(self, interaction, name: str, date: str, time_: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
+            return
+
+        event.dispatch_time = self.fetch_future_datetime(interaction.guild, time_, date)
+        self.events.update(event)
+
+        await self.unload_event(event)
+        await self.load_event(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Dispatch time has been set for event {name}."))
+        return
+
     async def load_event(self, event):
         if event.repeat_interval == Repeat.No:
             self.event_task.cancel()
