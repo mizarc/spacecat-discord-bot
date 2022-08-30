@@ -432,6 +432,47 @@ class Automation(commands.Cog):
             value=playlist_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
+    @schedule_group.command(name="view")
+    async def schedule_view(self, interaction, name: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
+            return
+
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"Event '{event.name}'",
+            description=event.description)
+
+        time_fields = []
+        if event.last_run_time:
+            time_fields.append(
+                f"**Initial Time:** {datetime.datetime.fromtimestamp(event.dispatch_time).strftime('%X %x')}")
+        else:
+            time_fields.append(
+                f"**Dispatch Time: {datetime.datetime.fromtimestamp(event.dispatch_time).strftime('%X %x')}")
+
+        if event.is_paused:
+            time_fields.append(
+                f"**Repeating:** "
+                f"{await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)} (Paused)")
+        else:
+            time_fields.append(
+                f"**Repeating:** "
+                f"{await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)}")
+
+        if event.last_run_time:
+            time_fields.append(
+                f"**Last Run**: {datetime.datetime.fromtimestamp(event.last_run_time).strftime('%X %x')}")
+
+        embed.add_field(name="Execution Time", value='\n'.join(time_fields))
+
+        function_fields = [f"**Function:** {event.function_name}", f"**Arguments:** {event.arguments}"]
+        embed.add_field(name="To Run", value='\n'.join(function_fields))
+        await interaction.response.send_message(embed=embed)
+
     @schedule_add_group.command(name="message")
     async def schedule_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
                                time_string: str, date_string: str, repeat: Repeat = Repeat.No,
@@ -549,44 +590,6 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.FAIL.value,
             description=f"Event {name} has now been resumed and will run at the scheduled time."))
         return
-
-    @schedule_group.command(name="view")
-    async def schedule_view(self, interaction, name: str):
-        event = self.events.get_by_name(name)
-        if not event:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"An event going by the name '{name}' does not exist."))
-            return
-
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
-            title=f"{event.name}",
-            description=event.description)
-
-        time_fields = []
-        if event.last_run_time:
-            time_fields.append(f"**Initial Time:** {event.dispatch_time}")
-        else:
-            time_fields.append(f"**Dispatch Time: {event.dispatch_time}")
-
-        if event.is_paused:
-            time_fields.append(
-                f"**Repeating:** "
-                f"{await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)} (Paused)")
-        else:
-            time_fields.append(
-                f"**Repeating:** "
-                f"{await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)}")
-
-        if event.last_run_time:
-            time_fields.append(f"**Last Run**: {event.last_run_time}")
-
-        embed.add_field(name="To Run", value='\n'.join(time_fields))
-
-        function_fields = [f"**Function:** {event.function_name}", f"**Arguments:** {event.arguments}"]
-        embed.add_field(name="Function", value='\n'.join(function_fields))
-        await interaction.response.send_message(embed=embed)
 
     async def load_event(self, event):
         if event.repeat_interval == Repeat.No:
@@ -734,7 +737,6 @@ class Automation(commands.Cog):
         else:
             return ""
         return f"Every {multiplier} {interval_string}"
-
 
 
 async def setup(bot):
