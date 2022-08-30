@@ -249,6 +249,9 @@ class RepeatJob:
         self.timezone = timezone
         self.interval = self.calculate_interval()
         self.next_run_time = self.calculate_next_run()
+        self.job_task = None
+
+    def run_task(self):
         self.job_task = asyncio.create_task(self.job_loop())
 
     def calculate_next_run(self):
@@ -596,8 +599,10 @@ class Automation(commands.Cog):
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
             return
-        self.repeating_events[event.id] = RepeatJob(
-            self.bot, event, await self.get_guild_timezone(event.guild_id))
+        repeat_job = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
+        repeat_job.run_task()
+        self.repeating_events[event.id] = repeat_job
+
 
     async def unload_event(self, event):
         if event.repeat_interval == Repeat.No:
