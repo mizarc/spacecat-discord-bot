@@ -634,6 +634,26 @@ class Automation(commands.Cog):
             description=f"Dispatch time has been set for event {name}."))
         return
 
+    @schedule_group.command(name="interval")
+    async def schedule_interval(self, interaction, name: str, interval: Repeat, multiplier: int = 1):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
+            return
+
+        event.repeat_interval = interval
+        event.repeat_multiplier = multiplier
+        self.events.update(event)
+
+        await self.unload_event(event)
+        await self.load_event(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Interval has been changed for event {name}."))
+        return
+
     async def load_event(self, event):
         if event.repeat_interval == Repeat.No:
             self.event_task.cancel()
