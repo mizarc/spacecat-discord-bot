@@ -468,7 +468,12 @@ class Automation(commands.Cog):
 
         if event.last_run_time:
             time_fields.append(
-                f"**Last Run**: {datetime.datetime.fromtimestamp(event.last_run_time).strftime('%X %x')}")
+                f"**Last Run:** {datetime.datetime.fromtimestamp(event.last_run_time).strftime('%X %x')}")
+
+        if event.repeat_interval:
+            repeat_job = RepeatJob(self.bot, event, await self.get_guild_timezone(interaction.guild.id))
+            time_fields.append(
+                f"**Next Run:** {datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).strftime('%X %x')}")
 
         embed.add_field(name="Execution Time", value='\n'.join(time_fields))
 
