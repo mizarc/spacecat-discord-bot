@@ -148,9 +148,9 @@ class Event:
 
     @classmethod
     def create_new(cls, user_id, guild_id, dispatch_time, repeat_interval,
-                   repeat_multiplier, name, description, function_name, arguments):
+                   repeat_multiplier, name, function_name, arguments):
         return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, None, repeat_interval,
-                   repeat_multiplier, False, name, description, function_name, arguments)
+                   repeat_multiplier, False, name, "", function_name, arguments)
 
 
 class EventRepository:
