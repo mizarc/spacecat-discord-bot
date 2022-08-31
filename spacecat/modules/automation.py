@@ -354,7 +354,7 @@ class Automation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_reminder(self, reminder):
-        channel = self.bot.get_channel(reminder.channel_id)
+        channel = await self.bot.fetch_channel(reminder.channel_id)
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.DEFAULT} Reminder!",
@@ -369,7 +369,7 @@ class Automation(commands.Cog):
     @commands.Cog.listener()
     async def on_message_event(self, event):
         self.events.update(event)
-        channel = self.bot.get_channel(int(event.arguments.split(' ')[0]))
+        channel = await self.bot.fetch_channel(int(event.arguments.split(' ')[0]))
         await channel.send(embed=discord.Embed(
             colour=constants.EmbedStatus.SPECIAL.value,
             title=f"{event.name}",
