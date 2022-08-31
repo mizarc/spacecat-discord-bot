@@ -434,6 +434,28 @@ class Automation(commands.Cog):
             value=reminder_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
+    @reminder_group.command(name="remove")
+    async def reminder_remove(self, interaction: discord.Interaction, index: int):
+        reminders = self.reminders.get_by_guild_and_user(interaction.guild, interaction.user.id)
+        if not reminders:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="You have no set reminders."))
+            return
+
+        if len(reminders) < index:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="A reminder by that index doesn't exist."))
+            return
+
+        self.reminders.remove(reminders[index - 1])
+
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description=f"Reminder at index {index} has been removed."))
+        return
+
     @schedule_group.command(name="list")
     async def schedule_list(self, interaction):
         events = self.events.get_by_guild(interaction.guild)
