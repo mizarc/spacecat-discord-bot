@@ -451,6 +451,11 @@ class Automation(commands.Cog):
 
         self.reminders.remove(reminders[index - 1])
 
+        # If reminder isn't first in list, then it's probably not currently queued up. No need to refresh task loop.
+        if index > 1:
+            self.reminder_task.cancel()
+            self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
             description=f"Reminder at index {index} has been removed."))
