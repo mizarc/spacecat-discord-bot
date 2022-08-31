@@ -540,6 +540,12 @@ class Automation(commands.Cog):
                                time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                repeat_multiplier: int = 0):
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        if selected_datetime.timestamp() < time.time():
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"You cannot set a date and time in the past."))
+            return
+
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
                                  repeat, repeat_multiplier, title, "message", f"{channel.id} {message}")
         self.events.add(event)
@@ -556,6 +562,12 @@ class Automation(commands.Cog):
     async def schedule_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel, time_string: str,
                                  date_string: str, repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        if selected_datetime.timestamp() < time.time():
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"You cannot set a date and time in the past."))
+            return
+
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
                                  repeat, repeat_multiplier, title, "voicekick", f"{voice_channel.id}")
         self.events.add(event)
@@ -573,6 +585,12 @@ class Automation(commands.Cog):
                                  new_channel: discord.VoiceChannel, time_string: str, date_string: str,
                                  repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        if selected_datetime.timestamp() < time.time():
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"You cannot set a date and time in the past."))
+            return
+
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
                                  repeat, repeat_multiplier, title, "voicemove",
                                  f"{current_channel.id} {new_channel.id}")
@@ -678,9 +696,15 @@ class Automation(commands.Cog):
                 description=f"An event going by the name '{name}' does not exist."))
             return
 
-        event.dispatch_time = self.fetch_future_datetime(interaction.guild, time_, date)
-        self.events.update(event)
+        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_, date)
+        if selected_datetime.timestamp() < time.time():
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"You cannot set a date and time in the past."))
+            return
 
+        event.dispatch_time = selected_datetime
+        self.events.update(event)
         if self.repeating_events.get(event.id):
             await self.unload_event(event)
             await self.load_event(event)
