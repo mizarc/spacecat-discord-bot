@@ -93,7 +93,7 @@ class ReminderRepository:
         # Get reminder by guild and reminder name
         cursor = self.db.cursor()
         values = (guild.id, name)
-        cursor.execute('SELECT * FROM reminders WHERE guild_id=? AND user_id=?', values)
+        cursor.execute('SELECT * FROM reminders WHERE guild_id=? AND user_id=? ORDER BY dispatch_time', values)
         results = cursor.fetchall()
 
         reminders = []
