@@ -300,6 +300,8 @@ class Automation(commands.Cog):
     async def cog_load(self):
         await self.init_repeating_events()
 
+    reminder_group = app_commands.Group(
+        name="reminder", description="Configure existing reminders.")
     schedule_group = app_commands.Group(
         name="schedule", description="Allows you to run an function at a scheduled time.")
     schedule_add_group = app_commands.Group(
@@ -406,6 +408,31 @@ class Automation(commands.Cog):
         self.reminders.add(reminder)
         self.reminder_task.cancel()
         self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+
+    @reminder_group.command()
+    async def reminder_list(self, interaction: discord.Interaction):
+        reminders = self.reminders.get_by_guild_and_user(interaction.guild, interaction.user.id)
+        if not reminders:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="You have no set reminders."))
+            return
+
+        # Reminders into pretty listings
+        reminder_listings = []
+        for index, reminder in enumerate(islice(reminders, 0, 10)):
+            listing = f"{index + 1}. {reminder.message[0:30]} | <t:{int(reminder.dispatch_time)}:R>"
+            reminder_listings.append(listing)
+
+        # Output results to chat
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.MUSIC} Your Reminders")
+        reminder_output = '\n'.join(reminder_listings)
+        embed.add_field(
+            name=f"{len(reminders)} available",
+            value=reminder_output, inline=False)
+        await interaction.response.send_message(embed=embed)
 
     @schedule_group.command(name="list")
     async def schedule_list(self, interaction):
