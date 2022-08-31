@@ -409,7 +409,7 @@ class Automation(commands.Cog):
         self.reminder_task.cancel()
         self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
 
-    @reminder_group.command()
+    @reminder_group.command(name="list")
     async def reminder_list(self, interaction: discord.Interaction):
         reminders = self.reminders.get_by_guild_and_user(interaction.guild, interaction.user.id)
         if not reminders:
