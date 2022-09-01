@@ -19,9 +19,9 @@ from spacecat.spacecat import SpaceCat
 
 class Repeat(Enum):
     No = 0,
-    Hourly = 1,
-    Daily = 2,
-    Weekly = 3,
+    Hourly = 3600,
+    Daily = 86400,
+    Weekly = 604800,
 
 
 class Reminder:
@@ -126,7 +126,7 @@ class Event:
         self.guild_id = guild_id
         self.dispatch_time = dispatch_time
         self.last_run_time = last_run_time
-        self.repeat_interval = repeat_interval
+        self.repeat_interval: Repeat = repeat_interval
         self.repeat_multiplier = repeat_multiplier
         self.is_paused = is_paused
         self.name = name
@@ -263,14 +263,7 @@ class RepeatJob:
         return next_run_time
 
     def calculate_interval(self):
-        interval = 0
-        if self.event.repeat_interval == Repeat.Hourly:
-            interval = 3600
-        elif self.event.repeat_interval == Repeat.Daily:
-            interval = 86400
-        elif self.event.repeat_interval == Repeat.Weekly:
-            interval = 604800
-        return interval * self.event.repeat_multiplier
+        return self.event.repeat_interval.value * self.event.repeat_multiplier
 
     async def job_loop(self):
         while True:
