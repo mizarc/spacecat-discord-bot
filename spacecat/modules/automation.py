@@ -206,7 +206,7 @@ class EventRepository:
         reminders = []
         for result in results:
             reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                         bool(result[7]), result[8], result[9], result[10], result[11]))
+                             bool(result[7]), result[8], result[9], result[10], result[11]))
         return reminders
 
     def get_first_before_timestamp(self, timestamp):
@@ -850,10 +850,6 @@ class Automation(commands.Cog):
             interval_string = "day"
         elif interval == Repeat.Weekly:
             interval_string = "week"
-        elif interval == Repeat.Monthly:
-            interval_string = "month"
-        elif interval == Repeat.Yearly:
-            interval_string = "year"
         else:
             return "."
 
