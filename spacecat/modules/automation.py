@@ -24,16 +24,6 @@ class Repeat(Enum):
     Weekly = 3,
 
 
-class Day(Enum):
-    Monday = 0,
-    Tuesday = 2,
-    Wednesday = 3,
-    Thursday = 4,
-    Friday = 5,
-    Saturday = 6,
-    Sunday = 7
-
-
 class Reminder:
     def __init__(self, id_, user_id, guild_id, channel_id, message_id, creation_time, dispatch_time, message):
         self.id = id_
