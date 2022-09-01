@@ -300,13 +300,6 @@ class Automation(commands.Cog):
     async def cog_load(self):
         await self.init_repeating_events()
 
-    reminder_group = app_commands.Group(
-        name="reminder", description="Configure existing reminders.")
-    schedule_group = app_commands.Group(
-        name="schedule", description="Allows you to run an function at a scheduled time.")
-    schedule_add_group = app_commands.Group(
-        parent=schedule_group, name="add", description="Add a new scheudled event.")
-
     async def init_repeating_events(self):
         events = self.events.get_repeating()
         for event in events:
@@ -408,6 +401,13 @@ class Automation(commands.Cog):
         self.reminders.add(reminder)
         self.reminder_task.cancel()
         self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+
+    reminder_group = app_commands.Group(
+        name="reminder", description="Configure existing reminders.")
+    schedule_group = app_commands.Group(
+        name="schedule", description="Allows you to run an function at a scheduled time.")
+    schedule_add_group = app_commands.Group(
+        parent=schedule_group, name="add", description="Add a new scheudled event.")
 
     @reminder_group.command(name="list")
     async def reminder_list(self, interaction: discord.Interaction):
