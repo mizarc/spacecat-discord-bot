@@ -5,7 +5,7 @@ from itertools import islice
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import datetime
 import pytz
@@ -209,6 +209,18 @@ class EventRepository:
                                    bool(result[7]), result[8], result[9], result[10], result[11]))
         return reminders
 
+    def get_repeating_before_timestamp(self, timestamp):
+        cursor = self.db.cursor()
+        results = cursor.execute('SELECT * FROM events '
+                                 'WHERE dispatch_time < ? AND NOT repeat_interval="No" ORDER BY dispatch_time',
+                                 (timestamp,)).fetchall()
+
+        reminders = []
+        for result in results:
+            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
+                         bool(result[7]), result[8], result[9], result[10], result[11]))
+        return reminders
+
     def get_first_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
         result = cursor.execute('SELECT * FROM events '
@@ -298,19 +310,12 @@ class Automation(commands.Cog):
         self.repeating_events: dict[str, RepeatJob] = {}
 
     async def cog_load(self):
-        await self.init_repeating_events()
-
-    async def init_repeating_events(self):
-        events = self.events.get_repeating()
-        for event in events:
-            if event.id in self.repeating_events:
-                continue
-            self.repeating_events[event.id] = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
+        self.load_upcoming_events.start()
 
     async def reminder_loop(self):
         try:
             while not self.bot.is_closed():
-                reminder = self.reminders.get_first_before_timestamp(time.time() + 86400)  # Get timers within 24 hours
+                reminder = self.reminders.get_first_before_timestamp(time.time() + 90000)  # Get timers within 25 hours
                 if reminder.dispatch_time >= time.time():
                     sleep_duration = (reminder.dispatch_time - time.time())
                     await asyncio.sleep(sleep_duration)
@@ -344,6 +349,14 @@ class Automation(commands.Cog):
     async def dispatch_event(self, event: Event):
         self.events.remove(event)
         self.bot.dispatch(f"{event.function_name}_event", event)
+
+    @tasks.loop(hours=24)
+    async def load_upcoming_events(self):
+        events = self.events.get_repeating_before_timestamp(time.time() + 90000)
+        for event in events:
+            if event.id in self.repeating_events:
+                continue
+            self.repeating_events[event.id] = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
 
     @commands.Cog.listener()
     async def on_reminder(self, reminder):
