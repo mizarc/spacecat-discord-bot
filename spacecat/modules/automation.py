@@ -18,10 +18,10 @@ from spacecat.spacecat import SpaceCat
 
 
 class Repeat(Enum):
-    No = 0,
-    Hourly = 3600,
-    Daily = 86400,
-    Weekly = 604800,
+    No = 0
+    Hourly = 3600
+    Daily = 86400
+    Weekly = 604800
 
 
 class Reminder:
