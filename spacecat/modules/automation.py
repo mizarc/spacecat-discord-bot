@@ -293,6 +293,17 @@ class Automation(commands.Cog):
     async def cog_load(self):
         self.load_upcoming_events.start()
 
+        # Add config keys
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        if 'automation' not in config:
+            config['automation'] = {}
+        if 'max_reminders_per_player' not in config['automation']:
+            config['automation']['max_reminders_per_player'] = 5
+        if 'max_events_per_server' not in config['automation']:
+            config['automation']['max_events_per_server'] = 10
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
+            toml.dump(config, config_file)
+
     async def reminder_loop(self):
         try:
             while not self.bot.is_closed():
