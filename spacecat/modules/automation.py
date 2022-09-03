@@ -78,10 +78,10 @@ class ReminderRepository:
                                       result[7]))
         return reminders
 
-    def get_by_guild_and_user(self, guild, name):
+    def get_by_guild_and_user(self, guild_id, user_id):
         # Get reminder by guild and reminder name
         cursor = self.db.cursor()
-        values = (guild.id, name)
+        values = (guild_id, user_id)
         cursor.execute('SELECT * FROM reminders WHERE guild_id=? AND user_id=? ORDER BY dispatch_time', values)
         results = cursor.fetchall()
 
@@ -173,10 +173,10 @@ class EventRepository:
         return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
                      bool(result[7]), result[8], result[9], result[10], result[11])
 
-    def get_by_guild(self, guild):
+    def get_by_guild(self, guild_id):
         # Get list of all reminders in a guild
         cursor = self.db.cursor()
-        values = (guild.id,)
+        values = (guild_id,)
         cursor.execute('SELECT * FROM events WHERE guild_id=?', values)
         results = cursor.fetchall()
 
@@ -545,6 +545,12 @@ class Automation(commands.Cog):
     async def schedule_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
                                time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                repeat_multiplier: int = 0):
+        if self.is_over_event_limit(interaction.guild_id):
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"The server has reach its event limit. Delete an event before adding another one."))
+            return
+
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
             await interaction.response.send_message(embed=discord.Embed(
@@ -567,6 +573,12 @@ class Automation(commands.Cog):
     @schedule_add_group.command(name="voicekick")
     async def schedule_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel, time_string: str,
                                  date_string: str, repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
+        if self.is_over_event_limit(interaction.guild_id):
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"The server has reach its event limit. Delete an event before adding another one."))
+            return
+
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
             await interaction.response.send_message(embed=discord.Embed(
@@ -590,6 +602,12 @@ class Automation(commands.Cog):
     async def schedule_voicemove(self, interaction, title: str, current_channel: discord.VoiceChannel,
                                  new_channel: discord.VoiceChannel, time_string: str, date_string: str,
                                  repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
+        if self.is_over_event_limit(interaction.guild_id):
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"The server has reach its event limit. Delete an event before adding another one."))
+            return
+
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
             await interaction.response.send_message(embed=discord.Embed(
@@ -779,6 +797,15 @@ class Automation(commands.Cog):
         if server_settings.timezone is not None:
             return pytz.timezone(server_settings.timezone)
         return pytz.utc
+
+    async def is_over_reminder_limit(self, guild_id, user_id):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        return len(self.reminders.get_by_guild_and_user(guild_id, user_id)) > \
+               config['automation']['max_reminders_per_player']
+
+    async def is_over_event_limit(self, guild_id):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        return len(self.events.get_by_guild(guild_id)) > config['automation']['max_reminders_per_server']
 
     @staticmethod
     async def parse_time(time_string):
