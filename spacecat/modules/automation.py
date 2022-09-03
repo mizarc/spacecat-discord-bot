@@ -392,6 +392,11 @@ class Automation(commands.Cog):
     @app_commands.command()
     async def remindme(self, interaction, message: str, seconds: int = 0, minutes: int = 0, hours: int = 0,
                        days: int = 0, weeks: int = 0, months: int = 0, years: int = 0):
+        if self.is_over_reminder_limit(interaction.guild_id, interaction.user.id):
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"You have reached your reminder limit. Delete one before adding another one."))
+            return
 
         timestamp = await self.to_seconds(seconds, minutes, hours, days, weeks, months, years)
         dispatch_time = timestamp + time.time()
@@ -801,7 +806,7 @@ class Automation(commands.Cog):
     async def is_over_reminder_limit(self, guild_id, user_id):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         return len(self.reminders.get_by_guild_and_user(guild_id, user_id)) > \
-               config['automation']['max_reminders_per_player']
+            config['automation']['max_reminders_per_player']
 
     async def is_over_event_limit(self, guild_id):
         config = toml.load(constants.DATA_DIR + 'config.toml')
