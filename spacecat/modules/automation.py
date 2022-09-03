@@ -547,7 +547,7 @@ class Automation(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @schedule_add_group.command(name="message")
-    async def schedule_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
+    async def schedule_add_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
                                time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                repeat_multiplier: int = 0):
         if self.is_over_event_limit(interaction.guild_id):
@@ -576,8 +576,9 @@ class Automation(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @schedule_add_group.command(name="voicekick")
-    async def schedule_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel, time_string: str,
-                                 date_string: str, repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
+    async def schedule_add_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel,
+                                     time_string: str, date_string: str, repeat: Repeat = Repeat.No,
+                                     repeat_multiplier: int = 0):
         if self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -604,7 +605,7 @@ class Automation(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @schedule_add_group.command(name="voicemove")
-    async def schedule_voicemove(self, interaction, title: str, current_channel: discord.VoiceChannel,
+    async def schedule_add_voicemove(self, interaction, title: str, current_channel: discord.VoiceChannel,
                                  new_channel: discord.VoiceChannel, time_string: str, date_string: str,
                                  repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         if self.is_over_event_limit(interaction.guild_id):
