@@ -282,6 +282,14 @@ class RepeatJob:
 
 class Automation(commands.Cog):
     """Schedule events to run at a later date"""
+    MAX_EVENTS_EMBED = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description=f"The server has reach its event limit. Delete an event before adding another one.")
+
+    PAST_TIME_EMBED = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description=f"You cannot set a date and time in the past.")
+
     def __init__(self, bot):
         self.bot: SpaceCat = bot
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
@@ -566,16 +574,12 @@ class Automation(commands.Cog):
                                    time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                    repeat_multiplier: int = 0):
         if self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"The server has reach its event limit. Delete an event before adding another one."))
+            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"You cannot set a date and time in the past."))
+            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
             return
 
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
@@ -595,16 +599,12 @@ class Automation(commands.Cog):
                                      time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                      repeat_multiplier: int = 0):
         if self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"The server has reach its event limit. Delete an event before adding another one."))
+            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"You cannot set a date and time in the past."))
+            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
             return
 
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
@@ -624,16 +624,12 @@ class Automation(commands.Cog):
                                      new_channel: discord.VoiceChannel, time_string: str, date_string: str,
                                      repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         if self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"The server has reach its event limit. Delete an event before adding another one."))
+            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"You cannot set a date and time in the past."))
+            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
             return
 
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
@@ -654,21 +650,16 @@ class Automation(commands.Cog):
                                           time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                           repeat_multiplier: int = 0):
         if self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"The server has reach its event limit. Delete an event before adding another one."))
+            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"You cannot set a date and time in the past."))
+            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
             return
 
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
-                                 repeat, repeat_multiplier, title, "channelprivate",
-                                 f"{channel.id}")
+                                 repeat, repeat_multiplier, title, "channelprivate", f"{channel.id}")
         self.events.add(event)
         await self.load_event(event)
         embed = discord.Embed(
@@ -684,16 +675,12 @@ class Automation(commands.Cog):
                                           time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                           repeat_multiplier: int = 0):
         if self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"The server has reach its event limit. Delete an event before adding another one."))
+            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"You cannot set a date and time in the past."))
+            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
             return
 
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
@@ -713,9 +700,7 @@ class Automation(commands.Cog):
     async def schedule_remove(self, interaction, name: str):
         event = self.events.get_by_name(name)
         if not event:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"An event going by the name '{name}' does not exist"))
+            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
         self.events.remove(event)
