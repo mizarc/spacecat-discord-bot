@@ -397,6 +397,13 @@ class Automation(commands.Cog):
         channel: discord.abc.GuildChannel = event.arguments
         await channel.set_permissions(guild.default_role, connect=False, view_channel=False)
 
+    @commands.Cog.listener()
+    async def on_channelprivate_event(self, event):
+        self.events.update(event)
+        guild = self.bot.get_guild(event.guild_id)
+        channel: discord.abc.GuildChannel = event.arguments
+        await channel.set_permissions(guild.default_role, connect=None, view_channel=None)
+
     @app_commands.command()
     async def remindme(self, interaction, message: str, seconds: int = 0, minutes: int = 0, hours: int = 0,
                        days: int = 0, weeks: int = 0, months: int = 0, years: int = 0):
@@ -556,8 +563,8 @@ class Automation(commands.Cog):
 
     @schedule_add_group.command(name="message")
     async def schedule_add_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
-                               time_string: str, date_string: str, repeat: Repeat = Repeat.No,
-                               repeat_multiplier: int = 0):
+                                   time_string: str, date_string: str, repeat: Repeat = Repeat.No,
+                                   repeat_multiplier: int = 0):
         if self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -667,6 +674,36 @@ class Automation(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             description=f"A channelprivate event named '{title}' has been set for "
+                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
+                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
+                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
+        await interaction.response.send_message(embed=embed)
+
+    @schedule_add_group.command(name="channelpublic")
+    async def schedule_add_channelprivate(self, interaction, title: str, channel: discord.abc.GuildChannel,
+                                          time_string: str, date_string: str, repeat: Repeat = Repeat.No,
+                                          repeat_multiplier: int = 0):
+        if self.is_over_event_limit(interaction.guild_id):
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"The server has reach its event limit. Delete an event before adding another one."))
+            return
+
+        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        if selected_datetime.timestamp() < time.time():
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"You cannot set a date and time in the past."))
+            return
+
+        event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
+                                 repeat, repeat_multiplier, title, "channelpublic",
+                                 f"{channel.id}")
+        self.events.add(event)
+        await self.load_event(event)
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            description=f"A channelpublic event named '{title}' has been set for "
                         f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
                         f"at {selected_datetime.hour}:{selected_datetime.minute}"
                         f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
