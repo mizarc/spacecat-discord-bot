@@ -384,10 +384,18 @@ class Automation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voicemove_event(self, event):
+        self.events.update(event)
         current_channel = self.bot.get_channel(int(event.arguments.split(' ')[0]))
         new_channel = self.bot.get_channel(int(event.arguments.split(' ')[1]))
         for member in current_channel.members:
             await member.move_to(new_channel)
+
+    @commands.Cog.listener()
+    async def on_channelprivate_event(self, event):
+        self.events.update(event)
+        guild = self.bot.get_guild(event.guild_id)
+        channel: discord.abc.GuildChannel = event.arguments
+        await channel.set_permissions(guild.default_role, connect=False, view_channel=False)
 
     @app_commands.command()
     async def remindme(self, interaction, message: str, seconds: int = 0, minutes: int = 0, hours: int = 0,
