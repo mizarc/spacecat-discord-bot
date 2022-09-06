@@ -290,6 +290,10 @@ class Automation(commands.Cog):
         colour=constants.EmbedStatus.FAIL.value,
         description=f"You cannot set a date and time in the past.")
 
+    NAME_ALREADY_EXISTS_EMBED = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description=f"An event of that name already exists.")
+
     def __init__(self, bot):
         self.bot: SpaceCat = bot
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
@@ -579,6 +583,10 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
+        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
+            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
+            return
+
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
             await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
@@ -604,6 +612,10 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
+        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
+            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
+            return
+
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
             await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
@@ -627,6 +639,10 @@ class Automation(commands.Cog):
                                      repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
+            return
+
+        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
+            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
             return
 
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
@@ -655,6 +671,10 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
+        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
+            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
+            return
+
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
             await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
@@ -673,11 +693,15 @@ class Automation(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @schedule_add_group.command(name="channelpublic")
-    async def schedule_add_channelprivate(self, interaction, title: str, channel: discord.abc.GuildChannel,
+    async def schedule_add_channelpublic(self, interaction, title: str, channel: discord.abc.GuildChannel,
                                           time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                           repeat_multiplier: int = 0):
         if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
+            return
+
+        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
+            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
             return
 
         selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
