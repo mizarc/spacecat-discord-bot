@@ -877,7 +877,7 @@ class Automation(commands.Cog):
 
     async def is_over_event_limit(self, guild_id):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        return len(self.events.get_by_guild(guild_id)) > config['automation']['max_reminders_per_server']
+        return len(self.events.get_by_guild(guild_id)) > config['automation']['max_events_per_server']
 
     @staticmethod
     async def parse_time(time_string):
