@@ -575,7 +575,7 @@ class Automation(commands.Cog):
     async def schedule_add_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
                                    time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                    repeat_multiplier: int = 0):
-        if self.is_over_event_limit(interaction.guild_id):
+        if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
@@ -600,7 +600,7 @@ class Automation(commands.Cog):
     async def schedule_add_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel,
                                      time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                      repeat_multiplier: int = 0):
-        if self.is_over_event_limit(interaction.guild_id):
+        if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
@@ -625,7 +625,7 @@ class Automation(commands.Cog):
     async def schedule_add_voicemove(self, interaction, title: str, current_channel: discord.VoiceChannel,
                                      new_channel: discord.VoiceChannel, time_string: str, date_string: str,
                                      repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
-        if self.is_over_event_limit(interaction.guild_id):
+        if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
@@ -651,7 +651,7 @@ class Automation(commands.Cog):
     async def schedule_add_channelprivate(self, interaction, title: str, channel: discord.abc.GuildChannel,
                                           time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                           repeat_multiplier: int = 0):
-        if self.is_over_event_limit(interaction.guild_id):
+        if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
@@ -676,7 +676,7 @@ class Automation(commands.Cog):
     async def schedule_add_channelprivate(self, interaction, title: str, channel: discord.abc.GuildChannel,
                                           time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                           repeat_multiplier: int = 0):
-        if self.is_over_event_limit(interaction.guild_id):
+        if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
 
