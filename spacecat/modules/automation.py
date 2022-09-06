@@ -499,7 +499,7 @@ class Automation(commands.Cog):
 
     @schedule_group.command(name="list")
     async def schedule_list(self, interaction):
-        events = self.events.get_by_guild(interaction.guild)
+        events = self.events.get_by_guild(interaction.guild_id)
         if not events:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
