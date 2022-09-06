@@ -702,7 +702,9 @@ class Automation(commands.Cog):
     async def schedule_remove(self, interaction, name: str):
         event = self.events.get_by_name(name)
         if not event:
-            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist"))
             return
 
         self.events.remove(event)
