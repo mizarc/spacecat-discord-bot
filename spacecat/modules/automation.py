@@ -842,9 +842,11 @@ class Automation(commands.Cog):
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
             return
+
         repeat_job = self.repeating_events[event.id]
-        repeat_job.job_task.cancel()
-        self.repeating_events.pop(event.id)
+        if repeat_job:
+            repeat_job.job_task.cancel()
+            self.repeating_events.pop(event.id)
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
         time_ = await self.parse_time(time_string)
