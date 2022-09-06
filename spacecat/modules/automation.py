@@ -404,14 +404,14 @@ class Automation(commands.Cog):
     async def on_channelprivate_event(self, event):
         self.events.update(event)
         guild = self.bot.get_guild(event.guild_id)
-        channel: discord.abc.GuildChannel = event.arguments
+        channel: discord.abc.GuildChannel = await self.bot.fetch_channel(event.arguments)
         await channel.set_permissions(guild.default_role, connect=False, view_channel=False)
 
     @commands.Cog.listener()
-    async def on_channelprivate_event(self, event):
+    async def on_channelpublic_event(self, event):
         self.events.update(event)
         guild = self.bot.get_guild(event.guild_id)
-        channel: discord.abc.GuildChannel = event.arguments
+        channel: discord.abc.GuildChannel = await self.bot.fetch_channel(event.arguments)
         await channel.set_permissions(guild.default_role, connect=None, view_channel=None)
 
     @app_commands.command()
