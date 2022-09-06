@@ -357,7 +357,9 @@ class Automation(commands.Cog):
         for event in events:
             if event.id in self.repeating_events:
                 continue
-            self.repeating_events[event.id] = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
+            repeat_job = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
+            repeat_job.run_task()
+            self.repeating_events[event.id] = repeat_job
 
     @commands.Cog.listener()
     async def on_reminder(self, reminder):
