@@ -151,6 +151,19 @@ class EventRepository:
                        'dispatch_time INTEGER, last_run_time INTEGER, repeat_interval TEXT, repeat_multiplier INTEGER, '
                        'is_paused INTEGER, name TEXT, description TEXT, function_name TEXT, arguments TEXT)')
         self.db.commit()
+        self.create_event_argument_tables()
+
+    def create_event_argument_tables(self):
+        cursor = self.db.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_message_args '
+                       '(event_id, TEXT PRIMARY KEY, title TEXT, description TEXT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicekick_args '
+                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicemove_args '
+                       '(event_id, TEXT PRIMARY KEY, current_channel INTEGER, new_channel INTEGER)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicemove_args '
+                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
+        self.db.commit()
 
     def get_all(self):
         """Get list of all reminders"""
@@ -694,8 +707,8 @@ class Automation(commands.Cog):
 
     @schedule_add_group.command(name="channelpublic")
     async def schedule_add_channelpublic(self, interaction, title: str, channel: discord.abc.GuildChannel,
-                                          time_string: str, date_string: str, repeat: Repeat = Repeat.No,
-                                          repeat_multiplier: int = 0):
+                                         time_string: str, date_string: str, repeat: Repeat = Repeat.No,
+                                         repeat_multiplier: int = 0):
         if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
