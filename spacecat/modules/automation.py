@@ -802,6 +802,26 @@ class Automation(commands.Cog):
             description=f"Event {name} has now been resumed and will run at the scheduled time."))
         return
 
+    @schedule_group.command(name="rename")
+    async def schedule_rename(self, interaction, name: str, new_name: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
+            return
+
+        if any(event.name == new_name for event in self.events.get_by_guild(interaction.guild_id)):
+            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
+            return
+
+        event.name = new_name
+        self.events.update(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Event {name} has been renamed to {new_name}."))
+        return
+
     @schedule_group.command(name="description")
     async def schedule_description(self, interaction, name: str, description: str):
         event = self.events.get_by_name(name)
