@@ -168,6 +168,38 @@ class ChannelPublicArgs:
         self.channel = channel
 
 
+class ChannelPublicArgsRepository:
+    def __init__(self, database):
+        self.db = database
+        cursor = self.db.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_channelpublic_args '
+                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
+        self.db.commit()
+
+    def get_by_event(self, event):
+        cursor = self.db.cursor()
+        cursor.execute('SELECT * FROM event_channelpublic_args WHERE event_id=?', (event.id,))
+        self.db.commit()
+
+    def add(self, event, channel_public_args: ChannelPublicArgs):
+        values = (event.id, channel_public_args.channel)
+        cursor = self.db.cursor()
+        cursor.execute('INSERT INTO event_channelpublic_args VALUES (?, ?)', values)
+        self.db.commit()
+
+    def update(self, event, channel_public_args: ChannelPublicArgs):
+        values = (event.id, channel_public_args.channel)
+        cursor = self.db.cursor()
+        cursor.execute('UPDATE event_channelpublic_args SET event_id=?, channel_id=?', values)
+        self.db.commit()
+
+    def remove(self, event, channel_public_args: ChannelPublicArgs):
+        values = (event.id, channel_public_args.channel)
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM event_channelpublic_args WHERE event_id=?, channel_id=?', values)
+        self.db.commit()
+
+
 class EventRepository:
     def __init__(self, database):
         self.db = database
