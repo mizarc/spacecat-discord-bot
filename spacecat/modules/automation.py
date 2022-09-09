@@ -170,21 +170,19 @@ class EventRepository:
         results = self.db.cursor().execute('SELECT * FROM events').fetchall()
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                                   bool(result[7]), result[8], result[9], result[10], result[11]))
+            event = self._result_to_event(result)
+            reminders.append(event)
         return reminders
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (id_,)).fetchone()
-        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                     bool(result[7]), result[8], result[9], result[10], result[11])
+        return self._result_to_event(result)
 
     def get_by_name(self, name):
         result = self.db.cursor().execute('SELECT * FROM events WHERE name=?', (name,)).fetchone()
         if not result:
             return None
-        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                     bool(result[7]), result[8], result[9], result[10], result[11])
+        return self._result_to_event(result)
 
     def get_by_guild(self, guild_id):
         # Get list of all reminders in a guild
@@ -195,8 +193,7 @@ class EventRepository:
 
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                                   bool(result[7]), result[8], result[9], result[10], result[11]))
+            reminders.append(self._result_to_event(result))
         return reminders
 
     def get_repeating(self):
@@ -207,29 +204,28 @@ class EventRepository:
 
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                                   bool(result[7]), result[8], result[9], result[10], result[11]))
+            reminders.append(self._result_to_event(result))
         return reminders
 
     def get_repeating_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
         results = cursor.execute('SELECT * FROM events '
-                                 'WHERE dispatch_time < ? AND NOT repeat_interval="No" ORDER BY dispatch_time',
+                                 'WHERE dispatch_time < ? AND NOT repeat_interval="No" '
+                                 'ORDER BY dispatch_time',
                                  (timestamp,)).fetchall()
 
         reminders = []
         for result in results:
-            reminders.append(Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                             bool(result[7]), result[8], result[9], result[10], result[11]))
+            reminders.append(self._result_to_event(result))
         return reminders
 
     def get_first_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
         result = cursor.execute('SELECT * FROM events '
-                                'WHERE dispatch_time < ? AND repeat_interval="No" ORDER BY dispatch_time',
+                                'WHERE dispatch_time < ? AND repeat_interval="No" '
+                                'ORDER BY dispatch_time',
                                 (timestamp,)).fetchone()
-        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                     bool(result[7]), result[8], result[9], result[10], result[11])
+        return self._result_to_event(result)
 
     def add(self, event):
         cursor = self.db.cursor()
@@ -254,6 +250,11 @@ class EventRepository:
         values = (event.id,)
         cursor.execute('DELETE FROM events WHERE id=?', values)
         self.db.commit()
+
+    @staticmethod
+    def _result_to_event(result):
+        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
+                     bool(result[7]), result[8], result[9], result[10])
 
 
 class RepeatJob:
