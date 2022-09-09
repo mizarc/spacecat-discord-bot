@@ -141,6 +141,32 @@ class Event:
         return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, None, repeat_interval,
                    repeat_multiplier, False, name, "", function_name, arguments)
 
+class MessageEventArgs:
+    def __init__(self, title, message):
+        self.title = title
+        self.message = message
+
+
+class VoiceKickEventArgs:
+    def __init__(self, channel):
+        self.channel = channel
+
+
+class VoiceMoveEventArgs:
+    def __init__(self, current_channel, new_channel):
+        self.current_channel = current_channel
+        self.new_channel = new_channel
+
+
+class ChannelPrivateArgs:
+    def __init__(self, channel):
+        self.channel = channel
+
+
+class ChannelPublicArgs:
+    def __init__(self, channel):
+        self.channel = channel
+
 
 class EventRepository:
     def __init__(self, database):
