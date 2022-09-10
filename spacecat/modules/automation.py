@@ -143,7 +143,7 @@ class Event:
                    repeat_multiplier, False, name, "", function_name, arguments)
 
 
-class EventArgsRepository(ABC):
+class ActionRepository(ABC):
     def __init__(self, database):
         self.db = database
 
@@ -156,36 +156,36 @@ class EventArgsRepository(ABC):
         pass
 
 
-class MessageEventArgs:
+class MessageEventAction:
     def __init__(self, title, message):
         self.title = title
         self.message = message
 
 
-class VoiceKickEventArgs:
+class VoiceKickEventAction:
     def __init__(self, channel):
         self.channel = channel
 
 
-class VoiceMoveEventArgs:
+class VoiceMoveEventAction:
     def __init__(self, current_channel, new_channel):
         self.current_channel = current_channel
         self.new_channel = new_channel
 
 
-class ChannelPrivateArgs:
+class ChannelPrivateAction:
     def __init__(self, channel):
         self.channel = channel
 
 
-class ChannelPublicArgs:
+class ChannelPublicAction:
     def __init__(self, id_, event_id, channel):
         self.id = id_
         self.event_id = event_id
         self.channel = channel
 
 
-class ChannelPublicArgsRepository(EventArgsRepository):
+class ChannelPublicFunctionAction(ActionRepository):
     def __init__(self, database):
         super().__init__(database)
         cursor = self.db.cursor()
@@ -204,19 +204,19 @@ class ChannelPublicArgsRepository(EventArgsRepository):
         self.db.commit()
         return self._result_to_args(result)
 
-    def add(self, event, channel_public_args: ChannelPublicArgs):
+    def add(self, event, channel_public_args: ChannelPublicAction):
         values = (event.id, channel_public_args.channel)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO event_channelpublic_args VALUES (?, ?)', values)
         self.db.commit()
 
-    def update(self, event, channel_public_args: ChannelPublicArgs):
+    def update(self, event, channel_public_args: ChannelPublicAction):
         values = (event.id, channel_public_args.channel)
         cursor = self.db.cursor()
         cursor.execute('UPDATE event_channelpublic_args SET event_id=?, channel_id=?', values)
         self.db.commit()
 
-    def remove(self, event, channel_public_args: ChannelPublicArgs):
+    def remove(self, event, channel_public_args: ChannelPublicAction):
         values = (event.id, channel_public_args.channel)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM event_channelpublic_args WHERE event_id=?, channel_id=?', values)
@@ -224,7 +224,7 @@ class ChannelPublicArgsRepository(EventArgsRepository):
 
     @staticmethod
     def _result_to_args(result):
-        return ChannelPublicArgs(result[0], result[1], result[2])
+        return ChannelPublicAction(result[0], result[1], result[2])
 
 
 class EventRepository:
@@ -340,6 +340,18 @@ class EventRepository:
     def _result_to_event(result):
         return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
                      bool(result[7]), result[8], result[9], result[10])
+
+
+class EventService:
+    def __init__(self, events, event_args):
+        self.events: EventRepository = events
+        self.event_args: list[ActionRepository] = event_args
+
+    def get_event_functions(self, event_id):
+        found_args = []
+        for event_arg in self.event_args:
+            found_args.append(event_arg.get_by_event(event_id))
+        return found_args
 
 
 class RepeatJob:
