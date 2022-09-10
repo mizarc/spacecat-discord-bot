@@ -1,5 +1,6 @@
 import asyncio
 import sqlite3
+from abc import ABC, abstractmethod
 from enum import Enum
 from itertools import islice
 
@@ -142,9 +143,17 @@ class Event:
                    repeat_multiplier, False, name, "", function_name, arguments)
 
 
-class EventArgsRepository:
+class EventArgsRepository(ABC):
     def __init__(self, database):
         self.db = database
+
+    @abstractmethod
+    def get_by_id(self, id_):
+        pass
+
+    @abstractmethod
+    def get_by_event(self, event_id):
+        pass
 
 
 class MessageEventArgs:
