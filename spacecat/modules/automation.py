@@ -141,6 +141,12 @@ class Event:
         return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, None, repeat_interval,
                    repeat_multiplier, False, name, "", function_name, arguments)
 
+
+class EventArgsRepository:
+    def __init__(self, database):
+        self.db = database
+
+
 class MessageEventArgs:
     def __init__(self, title, message):
         self.title = title
@@ -170,9 +176,9 @@ class ChannelPublicArgs:
         self.channel = channel
 
 
-class ChannelPublicArgsRepository:
+class ChannelPublicArgsRepository(EventArgsRepository):
     def __init__(self, database):
-        self.db = database
+        super().__init__(database)
         cursor = self.db.cursor()
         cursor.execute('CREATE TABLE IF NOT EXISTS event_channelpublic_args '
                        '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
