@@ -164,7 +164,9 @@ class ChannelPrivateArgs:
 
 
 class ChannelPublicArgs:
-    def __init__(self, channel):
+    def __init__(self, id_, event_id, channel):
+        self.id = id_
+        self.event_id = event_id
         self.channel = channel
 
 
@@ -177,9 +179,10 @@ class ChannelPublicArgsRepository:
         self.db.commit()
 
     def get_by_event(self, event):
-        cursor = self.db.cursor()
-        cursor.execute('SELECT * FROM event_channelpublic_args WHERE event_id=?', (event.id,))
+        result = self.db.cursor().execute(
+            'SELECT * FROM event_channelpublic_args WHERE event_id=?', (event.id,)).fetch_one()
         self.db.commit()
+        return self._result_to_args(result)
 
     def add(self, event, channel_public_args: ChannelPublicArgs):
         values = (event.id, channel_public_args.channel)
@@ -198,6 +201,10 @@ class ChannelPublicArgsRepository:
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM event_channelpublic_args WHERE event_id=?, channel_id=?', values)
         self.db.commit()
+
+    @staticmethod
+    def _result_to_args(result):
+        return ChannelPublicArgs(result[0], result[1], result[2])
 
 
 class EventRepository:
