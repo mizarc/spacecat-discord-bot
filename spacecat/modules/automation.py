@@ -342,8 +342,34 @@ class EventRepository:
                      bool(result[7]), result[8], result[9], result[10])
 
 
+class EventAction:
+    def __init__(self, id_, event_id, action_type, action_id):
+        self.id = id_
+        self.event_id = event_id
+        self.action_type = action_type
+        self.action_id = action_id
+
+
+class EventActionRepository:
+    def __init__(self, database):
+        self.db = database
+        cursor = self.db.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_actions '
+                       '(id TEXT PRIMARY KEY, event_id INTEGER, action_type TEXT, action_id INTEGER)')
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE id=?', (id_,)).fetchone()
+        return self._result_to_event_action(result)
+
+    @staticmethod
+    def _result_to_event_action(result):
+        return EventAction(result[0], result[1], result[2], result[3])
+
+
 class EventService:
-    def __init__(self, events, event_args):
+    def __init__(self, event_actions, events, event_args):
+        self.event_actions: EventActionRepository = event_actions
         self.events: EventRepository = events
         self.event_args: list[ActionRepository] = event_args
 
