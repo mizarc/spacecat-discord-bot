@@ -130,7 +130,7 @@ class ReminderRepository:
 
 class Event:
     def __init__(self, id_, user_id, guild_id, dispatch_time, last_run_time, repeat_interval,
-                 repeat_multiplier, is_paused, name, description, function_name, arguments):
+                 repeat_multiplier, is_paused, name, description):
         self.id = id_
         self.user_id = user_id
         self.guild_id = guild_id
@@ -141,14 +141,11 @@ class Event:
         self.is_paused = is_paused
         self.name = name
         self.description = description
-        self.function_name = function_name
-        self.arguments = arguments
 
     @classmethod
-    def create_new(cls, user_id, guild_id, dispatch_time, repeat_interval,
-                   repeat_multiplier, name, function_name, arguments):
-        return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, None, repeat_interval,
-                   repeat_multiplier, False, name, "", function_name, arguments)
+    def create_new(cls, user_id, guild_id, dispatch_time, repeat_interval, repeat_multiplier, name):
+        return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, None,
+                   repeat_interval, repeat_multiplier, False, name, "")
 
 
 class ActionRepository(ABC):
