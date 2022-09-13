@@ -161,18 +161,18 @@ class ActionRepository(ABC):
         pass
 
 
-class MessageEventAction:
+class MessageAction:
     def __init__(self, title, message):
         self.title = title
         self.message = message
 
 
-class VoiceKickEventAction:
+class VoiceKickAction:
     def __init__(self, channel):
         self.channel = channel
 
 
-class VoiceMoveEventAction:
+class VoiceMoveAction:
     def __init__(self, current_channel, new_channel):
         self.current_channel = current_channel
         self.new_channel = new_channel
