@@ -190,7 +190,7 @@ class ChannelPublicAction:
         self.channel = channel
 
 
-class ChannelPublicFunctionAction(ActionRepository):
+class ChannelPublicActionRepository(ActionRepository):
     def __init__(self, database):
         super().__init__(database)
         cursor = self.db.cursor()
