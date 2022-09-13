@@ -239,7 +239,7 @@ class EventRepository:
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER, '
                        'dispatch_time INTEGER, last_run_time INTEGER, repeat_interval TEXT, repeat_multiplier INTEGER, '
-                       'is_paused INTEGER, name TEXT, description TEXT, function_name TEXT, arguments TEXT)')
+                       'is_paused INTEGER, name TEXT, description TEXT)')
         self.db.commit()
         self.create_event_argument_tables()
 
@@ -344,7 +344,7 @@ class EventRepository:
     @staticmethod
     def _result_to_event(result):
         return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                     bool(result[7]), result[8], result[9], result[10])
+                     bool(result[7]), result[8], result[9])
 
 
 class EventAction:
