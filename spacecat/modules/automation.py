@@ -388,6 +388,25 @@ class EventActionRepository:
         result = self.db.cursor().execute('SELECT * FROM event_actions WHERE id=?', (id_,)).fetchone()
         return self._result_to_event_action(result)
 
+    def get_by_event(self, event_id):
+        results = self.db.cursor().execute('SELECT * FROM event_actions WHERE event_id=?', (event_id,)).fetchall()
+        event_actions = []
+        for result in results:
+            event_actions.append(self._result_to_event_action(result))
+        return event_actions
+
+    def add(self, event_id, action):
+        values = (event_id, action.get_name(), action.id)
+        cursor = self.db.cursor()
+        cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?)', values)
+        self.db.commit()
+
+    def remove(self, event_id, action):
+        values = (event_id, action.get_name(), action.id)
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM event_actions WHERE event_id=? AND action_id=?', values)
+        self.db.commit()
+
     @staticmethod
     def _result_to_event_action(result):
         return EventAction(result[0], result[1], Action[result[2]], result[3])
