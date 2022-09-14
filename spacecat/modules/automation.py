@@ -162,33 +162,53 @@ class ActionRepository(ABC):
         pass
 
 
-class MessageAction:
-    def __init__(self, title, message):
+
+class MessageAction(Action):
+    def __init__(self, id_, title, message):
+        super().__init__(id_)
         self.title = title
         self.message = message
 
+    def get_name(self):
+        return "message"
 
-class VoiceKickAction:
-    def __init__(self, channel):
+
+class VoiceKickAction(Action):
+    def __init__(self, id_, channel):
+        super().__init__(id_)
         self.channel = channel
 
+    def get_name(self):
+        return "voice_kick"
 
-class VoiceMoveAction:
-    def __init__(self, current_channel, new_channel):
+
+class VoiceMoveAction(Action):
+    def __init__(self, id_, current_channel, new_channel):
+        super().__init__(id_)
         self.current_channel = current_channel
         self.new_channel = new_channel
 
+    def get_name(self):
+        return "voice_move"
 
-class ChannelPrivateAction:
-    def __init__(self, channel):
+
+class ChannelPrivateAction(Action):
+    def __init__(self, id_, channel):
+        super().__init__(id_)
         self.channel = channel
 
+    def get_name(self):
+        return "channel_private"
 
-class ChannelPublicAction:
+
+class ChannelPublicAction(Action):
     def __init__(self, id_, event_id, channel):
-        self.id = id_
+        super().__init__(id_)
         self.event_id = event_id
         self.channel = channel
+
+    def get_name(self):
+        return "channel_public"
 
 
 class ChannelPublicActionRepository(ActionRepository):
@@ -352,7 +372,7 @@ class EventAction:
     def __init__(self, id_, event_id, action_type, action_id):
         self.id = id_
         self.event_id = event_id
-        self.action_type = action_type
+        self.action_type: Action = action_type
         self.action_id = action_id
 
 
