@@ -409,7 +409,7 @@ class EventActionRepository:
 
     @staticmethod
     def _result_to_event_action(result):
-        return EventAction(result[0], result[1], Action[result[2]], result[3])
+        return EventAction(result[0], result[1], result[2], result[3])
 
 
 class EventService:
