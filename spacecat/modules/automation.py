@@ -26,14 +26,6 @@ class Repeat(Enum):
     Weekly = 604800
 
 
-class Action(Enum):
-    Message = 0
-    VoiceKick = 1
-    VoiceMove = 2
-    ChannelPrivate = 3
-    ChannelPublic = 4
-
-
 class Reminder:
     def __init__(self, id_, user_id, guild_id, channel_id, message_id, creation_time, dispatch_time, message):
         self.id = id_
@@ -146,6 +138,15 @@ class Event:
     def create_new(cls, user_id, guild_id, dispatch_time, repeat_interval, repeat_multiplier, name):
         return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, None,
                    repeat_interval, repeat_multiplier, False, name, "")
+
+
+class Action(ABC):
+    def __init__(self, id_):
+        self.id = id_
+
+    @abstractmethod
+    def get_name(self):
+        pass
 
 
 class ActionRepository(ABC):
