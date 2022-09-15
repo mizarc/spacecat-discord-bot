@@ -3,6 +3,7 @@ import sqlite3
 from abc import ABC, abstractmethod
 from enum import Enum
 from itertools import islice
+from typing import Generic, TypeVar
 
 import discord
 import toml
@@ -149,7 +150,10 @@ class Action(ABC):
         pass
 
 
-class ActionRepository(ABC):
+T_Action = TypeVar("T_Action", bound=Action)
+
+
+class ActionRepository(ABC, Generic[T_Action]):
     def __init__(self, database):
         self.db = database
 
@@ -161,6 +165,13 @@ class ActionRepository(ABC):
     def get_by_event(self, event_id):
         pass
 
+    @abstractmethod
+    def add(self, action: T_Action):
+        pass
+
+    @abstractmethod
+    def remove(self, action: T_Action):
+        pass
 
 
 class MessageAction(Action):
