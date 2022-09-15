@@ -3,7 +3,7 @@ import sqlite3
 from abc import ABC, abstractmethod
 from enum import Enum
 from itertools import islice
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, get_args
 
 import discord
 import toml
@@ -418,16 +418,32 @@ class EventActionRepository:
 
 
 class EventService:
-    def __init__(self, event_actions, events, event_args):
+    def __init__(self, event_actions, events):
         self.event_actions: EventActionRepository = event_actions
         self.events: EventRepository = events
-        self.event_args: list[ActionRepository] = event_args
+        self.actions_collection: dict[Action, ActionRepository] = {}
 
-    def get_event_functions(self, event_id):
-        found_args = []
-        for event_arg in self.event_args:
-            found_args.append(event_arg.get_by_event(event_id))
-        return found_args
+    def add_action_repository(self, action_repository: ActionRepository):
+        self.actions_collection[get_args(action_repository)[0].get_name()] = action_repository
+
+    def get_event_actions(self, event_id):
+        found_actions = []
+        event_actions = self.event_actions.get_by_event(event_id)
+
+        for event_action in event_actions:
+            actions = self.actions_collection.get(event_action.action_type)
+            found_actions.append(actions.get_by_id(event_action.action_id))
+        return found_actions
+
+    def add_action(self, event: Event, action: Action):
+        actions = self.actions_collection.get(action)
+        actions.add(action)
+        self.event_actions.add(event.id, action)
+
+    def remove_action(self, event: Event, action: Action):
+        actions = self.actions_collection.get(action)
+        actions.remove(action)
+        self.event_actions.remove(event.id, action)
 
 
 class RepeatJob:
@@ -763,7 +779,7 @@ class Automation(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @schedule_add_group.command(name="message")
-    async def schedule_add_message(self, interaction, title: str, message: str, channel: discord.TextChannel,
+    async def schedule_add_message(self, interaction, name: str, title: str, message: str, channel: discord.TextChannel,
                                    time_string: str, date_string: str, repeat: Repeat = Repeat.No,
                                    repeat_multiplier: int = 0):
         if await self.is_over_event_limit(interaction.guild_id):
@@ -782,6 +798,9 @@ class Automation(commands.Cog):
         event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
                                  repeat, repeat_multiplier, title, "message", f"{channel.id} {message}")
         self.events.add(event)
+
+        action = MessageEventAction(title, message)
+
         await self.load_event(event)
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
