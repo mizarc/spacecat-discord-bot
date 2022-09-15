@@ -222,7 +222,7 @@ class ChannelPublicAction(Action):
         return "channel_public"
 
 
-class ChannelPublicActionRepository(ActionRepository):
+class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
     def __init__(self, database):
         super().__init__(database)
         cursor = self.db.cursor()
@@ -241,22 +241,16 @@ class ChannelPublicActionRepository(ActionRepository):
         self.db.commit()
         return self._result_to_args(result)
 
-    def add(self, event, channel_public_args: ChannelPublicAction):
-        values = (event.id, channel_public_args.channel)
+    def add(self, action: ChannelPublicAction):
+        values = (action.id, action.channel)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO event_channelpublic_args VALUES (?, ?)', values)
         self.db.commit()
 
-    def update(self, event, channel_public_args: ChannelPublicAction):
-        values = (event.id, channel_public_args.channel)
+    def remove(self, action: ChannelPublicAction):
+        values = (action.id,)
         cursor = self.db.cursor()
-        cursor.execute('UPDATE event_channelpublic_args SET event_id=?, channel_id=?', values)
-        self.db.commit()
-
-    def remove(self, event, channel_public_args: ChannelPublicAction):
-        values = (event.id, channel_public_args.channel)
-        cursor = self.db.cursor()
-        cursor.execute('DELETE FROM event_channelpublic_args WHERE event_id=?, channel_id=?', values)
+        cursor.execute('DELETE FROM event_channelpublic_args WHERE id=?', values)
         self.db.commit()
 
     @staticmethod
