@@ -611,9 +611,12 @@ class Automation(commands.Cog):
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
         self.reminders = ReminderRepository(self.database)
         self.events = EventRepository(self.database)
+        self.event_actions = EventActionRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
         self.repeating_events: dict[str, RepeatJob] = {}
+
+        self.event_service = self.init_event_service()
 
     async def cog_load(self):
         self.load_upcoming_events.start()
@@ -628,6 +631,21 @@ class Automation(commands.Cog):
             config['automation']['max_events_per_server'] = 10
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
+
+    async def init_event_service(self):
+        event_service = EventService(self.event_actions, self.events)
+
+        action_repositories = [
+            MessageActionRepository(self.database),
+            VoiceKickActionRepository(self.database),
+            VoiceMoveActionRepository(self.database),
+            ChannelPrivateActionRepository(self.database),
+            ChannelPublicActionRepository(self.database)
+        ]
+
+        for action_repository in action_repositories:
+            event_service.add_action_repository(action_repository)
+        return event_service
 
     async def reminder_loop(self):
         try:
