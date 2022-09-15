@@ -141,6 +141,121 @@ class Event:
                    repeat_interval, repeat_multiplier, False, name, "")
 
 
+class EventRepository:
+    def __init__(self, database):
+        self.db = database
+        cursor = self.db.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER, '
+                       'dispatch_time INTEGER, last_run_time INTEGER, repeat_interval TEXT, repeat_multiplier INTEGER, '
+                       'is_paused INTEGER, name TEXT, description TEXT)')
+        self.db.commit()
+        self.create_event_argument_tables()
+
+    def create_event_argument_tables(self):
+        cursor = self.db.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_message_args '
+                       '(event_id, TEXT PRIMARY KEY, title TEXT, description TEXT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicekick_args '
+                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicemove_args '
+                       '(event_id, TEXT PRIMARY KEY, current_channel INTEGER, new_channel INTEGER)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicemove_args '
+                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
+        self.db.commit()
+
+    def get_all(self):
+        """Get list of all reminders"""
+        results = self.db.cursor().execute('SELECT * FROM events').fetchall()
+        reminders = []
+        for result in results:
+            event = self._result_to_event(result)
+            reminders.append(event)
+        return reminders
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (id_,)).fetchone()
+        return self._result_to_event(result)
+
+    def get_by_name(self, name):
+        result = self.db.cursor().execute('SELECT * FROM events WHERE name=?', (name,)).fetchone()
+        if not result:
+            return None
+        return self._result_to_event(result)
+
+    def get_by_guild(self, guild_id):
+        # Get list of all reminders in a guild
+        cursor = self.db.cursor()
+        values = (guild_id,)
+        cursor.execute('SELECT * FROM events WHERE guild_id=?', values)
+        results = cursor.fetchall()
+
+        reminders = []
+        for result in results:
+            reminders.append(self._result_to_event(result))
+        return reminders
+
+    def get_repeating(self):
+        # Get list of all reminders in a guild
+        cursor = self.db.cursor()
+        cursor.execute('SELECT * FROM events WHERE NOT repeat_interval=? AND is_paused=0', ('No',))
+        results = cursor.fetchall()
+
+        reminders = []
+        for result in results:
+            reminders.append(self._result_to_event(result))
+        return reminders
+
+    def get_repeating_before_timestamp(self, timestamp):
+        cursor = self.db.cursor()
+        results = cursor.execute('SELECT * FROM events '
+                                 'WHERE dispatch_time < ? AND NOT repeat_interval="No" '
+                                 'ORDER BY dispatch_time',
+                                 (timestamp,)).fetchall()
+
+        reminders = []
+        for result in results:
+            reminders.append(self._result_to_event(result))
+        return reminders
+
+    def get_first_before_timestamp(self, timestamp):
+        cursor = self.db.cursor()
+        result = cursor.execute('SELECT * FROM events '
+                                'WHERE dispatch_time < ? AND repeat_interval="No" '
+                                'ORDER BY dispatch_time',
+                                (timestamp,)).fetchone()
+        return self._result_to_event(result)
+
+    def add(self, event):
+        cursor = self.db.cursor()
+        values = (str(event.id), event.user_id, event.guild_id, event.dispatch_time, event.last_run_time,
+                  event.repeat_interval.name, event.repeat_multiplier, int(event.is_paused), event.name,
+                  event.description, event.function_name, event.arguments)
+        cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', values)
+        self.db.commit()
+
+    def update(self, event):
+        cursor = self.db.cursor()
+        values = (event.user_id, event.guild_id, event.dispatch_time, event.last_run_time, event.repeat_interval.name,
+                  event.repeat_multiplier, int(event.is_paused), event.name, event.description, event.function_name,
+                  event.arguments, str(event.id))
+        cursor.execute('UPDATE events SET user_id=?, guild_id=?, dispatch_time=?, last_run_time=?, repeat_interval=?, '
+                       'repeat_multiplier=?, is_paused=?, name=?, description=?, function_name=?, arguments=? '
+                       'WHERE id=?', values)
+        self.db.commit()
+
+    def remove(self, event):
+        cursor = self.db.cursor()
+        values = (event.id,)
+        cursor.execute('DELETE FROM events WHERE id=?', values)
+        self.db.commit()
+
+    @staticmethod
+    def _result_to_event(result):
+        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
+                     bool(result[7]), result[8], result[9])
+
+
 class Action(ABC):
     def __init__(self, id_):
         self.id = id_
@@ -365,121 +480,6 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
     @staticmethod
     def _result_to_args(result):
         return ChannelPublicAction(result[0], result[1], result[2])
-
-
-class EventRepository:
-    def __init__(self, database):
-        self.db = database
-        cursor = self.db.cursor()
-        cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER, '
-                       'dispatch_time INTEGER, last_run_time INTEGER, repeat_interval TEXT, repeat_multiplier INTEGER, '
-                       'is_paused INTEGER, name TEXT, description TEXT)')
-        self.db.commit()
-        self.create_event_argument_tables()
-
-    def create_event_argument_tables(self):
-        cursor = self.db.cursor()
-        cursor.execute('CREATE TABLE IF NOT EXISTS event_message_args '
-                       '(event_id, TEXT PRIMARY KEY, title TEXT, description TEXT)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicekick_args '
-                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicemove_args '
-                       '(event_id, TEXT PRIMARY KEY, current_channel INTEGER, new_channel INTEGER)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicemove_args '
-                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
-        self.db.commit()
-
-    def get_all(self):
-        """Get list of all reminders"""
-        results = self.db.cursor().execute('SELECT * FROM events').fetchall()
-        reminders = []
-        for result in results:
-            event = self._result_to_event(result)
-            reminders.append(event)
-        return reminders
-
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (id_,)).fetchone()
-        return self._result_to_event(result)
-
-    def get_by_name(self, name):
-        result = self.db.cursor().execute('SELECT * FROM events WHERE name=?', (name,)).fetchone()
-        if not result:
-            return None
-        return self._result_to_event(result)
-
-    def get_by_guild(self, guild_id):
-        # Get list of all reminders in a guild
-        cursor = self.db.cursor()
-        values = (guild_id,)
-        cursor.execute('SELECT * FROM events WHERE guild_id=?', values)
-        results = cursor.fetchall()
-
-        reminders = []
-        for result in results:
-            reminders.append(self._result_to_event(result))
-        return reminders
-
-    def get_repeating(self):
-        # Get list of all reminders in a guild
-        cursor = self.db.cursor()
-        cursor.execute('SELECT * FROM events WHERE NOT repeat_interval=? AND is_paused=0', ('No',))
-        results = cursor.fetchall()
-
-        reminders = []
-        for result in results:
-            reminders.append(self._result_to_event(result))
-        return reminders
-
-    def get_repeating_before_timestamp(self, timestamp):
-        cursor = self.db.cursor()
-        results = cursor.execute('SELECT * FROM events '
-                                 'WHERE dispatch_time < ? AND NOT repeat_interval="No" '
-                                 'ORDER BY dispatch_time',
-                                 (timestamp,)).fetchall()
-
-        reminders = []
-        for result in results:
-            reminders.append(self._result_to_event(result))
-        return reminders
-
-    def get_first_before_timestamp(self, timestamp):
-        cursor = self.db.cursor()
-        result = cursor.execute('SELECT * FROM events '
-                                'WHERE dispatch_time < ? AND repeat_interval="No" '
-                                'ORDER BY dispatch_time',
-                                (timestamp,)).fetchone()
-        return self._result_to_event(result)
-
-    def add(self, event):
-        cursor = self.db.cursor()
-        values = (str(event.id), event.user_id, event.guild_id, event.dispatch_time, event.last_run_time,
-                  event.repeat_interval.name, event.repeat_multiplier, int(event.is_paused), event.name,
-                  event.description, event.function_name, event.arguments)
-        cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', values)
-        self.db.commit()
-
-    def update(self, event):
-        cursor = self.db.cursor()
-        values = (event.user_id, event.guild_id, event.dispatch_time, event.last_run_time, event.repeat_interval.name,
-                  event.repeat_multiplier, int(event.is_paused), event.name, event.description, event.function_name,
-                  event.arguments, str(event.id))
-        cursor.execute('UPDATE events SET user_id=?, guild_id=?, dispatch_time=?, last_run_time=?, repeat_interval=?, '
-                       'repeat_multiplier=?, is_paused=?, name=?, description=?, function_name=?, arguments=? '
-                       'WHERE id=?', values)
-        self.db.commit()
-
-    def remove(self, event):
-        cursor = self.db.cursor()
-        values = (event.id,)
-        cursor.execute('DELETE FROM events WHERE id=?', values)
-        self.db.commit()
-
-    @staticmethod
-    def _result_to_event(result):
-        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                     bool(result[7]), result[8], result[9])
 
 
 class EventAction:
