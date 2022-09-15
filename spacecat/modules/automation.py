@@ -162,10 +162,6 @@ class ActionRepository(ABC, Generic[T_Action]):
         pass
 
     @abstractmethod
-    def get_by_event(self, event_id):
-        pass
-
-    @abstractmethod
     def add(self, action: T_Action):
         pass
 
@@ -227,17 +223,11 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
         super().__init__(database)
         cursor = self.db.cursor()
         cursor.execute('CREATE TABLE IF NOT EXISTS event_channelpublic_args '
-                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
+                       '(id TEXT PRIMARY KEY, channel_id INTEGER)')
         self.db.commit()
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM event_channelpublic_args WHERE id=?', (id_,)).fetch_one()
-        self.db.commit()
-        return self._result_to_args(result)
-
-    def get_by_event(self, event):
-        result = self.db.cursor().execute(
-            'SELECT * FROM event_channelpublic_args WHERE event_id=?', (event.id,)).fetch_one()
         self.db.commit()
         return self._result_to_args(result)
 
