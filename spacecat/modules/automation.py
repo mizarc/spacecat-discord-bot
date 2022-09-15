@@ -171,13 +171,44 @@ class ActionRepository(ABC, Generic[T_Action]):
 
 
 class MessageAction(Action):
-    def __init__(self, id_, title, message):
+    def __init__(self, id_, text_channel_id, title, message):
         super().__init__(id_)
+        self.text_channel_id = text_channel_id
         self.title = title
         self.message = message
 
     def get_name(self):
         return "message"
+
+
+class MessageActionRepository(ActionRepository[MessageAction]):
+    def __init__(self, database):
+        super().__init__(database)
+        cursor = self.db.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS action_message '
+                       '(id TEXT PRIMARY KEY, text_channel INTEGER, title TEXT, message TEXT)')
+        self.db.commit()
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM action_message WHERE id=?', (id_,)).fetch_one()
+        self.db.commit()
+        return self._result_to_args(result)
+
+    def add(self, action: MessageAction):
+        values = (action.id, action.text_channel_id, action.title, action.message)
+        cursor = self.db.cursor()
+        cursor.execute('INSERT INTO action_message VALUES (?, ?, ?, ?)', values)
+        self.db.commit()
+
+    def remove(self, action: MessageAction):
+        values = (action.id,)
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM action_message WHERE id=?', values)
+        self.db.commit()
+
+    @staticmethod
+    def _result_to_args(result):
+        return MessageAction(result[0], result[1], result[2], result[3])
 
 
 class VoiceKickAction(Action):
@@ -189,30 +220,118 @@ class VoiceKickAction(Action):
         return "voice_kick"
 
 
+class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
+    def __init__(self, database):
+        super().__init__(database)
+        cursor = self.db.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS action_voice_kick (id TEXT PRIMARY KEY, voice_channel_id TEXT)')
+        self.db.commit()
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM action_voice_kick WHERE id=?', (id_,)).fetch_one()
+        self.db.commit()
+        return self._result_to_args(result)
+
+    def add(self, action: VoiceKickAction):
+        values = (action.id, action.channel)
+        cursor = self.db.cursor()
+        cursor.execute('INSERT INTO action_voice_kick VALUES (?, ?)', values)
+        self.db.commit()
+
+    def remove(self, action: VoiceKickAction):
+        values = (action.id,)
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM action_voice_kick WHERE id=?', values)
+        self.db.commit()
+
+    @staticmethod
+    def _result_to_args(result):
+        return VoiceKickAction(result[0], result[1])
+
+
 class VoiceMoveAction(Action):
-    def __init__(self, id_, current_channel, new_channel):
+    def __init__(self, id_, current_voice_channel_id, new_voice_channel_id):
         super().__init__(id_)
-        self.current_channel = current_channel
-        self.new_channel = new_channel
+        self.current_voice_channel_id = current_voice_channel_id
+        self.new_voice_channel_id = new_voice_channel_id
 
     def get_name(self):
         return "voice_move"
 
 
+class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
+    def __init__(self, database):
+        super().__init__(database)
+        cursor = self.db.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS action_voice_move '
+                       '(id TEXT PRIMARY KEY, current_voice_channel_id INTEGER, new_voice_channel_id INTEGER)')
+        self.db.commit()
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM action_voice_move WHERE id=?', (id_,)).fetch_one()
+        self.db.commit()
+        return self._result_to_args(result)
+
+    def add(self, action: VoiceMoveAction):
+        values = (action.id, action.current_voice_channel_id, action.new_voice_channel_id)
+        cursor = self.db.cursor()
+        cursor.execute('INSERT INTO action_voice_move VALUES (?, ?, ?)', values)
+        self.db.commit()
+
+    def remove(self, action: VoiceMoveAction):
+        values = (action.id,)
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM action_voice_move WHERE id=?', values)
+        self.db.commit()
+
+    @staticmethod
+    def _result_to_args(result):
+        return VoiceMoveAction(result[0], result[1], result[2])
+
+
 class ChannelPrivateAction(Action):
-    def __init__(self, id_, channel):
+    def __init__(self, id_, channel_id):
         super().__init__(id_)
-        self.channel = channel
+        self.channel_id = channel_id
 
     def get_name(self):
         return "channel_private"
 
 
+class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
+    def __init__(self, database):
+        super().__init__(database)
+        cursor = self.db.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS action_channel_private (id TEXT PRIMARY KEY, channel_id INTEGER)')
+        self.db.commit()
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM action_channel_private WHERE id=?', (id_,)).fetch_one()
+        self.db.commit()
+        return self._result_to_args(result)
+
+    def add(self, action: ChannelPrivateAction):
+        values = (action.id, action.channel_id)
+        cursor = self.db.cursor()
+        cursor.execute('INSERT INTO action_channel_private VALUES (?, ?)', values)
+        self.db.commit()
+
+    def remove(self, action: ChannelPrivateAction):
+        values = (action.id,)
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM action_channel_private WHERE id=?', values)
+        self.db.commit()
+
+    @staticmethod
+    def _result_to_args(result):
+        return VoiceMoveAction(result[0], result[1], result[2])
+
+
 class ChannelPublicAction(Action):
-    def __init__(self, id_, event_id, channel):
+    def __init__(self, id_, event_id, channel_id):
         super().__init__(id_)
         self.event_id = event_id
-        self.channel = channel
+        self.channel_id = channel_id
 
     def get_name(self):
         return "channel_public"
@@ -232,7 +351,7 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
         return self._result_to_args(result)
 
     def add(self, action: ChannelPublicAction):
-        values = (action.id, action.channel)
+        values = (action.id, action.channel_id)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO event_channelpublic_args VALUES (?, ?)', values)
         self.db.commit()
