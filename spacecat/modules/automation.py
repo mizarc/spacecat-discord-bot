@@ -287,7 +287,7 @@ class ActionRepository(ABC, Generic[T_Action]):
         pass
 
     @abstractmethod
-    def remove(self, action: T_Action):
+    def remove(self, id_: int):
         pass
 
 
@@ -509,10 +509,10 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
 
 class EventAction:
     def __init__(self, id_, event_id, action_type, action_id):
-        self.id = id_
-        self.event_id = event_id
-        self.action_type: Action = action_type
-        self.action_id = action_id
+        self.id: int = id_
+        self.event_id: int = event_id
+        self.action_type: str = action_type
+        self.action_id: int = action_id
 
 
 class EventActionRepository:
@@ -540,8 +540,8 @@ class EventActionRepository:
         cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?)', values)
         self.db.commit()
 
-    def remove(self, event_id, action):
-        values = (event_id, action.get_name(), action.id)
+    def remove(self, event_id, action_id):
+        values = (event_id, action_id)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM event_actions WHERE event_id=? AND action_id=?', values)
         self.db.commit()
@@ -555,14 +555,21 @@ class EventService:
     def __init__(self, event_actions, events):
         self.event_actions: EventActionRepository = event_actions
         self.events: EventRepository = events
-        self.actions_collection: dict[Action, ActionRepository] = {}
+        self.actions_collection: dict[str, ActionRepository] = {}
 
     def add_action_repository(self, action_repository: ActionRepository):
         self.actions_collection[get_args(action_repository)[0].get_name()] = action_repository
 
-    def get_event_actions(self, event_id):
+    def remove_event(self, event: Event):
+        found_event_actions = self.event_actions.get_by_event(event.id)
+        for event_action in found_event_actions:
+            self.actions_collection.get(event_action.action_type).remove(event_action.action_id)
+            self.event_actions.remove(event.id, event_action.action_id)
+        self.events.remove(event.id)
+
+    def get_event_actions(self, event):
         found_actions = []
-        event_actions = self.event_actions.get_by_event(event_id)
+        event_actions = self.event_actions.get_by_event(event.id)
 
         for event_action in event_actions:
             actions = self.actions_collection.get(event_action.action_type)
@@ -570,14 +577,14 @@ class EventService:
         return found_actions
 
     def add_action(self, event: Event, action: Action):
-        actions = self.actions_collection.get(action)
+        actions = self.actions_collection.get(action.get_name())
         actions.add(action)
         self.event_actions.add(event.id, action)
 
     def remove_action(self, event: Event, action: Action):
-        actions = self.actions_collection.get(action)
-        actions.remove(action)
-        self.event_actions.remove(event.id, action)
+        actions = self.actions_collection.get(action.get_name())
+        actions.remove(action.id)
+        self.event_actions.remove(event.id, action.id)
 
 
 class RepeatJob:
