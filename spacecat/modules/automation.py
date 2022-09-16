@@ -298,6 +298,10 @@ class MessageAction(Action):
         self.title = title
         self.message = message
 
+    @classmethod
+    def create_new(cls, text_channel_id, title, message):
+        return cls(uuid.uuid4(), text_channel_id, title, message)
+
     def get_name(self):
         return "message"
 
@@ -333,9 +337,13 @@ class MessageActionRepository(ActionRepository[MessageAction]):
 
 
 class VoiceKickAction(Action):
-    def __init__(self, id_, channel):
+    def __init__(self, id_, voice_channel_id):
         super().__init__(id_)
-        self.channel = channel
+        self.channel = voice_channel_id
+
+    @classmethod
+    def create_new(cls, voice_channel_id):
+        return cls(uuid.uuid4(), voice_channel_id)
 
     def get_name(self):
         return "voice_kick"
@@ -376,6 +384,10 @@ class VoiceMoveAction(Action):
         self.current_voice_channel_id = current_voice_channel_id
         self.new_voice_channel_id = new_voice_channel_id
 
+    @classmethod
+    def create_new(cls, current_voice_channel_id, new_voice_channel_id):
+        return cls(uuid.uuid4(), current_voice_channel_id, new_voice_channel_id)
+
     def get_name(self):
         return "voice_move"
 
@@ -415,6 +427,10 @@ class ChannelPrivateAction(Action):
         super().__init__(id_)
         self.channel_id = channel_id
 
+    @classmethod
+    def create_new(cls, channel_id):
+        return cls(uuid.uuid4(), channel_id)
+
     def get_name(self):
         return "channel_private"
 
@@ -449,10 +465,13 @@ class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
 
 
 class ChannelPublicAction(Action):
-    def __init__(self, id_, event_id, channel_id):
+    def __init__(self, id_, channel_id):
         super().__init__(id_)
-        self.event_id = event_id
         self.channel_id = channel_id
+
+    @classmethod
+    def create_new(cls, channel_id):
+        return cls(uuid.uuid4(), channel_id)
 
     def get_name(self):
         return "channel_public"
