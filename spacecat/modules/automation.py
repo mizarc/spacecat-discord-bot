@@ -554,10 +554,15 @@ class EventActionRepository:
         cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?, ?)', values)
         self.db.commit()
 
-    def remove(self, event_id, action_id):
-        values = (event_id, action_id)
-        cursor = self.db.cursor()
-        cursor.execute('DELETE FROM event_actions WHERE event_id=? AND action_id=?', values)
+    def update(self, event_action: EventAction):
+        values = (event_action.id, event_action.event_id, event_action.action_type, event_action.action_id,
+                  event_action.previous_id)
+        self.db.cursor().execute('UPDATE event_actions SET event_id=?, action_type=?, action_id=?, previous_id=? '
+                                 'WHERE id=?', values)
+        self.db.commit()
+
+    def remove(self, id_):
+        self.db.cursor().execute('DELETE FROM event_actions WHERE id=?', (id_,))
         self.db.commit()
 
     @staticmethod
