@@ -602,15 +602,23 @@ class Automation(commands.Cog):
     """Schedule events to run at a later date"""
     MAX_EVENTS_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
-        description=f"The server has reach its event limit. Delete an event before adding another one.")
+        description=f"The server has reach its event limit. Delete an event before adding another one."
+    )
+
+    MAX_ACTIONS_EMBED = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description=f"This event has reached its action limit. Delete an action before adding another one."
+    )
 
     PAST_TIME_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
-        description=f"You cannot set a date and time in the past.")
+        description=f"You cannot set a date and time in the past."
+    )
 
     NAME_ALREADY_EXISTS_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
-        description=f"An event of that name already exists.")
+        description=f"An event of that name already exists."
+    )
 
     def __init__(self, bot):
         self.bot: SpaceCat = bot
