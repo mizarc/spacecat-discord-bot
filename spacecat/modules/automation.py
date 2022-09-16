@@ -642,6 +642,8 @@ class Automation(commands.Cog):
             config['automation']['max_reminders_per_player'] = 5
         if 'max_events_per_server' not in config['automation']:
             config['automation']['max_events_per_server'] = 10
+        if 'max_actions_per_event' not in config['automation']:
+            config['automation']['max_actions_per_event'] = 15
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
