@@ -513,7 +513,7 @@ class EventAction:
         self.event_id: int = event_id
         self.action_type: str = action_type
         self.action_id: int = action_id
-        self.previous_id: previous_id
+        self.previous_id: uuid = previous_id
 
 
 class EventActionRepository:
@@ -569,13 +569,21 @@ class EventService:
         self.events.remove(event.id)
 
     def get_event_actions(self, event):
-        found_actions = []
+        event_action_links = {}
         event_actions = self.event_actions.get_by_event(event.id)
 
         for event_action in event_actions:
             actions = self.actions_collection.get(event_action.action_type)
-            found_actions.append(actions.get_by_id(event_action.action_id))
-        return found_actions
+            event_action_links[event_action.previous_id](actions.get_by_id(event_action.action_id))
+
+        # Sort actions using linked previous_id
+        sorted_actions = []
+        next_action = event_action_links.get(None)
+        while next_action is not None:
+            sorted_actions.append(next_action)
+            next_action = event_action_links.get(next_action.id)
+
+        return sorted_actions
 
     def add_action(self, event: Event, action: Action):
         actions = self.actions_collection.get(action.get_name())
@@ -1088,15 +1096,13 @@ class Automation(commands.Cog):
             description=f"Channel Public action has been added to event '{event_name}'"))
 
     @schedule_group.command(name="remove")
-    async def schedule_remove(self, interaction, name: str):
+    async def schedule_remove(self, interaction, name: str, index: int):
         event = self.events.get_by_name(name)
         if not event:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"An event going by the name '{name}' does not exist"))
+            await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        self.events.remove(event)
+        self.event_service.remove_action(event, )
         await self.unload_event(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
