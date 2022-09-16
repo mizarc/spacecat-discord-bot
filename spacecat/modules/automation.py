@@ -770,9 +770,12 @@ class Automation(commands.Cog):
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
 
-    async def dispatch_event(self, event: Event):
+    async def dispatch_actions(self, event: Event):
+        event_actions = self.event_service.get_event_actions(event)
+        for event_action in event_actions:
+            action = self.event_service.get_action(event_action)
+            self.bot.dispatch(f"{action.get_name()}_event", action)
         self.events.remove(event)
-        self.bot.dispatch(f"{event.function_name}_event", event)
 
     @tasks.loop(hours=24)
     async def load_upcoming_events(self):
