@@ -122,10 +122,9 @@ class ReminderRepository:
 
 
 class Event:
-    def __init__(self, id_, user_id, guild_id, dispatch_time, last_run_time, repeat_interval,
+    def __init__(self, id_, guild_id, dispatch_time, last_run_time, repeat_interval,
                  repeat_multiplier, is_paused, name, description):
         self.id = id_
-        self.user_id = user_id
         self.guild_id = guild_id
         self.dispatch_time = dispatch_time
         self.last_run_time = last_run_time
@@ -136,8 +135,8 @@ class Event:
         self.description = description
 
     @classmethod
-    def create_new(cls, user_id, guild_id, dispatch_time, repeat_interval, repeat_multiplier, name):
-        return cls(uuid.uuid4(), user_id, guild_id, dispatch_time, None,
+    def create_new(cls, guild_id, dispatch_time, repeat_interval, repeat_multiplier, name):
+        return cls(uuid.uuid4(), guild_id, dispatch_time, None,
                    repeat_interval, repeat_multiplier, False, name, "")
 
 
