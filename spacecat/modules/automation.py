@@ -242,10 +242,9 @@ class EventRepository:
 
     def update(self, event):
         cursor = self.db.cursor()
-        values = (event.user_id, event.guild_id, event.dispatch_time, event.last_run_time, event.repeat_interval.name,
-                  event.repeat_multiplier, int(event.is_paused), event.name, event.description, event.function_name,
-                  event.arguments, str(event.id))
-        cursor.execute('UPDATE events SET user_id=?, guild_id=?, dispatch_time=?, last_run_time=?, repeat_interval=?, '
+        values = (event.guild_id, event.dispatch_time, event.last_run_time, event.repeat_interval.name,
+                  event.repeat_multiplier, int(event.is_paused), event.name, event.description, str(event.id))
+        cursor.execute('UPDATE events SET guild_id=?, dispatch_time=?, last_run_time=?, repeat_interval=?, '
                        'repeat_multiplier=?, is_paused=?, name=?, description=?, function_name=?, arguments=? '
                        'WHERE id=?', values)
         self.db.commit()
