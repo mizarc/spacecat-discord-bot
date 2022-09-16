@@ -572,9 +572,9 @@ class EventActionRepository:
 
 class EventService:
     def __init__(self, event_actions, events):
-        self.event_actions: EventActionRepository = event_actions
         self.events: EventRepository = events
         self.actions_collection: dict[str, ActionRepository] = {}
+        self.event_actions: EventActionRepository = event_actions
 
     def add_action_repository(self, action_repository: ActionRepository):
         self.actions_collection[get_args(action_repository)[0].get_name()] = action_repository
@@ -583,7 +583,7 @@ class EventService:
         found_event_actions = self.event_actions.get_by_event(event.id)
         for event_action in found_event_actions:
             self.actions_collection.get(event_action.action_type).remove(event_action.action_id)
-            self.event_actions.remove(event.id, event_action.action_id)
+            self.event_actions.remove(event_action.id)
         self.events.remove(event.id)
 
     def get_event_actions(self, event):
@@ -607,16 +607,24 @@ class EventService:
         actions = self.actions_collection.get(action.get_name())
         actions.add(action)
 
-        actions = self.get_event_actions(event)
-        if actions:
-            self.event_actions.add(event.id, action, actions[-1])
+        event_actions = self.get_event_actions(event)
+        if event_actions:
+            self.event_actions.add(event.id, action, event_actions[-1])
             return
         self.event_actions.add(event.id, action)
 
     def remove_action(self, event: Event, action: Action):
         actions = self.actions_collection.get(action.get_name())
         actions.remove(action.id)
-        self.event_actions.remove(event.id, action.id)
+
+        event_action = self.event_actions.get_by_action_in_event(action.id, event.id)
+        next_action = self.event_actions.get_by_previous(event_action.id)
+        if event_action.previous_id:
+            next_action.previous_id = event_action.previous_id
+        else:
+            next_action.previous_id = None
+        self.event_actions.update(next_action)
+        self.event_actions.remove(event_action.id)
 
 
 class RepeatJob:
