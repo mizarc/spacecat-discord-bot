@@ -867,6 +867,10 @@ class Automation(commands.Cog):
     @schedule_group.command(name="create")
     async def schedule_create(self, interaction: discord.Interaction, name: str, time_string: str, date_string: str,
                               repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
+        if await self.is_over_event_limit(interaction.guild_id):
+            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
+            return
+
         event = self.events.get_by_name_in_guild(name, interaction.guild_id)
         if event:
             embed = discord.Embed(
