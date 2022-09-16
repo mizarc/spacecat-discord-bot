@@ -639,6 +639,11 @@ class Automation(commands.Cog):
         description=f"An event of that name already exists."
     )
 
+    EVENT_DOES_NOT_EXIST_EMBED = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description=f"An event of that name does not exist."
+    )
+
     def __init__(self, bot):
         self.bot: SpaceCat = bot
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
@@ -648,7 +653,7 @@ class Automation(commands.Cog):
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
         self.repeating_events: dict[str, RepeatJob] = {}
-        self.event_service = self.init_event_service()
+        self.event_service = await self.init_event_service()
 
     async def cog_load(self):
         self.load_upcoming_events.start()
@@ -972,154 +977,91 @@ class Automation(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @schedule_add_group.command(name="message")
-    async def schedule_add_message(self, interaction, name: str, title: str, message: str, channel: discord.TextChannel,
-                                   time_string: str, date_string: str, repeat: Repeat = Repeat.No,
-                                   repeat_multiplier: int = 0):
-        if await self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
+    async def schedule_add_message(self, interaction: discord.Interaction, event_name: str,
+                                   channel: discord.TextChannel, title: str, message: str):
+        event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
+        if not event:
+            await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
-            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
+        if await self.is_over_action_limit(interaction.guild_id, event.id):
+            await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
-        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
-        if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
-            return
-
-        event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
-                                 repeat, repeat_multiplier, title, "message", f"{channel.id} {message}")
-        self.events.add(event)
-
-        action = MessageEventAction(title, message)
-
-        await self.load_event(event)
-        embed = discord.Embed(
+        action = MessageAction.create_new(channel, title, message)
+        self.event_service.add_action(event, action)
+        await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            description=f"A message event named '{title}' has been set for "
-                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
-                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
-                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
-        await interaction.response.send_message(embed=embed)
+            description=f"Message action has been added to event '{event_name}'"))
 
     @schedule_add_group.command(name="voicekick")
-    async def schedule_add_voicekick(self, interaction, title: str, voice_channel: discord.VoiceChannel,
-                                     time_string: str, date_string: str, repeat: Repeat = Repeat.No,
-                                     repeat_multiplier: int = 0):
-        if await self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
+    async def schedule_add_voicekick(self, interaction, event_name: str, voice_channel: discord.VoiceChannel):
+        event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
+        if not event:
+            await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
-            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
+        if await self.is_over_action_limit(interaction.guild_id, event.id):
+            await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
-        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
-        if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
-            return
-
-        event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
-                                 repeat, repeat_multiplier, title, "voicekick", f"{voice_channel.id}")
-        self.events.add(event)
-        await self.load_event(event)
-        embed = discord.Embed(
+        action = VoiceKickAction.create_new(voice_channel.id)
+        self.event_service.add_action(event, action)
+        await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            description=f"A voicekick event named '{title}' has been set for "
-                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
-                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
-                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
-        await interaction.response.send_message(embed=embed)
+            description=f"Voice Kick action has been added to event '{event_name}'"))
 
     @schedule_add_group.command(name="voicemove")
-    async def schedule_add_voicemove(self, interaction, title: str, current_channel: discord.VoiceChannel,
-                                     new_channel: discord.VoiceChannel, time_string: str, date_string: str,
-                                     repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
-        if await self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
+    async def schedule_add_voicemove(self, interaction, event_name: str, current_channel: discord.VoiceChannel,
+                                     new_channel: discord.VoiceChannel):
+        event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
+        if not event:
+            await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
-            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
+        if await self.is_over_action_limit(interaction.guild_id, event.id):
+            await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
-        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
-        if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
-            return
-
-        event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
-                                 repeat, repeat_multiplier, title, "voicemove",
-                                 f"{current_channel.id} {new_channel.id}")
-        self.events.add(event)
-        await self.load_event(event)
-        embed = discord.Embed(
+        action = VoiceMoveAction.create_new(current_channel.id, new_channel.id)
+        self.event_service.add_action(event, action)
+        await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            description=f"A voicemove event named '{title}' has been set for "
-                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
-                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
-                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
-        await interaction.response.send_message(embed=embed)
+            description=f"Voice Move action has been added to event '{event_name}'"))
 
     @schedule_add_group.command(name="channelprivate")
-    async def schedule_add_channelprivate(self, interaction, title: str, channel: discord.abc.GuildChannel,
-                                          time_string: str, date_string: str, repeat: Repeat = Repeat.No,
-                                          repeat_multiplier: int = 0):
-        if await self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
+    async def schedule_add_channelprivate(self, interaction, event_name: str, channel: discord.abc.GuildChannel):
+        event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
+        if not event:
+            await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
-            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
+        if await self.is_over_action_limit(interaction.guild_id, event.id):
+            await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
-        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
-        if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
-            return
-
-        event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
-                                 repeat, repeat_multiplier, title, "channelprivate", f"{channel.id}")
-        self.events.add(event)
-        await self.load_event(event)
-        embed = discord.Embed(
+        action = ChannelPrivateAction.create_new(channel.id)
+        self.event_service.add_action(event, action)
+        await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            description=f"A channelprivate event named '{title}' has been set for "
-                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
-                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
-                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
-        await interaction.response.send_message(embed=embed)
+            description=f"Channel Private action has been added to event '{event_name}'"))
 
     @schedule_add_group.command(name="channelpublic")
-    async def schedule_add_channelpublic(self, interaction, title: str, channel: discord.abc.GuildChannel,
-                                         time_string: str, date_string: str, repeat: Repeat = Repeat.No,
-                                         repeat_multiplier: int = 0):
-        if await self.is_over_event_limit(interaction.guild_id):
-            await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
+    async def schedule_add_channelpublic(self, interaction, event_name: str, channel: discord.abc.GuildChannel):
+        event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
+        if not event:
+            await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if any(event.name == title for event in self.events.get_by_guild(interaction.guild_id)):
-            await interaction.response.send_message(embed=self.NAME_ALREADY_EXISTS_EMBED)
+        if await self.is_over_action_limit(interaction.guild_id, event.id):
+            await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
-        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
-        if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
-            return
-
-        event = Event.create_new(interaction.user.id, interaction.guild_id, selected_datetime.timestamp(),
-                                 repeat, repeat_multiplier, title, "channelpublic",
-                                 f"{channel.id}")
-        self.events.add(event)
-        await self.load_event(event)
-        embed = discord.Embed(
+        action = ChannelPublicAction.create_new(channel.id)
+        self.event_service.add_action(event, action)
+        await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            description=f"A channelpublic event named '{title}' has been set for "
-                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
-                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
-                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}")
-        await interaction.response.send_message(embed=embed)
+            description=f"Channel Public action has been added to event '{event_name}'"))
 
     @schedule_group.command(name="remove")
     async def schedule_remove(self, interaction, name: str):
@@ -1321,6 +1263,10 @@ class Automation(commands.Cog):
     async def is_over_event_limit(self, guild_id):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         return len(self.events.get_by_guild(guild_id)) > config['automation']['max_events_per_server']
+
+    async def is_over_action_limit(self, guild_id, event_id):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        return len(self.events.get_by_guild(guild_id)) > config['automation']['max_actions_per_event']
 
     @staticmethod
     async def parse_time(time_string):
