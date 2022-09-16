@@ -535,6 +535,19 @@ class EventActionRepository:
             event_actions.append(self._result_to_event_action(result))
         return event_actions
 
+    def get_by_action(self, action_id):
+        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE action_id=?', (action_id,)).fetchone()
+        return self._result_to_event_action(result)
+
+    def get_by_action_in_event(self, action_id, event_id):
+        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE action_id=? AND event_id=?',
+                                          (action_id,)).fetchone()
+        return self._result_to_event_action(result)
+
+    def get_by_previous(self, action_id):
+        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE previous_id=?', (action_id,)).fetchone()
+        return self._result_to_event_action(result)
+
     def add(self, event_id, action, previous_id=None):
         values = (event_id, action.get_name(), action.id, previous_id)
         cursor = self.db.cursor()
