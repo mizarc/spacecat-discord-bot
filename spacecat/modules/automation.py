@@ -588,6 +588,11 @@ class EventService:
     def add_action(self, event: Event, action: Action):
         actions = self.actions_collection.get(action.get_name())
         actions.add(action)
+
+        actions = self.get_event_actions(event)
+        if actions:
+            self.event_actions.add(event.id, action, actions[-1])
+            return
         self.event_actions.add(event.id, action)
 
     def remove_action(self, event: Event, action: Action):
