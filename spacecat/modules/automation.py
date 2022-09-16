@@ -194,6 +194,13 @@ class EventRepository:
             reminders.append(self._result_to_event(result))
         return reminders
 
+    def get_by_name_in_guild(self, name, guild_id):
+        values = (name, guild_id)
+        result = self.db.cursor().execute('SELECT * FROM events WHERE name=? AND guild_id=?', values).fetchone()
+        if not result:
+            return None
+        return self._result_to_event(result)
+
     def get_repeating(self):
         # Get list of all reminders in a guild
         cursor = self.db.cursor()
