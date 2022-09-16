@@ -621,7 +621,6 @@ class Automation(commands.Cog):
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
         self.repeating_events: dict[str, RepeatJob] = {}
-
         self.event_service = self.init_event_service()
 
     async def cog_load(self):
@@ -864,6 +863,34 @@ class Automation(commands.Cog):
             name=f"{len(events)} available",
             value=playlist_output, inline=False)
         await interaction.response.send_message(embed=embed)
+
+    @schedule_group.command(name="create")
+    async def schedule_create(self, interaction: discord.Interaction, name: str, time_string: str, date_string: str,
+                              repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
+        event = self.events.get_by_name_in_guild(name, interaction.guild_id)
+        if event:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="An event by that name already exists.")
+            await interaction.response.send_message(embed=embed)
+            return
+
+        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        if selected_datetime.timestamp() < time.time():
+            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
+            return
+
+        event = Event.create_new(interaction.guild_id, selected_datetime.timestamp(), repeat, repeat_multiplier, name)
+        self.events.add(event)
+
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"An event by the name of '{name}' has been created, set to trigger on "
+                        f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
+                        f"at {selected_datetime.hour}:{selected_datetime.minute}"
+                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}. Use `/schedule add` to"
+                        f"assign actions."))
+        return
 
     @schedule_group.command(name="view")
     async def schedule_view(self, interaction, name: str):
