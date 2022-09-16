@@ -586,7 +586,7 @@ class EventService:
             self.event_actions.remove(event_action.id)
         self.events.remove(event.id)
 
-    def get_event_actions(self, event):
+    def get_event_actions(self, event: Event) -> list[EventAction]:
         event_action_links = {}
         event_actions = self.event_actions.get_by_event(event.id)
 
@@ -595,13 +595,17 @@ class EventService:
             event_action_links[event_action.previous_id](actions.get_by_id(event_action.action_id))
 
         # Sort actions using linked previous_id
-        sorted_actions = []
+        sorted_actions: list[EventAction] = []
         next_action = event_action_links.get(None)
         while next_action is not None:
             sorted_actions.append(next_action)
             next_action = event_action_links.get(next_action.id)
 
         return sorted_actions
+
+    def get_action(self, event_action: EventAction) -> Action:
+        actions = self.actions_collection.get(event_action.action_type)
+        return actions.get_by_id(event_action.action_id)
 
     def add_action(self, event: Event, action: Action):
         actions = self.actions_collection.get(action.get_name())
@@ -1133,11 +1137,13 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        self.event_service.remove_action(event, )
-        await self.unload_event(event)
+        event_actions = self.event_service.get_event_actions(event)
+        action = self.event_service.get_action(event_actions[index])
+        self.event_service.remove_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Scheduled event '{name}' has been removed."))
+            description=f"Action '{event_actions[index].action_type}' at index {index} has been removed from "
+                        f"event {event.name}."))
 
     @schedule_group.command(name="pause")
     async def schedule_pause(self, interaction, name: str):
