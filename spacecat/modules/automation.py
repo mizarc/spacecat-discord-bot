@@ -504,15 +504,16 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
 
     @staticmethod
     def _result_to_args(result):
-        return ChannelPublicAction(result[0], result[1], result[2])
+        return ChannelPublicAction(result[0], result[1])
 
 
 class EventAction:
-    def __init__(self, id_, event_id, action_type, action_id):
-        self.id: int = id_
+    def __init__(self, id_, event_id, action_type, action_id, previous_id):
+        self.id: uuid = id_
         self.event_id: int = event_id
         self.action_type: str = action_type
         self.action_id: int = action_id
+        self.previous_id: previous_id
 
 
 class EventActionRepository:
@@ -521,7 +522,7 @@ class EventActionRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS event_actions '
-                       '(id TEXT PRIMARY KEY, event_id INTEGER, action_type TEXT, action_id INTEGER)')
+                       '(id TEXT PRIMARY KEY, event_id INTEGER, action_type TEXT, action_id INTEGER, previous_id TEXT)')
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM event_actions WHERE id=?', (id_,)).fetchone()
@@ -534,10 +535,10 @@ class EventActionRepository:
             event_actions.append(self._result_to_event_action(result))
         return event_actions
 
-    def add(self, event_id, action):
-        values = (event_id, action.get_name(), action.id)
+    def add(self, event_id, action, previous_id=None):
+        values = (event_id, action.get_name(), action.id, previous_id)
         cursor = self.db.cursor()
-        cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?)', values)
+        cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?, ?)', values)
         self.db.commit()
 
     def remove(self, event_id, action_id):
@@ -548,7 +549,7 @@ class EventActionRepository:
 
     @staticmethod
     def _result_to_event_action(result):
-        return EventAction(result[0], result[1], result[2], result[3])
+        return EventAction(result[0], result[1], result[2], result[3], result[4])
 
 
 class EventService:
