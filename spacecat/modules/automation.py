@@ -227,10 +227,10 @@ class EventRepository:
 
     def add(self, event):
         cursor = self.db.cursor()
-        values = (str(event.id), event.user_id, event.guild_id, event.dispatch_time, event.last_run_time,
+        values = (str(event.id), event.guild_id, event.dispatch_time, event.last_run_time,
                   event.repeat_interval.name, event.repeat_multiplier, int(event.is_paused), event.name,
-                  event.description, event.function_name, event.arguments)
-        cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', values)
+                  event.description)
+        cursor.execute('INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, event):
@@ -252,7 +252,7 @@ class EventRepository:
     @staticmethod
     def _result_to_event(result):
         return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
-                     bool(result[7]), result[8], result[9])
+                     bool(result[7]), result[8])
 
 
 class Action(ABC):
