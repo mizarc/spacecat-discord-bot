@@ -937,6 +937,22 @@ class Automation(commands.Cog):
                         f"assign actions."))
         return
 
+    @schedule_group.command(name="destroy")
+    async def schedule_destroy(self, interaction: discord.Interaction, event_name: str):
+        event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
+        if not event:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="An event by that name does not exist.")
+            await interaction.response.send_message(embed=embed)
+            return
+
+        self.event_service.remove_event(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Event {event_name} has been deleted."))
+        return
+
     @schedule_group.command(name="view")
     async def schedule_view(self, interaction, name: str):
         event = self.events.get_by_name(name)
