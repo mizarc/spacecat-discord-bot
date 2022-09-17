@@ -880,10 +880,10 @@ class Automation(commands.Cog):
 
     reminder_group = app_commands.Group(
         name="reminder", description="Configure existing reminders.")
-    schedule_group = app_commands.Group(
+    event_group = app_commands.Group(
         name="schedule", description="Allows you to run an function at a scheduled time.")
-    schedule_add_group = app_commands.Group(
-        parent=schedule_group, name="add", description="Add a new scheudled event.")
+    event_add_group = app_commands.Group(
+        parent=event_group, name="add", description="Add a new scheudled event.")
 
     @reminder_group.command(name="list")
     async def reminder_list(self, interaction: discord.Interaction):
@@ -937,8 +937,8 @@ class Automation(commands.Cog):
             description=f"Reminder at index {index} has been removed."))
         return
 
-    @schedule_group.command(name="list")
-    async def schedule_list(self, interaction):
+    @event_group.command(name="list")
+    async def event_list(self, interaction):
         events = self.events.get_by_guild(interaction.guild_id)
         if not events:
             embed = discord.Embed(
@@ -965,8 +965,8 @@ class Automation(commands.Cog):
             value=playlist_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
-    @schedule_group.command(name="create")
-    async def schedule_create(self, interaction: discord.Interaction, name: str, time_string: str, date_string: str,
+    @event_group.command(name="create")
+    async def event_create(self, interaction: discord.Interaction, name: str, time_string: str, date_string: str,
                               repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
@@ -997,8 +997,8 @@ class Automation(commands.Cog):
                         f"assign actions."))
         return
 
-    @schedule_group.command(name="destroy")
-    async def schedule_destroy(self, interaction: discord.Interaction, event_name: str):
+    @event_group.command(name="destroy")
+    async def event_destroy(self, interaction: discord.Interaction, event_name: str):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
             embed = discord.Embed(
@@ -1013,8 +1013,8 @@ class Automation(commands.Cog):
             description=f"Event {event_name} has been deleted."))
         return
 
-    @schedule_group.command(name="view")
-    async def schedule_view(self, interaction, name: str):
+    @event_group.command(name="view")
+    async def event_view(self, interaction, name: str):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
@@ -1067,8 +1067,8 @@ class Automation(commands.Cog):
         embed.add_field(name="Actions", value='\n'.join(action_fields))
         await interaction.response.send_message(embed=embed)
 
-    @schedule_add_group.command(name="message")
-    async def schedule_add_message(self, interaction: discord.Interaction, event_name: str,
+    @event_add_group.command(name="message")
+    async def event_add_message(self, interaction: discord.Interaction, event_name: str,
                                    channel: discord.TextChannel, title: str, message: str):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
@@ -1085,8 +1085,8 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.INFO.value,
             description=f"Message action has been added to event '{event_name}'"))
 
-    @schedule_add_group.command(name="voicekick")
-    async def schedule_add_voicekick(self, interaction, event_name: str, voice_channel: discord.VoiceChannel):
+    @event_add_group.command(name="voicekick")
+    async def event_add_voicekick(self, interaction, event_name: str, voice_channel: discord.VoiceChannel):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
@@ -1102,8 +1102,8 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.INFO.value,
             description=f"Voice Kick action has been added to event '{event_name}'"))
 
-    @schedule_add_group.command(name="voicemove")
-    async def schedule_add_voicemove(self, interaction, event_name: str, current_channel: discord.VoiceChannel,
+    @event_add_group.command(name="voicemove")
+    async def event_add_voicemove(self, interaction, event_name: str, current_channel: discord.VoiceChannel,
                                      new_channel: discord.VoiceChannel):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
@@ -1120,8 +1120,8 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.INFO.value,
             description=f"Voice Move action has been added to event '{event_name}'"))
 
-    @schedule_add_group.command(name="channelprivate")
-    async def schedule_add_channelprivate(self, interaction, event_name: str, channel: discord.abc.GuildChannel):
+    @event_add_group.command(name="channelprivate")
+    async def event_add_channelprivate(self, interaction, event_name: str, channel: discord.abc.GuildChannel):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
@@ -1137,8 +1137,8 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.INFO.value,
             description=f"Channel Private action has been added to event '{event_name}'"))
 
-    @schedule_add_group.command(name="channelpublic")
-    async def schedule_add_channelpublic(self, interaction, event_name: str, channel: discord.abc.GuildChannel):
+    @event_add_group.command(name="channelpublic")
+    async def event_add_channelpublic(self, interaction, event_name: str, channel: discord.abc.GuildChannel):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
@@ -1154,8 +1154,8 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.INFO.value,
             description=f"Channel Public action has been added to event '{event_name}'"))
 
-    @schedule_group.command(name="remove")
-    async def schedule_remove(self, interaction, name: str, index: int):
+    @event_group.command(name="remove")
+    async def event_remove(self, interaction, name: str, index: int):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
@@ -1169,8 +1169,8 @@ class Automation(commands.Cog):
             description=f"Action '{event_actions[index].action_type}' at index {index} has been removed from "
                         f"event {event.name}."))
 
-    @schedule_group.command(name="pause")
-    async def schedule_pause(self, interaction, name: str):
+    @event_group.command(name="pause")
+    async def event_pause(self, interaction, name: str):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
@@ -1198,8 +1198,8 @@ class Automation(commands.Cog):
             description=f"Event '{name}' has been paused and will not run on its next scheduled run time."))
         return
 
-    @schedule_group.command(name="resume")
-    async def schedule_resume(self, interaction, name: str):
+    @event_group.command(name="resume")
+    async def event_resume(self, interaction, name: str):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
@@ -1221,8 +1221,8 @@ class Automation(commands.Cog):
             description=f"Event {name} has now been resumed and will run at the scheduled time."))
         return
 
-    @schedule_group.command(name="rename")
-    async def schedule_rename(self, interaction, name: str, new_name: str):
+    @event_group.command(name="rename")
+    async def event_rename(self, interaction, name: str, new_name: str):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
@@ -1241,8 +1241,8 @@ class Automation(commands.Cog):
             description=f"Event {name} has been renamed to {new_name}."))
         return
 
-    @schedule_group.command(name="description")
-    async def schedule_description(self, interaction, name: str, description: str):
+    @event_group.command(name="description")
+    async def event_description(self, interaction, name: str, description: str):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
@@ -1257,8 +1257,8 @@ class Automation(commands.Cog):
             description=f"Description has been set for event {name}."))
         return
 
-    @schedule_group.command(name="reschedule")
-    async def schedule_reschedule(self, interaction, name: str, date: str, time_: str):
+    @event_group.command(name="reschedule")
+    async def event_reschedule(self, interaction, name: str, date: str, time_: str):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
@@ -1283,8 +1283,8 @@ class Automation(commands.Cog):
             description=f"Dispatch time has been set for event {name}."))
         return
 
-    @schedule_group.command(name="interval")
-    async def schedule_interval(self, interaction, name: str, interval: Repeat, multiplier: int = 1):
+    @event_group.command(name="interval")
+    async def event_interval(self, interaction, name: str, interval: Repeat, multiplier: int = 1):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
