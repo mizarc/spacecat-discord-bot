@@ -770,7 +770,7 @@ class Automation(commands.Cog):
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
 
-    async def dispatch_actions(self, event: Event):
+    async def dispatch_event(self, event: Event):
         event_actions = self.event_service.get_event_actions(event)
         for event_action in event_actions:
             action = self.event_service.get_action(event_action)
@@ -1013,6 +1013,7 @@ class Automation(commands.Cog):
             title=f"Event '{event.name}'",
             description=event.description)
 
+        # Embed category to do with execution time and interval
         time_fields = []
         if event.last_run_time:
             time_fields.append(
@@ -1041,8 +1042,14 @@ class Automation(commands.Cog):
 
         embed.add_field(name="Execution Time", value='\n'.join(time_fields))
 
-        function_fields = [f"**Function:** {event.function_name}", f"**Arguments:** {event.arguments}"]
-        embed.add_field(name="To Run", value='\n'.join(function_fields))
+        # Embed category to do with actions
+        action_fields = []
+        index = 1
+        for event_action in self.event_service.get_event_actions(event):
+            #action = self.event_service.get_action(event_action)
+            action_fields.append(f"{index}. {event_action.action_type}")
+            index += 1
+        embed.add_field(name="Actions", value='\n'.join(action_fields))
         await interaction.response.send_message(embed=embed)
 
     @schedule_add_group.command(name="message")
