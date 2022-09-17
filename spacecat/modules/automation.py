@@ -631,8 +631,9 @@ class EventService:
 
 
 class RepeatJob:
-    def __init__(self, bot: commands.Bot, event: Event, timezone: pytz.tzinfo):
+    def __init__(self, bot: commands.Bot, event_service: EventService, event: Event, timezone: pytz.tzinfo):
         self.bot = bot
+        self.event_service = event_service
         self.event = event
         self.timezone = timezone
         self.interval = self.calculate_interval()
@@ -660,7 +661,9 @@ class RepeatJob:
             await self.dispatch_event()
 
     async def dispatch_event(self):
-        self.bot.dispatch(f"{self.event.function_name}_event", self.event)
+        event_actions = self.event_service.get_event_actions(self.event)
+        for event_action in event_actions:
+            self.bot.dispatch(f"{event_action.action_type}_event", self.event_service.get_action(event_action))
         self.event.last_run_time = self.next_run_time
         self.next_run_time = self.calculate_next_run()
         self.job_task.cancel()
@@ -783,7 +786,7 @@ class Automation(commands.Cog):
         for event in events:
             if event.id in self.repeating_events:
                 continue
-            repeat_job = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
+            repeat_job = RepeatJob(self.bot, self.event_service, event, await self.get_guild_timezone(event.guild_id))
             repeat_job.run_task()
             self.repeating_events[event.id] = repeat_job
 
@@ -1036,7 +1039,8 @@ class Automation(commands.Cog):
                 f"**Last Run:** {datetime.datetime.fromtimestamp(event.last_run_time).strftime('%X %x')}")
 
         if event.repeat_interval:
-            repeat_job = RepeatJob(self.bot, event, await self.get_guild_timezone(interaction.guild.id))
+            repeat_job = RepeatJob(self.bot, self.event_service, event,
+                                   await self.get_guild_timezone(interaction.guild.id))
             time_fields.append(
                 f"**Next Run:** {datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).strftime('%X %x')}")
 
@@ -1294,7 +1298,7 @@ class Automation(commands.Cog):
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
             return
-        repeat_job = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
+        repeat_job = RepeatJob(self.bot, self.event_service, event, await self.get_guild_timezone(event.guild_id))
         repeat_job.run_task()
         self.repeating_events[event.id] = repeat_job
 
