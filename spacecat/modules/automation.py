@@ -1034,7 +1034,7 @@ class Automation(commands.Cog):
                 f"**Initial Time:** {datetime.datetime.fromtimestamp(event.dispatch_time).strftime('%X %x')}")
         else:
             time_fields.append(
-                f"**Dispatch Time: {datetime.datetime.fromtimestamp(event.dispatch_time).strftime('%X %x')}")
+                f"**Dispatch Time:** {datetime.datetime.fromtimestamp(event.dispatch_time).strftime('%X %x')}")
 
         if event.is_paused:
             time_fields.append(
@@ -1055,7 +1055,7 @@ class Automation(commands.Cog):
             time_fields.append(
                 f"**Next Run:** {datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).strftime('%X %x')}")
 
-        embed.add_field(name="Execution Time", value='\n'.join(time_fields))
+        embed.add_field(name="Execution Time", value='\n'.join(time_fields), inline=False)
 
         # Embed category to do with actions
         event_actions = self.event_service.get_event_actions(event)
