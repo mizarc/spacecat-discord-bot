@@ -706,7 +706,7 @@ class Automation(commands.Cog):
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
         self.repeating_events: dict[str, RepeatJob] = {}
-        self.event_service = await self.init_event_service()
+        self.event_service = self.init_event_service()
 
     async def cog_load(self):
         self.load_upcoming_events.start()
@@ -724,7 +724,7 @@ class Automation(commands.Cog):
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
-    async def init_event_service(self):
+    def init_event_service(self):
         event_service = EventService(self.event_actions, self.events)
 
         action_repositories = [
