@@ -319,7 +319,7 @@ class MessageActionRepository(ActionRepository[MessageAction]):
         return self._result_to_args(result)
 
     def add(self, action: MessageAction):
-        values = (action.id, action.text_channel_id, action.title, action.message)
+        values = (str(action.id), action.text_channel_id, action.title, action.message)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO action_message VALUES (?, ?, ?, ?)', values)
         self.db.commit()
@@ -361,7 +361,7 @@ class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
         return self._result_to_args(result)
 
     def add(self, action: VoiceKickAction):
-        values = (action.id, action.channel)
+        values = (str(action.id), action.channel)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO action_voice_kick VALUES (?, ?)', values)
         self.db.commit()
@@ -405,7 +405,7 @@ class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
         return self._result_to_args(result)
 
     def add(self, action: VoiceMoveAction):
-        values = (action.id, action.current_voice_channel_id, action.new_voice_channel_id)
+        values = (str(action.id), action.current_voice_channel_id, action.new_voice_channel_id)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO action_voice_move VALUES (?, ?, ?)', values)
         self.db.commit()
@@ -447,7 +447,7 @@ class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
         return self._result_to_args(result)
 
     def add(self, action: ChannelPrivateAction):
-        values = (action.id, action.channel_id)
+        values = (str(action.id), action.channel_id)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO action_channel_private VALUES (?, ?)', values)
         self.db.commit()
@@ -490,7 +490,7 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
         return self._result_to_args(result)
 
     def add(self, action: ChannelPublicAction):
-        values = (action.id, action.channel_id)
+        values = (str(action.id), action.channel_id)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO event_channelpublic_args VALUES (?, ?)', values)
         self.db.commit()
