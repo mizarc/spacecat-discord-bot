@@ -881,7 +881,7 @@ class Automation(commands.Cog):
     reminder_group = app_commands.Group(
         name="reminder", description="Configure existing reminders.")
     event_group = app_commands.Group(
-        name="schedule", description="Allows you to run an function at a scheduled time.")
+        name="event", description="Allows you to run an function at a scheduled time.")
     event_add_group = app_commands.Group(
         parent=event_group, name="add", description="Add a new scheudled event.")
 
