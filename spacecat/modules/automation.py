@@ -145,7 +145,7 @@ class EventRepository:
         self.db = database
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, user_id INTEGER, guild_id INTEGER, '
+        cursor.execute('CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, guild_id INTEGER, '
                        'dispatch_time INTEGER, last_run_time INTEGER, repeat_interval TEXT, repeat_multiplier INTEGER, '
                        'is_paused INTEGER, name TEXT, description TEXT)')
         self.db.commit()
