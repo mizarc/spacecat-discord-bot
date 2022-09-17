@@ -547,10 +547,11 @@ class EventActionRepository:
         result = self.db.cursor().execute('SELECT * FROM event_actions WHERE previous_id=?', (action_id,)).fetchone()
         return self._result_to_event_action(result)
 
-    def add(self, event_id, action, previous_id=None):
-        values = (event_id, action.get_name(), action.id, previous_id)
+    def add(self, event_action: EventAction):
+        values = (event_action.id, event_action.event_id, event_action.action_type, event_action.action_id,
+                  event_action.previous_id)
         cursor = self.db.cursor()
-        cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?, ?)', values)
+        cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, event_action: EventAction):
@@ -612,9 +613,11 @@ class EventService:
 
         event_actions = self.get_event_actions(event)
         if event_actions:
-            self.event_actions.add(event.id, action, event_actions[-1])
-            return
-        self.event_actions.add(event.id, action)
+            previous_id = event_actions[-1].id
+        else:
+            previous_id = None
+        event_action = EventAction.create_new(event.id, action.get_name(), action.id, previous_id)
+        self.event_actions.add(event_action)
 
     def remove_action(self, event: Event, action: Action):
         actions = self.actions_collection.get(action.get_name())
