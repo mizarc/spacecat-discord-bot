@@ -1070,7 +1070,7 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
-        action = MessageAction.create_new(channel, title, message)
+        action = MessageAction.create_new(channel.id, title, message)
         self.event_service.add_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
