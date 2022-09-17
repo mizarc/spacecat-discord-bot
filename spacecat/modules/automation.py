@@ -257,7 +257,7 @@ class EventRepository:
 
     @staticmethod
     def _result_to_event(result):
-        return Event(result[0], result[1], result[2], result[3], result[4], Repeat[result[5]], result[6],
+        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
                      bool(result[7]), result[8])
 
 
