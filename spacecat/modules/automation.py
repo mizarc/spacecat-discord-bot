@@ -301,7 +301,8 @@ class MessageAction(Action):
     def create_new(cls, text_channel_id, title, message):
         return cls(uuid.uuid4(), text_channel_id, title, message)
 
-    def get_name(self):
+    @classmethod
+    def get_name(cls):
         return "message"
 
 
@@ -344,7 +345,8 @@ class VoiceKickAction(Action):
     def create_new(cls, voice_channel_id):
         return cls(uuid.uuid4(), voice_channel_id)
 
-    def get_name(self):
+    @classmethod
+    def get_name(cls):
         return "voice_kick"
 
 
@@ -387,7 +389,8 @@ class VoiceMoveAction(Action):
     def create_new(cls, current_voice_channel_id, new_voice_channel_id):
         return cls(uuid.uuid4(), current_voice_channel_id, new_voice_channel_id)
 
-    def get_name(self):
+    @classmethod
+    def get_name(cls):
         return "voice_move"
 
 
@@ -430,7 +433,8 @@ class ChannelPrivateAction(Action):
     def create_new(cls, channel_id):
         return cls(uuid.uuid4(), channel_id)
 
-    def get_name(self):
+    @classmethod
+    def get_name(cls):
         return "channel_private"
 
 
@@ -472,7 +476,8 @@ class ChannelPublicAction(Action):
     def create_new(cls, channel_id):
         return cls(uuid.uuid4(), channel_id)
 
-    def get_name(self):
+    @classmethod
+    def get_name(cls):
         return "channel_public"
 
 
@@ -513,6 +518,10 @@ class EventAction:
         self.action_type: str = action_type
         self.action_id: int = action_id
         self.previous_id: uuid = previous_id
+
+    @classmethod
+    def create_new(cls, event_id, action_type, action_id, previous_id):
+        return cls(uuid.uuid4(), event_id, action_type, action_id, previous_id)
 
 
 class EventActionRepository:
@@ -577,7 +586,7 @@ class EventService:
         self.event_actions: EventActionRepository = event_actions
 
     def add_action_repository(self, action_repository: ActionRepository):
-        self.actions_collection[get_args(action_repository)[0].get_name()] = action_repository
+        self.actions_collection[get_args(type(action_repository).__orig_bases__[0])[0].get_name()] = action_repository
 
     def remove_event(self, event: Event):
         found_event_actions = self.event_actions.get_by_event(event.id)
