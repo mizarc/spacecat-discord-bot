@@ -540,7 +540,7 @@ class EventActionRepository:
 
     def get_by_action_in_event(self, action_id, event_id):
         result = self.db.cursor().execute('SELECT * FROM event_actions WHERE action_id=? AND event_id=?',
-                                          (action_id,)).fetchone()
+                                          (action_id, event_id)).fetchone()
         return self._result_to_event_action(result)
 
     def get_by_previous(self, action_id):
@@ -811,8 +811,7 @@ class Automation(commands.Cog):
         await channel.send(embed=discord.Embed(
             colour=constants.EmbedStatus.SPECIAL.value,
             title=f"{event.name}",
-            description=f"{event.arguments.split(' ', 1)[1]}"
-        ))
+            description=f"{event.arguments.split(' ', 1)[1]}"))
 
     @commands.Cog.listener()
     async def on_voicekick_event(self, event):
