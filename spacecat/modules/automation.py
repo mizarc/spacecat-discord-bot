@@ -257,8 +257,8 @@ class EventRepository:
 
     @staticmethod
     def _result_to_event(result):
-        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], result[6],
-                     bool(result[7]), result[8])
+        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], bool(result[6]),
+                     result[7], result[8])
 
 
 class Action(ABC):
@@ -1058,18 +1058,23 @@ class Automation(commands.Cog):
         embed.add_field(name="Execution Time", value='\n'.join(time_fields))
 
         # Embed category to do with actions
-        action_fields = []
-        index = 1
-        for event_action in self.event_service.get_event_actions(event):
-            #action = self.event_service.get_action(event_action)
-            action_fields.append(f"{index}. {event_action.action_type}")
-            index += 1
-        embed.add_field(name="Actions", value='\n'.join(action_fields))
+        event_actions = self.event_service.get_event_actions(event)
+        if event_actions:
+            action_fields = []
+            index = 1
+            for event_action in self.event_service.get_event_actions(event):
+                #action = self.event_service.get_action(event_action)
+                action_fields.append(f"{index}. {event_action.action_type}")
+                index += 1
+            embed.add_field(name="Actions", value='\n'.join(action_fields))
+        else:
+            embed.add_field(name="Actions", value="No actions have been set.")
+
         await interaction.response.send_message(embed=embed)
 
     @event_add_group.command(name="message")
-    async def event_add_message(self, interaction: discord.Interaction, event_name: str,
-                                   channel: discord.TextChannel, title: str, message: str):
+    async def event_add_message(self, interaction: discord.Interaction, event_name: str, channel: discord.TextChannel,
+                                title: str, message: str):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
