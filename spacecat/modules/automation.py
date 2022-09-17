@@ -1060,7 +1060,7 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if await self.is_over_action_limit(interaction.guild_id, event.id):
+        if await self.is_over_action_limit(interaction.guild_id, event):
             await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
@@ -1077,7 +1077,7 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if await self.is_over_action_limit(interaction.guild_id, event.id):
+        if await self.is_over_action_limit(interaction.guild_id, event):
             await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
@@ -1095,7 +1095,7 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if await self.is_over_action_limit(interaction.guild_id, event.id):
+        if await self.is_over_action_limit(interaction.guild_id, event):
             await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
@@ -1112,7 +1112,7 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if await self.is_over_action_limit(interaction.guild_id, event.id):
+        if await self.is_over_action_limit(interaction.guild_id, event):
             await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
@@ -1129,7 +1129,7 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        if await self.is_over_action_limit(interaction.guild_id, event.id):
+        if await self.is_over_action_limit(interaction.guild_id, event):
             await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
@@ -1340,9 +1340,9 @@ class Automation(commands.Cog):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         return len(self.events.get_by_guild(guild_id)) > config['automation']['max_events_per_server']
 
-    async def is_over_action_limit(self, guild_id, event_id):
+    async def is_over_action_limit(self, guild_id, event):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        return len(self.events.get_by_guild(guild_id)) > config['automation']['max_actions_per_event']
+        return len(self.event_service.get_event_actions(event)) > config['automation']['max_actions_per_event']
 
     @staticmethod
     async def parse_time(time_string):
