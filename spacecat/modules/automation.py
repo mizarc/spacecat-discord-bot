@@ -1012,7 +1012,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="view")
-    async def event_view(self, interaction, name: str):
+    async def event_view(self, interaction: discord.Interaction, name: str):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
@@ -1027,12 +1027,15 @@ class Automation(commands.Cog):
 
         # Embed category to do with execution time and interval
         time_fields = []
+        timezone = await self.get_guild_timezone(interaction.guild_id)
         if event.last_run_time:
             time_fields.append(
-                f"**Initial Time:** {datetime.datetime.fromtimestamp(event.dispatch_time).strftime('%X %x')}")
+                f"**Initial Time:** "
+                f"{datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone).strftime('%X %x')}")
         else:
             time_fields.append(
-                f"**Dispatch Time:** {datetime.datetime.fromtimestamp(event.dispatch_time).strftime('%X %x')}")
+                f"**Dispatch Time:** "
+                f"{datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone).strftime('%X %x')}")
 
         if event.is_paused:
             time_fields.append(
@@ -1045,13 +1048,15 @@ class Automation(commands.Cog):
 
         if event.last_run_time:
             time_fields.append(
-                f"**Last Run:** {datetime.datetime.fromtimestamp(event.last_run_time).strftime('%X %x')}")
+                f"**Last Run:** "
+                f"{datetime.datetime.fromtimestamp(event.last_run_time).astimezone(timezone).strftime('%X %x')}")
 
         if event.repeat_interval is not Repeat.No:
             repeat_job = RepeatJob(self.bot, self.event_service, event,
                                    await self.get_guild_timezone(interaction.guild.id))
             time_fields.append(
-                f"**Next Run:** {datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).strftime('%X %x')}")
+                f"**Next Run:** "
+                f"{datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).astimezone(timezone).strftime('%X %x')}")
 
         embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
 
