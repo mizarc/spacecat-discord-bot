@@ -1051,7 +1051,7 @@ class Automation(commands.Cog):
         if event.repeat_interval is not Repeat.No:
             repeat_job = RepeatJob(self.bot, self.event_service, event,
                                    await self.get_guild_timezone(interaction.guild.id))
-            next_run_time = datetime.datetime.fromtimestamp(repeat_job.calculate_next_run())
+            next_run_time = datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).astimezone(timezone)
             time_fields.append(f"**Next Run:** {next_run_time.strftime('%X %x')}")
 
         embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
