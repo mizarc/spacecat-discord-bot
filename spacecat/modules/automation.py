@@ -557,7 +557,7 @@ class EventActionRepository:
         return self._result_to_event_action(result)
 
     def add(self, event_action: EventAction):
-        values = (event_action.id, event_action.event_id, event_action.action_type, event_action.action_id,
+        values = (str(event_action.id), event_action.event_id, event_action.action_type, str(event_action.action_id),
                   event_action.previous_id)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?, ?, ?)', values)
@@ -598,10 +598,8 @@ class EventService:
     def get_event_actions(self, event: Event) -> list[EventAction]:
         event_action_links = {}
         event_actions = self.event_actions.get_by_event(event.id)
-
         for event_action in event_actions:
-            actions = self.actions_collection.get(event_action.action_type)
-            event_action_links[event_action.previous_id](actions.get_by_id(event_action.action_id))
+            event_action_links[event_action.previous_id] = event_action
 
         # Sort actions using linked previous_id
         sorted_actions: list[EventAction] = []
@@ -967,7 +965,7 @@ class Automation(commands.Cog):
 
     @event_group.command(name="create")
     async def event_create(self, interaction: discord.Interaction, name: str, time_string: str, date_string: str,
-                              repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
+                           repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
         if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
@@ -990,10 +988,10 @@ class Automation(commands.Cog):
 
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"An event by the name of '{name}' has been created, set to trigger on "
+            description=f"Event `{name}` has been created, set to trigger on "
                         f"{selected_datetime.day}/{selected_datetime.month}/{selected_datetime.year} "
                         f"at {selected_datetime.hour}:{selected_datetime.minute}"
-                        f"{await self.format_repeat_message(repeat, repeat_multiplier)}. Use `/schedule add` to"
+                        f"{await self.format_repeat_message(repeat, repeat_multiplier)} Use `/event add` to "
                         f"assign actions."))
         return
 
@@ -1109,7 +1107,7 @@ class Automation(commands.Cog):
 
     @event_add_group.command(name="voicemove")
     async def event_add_voicemove(self, interaction, event_name: str, current_channel: discord.VoiceChannel,
-                                     new_channel: discord.VoiceChannel):
+                                  new_channel: discord.VoiceChannel):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
