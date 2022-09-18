@@ -653,13 +653,13 @@ class RepeatJob:
         self.event = event
         self.timezone = timezone
         self.interval = self.calculate_interval()
-        self.next_run_time = self.calculate_next_run()
+        self.next_run_time: float = self.calculate_next_run()
         self.job_task = None
 
     def run_task(self):
         self.job_task = asyncio.create_task(self.job_loop())
 
-    def calculate_next_run(self):
+    def calculate_next_run(self) -> float:
         next_run_time = self.event.dispatch_time
         if self.event.last_run_time:
             next_run_time = self.event.last_run_time
@@ -1277,7 +1277,7 @@ class Automation(commands.Cog):
                 description=f"You cannot set a date and time in the past."))
             return
 
-        event.dispatch_time = selected_datetime
+        event.dispatch_time = selected_datetime.timestamp()
         self.events.update(event)
         if self.repeating_events.get(event.id):
             await self.unload_event(event)
