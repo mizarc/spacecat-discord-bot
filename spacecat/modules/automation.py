@@ -249,9 +249,9 @@ class EventRepository:
                        'WHERE id=?', values)
         self.db.commit()
 
-    def remove(self, event):
+    def remove(self, id_: uuid):
         cursor = self.db.cursor()
-        values = (event.id,)
+        values = (id_,)
         cursor.execute('DELETE FROM events WHERE id=?', values)
         self.db.commit()
 
@@ -286,7 +286,7 @@ class ActionRepository(ABC, Generic[T_Action]):
         pass
 
     @abstractmethod
-    def remove(self, id_: int):
+    def remove(self, id_: uuid):
         pass
 
 
@@ -325,8 +325,8 @@ class MessageActionRepository(ActionRepository[MessageAction]):
         cursor.execute('INSERT INTO action_message VALUES (?, ?, ?, ?)', values)
         self.db.commit()
 
-    def remove(self, action: MessageAction):
-        values = (action.id,)
+    def remove(self, id_: uuid):
+        values = (str(id_),)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM action_message WHERE id=?', values)
         self.db.commit()
@@ -368,8 +368,8 @@ class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
         cursor.execute('INSERT INTO action_voice_kick VALUES (?, ?)', values)
         self.db.commit()
 
-    def remove(self, action: VoiceKickAction):
-        values = (action.id,)
+    def remove(self, id_: uuid):
+        values = (str(id_),)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM action_voice_kick WHERE id=?', values)
         self.db.commit()
@@ -413,8 +413,8 @@ class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
         cursor.execute('INSERT INTO action_voice_move VALUES (?, ?, ?)', values)
         self.db.commit()
 
-    def remove(self, action: VoiceMoveAction):
-        values = (action.id,)
+    def remove(self, id_: uuid):
+        values = (str(id_),)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM action_voice_move WHERE id=?', values)
         self.db.commit()
@@ -456,8 +456,8 @@ class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
         cursor.execute('INSERT INTO action_channel_private VALUES (?, ?)', values)
         self.db.commit()
 
-    def remove(self, action: ChannelPrivateAction):
-        values = (action.id,)
+    def remove(self, id_: uuid):
+        values = (str(id_),)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM action_channel_private WHERE id=?', values)
         self.db.commit()
@@ -500,8 +500,8 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
         cursor.execute('INSERT INTO event_channelpublic_args VALUES (?, ?)', values)
         self.db.commit()
 
-    def remove(self, action: ChannelPublicAction):
-        values = (action.id,)
+    def remove(self, id_: uuid):
+        values = (str(id_),)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM event_channelpublic_args WHERE id=?', values)
         self.db.commit()
@@ -571,7 +571,7 @@ class EventActionRepository:
         self.db.commit()
 
     def remove(self, id_):
-        self.db.cursor().execute('DELETE FROM event_actions WHERE id=?', (id_,))
+        self.db.cursor().execute('DELETE FROM event_actions WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
@@ -1054,9 +1054,8 @@ class Automation(commands.Cog):
         if event.repeat_interval is not Repeat.No:
             repeat_job = RepeatJob(self.bot, self.event_service, event,
                                    await self.get_guild_timezone(interaction.guild.id))
-            time_fields.append(
-                f"**Next Run:** "
-                f"{datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).astimezone(timezone).strftime('%X %x')}")
+            next_run_time = datetime.datetime.fromtimestamp(repeat_job.calculate_next_run())
+            time_fields.append(f"**Next Run:** {next_run_time.strftime('%X %x')}")
 
         embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
 
