@@ -1262,7 +1262,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="reschedule")
-    async def event_reschedule(self, interaction, name: str, date: str, time_: str):
+    async def event_reschedule(self, interaction, name: str, time_string: str, date_string: str):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
@@ -1270,7 +1270,7 @@ class Automation(commands.Cog):
                 description=f"An event going by the name '{name}' does not exist."))
             return
 
-        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_, date)
+        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
         if selected_datetime.timestamp() < time.time():
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
