@@ -326,7 +326,7 @@ class MessageActionRepository(ActionRepository[MessageAction]):
         self.db.commit()
 
     def remove(self, id_: uuid):
-        values = (str(id_),)
+        values = (id_,)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM action_message WHERE id=?', values)
         self.db.commit()
@@ -369,7 +369,7 @@ class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
         self.db.commit()
 
     def remove(self, id_: uuid):
-        values = (str(id_),)
+        values = (id_,)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM action_voice_kick WHERE id=?', values)
         self.db.commit()
@@ -414,7 +414,7 @@ class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
         self.db.commit()
 
     def remove(self, id_: uuid):
-        values = (str(id_),)
+        values = (id_,)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM action_voice_move WHERE id=?', values)
         self.db.commit()
@@ -457,7 +457,7 @@ class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
         self.db.commit()
 
     def remove(self, id_: uuid):
-        values = (str(id_),)
+        values = (id_,)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM action_channel_private WHERE id=?', values)
         self.db.commit()
@@ -501,7 +501,7 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
         self.db.commit()
 
     def remove(self, id_: uuid):
-        values = (str(id_),)
+        values = (id_,)
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM event_channelpublic_args WHERE id=?', values)
         self.db.commit()
