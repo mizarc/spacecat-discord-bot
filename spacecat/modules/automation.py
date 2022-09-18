@@ -126,7 +126,7 @@ class Event:
                  repeat_multiplier, is_paused, name, description):
         self.id = id_
         self.guild_id = guild_id
-        self.dispatch_time = dispatch_time
+        self.dispatch_time: int = dispatch_time
         self.last_run_time = last_run_time
         self.repeat_interval: Repeat = repeat_interval
         self.repeat_multiplier = repeat_multiplier
@@ -314,8 +314,7 @@ class MessageActionRepository(ActionRepository[MessageAction]):
         self.db.commit()
 
     def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM action_message WHERE id=?', (id_,)).fetch_one()
-        self.db.commit()
+        result = self.db.cursor().execute('SELECT * FROM action_message WHERE id=?', (id_,)).fetchone()
         return self._result_to_args(result)
 
     def add(self, action: MessageAction):
@@ -357,7 +356,7 @@ class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
         self.db.commit()
 
     def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM action_voice_kick WHERE id=?', (id_,)).fetch_one()
+        result = self.db.cursor().execute('SELECT * FROM action_voice_kick WHERE id=?', (id_,)).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
@@ -402,7 +401,7 @@ class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
         self.db.commit()
 
     def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM action_voice_move WHERE id=?', (id_,)).fetch_one()
+        result = self.db.cursor().execute('SELECT * FROM action_voice_move WHERE id=?', (id_,)).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
@@ -445,7 +444,7 @@ class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
         self.db.commit()
 
     def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM action_channel_private WHERE id=?', (id_,)).fetch_one()
+        result = self.db.cursor().execute('SELECT * FROM action_channel_private WHERE id=?', (id_,)).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
@@ -489,7 +488,7 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
         self.db.commit()
 
     def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM event_channelpublic_args WHERE id=?', (id_,)).fetch_one()
+        result = self.db.cursor().execute('SELECT * FROM event_channelpublic_args WHERE id=?', (id_,)).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
