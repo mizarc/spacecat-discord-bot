@@ -1008,7 +1008,7 @@ class Automation(commands.Cog):
         self.event_service.remove_event(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Event {event_name} has been deleted."))
+            description=f"Event '{event_name}' has been deleted."))
         return
 
     @event_group.command(name="view")
