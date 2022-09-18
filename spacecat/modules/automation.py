@@ -965,7 +965,7 @@ class Automation(commands.Cog):
 
     @event_group.command(name="create")
     async def event_create(self, interaction: discord.Interaction, name: str, time_string: str, date_string: str,
-                           repeat: Repeat = Repeat.No, repeat_multiplier: int = 0):
+                           repeat: Repeat = Repeat.No, repeat_multiplier: int = 1):
         if await self.is_over_event_limit(interaction.guild_id):
             await interaction.response.send_message(embed=self.MAX_EVENTS_EMBED)
             return
