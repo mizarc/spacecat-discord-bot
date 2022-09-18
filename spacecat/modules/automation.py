@@ -1047,13 +1047,13 @@ class Automation(commands.Cog):
             time_fields.append(
                 f"**Last Run:** {datetime.datetime.fromtimestamp(event.last_run_time).strftime('%X %x')}")
 
-        if event.repeat_interval:
+        if event.repeat_interval is not Repeat.No:
             repeat_job = RepeatJob(self.bot, self.event_service, event,
                                    await self.get_guild_timezone(interaction.guild.id))
             time_fields.append(
                 f"**Next Run:** {datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).strftime('%X %x')}")
 
-        embed.add_field(name="Execution Time", value='\n'.join(time_fields), inline=False)
+        embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
 
         # Embed category to do with actions
         event_actions = self.event_service.get_event_actions(event)
