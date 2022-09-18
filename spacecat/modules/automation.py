@@ -245,8 +245,7 @@ class EventRepository:
         values = (event.guild_id, event.dispatch_time, event.last_run_time, event.repeat_interval.name,
                   event.repeat_multiplier, int(event.is_paused), event.name, event.description, str(event.id))
         cursor.execute('UPDATE events SET guild_id=?, dispatch_time=?, last_run_time=?, repeat_interval=?, '
-                       'repeat_multiplier=?, is_paused=?, name=?, description=?, function_name=?, arguments=? '
-                       'WHERE id=?', values)
+                       'repeat_multiplier=?, is_paused=?, name=?, description=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, id_: uuid):
@@ -339,7 +338,7 @@ class MessageActionRepository(ActionRepository[MessageAction]):
 class VoiceKickAction(Action):
     def __init__(self, id_, voice_channel_id):
         super().__init__(id_)
-        self.channel = voice_channel_id
+        self.voice_channel_id = voice_channel_id
 
     @classmethod
     def create_new(cls, voice_channel_id):
@@ -363,7 +362,7 @@ class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
         return self._result_to_args(result)
 
     def add(self, action: VoiceKickAction):
-        values = (str(action.id), action.channel)
+        values = (str(action.id), action.voice_channel_id)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO action_voice_kick VALUES (?, ?)', values)
         self.db.commit()
@@ -580,7 +579,8 @@ class EventActionRepository:
 
 
 class EventService:
-    def __init__(self, event_actions, events):
+    def __init__(self, bot: discord.ext.commands.Bot, event_actions, events):
+        self.bot = bot
         self.events: EventRepository = events
         self.actions_collection: dict[str, ActionRepository] = {}
         self.event_actions: EventActionRepository = event_actions
@@ -639,6 +639,12 @@ class EventService:
         self.event_actions.update(next_action)
         self.event_actions.remove(event_action.id)
 
+    def dispatch_event(self, event: Event):
+        event_actions = self.get_event_actions(event)
+        for event_action in event_actions:
+            self.bot.dispatch(f"{event_action.action_type}_event", self.get_action(event_action))
+        self.events.update(event)
+
 
 class RepeatJob:
     def __init__(self, bot: commands.Bot, event_service: EventService, event: Event, timezone: pytz.tzinfo):
@@ -671,11 +677,9 @@ class RepeatJob:
             await self.dispatch_event()
 
     async def dispatch_event(self):
-        event_actions = self.event_service.get_event_actions(self.event)
-        for event_action in event_actions:
-            self.bot.dispatch(f"{event_action.action_type}_event", self.event_service.get_action(event_action))
         self.event.last_run_time = self.next_run_time
         self.next_run_time = self.calculate_next_run()
+        self.event_service.dispatch_event(self.event)
         self.job_task.cancel()
         self.job_task = asyncio.create_task(self.job_loop())
 
@@ -735,7 +739,7 @@ class Automation(commands.Cog):
             toml.dump(config, config_file)
 
     def init_event_service(self):
-        event_service = EventService(self.event_actions, self.events)
+        event_service = EventService(self.bot, self.event_actions, self.events)
 
         action_repositories = [
             MessageActionRepository(self.database),
@@ -815,42 +819,35 @@ class Automation(commands.Cog):
         await channel.send(embed=embed, view=view)
 
     @commands.Cog.listener()
-    async def on_message_event(self, event):
-        self.events.update(event)
-        channel = await self.bot.fetch_channel(int(event.arguments.split(' ')[0]))
+    async def on_message_event(self, action: MessageAction):
+        channel = await self.bot.fetch_channel(action.text_channel_id)
         await channel.send(embed=discord.Embed(
             colour=constants.EmbedStatus.SPECIAL.value,
-            title=f"{event.name}",
-            description=f"{event.arguments.split(' ', 1)[1]}"))
+            title=f"{action.title}",
+            description=f"{action.message}"))
 
     @commands.Cog.listener()
-    async def on_voicekick_event(self, event):
-        self.events.update(event)
-        voice_channel = self.bot.get_channel(int(event.arguments.split(' ')[0]))
+    async def on_voicekick_event(self, action: VoiceKickAction):
+        voice_channel = self.bot.get_channel(action.voice_channel_id)
         for member in voice_channel.members:
             await member.move_to(None)
 
     @commands.Cog.listener()
-    async def on_voicemove_event(self, event):
-        self.events.update(event)
-        current_channel = self.bot.get_channel(int(event.arguments.split(' ')[0]))
-        new_channel = self.bot.get_channel(int(event.arguments.split(' ')[1]))
+    async def on_voicemove_event(self, action: VoiceMoveAction):
+        current_channel = self.bot.get_channel(action.current_voice_channel_id)
+        new_channel = self.bot.get_channel(action.new_voice_channel_id)
         for member in current_channel.members:
             await member.move_to(new_channel)
 
     @commands.Cog.listener()
-    async def on_channelprivate_event(self, event):
-        self.events.update(event)
-        guild = self.bot.get_guild(event.guild_id)
-        channel: discord.abc.GuildChannel = await self.bot.fetch_channel(event.arguments)
-        await channel.set_permissions(guild.default_role, connect=False, view_channel=False)
+    async def on_channelprivate_event(self, action: ChannelPrivateAction):
+        channel: discord.abc.GuildChannel = await self.bot.fetch_channel(action.channel_id)
+        await channel.set_permissions(channel.guild.default_role, connect=False, view_channel=False)
 
     @commands.Cog.listener()
-    async def on_channelpublic_event(self, event):
-        self.events.update(event)
-        guild = self.bot.get_guild(event.guild_id)
-        channel: discord.abc.GuildChannel = await self.bot.fetch_channel(event.arguments)
-        await channel.set_permissions(guild.default_role, connect=None, view_channel=None)
+    async def on_channelpublic_event(self, action: ChannelPublicAction):
+        channel: discord.abc.GuildChannel = await self.bot.fetch_channel(action.channel_id)
+        await channel.set_permissions(channel.guild.default_role, connect=None, view_channel=None)
 
     @app_commands.command()
     async def remindme(self, interaction, message: str, seconds: int = 0, minutes: int = 0, hours: int = 0,
