@@ -846,25 +846,25 @@ class Automation(commands.Cog):
             description=f"{action.message}"))
 
     @commands.Cog.listener()
-    async def on_voicekick_action(self, action: VoiceKickAction):
-        voice_channel = self.bot.get_channel(action.voice_channel_id)
+    async def on_voice_kick_action(self, action: VoiceKickAction):
+        voice_channel = await self.bot.fetch_channel(action.voice_channel_id)
         for member in voice_channel.members:
             await member.move_to(None)
 
     @commands.Cog.listener()
-    async def on_voicemove_action(self, action: VoiceMoveAction):
-        current_channel = self.bot.get_channel(action.current_voice_channel_id)
-        new_channel = self.bot.get_channel(action.new_voice_channel_id)
+    async def on_voice_move_action(self, action: VoiceMoveAction):
+        current_channel = await self.bot.fetch_channel(action.current_voice_channel_id)
+        new_channel = await self.bot.fetch_channel(action.new_voice_channel_id)
         for member in current_channel.members:
             await member.move_to(new_channel)
 
     @commands.Cog.listener()
-    async def on_channelprivate_action(self, action: ChannelPrivateAction):
+    async def on_channel_private_action(self, action: ChannelPrivateAction):
         channel: discord.abc.GuildChannel = await self.bot.fetch_channel(action.channel_id)
         await channel.set_permissions(channel.guild.default_role, connect=False, view_channel=False)
 
     @commands.Cog.listener()
-    async def on_channelpublic_action(self, action: ChannelPublicAction):
+    async def on_channel_public_action(self, action: ChannelPublicAction):
         channel: discord.abc.GuildChannel = await self.bot.fetch_channel(action.channel_id)
         await channel.set_permissions(channel.guild.default_role, connect=None, view_channel=None)
 
