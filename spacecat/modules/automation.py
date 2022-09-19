@@ -684,7 +684,7 @@ class RepeatJob:
 
     def calculate_next_run(self) -> float:
         next_run_time = self.event.dispatch_time
-        if self.event.last_run_time > self.event.dispatch_time:
+        if self.event.last_run_time is not None and self.event.last_run_time > self.event.dispatch_time:
             next_run_time = self.event.last_run_time
         while next_run_time <= datetime.datetime.now(tz=self.timezone).timestamp() + 1:
             next_run_time += self.interval
