@@ -1229,7 +1229,7 @@ class Automation(commands.Cog):
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
             description=f"Action of type '{action_to_move.action_type}' in event '{name}' has been moved from position "
-                        f"`{original_position}` to `{new_position}"))
+                        f"`{original_position}` to `{new_position}`"))
         return
 
     @event_group.command(name="pause")
