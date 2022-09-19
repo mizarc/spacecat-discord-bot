@@ -801,7 +801,9 @@ class Automation(commands.Cog):
         for event_action in event_actions:
             action = self.event_service.get_action(event_action)
             self.bot.dispatch(f"{action.get_name()}_action", action)
-        self.events.remove(event)
+        event.last_run_time = event.dispatch_time
+        event.dispatch_time = None
+        self.events.update(event)
 
     @tasks.loop(hours=24)
     async def load_upcoming_events(self):
