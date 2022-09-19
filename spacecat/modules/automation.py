@@ -667,8 +667,7 @@ class EventService:
 
 
 class RepeatJob:
-    def __init__(self, bot: commands.Bot, event_service: EventService, event: Event, timezone: pytz.tzinfo):
-        self.bot = bot
+    def __init__(self, event_service: EventService, event: Event, timezone: pytz.tzinfo):
         self.event_service = event_service
         self.event = event
         self.timezone = timezone
@@ -820,7 +819,7 @@ class Automation(commands.Cog):
         for event in events:
             if event.id in self.repeating_events:
                 continue
-            repeat_job = RepeatJob(self.bot, self.event_service, event, await self.get_guild_timezone(event.guild_id))
+            repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(event.guild_id))
             repeat_job.run_task()
             self.repeating_events[event.id] = repeat_job
 
@@ -1069,8 +1068,7 @@ class Automation(commands.Cog):
                 f"{datetime.datetime.fromtimestamp(event.last_run_time).astimezone(timezone).strftime('%X %x')}")
 
         if event.repeat_interval is not Repeat.No:
-            repeat_job = RepeatJob(self.bot, self.event_service, event,
-                                   await self.get_guild_timezone(interaction.guild.id))
+            repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(interaction.guild.id))
             next_run_time = datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).astimezone(timezone)
             time_fields.append(f"**Next Run:** {next_run_time.strftime('%X %x')}")
 
@@ -1332,7 +1330,7 @@ class Automation(commands.Cog):
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
             return
-        repeat_job = RepeatJob(self.bot, self.event_service, event, await self.get_guild_timezone(event.guild_id))
+        repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(event.guild_id))
         repeat_job.run_task()
         self.repeating_events[event.id] = repeat_job
 
