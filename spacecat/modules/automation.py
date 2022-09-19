@@ -503,25 +503,24 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
     def __init__(self, database):
         super().__init__(database)
         cursor = self.db.cursor()
-        cursor.execute('CREATE TABLE IF NOT EXISTS event_channelpublic_args '
-                       '(id TEXT PRIMARY KEY, channel_id INTEGER)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS action_channel_public (id TEXT PRIMARY KEY, channel_id INTEGER)')
         self.db.commit()
 
     def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM event_channelpublic_args WHERE id=?', (id_,)).fetchone()
+        result = self.db.cursor().execute('SELECT * FROM action_channel_public WHERE id=?', (id_,)).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
     def add(self, action: ChannelPublicAction):
         values = (str(action.id), action.channel_id)
         cursor = self.db.cursor()
-        cursor.execute('INSERT INTO event_channelpublic_args VALUES (?, ?)', values)
+        cursor.execute('INSERT INTO action_channel_public VALUES (?, ?)', values)
         self.db.commit()
 
     def remove(self, id_: uuid):
         values = (id_,)
         cursor = self.db.cursor()
-        cursor.execute('DELETE FROM event_channelpublic_args WHERE id=?', values)
+        cursor.execute('DELETE FROM action_channel_public WHERE id=?', values)
         self.db.commit()
 
     @staticmethod
