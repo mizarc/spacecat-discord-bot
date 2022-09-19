@@ -1180,6 +1180,58 @@ class Automation(commands.Cog):
             description=f"Action '{event_actions[index - 1].action_type}' at index {index} has been removed from "
                         f"event {event.name}."))
 
+    @event_group.command(name="reorder")
+    async def event_reorder(self, interaction, name: str, original_position: int, new_position: int):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
+            return
+
+        event_actions = self.event_service.get_event_actions(event)
+
+        # Automatically put new position within bounds
+        if new_position > len(event_actions):
+            new_position = len(event_actions)
+        elif new_position < 1:
+            new_position = 1
+
+        action_to_move = event_actions[original_position - 1]
+        action_to_replace = event_actions[new_position - 1]
+
+        # If moving up, song after new position should be re-referenced to moved song
+        if new_position > original_position:
+            action_to_move.previous_id = action_to_replace.id
+            try:
+                action_after_new = event_actions[new_position]
+                action_after_new.previous_id = action_to_move.id
+                self.event_actions.update(action_after_new)
+            except IndexError:
+                pass
+
+        # If moving down, song at new position should be re-referenced to moved song
+        else:
+            action_to_move.previous_id = action_to_replace.previous_id
+            action_to_replace.previous_id = action_to_move.id
+            self.event_actions.update(action_to_replace)
+
+        # Fill in the gap at the original song position
+        try:
+            action_after_selected = event_actions[original_position]
+            action_before_selected = event_actions[original_position - 2]
+            action_after_selected.previous_id = action_before_selected.id
+            self.event_actions.update(action_after_selected)
+        except IndexError:
+            pass
+
+        self.event_actions.update(action_to_move)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.FAIL.value,
+            description=f"Action of type '{action_to_move.action_type}' in event '{name}' has been moved from position "
+                        f"`{original_position}` to `{new_position}"))
+        return
+
     @event_group.command(name="pause")
     async def event_pause(self, interaction, name: str):
         event = self.events.get_by_name(name)
