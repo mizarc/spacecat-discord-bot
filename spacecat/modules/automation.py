@@ -268,6 +268,10 @@ class Action(ABC):
     def get_name(self):
         pass
 
+    @abstractmethod
+    def get_formatted_output(self):
+        pass
+
 
 T_Action = TypeVar("T_Action", bound=Action)
 
@@ -303,6 +307,9 @@ class MessageAction(Action):
     @classmethod
     def get_name(cls):
         return "message"
+
+    def get_formatted_output(self):
+        return f"Sends a message titled '{self.title}' to channel <#{self.text_channel_id}>."
 
 
 class MessageActionRepository(ActionRepository[MessageAction]):
@@ -346,6 +353,9 @@ class VoiceKickAction(Action):
     @classmethod
     def get_name(cls):
         return "voice_kick"
+
+    def get_formatted_output(self):
+        return f"Kicks all users out of voice channel <#{self.voice_channel_id}>."
 
 
 class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
@@ -391,6 +401,10 @@ class VoiceMoveAction(Action):
     def get_name(cls):
         return "voice_move"
 
+    def get_formatted_output(self):
+        return f"Moves all users from voice channel " \
+               f"<#{self.current_voice_channel_id}> to <#{self.new_voice_channel_id}>."
+
 
 class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
     def __init__(self, database):
@@ -435,6 +449,9 @@ class ChannelPrivateAction(Action):
     def get_name(cls):
         return "channel_private"
 
+    def get_formatted_output(self):
+        return f"Sets channel <#{self.channel_id}> to private visibility."
+
 
 class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
     def __init__(self, database):
@@ -477,6 +494,9 @@ class ChannelPublicAction(Action):
     @classmethod
     def get_name(cls):
         return "channel_public"
+
+    def get_formatted_output(self):
+        return f"Sets channel <#{self.channel_id}> to public visibility."
 
 
 class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
@@ -1062,8 +1082,7 @@ class Automation(commands.Cog):
             action_fields = []
             index = 1
             for event_action in self.event_service.get_event_actions(event):
-                #action = self.event_service.get_action(event_action)
-                action_fields.append(f"{index}. {event_action.action_type}")
+                action_fields.append(f"{index}. {self.event_service.get_action(event_action).get_formatted_output()}")
                 index += 1
             embed.add_field(name="Actions", value='\n'.join(action_fields))
         else:
