@@ -1107,7 +1107,7 @@ class Automation(commands.Cog):
         action = MessageAction.create_new(channel.id, title, message)
         self.event_service.add_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Message action has been added to event '{event_name}'"))
 
     @event_add_group.command(name="voicekick")
@@ -1124,7 +1124,7 @@ class Automation(commands.Cog):
         action = VoiceKickAction.create_new(voice_channel.id)
         self.event_service.add_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Voice Kick action has been added to event '{event_name}'"))
 
     @event_add_group.command(name="voicemove")
@@ -1142,7 +1142,7 @@ class Automation(commands.Cog):
         action = VoiceMoveAction.create_new(current_channel.id, new_channel.id)
         self.event_service.add_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Voice Move action has been added to event '{event_name}'"))
 
     @event_add_group.command(name="channelprivate")
@@ -1159,7 +1159,7 @@ class Automation(commands.Cog):
         action = ChannelPrivateAction.create_new(channel.id)
         self.event_service.add_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Channel Private action has been added to event '{event_name}'"))
 
     @event_add_group.command(name="channelpublic")
@@ -1176,7 +1176,7 @@ class Automation(commands.Cog):
         action = ChannelPublicAction.create_new(channel.id)
         self.event_service.add_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Channel Public action has been added to event '{event_name}'"))
 
     @event_group.command(name="remove")
