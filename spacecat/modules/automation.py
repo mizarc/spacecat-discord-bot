@@ -957,6 +957,8 @@ class Automation(commands.Cog):
         event_listings = []
         for index, event in enumerate(islice(events, 0, 10)):
             listing = f"{index + 1}. {event.name}"
+            if not event.dispatch_time:
+                listing += f" | `Expired`"
             if event.repeat_interval != Repeat.No:
                 listing += f" | `Repeating {event.repeat_interval.name}`"
             event_listings.append(listing)
@@ -1036,23 +1038,19 @@ class Automation(commands.Cog):
         # Embed category to do with execution time and interval
         time_fields = []
         timezone = await self.get_guild_timezone(interaction.guild_id)
-        if event.last_run_time:
-            time_fields.append(
-                f"**Initial Time:** "
-                f"{datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone).strftime('%X %x')}")
-        else:
-            time_fields.append(
-                f"**Dispatch Time:** "
-                f"{datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone).strftime('%X %x')}")
 
+        if event.dispatch_time:
+            dispatch_time = datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone).strftime('%X %x')
+            if event.last_run_time:
+                time_fields.append(f"**Initial Time:** {dispatch_time}")
+            else:
+                time_fields.append(f"**Dispatch Time:** {dispatch_time}")
+
+        repeating = await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)
         if event.is_paused:
-            time_fields.append(
-                f"**Repeating:** "
-                f"{await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)} (Paused)")
+            time_fields.append(f"**Repeating:** {repeating} (Paused)")
         else:
-            time_fields.append(
-                f"**Repeating:** "
-                f"{await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)}")
+            time_fields.append(f"**Repeating:** {repeating}")
 
         if event.last_run_time:
             time_fields.append(
