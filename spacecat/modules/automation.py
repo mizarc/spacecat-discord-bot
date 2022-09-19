@@ -995,6 +995,7 @@ class Automation(commands.Cog):
 
         event = Event.create_new(interaction.guild_id, selected_datetime.timestamp(), repeat, repeat_multiplier, name)
         self.events.add(event)
+        await self.load_event(event)
 
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -1338,9 +1339,8 @@ class Automation(commands.Cog):
 
         event.dispatch_time = selected_datetime.timestamp()
         self.events.update(event)
-        if self.repeating_events.get(event.id):
-            await self.unload_event(event)
-            await self.load_event(event)
+        await self.unload_event(event)
+        await self.load_event(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Dispatch time has been set for event {name}."))
