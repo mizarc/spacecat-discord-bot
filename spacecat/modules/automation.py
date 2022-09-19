@@ -1183,11 +1183,11 @@ class Automation(commands.Cog):
             return
 
         event_actions = self.event_service.get_event_actions(event)
-        action = self.event_service.get_action(event_actions[index])
+        action = self.event_service.get_action(event_actions[index - 1])
         self.event_service.remove_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Action '{event_actions[index].action_type}' at index {index} has been removed from "
+            description=f"Action '{event_actions[index - 1].action_type}' at index {index} has been removed from "
                         f"event {event.name}."))
 
     @event_group.command(name="pause")
