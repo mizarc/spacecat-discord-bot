@@ -149,19 +149,6 @@ class EventRepository:
                        'dispatch_time INTEGER, last_run_time INTEGER, repeat_interval TEXT, repeat_multiplier INTEGER, '
                        'is_paused INTEGER, name TEXT, description TEXT)')
         self.db.commit()
-        self.create_event_argument_tables()
-
-    def create_event_argument_tables(self):
-        cursor = self.db.cursor()
-        cursor.execute('CREATE TABLE IF NOT EXISTS event_message_args '
-                       '(event_id, TEXT PRIMARY KEY, title TEXT, description TEXT)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicekick_args '
-                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicemove_args '
-                       '(event_id, TEXT PRIMARY KEY, current_channel INTEGER, new_channel INTEGER)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS event_voicemove_args '
-                       '(event_id, TEXT PRIMARY KEY, channel_id INTEGER)')
-        self.db.commit()
 
     def get_all(self):
         """Get list of all reminders"""
