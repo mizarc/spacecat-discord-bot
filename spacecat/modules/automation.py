@@ -338,7 +338,7 @@ class MessageActionRepository(ActionRepository[MessageAction]):
 
     @staticmethod
     def _result_to_args(result):
-        return MessageAction(result[0], result[1], result[2], result[3])
+        return MessageAction(result[0], result[1], result[2], result[3]) if result else None
 
 
 class VoiceKickAction(Action):
@@ -384,7 +384,7 @@ class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
 
     @staticmethod
     def _result_to_args(result):
-        return VoiceKickAction(result[0], result[1])
+        return VoiceKickAction(result[0], result[1]) if result else None
 
 
 class VoiceMoveAction(Action):
@@ -433,7 +433,7 @@ class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
 
     @staticmethod
     def _result_to_args(result):
-        return VoiceMoveAction(result[0], result[1], result[2])
+        return VoiceMoveAction(result[0], result[1], result[2]) if result else None
 
 
 class ChannelPrivateAction(Action):
@@ -479,7 +479,7 @@ class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
 
     @staticmethod
     def _result_to_args(result):
-        return VoiceMoveAction(result[0], result[1], result[2])
+        return VoiceMoveAction(result[0], result[1], result[2]) if result else None
 
 
 class ChannelPublicAction(Action):
@@ -526,7 +526,7 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
 
     @staticmethod
     def _result_to_args(result):
-        return ChannelPublicAction(result[0], result[1])
+        return ChannelPublicAction(result[0], result[1]) if result else None
 
 
 class EventAction:
@@ -570,8 +570,8 @@ class EventActionRepository:
                                           (action_id, event_id)).fetchone()
         return self._result_to_event_action(result)
 
-    def get_by_previous(self, action_id):
-        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE previous_id=?', (action_id,)).fetchone()
+    def get_by_previous(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE previous_id=?', (id_,)).fetchone()
         return self._result_to_event_action(result)
 
     def add(self, event_action: EventAction):
@@ -594,7 +594,7 @@ class EventActionRepository:
 
     @staticmethod
     def _result_to_event_action(result):
-        return EventAction(result[0], result[1], result[2], result[3], result[4])
+        return EventAction(result[0], result[1], result[2], result[3], result[4]) if result else None
 
 
 class EventService:
