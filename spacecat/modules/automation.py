@@ -800,7 +800,7 @@ class Automation(commands.Cog):
         event_actions = self.event_service.get_event_actions(event)
         for event_action in event_actions:
             action = self.event_service.get_action(event_action)
-            self.bot.dispatch(f"{action.get_name()}_event", action)
+            self.bot.dispatch(f"{action.get_name()}_action", action)
         self.events.remove(event)
 
     @tasks.loop(hours=24)
