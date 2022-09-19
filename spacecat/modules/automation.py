@@ -651,11 +651,15 @@ class EventService:
 
         event_action = self.event_actions.get_by_action_in_event(action.id, event.id)
         next_action = self.event_actions.get_by_previous(event_action.id)
-        if event_action.previous_id:
-            next_action.previous_id = event_action.previous_id
-        else:
-            next_action.previous_id = None
-        self.event_actions.update(next_action)
+
+        # Ensure next song in list is relinked
+        if next_action:
+            if event_action.previous_id:
+                next_action.previous_id = event_action.previous_id
+            else:
+                next_action.previous_id = None
+            self.event_actions.update(next_action)
+
         self.event_actions.remove(event_action.id)
 
     def dispatch_event(self, event: Event):
