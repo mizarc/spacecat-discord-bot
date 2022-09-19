@@ -211,7 +211,7 @@ class EventRepository:
             reminders.append(self._result_to_event(result))
         return reminders
 
-    def get_first_before_timestamp(self, timestamp):
+    def get_first_non_repeating_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
         result = cursor.execute('SELECT * FROM events '
                                 'WHERE dispatch_time < ? AND repeat_interval="No" '
@@ -236,9 +236,7 @@ class EventRepository:
         self.db.commit()
 
     def remove(self, id_: uuid):
-        cursor = self.db.cursor()
-        values = (id_,)
-        cursor.execute('DELETE FROM events WHERE id=?', values)
+        self.db.cursor().execute('DELETE FROM events WHERE id=?', (id_,))
         self.db.commit()
 
     @staticmethod
@@ -784,7 +782,8 @@ class Automation(commands.Cog):
     async def event_loop(self):
         try:
             while not self.bot.is_closed():
-                event = self.events.get_first_before_timestamp(time.time() + 86400)  # Get timers within 24 hours
+                # Get timers within 24 hours
+                event = self.events.get_first_non_repeating_before_timestamp(time.time() + 86400)
                 if event.dispatch_time >= time.time():
                     sleep_duration = (event.dispatch_time - time.time())
                     await asyncio.sleep(sleep_duration)
