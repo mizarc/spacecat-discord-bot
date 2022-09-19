@@ -568,8 +568,8 @@ class EventActionRepository:
         self.db.commit()
 
     def update(self, event_action: EventAction):
-        values = (event_action.id, event_action.event_id, event_action.action_type, event_action.action_id,
-                  event_action.previous_id)
+        values = (event_action.event_id, event_action.action_type, event_action.action_id, event_action.previous_id,
+                  event_action.id)
         self.db.cursor().execute('UPDATE event_actions SET event_id=?, action_type=?, action_id=?, previous_id=? '
                                  'WHERE id=?', values)
         self.db.commit()
