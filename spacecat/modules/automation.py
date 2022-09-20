@@ -1336,7 +1336,7 @@ class Automation(commands.Cog):
         await self.load_event(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Event '{name}' has been rescheduled to {time_string} {date_string}."))
+            description=f"Event '{name}' has been rescheduled to {date_string} at {time_string}."))
         return
 
     @event_group.command(name="interval")
