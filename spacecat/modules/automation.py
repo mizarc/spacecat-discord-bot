@@ -27,6 +27,16 @@ class Repeat(Enum):
     Weekly = 604800
 
 
+class InvalidTimeException(Exception):
+    """Raised when a string cannot be converted to a valid time"""
+    pass
+
+
+class InvalidDateException(Exception):
+    """Raised when a string cannot be converted to a valid date"""
+    pass
+
+
 class Reminder:
     def __init__(self, id_: uuid.UUID, user_id, guild_id, channel_id, message_id, creation_time, dispatch_time,
                  message):
@@ -712,6 +722,16 @@ class Automation(commands.Cog):
         description=f"An event of that name does not exist."
     )
 
+    INVALID_TIME_ENUM = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description=f"Selected time is invalid. Ensure time is in `hours:minutes` format."
+    )
+
+    INVALID_DATE_ENUM = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description=f"Selected date is invalid. Ensure date is in `date/month/year` format."
+    )
+
     def __init__(self, bot):
         self.bot: SpaceCat = bot
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
@@ -981,7 +1001,12 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        try:
+            selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        except InvalidTimeException:
+            return await interaction.response.send_message(embed=self.INVALID_TIME_ENUM)
+        except InvalidDateException:
+            return await interaction.response.send_message(embed=self.INVALID_DATE_ENUM)
         if selected_datetime.timestamp() < time.time():
             await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
             return
@@ -1323,11 +1348,14 @@ class Automation(commands.Cog):
                 description=f"An event going by the name '{name}' does not exist."))
             return
 
-        selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        try:
+            selected_datetime = await self.fetch_future_datetime(interaction.guild, time_string, date_string)
+        except InvalidTimeException:
+            return await interaction.response.send_message(embed=self.INVALID_TIME_ENUM)
+        except InvalidDateException:
+            return await interaction.response.send_message(embed=self.INVALID_DATE_ENUM)
         if selected_datetime.timestamp() < time.time():
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"You cannot set a date and time in the past."))
+            await interaction.response.send_message(embed=self.PAST_TIME_EMBED)
             return
 
         event.dispatch_time = selected_datetime.timestamp()
@@ -1381,13 +1409,20 @@ class Automation(commands.Cog):
             self.repeating_events.pop(event.id)
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
-        time_ = await self.parse_time(time_string)
-        timezone = await self.get_guild_timezone(guild.id)
-        if date_string is None:
-            date = datetime.date.today()
-        else:
-            date = await self.parse_date(date_string)
+        try:
+            time_ = await self.parse_time(time_string)
+        except InvalidTimeException:
+            raise InvalidTimeException
 
+        try:
+            if date_string is None:
+                date = datetime.date.today()
+            else:
+                date = await self.parse_date(date_string)
+        except InvalidDateException:
+            raise InvalidDateException
+
+        timezone = await self.get_guild_timezone(guild.id)
         combined = timezone.localize(datetime.datetime.combine(date, time_))
         timestamp = combined.timestamp()
         if timestamp < time.time():
@@ -1418,7 +1453,11 @@ class Automation(commands.Cog):
     @staticmethod
     async def parse_time(time_string):
         split = time_string.split(':')
-        return datetime.time(hour=int(split[0]), minute=int(split[1]))
+        try:
+            time_ = datetime.time(hour=int(split[0]), minute=int(split[1]))
+            return time_
+        except ValueError:
+            raise InvalidTimeException
 
     @staticmethod
     async def parse_date(date_string):
@@ -1426,8 +1465,13 @@ class Automation(commands.Cog):
         if not split:
             split = date_string.split(':')
         if not split:
-            raise
-        return datetime.date(day=int(split[0]), month=int(split[1]), year=int(split[2]))
+            raise InvalidDateException
+
+        try:
+            date = datetime.date(day=int(split[0]), month=int(split[1]), year=int(split[2]))
+            return date
+        except ValueError:
+            raise InvalidDateException
 
     @staticmethod
     async def to_seconds(seconds=0, minutes=0, hours=0, days=0, weeks=0, months=0, years=0) -> int:
