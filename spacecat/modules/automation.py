@@ -725,7 +725,6 @@ class Automation(commands.Cog):
 
     async def cog_load(self):
         self.load_upcoming_events.start()
-        self.est.start()
 
         # Add config keys
         config = toml.load(constants.DATA_DIR + 'config.toml')
@@ -798,11 +797,6 @@ class Automation(commands.Cog):
         event.last_run_time = event.dispatch_time
         event.dispatch_time = None
         self.events.update(event)
-
-    @tasks.loop(seconds=5)
-    async def est(self):
-        for e in self.repeating_events:
-            print(type(e))
 
     @tasks.loop(hours=24)
     async def load_upcoming_events(self):
@@ -1041,7 +1035,7 @@ class Automation(commands.Cog):
 
         if event.dispatch_time:
             dispatch_time = datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone).strftime('%X %x')
-            if event.last_run_time:
+            if event.repeat_interval is not Repeat.No:
                 time_fields.append(f"**Initial Time:** {dispatch_time}")
             else:
                 time_fields.append(f"**Dispatch Time:** {dispatch_time}")
@@ -1373,13 +1367,9 @@ class Automation(commands.Cog):
             return
         repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(event.guild_id))
         repeat_job.run_task()
-        print("fds")
         self.repeating_events[event.id] = repeat_job
-        print(self.repeating_events[event.id])
-        print("huh")
 
     async def unload_event(self, event):
-        print(self.repeating_events[event.id])
         if event.repeat_interval == Repeat.No:
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
