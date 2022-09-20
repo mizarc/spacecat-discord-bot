@@ -709,7 +709,8 @@ class Automation(commands.Cog):
 
     PAST_TIME_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
-        description=f"You cannot set a date and time in the past."
+        description=f"You cannot set a date and time in the past. Remember that time is in 24 hour format by default. "
+                    f"Add `am/pm` if you would like to work with 12 hour time."
     )
 
     NAME_ALREADY_EXISTS_EMBED = discord.Embed(
@@ -724,7 +725,8 @@ class Automation(commands.Cog):
 
     INVALID_TIME_ENUM = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
-        description=f"Selected time is invalid. Ensure time is in `hours:minutes` format."
+        description=f"Selected time is invalid. Ensure time is in `hours:minutes` format. You may add `am/pm` to the "
+                    f"end to use 12 hour time."
     )
 
     INVALID_DATE_ENUM = discord.Embed(
@@ -1453,6 +1455,13 @@ class Automation(commands.Cog):
     @staticmethod
     async def parse_time(time_string):
         split = time_string.split(':')
+
+        if split[-1][-2:] == "am":
+            split[-1] = split[-1][:-2]
+        elif time_string[-2:] == "pm":
+            split[-1] = split[-1][:-2]
+            split[0] = int(split[0]) + 12
+
         try:
             time_ = datetime.time(hour=int(split[0]), minute=int(split[1]))
             return time_
