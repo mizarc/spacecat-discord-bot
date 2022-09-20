@@ -28,8 +28,9 @@ class Repeat(Enum):
 
 
 class Reminder:
-    def __init__(self, id_, user_id, guild_id, channel_id, message_id, creation_time, dispatch_time, message):
-        self.id = id_
+    def __init__(self, id_: uuid.UUID, user_id, guild_id, channel_id, message_id, creation_time, dispatch_time,
+                 message):
+        self.id: uuid.UUID = id_
         self.user_id = user_id
         self.guild_id = guild_id
         self.channel_id = channel_id
@@ -59,51 +60,44 @@ class ReminderRepository:
         results = self.db.cursor().execute('SELECT * FROM reminders').fetchall()
         reminders = []
         for result in results:
-            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6],
-                                      result[7]))
+            reminders.append(self._result_to_reminder(result))
         return reminders
 
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM reminders WHERE id=?', (id_,)).fetchone()
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM reminders WHERE id=?', (str(id_),)).fetchone()
         return Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7])
 
-    def get_by_guild(self, guild):
+    def get_by_guild(self, guild_id: int):
         # Get list of all reminders in a guild
         cursor = self.db.cursor()
-        values = (guild.id,)
-        cursor.execute('SELECT * FROM reminders WHERE guild_id=?', values)
+        cursor.execute('SELECT * FROM reminders WHERE guild_id=?', (guild_id,))
         results = cursor.fetchall()
-
         reminders = []
         for result in results:
-            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6],
-                                      result[7]))
+            reminders.append(self._result_to_reminder(result))
         return reminders
 
-    def get_by_guild_and_user(self, guild_id, user_id):
+    def get_by_guild_and_user(self, guild_id: int, user_id: int):
         # Get reminder by guild and reminder name
         cursor = self.db.cursor()
-        values = (guild_id, user_id)
-        cursor.execute('SELECT * FROM reminders WHERE guild_id=? AND user_id=? ORDER BY dispatch_time', values)
+        cursor.execute(
+            'SELECT * FROM reminders WHERE guild_id=? AND user_id=? ORDER BY dispatch_time', (guild_id, user_id))
         results = cursor.fetchall()
-
         reminders = []
         for result in results:
-            reminders.append(Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6],
-                                      result[7]))
+            reminders.append(self._result_to_reminder(result))
         return reminders
 
     def get_first_before_timestamp(self, timestamp):
-        cursor = self.db.cursor()
-        result = cursor.execute('SELECT * FROM reminders WHERE dispatch_time < ? ORDER BY dispatch_time',
-                                (timestamp,)).fetchone()
-        return Reminder(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7])
+        result = self.db.cursor().execute(
+            'SELECT * FROM reminders WHERE dispatch_time < ? ORDER BY dispatch_time', (timestamp,)).fetchone()
+        return self._result_to_reminder(result)
 
     def add(self, reminder):
         cursor = self.db.cursor()
-        values = (str(reminder.id), reminder.user_id, reminder.guild_id, reminder.channel_id, reminder.message_id,
-                  reminder.creation_time, reminder.dispatch_time, reminder.message)
-        cursor.execute('INSERT INTO reminders VALUES (?, ?, ?, ?, ?, ?, ?, ?)', values)
+        cursor.execute('INSERT INTO reminders VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                       (str(reminder.id), reminder.user_id, reminder.guild_id, reminder.channel_id, reminder.message_id,
+                        reminder.creation_time, reminder.dispatch_time, reminder.message))
         self.db.commit()
 
     def update(self, reminder):
@@ -114,17 +108,21 @@ class ReminderRepository:
                        'creation_time=?, dispatch_time=?, message=? WHERE id=?', values)
         self.db.commit()
 
-    def remove(self, reminder):
+    def remove(self, id_: uuid.UUID):
         cursor = self.db.cursor()
-        values = (reminder.id,)
-        cursor.execute('DELETE FROM reminders WHERE id=?', values)
+        cursor.execute('DELETE FROM reminders WHERE id=?', (str(id_),))
         self.db.commit()
+
+    @staticmethod
+    def _result_to_reminder(result):
+        return Reminder(uuid.UUID(result[0]), result[1], result[2], result[3],
+                        result[4], result[5], result[6], result[7])
 
 
 class Event:
-    def __init__(self, id_, guild_id, dispatch_time, last_run_time, repeat_interval,
+    def __init__(self, id_: uuid.UUID, guild_id, dispatch_time, last_run_time, repeat_interval,
                  repeat_multiplier, is_paused, name, description):
-        self.id = id_
+        self.id: uuid.UUID = id_
         self.guild_id = guild_id
         self.dispatch_time: int = dispatch_time
         self.last_run_time = last_run_time
@@ -159,8 +157,8 @@ class EventRepository:
             reminders.append(event)
         return reminders
 
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (id_,)).fetchone()
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM events WHERE id=?', (str(id_),)).fetchone()
         return self._result_to_event(result)
 
     def get_by_name(self, name):
@@ -235,19 +233,19 @@ class EventRepository:
                        'repeat_multiplier=?, is_paused=?, name=?, description=? WHERE id=?', values)
         self.db.commit()
 
-    def remove(self, id_: uuid):
-        self.db.cursor().execute('DELETE FROM events WHERE id=?', (id_,))
+    def remove(self, id_: uuid.UUID):
+        self.db.cursor().execute('DELETE FROM events WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
     def _result_to_event(result):
-        return Event(result[0], result[1], result[2], result[3], Repeat[result[4]], result[5], bool(result[6]),
-                     result[7], result[8])
+        return Event(uuid.UUID(result[0]), result[1], result[2], result[3],
+                     Repeat[result[4]], result[5], bool(result[6]), result[7], result[8])
 
 
 class Action(ABC):
-    def __init__(self, id_):
-        self.id = id_
+    def __init__(self, id_: uuid.UUID):
+        self.id: uuid.UUID = id_
 
     @abstractmethod
     def get_name(self):
@@ -266,7 +264,7 @@ class ActionRepository(ABC, Generic[T_Action]):
         self.db = database
 
     @abstractmethod
-    def get_by_id(self, id_):
+    def get_by_id(self, id_: uuid):
         pass
 
     @abstractmethod
@@ -279,7 +277,7 @@ class ActionRepository(ABC, Generic[T_Action]):
 
 
 class MessageAction(Action):
-    def __init__(self, id_, text_channel_id, title, message):
+    def __init__(self, id_: uuid.UUID, text_channel_id, title, message):
         super().__init__(id_)
         self.text_channel_id = text_channel_id
         self.title = title
@@ -305,9 +303,9 @@ class MessageActionRepository(ActionRepository[MessageAction]):
                        '(id TEXT PRIMARY KEY, text_channel INTEGER, title TEXT, message TEXT)')
         self.db.commit()
 
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM action_message WHERE id=?', (id_,)).fetchone()
-        return self._result_to_args(result)
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM action_message WHERE id=?', (str(id_),)).fetchone()
+        return self._result_to_action(result)
 
     def add(self, action: MessageAction):
         values = (str(action.id), action.text_channel_id, action.title, action.message)
@@ -315,19 +313,18 @@ class MessageActionRepository(ActionRepository[MessageAction]):
         cursor.execute('INSERT INTO action_message VALUES (?, ?, ?, ?)', values)
         self.db.commit()
 
-    def remove(self, id_: uuid):
-        values = (id_,)
+    def remove(self, id_: uuid.UUID):
         cursor = self.db.cursor()
-        cursor.execute('DELETE FROM action_message WHERE id=?', values)
+        cursor.execute('DELETE FROM action_message WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
-    def _result_to_args(result):
-        return MessageAction(result[0], result[1], result[2], result[3]) if result else None
+    def _result_to_action(result):
+        return MessageAction(uuid.UUID(result[0]), result[1], result[2], result[3]) if result else None
 
 
 class VoiceKickAction(Action):
-    def __init__(self, id_, voice_channel_id):
+    def __init__(self, id_: uuid.UUID, voice_channel_id):
         super().__init__(id_)
         self.voice_channel_id = voice_channel_id
 
@@ -350,8 +347,8 @@ class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
         cursor.execute('CREATE TABLE IF NOT EXISTS action_voice_kick (id TEXT PRIMARY KEY, voice_channel_id TEXT)')
         self.db.commit()
 
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM action_voice_kick WHERE id=?', (id_,)).fetchone()
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM action_voice_kick WHERE id=?', (str(id_),)).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
@@ -361,19 +358,18 @@ class VoiceKickActionRepository(ActionRepository[VoiceKickAction]):
         cursor.execute('INSERT INTO action_voice_kick VALUES (?, ?)', values)
         self.db.commit()
 
-    def remove(self, id_: uuid):
-        values = (id_,)
+    def remove(self, id_: uuid.UUID):
         cursor = self.db.cursor()
-        cursor.execute('DELETE FROM action_voice_kick WHERE id=?', values)
+        cursor.execute('DELETE FROM action_voice_kick WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
     def _result_to_args(result):
-        return VoiceKickAction(result[0], result[1]) if result else None
+        return VoiceKickAction(uuid.UUID(result[0]), result[1]) if result else None
 
 
 class VoiceMoveAction(Action):
-    def __init__(self, id_, current_voice_channel_id, new_voice_channel_id):
+    def __init__(self, id_: uuid.UUID, current_voice_channel_id, new_voice_channel_id):
         super().__init__(id_)
         self.current_voice_channel_id = current_voice_channel_id
         self.new_voice_channel_id = new_voice_channel_id
@@ -399,8 +395,8 @@ class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
                        '(id TEXT PRIMARY KEY, current_voice_channel_id INTEGER, new_voice_channel_id INTEGER)')
         self.db.commit()
 
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM action_voice_move WHERE id=?', (id_,)).fetchone()
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM action_voice_move WHERE id=?', str((id_,))).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
@@ -410,19 +406,18 @@ class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
         cursor.execute('INSERT INTO action_voice_move VALUES (?, ?, ?)', values)
         self.db.commit()
 
-    def remove(self, id_: uuid):
-        values = (id_,)
+    def remove(self, id_: uuid.UUID):
         cursor = self.db.cursor()
-        cursor.execute('DELETE FROM action_voice_move WHERE id=?', values)
+        cursor.execute('DELETE FROM action_voice_move WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
     def _result_to_args(result):
-        return VoiceMoveAction(result[0], result[1], result[2]) if result else None
+        return VoiceMoveAction(uuid.UUID(result[0]), result[1], result[2]) if result else None
 
 
 class ChannelPrivateAction(Action):
-    def __init__(self, id_, channel_id):
+    def __init__(self, id_: uuid.UUID, channel_id):
         super().__init__(id_)
         self.channel_id = channel_id
 
@@ -445,8 +440,8 @@ class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
         cursor.execute('CREATE TABLE IF NOT EXISTS action_channel_private (id TEXT PRIMARY KEY, channel_id INTEGER)')
         self.db.commit()
 
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM action_channel_private WHERE id=?', (id_,)).fetchone()
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM action_channel_private WHERE id=?', (str(id_),)).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
@@ -456,19 +451,18 @@ class ChannelPrivateActionRepository(ActionRepository[ChannelPrivateAction]):
         cursor.execute('INSERT INTO action_channel_private VALUES (?, ?)', values)
         self.db.commit()
 
-    def remove(self, id_: uuid):
-        values = (id_,)
+    def remove(self, id_: uuid.UUID):
         cursor = self.db.cursor()
-        cursor.execute('DELETE FROM action_channel_private WHERE id=?', values)
+        cursor.execute('DELETE FROM action_channel_private WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
     def _result_to_args(result):
-        return VoiceMoveAction(result[0], result[1], result[2]) if result else None
+        return VoiceMoveAction(uuid.UUID(result[0]), result[1], result[2]) if result else None
 
 
 class ChannelPublicAction(Action):
-    def __init__(self, id_, channel_id):
+    def __init__(self, id_: uuid.UUID, channel_id):
         super().__init__(id_)
         self.channel_id = channel_id
 
@@ -491,8 +485,8 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
         cursor.execute('CREATE TABLE IF NOT EXISTS action_channel_public (id TEXT PRIMARY KEY, channel_id INTEGER)')
         self.db.commit()
 
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM action_channel_public WHERE id=?', (id_,)).fetchone()
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM action_channel_public WHERE id=?', (str(id_),)).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
@@ -502,23 +496,22 @@ class ChannelPublicActionRepository(ActionRepository[ChannelPublicAction]):
         cursor.execute('INSERT INTO action_channel_public VALUES (?, ?)', values)
         self.db.commit()
 
-    def remove(self, id_: uuid):
-        values = (id_,)
+    def remove(self, id_: uuid.UUID):
         cursor = self.db.cursor()
-        cursor.execute('DELETE FROM action_channel_public WHERE id=?', values)
+        cursor.execute('DELETE FROM action_channel_public WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
     def _result_to_args(result):
-        return ChannelPublicAction(result[0], result[1]) if result else None
+        return ChannelPublicAction(uuid.UUID(result[0]), result[1]) if result else None
 
 
 class EventAction:
-    def __init__(self, id_, event_id, action_type, action_id, previous_id):
-        self.id: uuid = id_
-        self.event_id: int = event_id
+    def __init__(self, id_: uuid.UUID, event_id: uuid.UUID, action_type, action_id: uuid.UUID, previous_id):
+        self.id: uuid.UUID = id_
+        self.event_id: uuid.UUID = event_id
         self.action_type: str = action_type
-        self.action_id: int = action_id
+        self.action_id: uuid.UUID = action_id
         self.previous_id: uuid = previous_id
 
     @classmethod
@@ -534,33 +527,33 @@ class EventActionRepository:
         cursor.execute('CREATE TABLE IF NOT EXISTS event_actions '
                        '(id TEXT PRIMARY KEY, event_id INTEGER, action_type TEXT, action_id INTEGER, previous_id TEXT)')
 
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE id=?', (id_,)).fetchone()
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE id=?', (str(id_),)).fetchone()
         return self._result_to_event_action(result)
 
-    def get_by_event(self, event_id):
-        results = self.db.cursor().execute('SELECT * FROM event_actions WHERE event_id=?', (event_id,)).fetchall()
+    def get_by_event(self, event_id: uuid.UUID):
+        results = self.db.cursor().execute('SELECT * FROM event_actions WHERE event_id=?', (str(event_id),)).fetchall()
         event_actions = []
         for result in results:
             event_actions.append(self._result_to_event_action(result))
         return event_actions
 
-    def get_by_action(self, action_id):
-        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE action_id=?', (action_id,)).fetchone()
+    def get_by_action(self, action_id: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE action_id=?', (str(action_id),)).fetchone()
         return self._result_to_event_action(result)
 
-    def get_by_action_in_event(self, action_id, event_id):
-        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE action_id=? AND event_id=?',
-                                          (action_id, event_id)).fetchone()
+    def get_by_action_in_event(self, action_id: uuid.UUID, event_id: uuid.UUID):
+        result = self.db.cursor().execute(
+            'SELECT * FROM event_actions WHERE action_id=? AND event_id=?', (str(action_id), str(event_id))).fetchone()
         return self._result_to_event_action(result)
 
-    def get_by_previous(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE previous_id=?', (id_,)).fetchone()
+    def get_by_previous(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM event_actions WHERE previous_id=?', (str(id_),)).fetchone()
         return self._result_to_event_action(result)
 
     def add(self, event_action: EventAction):
-        values = (str(event_action.id), event_action.event_id, event_action.action_type, str(event_action.action_id),
-                  event_action.previous_id)
+        values = (str(event_action.id), str(event_action.event_id), event_action.action_type,
+                  str(event_action.action_id), event_action.previous_id)
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?, ?, ?)', values)
         self.db.commit()
@@ -572,13 +565,14 @@ class EventActionRepository:
                                  'WHERE id=?', values)
         self.db.commit()
 
-    def remove(self, id_):
+    def remove(self, id_: uuid.UUID):
         self.db.cursor().execute('DELETE FROM event_actions WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
     def _result_to_event_action(result):
-        return EventAction(result[0], result[1], result[2], result[3], result[4]) if result else None
+        return EventAction(uuid.UUID(result[0]), uuid.UUID(result[1]), result[2], uuid.UUID(result[3]), result[4]) \
+            if result else None
 
 
 class EventService:
@@ -726,11 +720,12 @@ class Automation(commands.Cog):
         self.event_actions = EventActionRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
-        self.repeating_events: dict[str, RepeatJob] = {}
+        self.repeating_events: dict[uuid.UUID, RepeatJob] = {}
         self.event_service = self.init_event_service()
 
     async def cog_load(self):
         self.load_upcoming_events.start()
+        self.est.start()
 
         # Add config keys
         config = toml.load(constants.DATA_DIR + 'config.toml')
@@ -776,7 +771,7 @@ class Automation(commands.Cog):
             self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
 
     async def dispatch_reminder(self, reminder: Reminder):
-        self.reminders.remove(reminder)
+        self.reminders.remove(reminder.id)
         self.bot.dispatch("reminder", reminder)
 
     async def event_loop(self):
@@ -803,6 +798,11 @@ class Automation(commands.Cog):
         event.last_run_time = event.dispatch_time
         event.dispatch_time = None
         self.events.update(event)
+
+    @tasks.loop(seconds=5)
+    async def est(self):
+        for e in self.repeating_events:
+            print(type(e))
 
     @tasks.loop(hours=24)
     async def load_upcoming_events(self):
@@ -892,7 +892,7 @@ class Automation(commands.Cog):
 
     @reminder_group.command(name="list")
     async def reminder_list(self, interaction: discord.Interaction):
-        reminders = self.reminders.get_by_guild_and_user(interaction.guild, interaction.user.id)
+        reminders = self.reminders.get_by_guild_and_user(interaction.guild.id, interaction.user.id)
         if not reminders:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -917,7 +917,7 @@ class Automation(commands.Cog):
 
     @reminder_group.command(name="remove")
     async def reminder_remove(self, interaction: discord.Interaction, index: int):
-        reminders = self.reminders.get_by_guild_and_user(interaction.guild, interaction.user.id)
+        reminders = self.reminders.get_by_guild_and_user(interaction.guild.id, interaction.user.id)
         if not reminders:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -930,7 +930,7 @@ class Automation(commands.Cog):
                 description="A reminder by that index doesn't exist."))
             return
 
-        self.reminders.remove(reminders[index - 1])
+        self.reminders.remove(reminders[index - 1].id)
 
         # If reminder isn't first in list, then it's probably not currently queued up. No need to refresh task loop.
         if index > 1:
@@ -1373,9 +1373,13 @@ class Automation(commands.Cog):
             return
         repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(event.guild_id))
         repeat_job.run_task()
+        print("fds")
         self.repeating_events[event.id] = repeat_job
+        print(self.repeating_events[event.id])
+        print("huh")
 
     async def unload_event(self, event):
+        print(self.repeating_events[event.id])
         if event.repeat_interval == Repeat.No:
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
