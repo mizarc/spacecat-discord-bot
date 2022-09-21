@@ -610,7 +610,7 @@ class EventService:
 
         # Sort actions using linked previous_id
         sorted_actions: list[EventAction] = []
-        next_action = event_action_links.get(None)
+        next_action = event_action_links.get(uuid.UUID(int=0))
         while next_action is not None:
             sorted_actions.append(next_action)
             next_action = event_action_links.get(next_action.id)
@@ -629,7 +629,7 @@ class EventService:
         if event_actions:
             previous_id = event_actions[-1].id
         else:
-            previous_id = None
+            previous_id = uuid.UUID(int=0)
         event_action = EventAction.create_new(event.id, action.get_name(), action.id, previous_id)
         self.event_actions.add(event_action)
 
