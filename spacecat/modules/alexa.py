@@ -19,12 +19,13 @@ import toml
 import uuid
 
 import youtube_dl
+import yt_dlp
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers import reaction_buttons
 
-youtube_dl.utils.bug_reports_message = lambda: ''
+yt_dlp.utils.bug_reports_message = lambda: ''
 
 
 class VideoTooLongError(ValueError):
@@ -65,7 +66,7 @@ ffmpeg_options = {
     'options': '-vn -loglevel quiet'
 }
 
-ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
+ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
 
 class PlayerResult(Enum):
