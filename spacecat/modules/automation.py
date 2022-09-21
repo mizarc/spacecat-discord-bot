@@ -406,7 +406,7 @@ class VoiceMoveActionRepository(ActionRepository[VoiceMoveAction]):
         self.db.commit()
 
     def get_by_id(self, id_: uuid.UUID):
-        result = self.db.cursor().execute('SELECT * FROM action_voice_move WHERE id=?', str((id_,))).fetchone()
+        result = self.db.cursor().execute('SELECT * FROM action_voice_move WHERE id=?', (str(id_),)).fetchone()
         self.db.commit()
         return self._result_to_args(result)
 
