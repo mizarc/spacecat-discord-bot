@@ -522,7 +522,7 @@ class EventAction:
         self.event_id: uuid.UUID = event_id
         self.action_type: str = action_type
         self.action_id: uuid.UUID = action_id
-        self.previous_id: uuid = previous_id
+        self.previous_id: uuid.UUID = previous_id
 
     @classmethod
     def create_new(cls, event_id, action_type, action_id, previous_id):
@@ -563,7 +563,7 @@ class EventActionRepository:
 
     def add(self, event_action: EventAction):
         values = (str(event_action.id), str(event_action.event_id), event_action.action_type,
-                  str(event_action.action_id), event_action.previous_id)
+                  str(event_action.action_id), str(event_action.previous_id))
         cursor = self.db.cursor()
         cursor.execute('INSERT INTO event_actions VALUES (?, ?, ?, ?, ?)', values)
         self.db.commit()
@@ -581,8 +581,8 @@ class EventActionRepository:
 
     @staticmethod
     def _result_to_event_action(result):
-        return EventAction(uuid.UUID(result[0]), uuid.UUID(result[1]), result[2], uuid.UUID(result[3]), result[4]) \
-            if result else None
+        return EventAction(uuid.UUID(result[0]), uuid.UUID(result[1]), result[2], uuid.UUID(result[3]),
+                           uuid.UUID(result[4])) if result else None
 
 
 class EventService:
