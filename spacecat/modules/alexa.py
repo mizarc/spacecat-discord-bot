@@ -260,6 +260,36 @@ class BuiltinMusicPlayer:
             await self.voice_client.disconnect()
 
 
+class WavelinkMusicPlayer(MusicPlayer):
+    def __init__(self):
+        self.player: Optional[wavelink.Player] = None
+        self.queue: wavelink.Queue = wavelink.Queue()
+
+    async def connect(self, channel: discord.VoiceChannel):
+        self.player = await channel.connect(cls=wavelink.Player)
+
+    async def disconnect(self):
+        await self.player.disconnect()
+
+    async def play(self, audio_source: WavelinkAudioSource, index=0) -> None:
+        await self.player.play(audio_source.get_stream())
+
+    async def add(self, audio_source: WavelinkAudioSource, index=0) -> PlayerResult:
+        if self.queue.is_empty:
+            await self.player.play(audio_source.get_stream(),)
+            return PlayerResult.PLAYING
+        self.queue.put(audio_source.get_stream())
+        return PlayerResult.QUEUEING
+
+    async def remove(self, index=0):
+        self.queue.pop()
+        pass
+
+    async def stop(self):
+        await self.player.stop()
+        pass
+
+
 class Playlist:
     def __init__(self, id_, name, guild_id, description):
         self.id = id_
