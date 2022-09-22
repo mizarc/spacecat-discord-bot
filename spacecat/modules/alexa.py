@@ -97,8 +97,9 @@ class AudioSource(ABC):
 
 
 class WavelinkAudioSource(AudioSource):
-    def __init__(self, track):
+    def __init__(self, track, playlist=None):
         self.track: wavelink.Track = track
+        self.playlist: str = playlist
 
     def get_stream(self) -> wavelink.Track:
         return self.track
@@ -109,13 +110,24 @@ class WavelinkAudioSource(AudioSource):
     def get_duration(self) -> int:
         return int(self.track.duration)
 
+    def get_playlist(self) -> Optional[str]:
+        return self.playlist
+
     def get_url(self) -> str:
         return self.track.uri
 
     @classmethod
-    async def from_query(cls, query):
-        track = await wavelink.YouTubeTrack.search(query=query, return_first=True)
-        return cls(track)
+    async def from_query(cls, query) -> list['WavelinkAudioSource']:
+        try:
+            found_tracks = await wavelink.YouTubeTrack.search(query=query)
+        except IndexError:
+            raise VideoUnavailableError
+
+        # The wavelink search method returns an unlisted type of "YouTubePlaylist". Bad practice, but we can use this
+        # to our advantage to check if a track is a playlist
+        if isinstance(found_tracks, wavelink.YouTubePlaylist):
+            return [cls(track, found_tracks.name) for track in found_tracks.tracks]
+        return [cls(found_tracks[0])]
 
 
 class YTDLStream:
