@@ -4,5 +4,6 @@ Pillow==9.2.0
 pytz==2022.2.1
 requests==2.28.1
 toml==0.10.2
+Wavelink
 youtube-dl
 yt-dlp

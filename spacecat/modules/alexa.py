@@ -3,6 +3,7 @@ import random
 import sqlite3
 from itertools import islice
 from time import gmtime, strftime, time
+from typing import Optional
 
 from bs4 import BeautifulSoup as bs
 
@@ -17,6 +18,8 @@ import requests
 import toml
 
 import uuid
+
+import wavelink
 
 import youtube_dl
 import yt_dlp
