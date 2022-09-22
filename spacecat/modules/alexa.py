@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import asyncio
 import random
 import sqlite3
@@ -116,7 +117,29 @@ class YTDLStream:
         return songs
 
 
-class MusicPlayer:
+class MusicPlayer(ABC):
+    @abstractmethod
+    async def connect(self, channel):
+        pass
+
+    @abstractmethod
+    async def play(self, song):
+        pass
+
+    @abstractmethod
+    async def add(self, song, index=0):
+        pass
+
+    @abstractmethod
+    async def remove(self, index=0):
+        pass
+
+    @abstractmethod
+    async def stop(self):
+        pass
+
+
+class BuiltinMusicPlayer:
     def __init__(self, voice_client):
         self.voice_client = voice_client
         self.song_queue = []
