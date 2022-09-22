@@ -4,7 +4,7 @@ import random
 import sqlite3
 from itertools import islice
 from time import gmtime, strftime, time
-from typing import Optional
+from typing import Optional, Any
 
 from bs4 import BeautifulSoup as bs
 
@@ -76,6 +76,46 @@ ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 class PlayerResult(Enum):
     PLAYING = 0
     QUEUEING = 1
+
+
+class AudioSource(ABC):
+    @abstractmethod
+    def get_stream(self) -> Any:
+        pass
+
+    @abstractmethod
+    def get_title(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_duration(self) -> int:
+        pass
+
+    @abstractmethod
+    async def get_url(self) -> str:
+        pass
+
+
+class WavelinkAudioSource(AudioSource):
+    def __init__(self, track):
+        self.track: wavelink.Track = track
+
+    def get_stream(self) -> wavelink.Track:
+        return self.track
+
+    def get_title(self) -> str:
+        return self.track.title
+
+    def get_duration(self) -> int:
+        return int(self.track.duration)
+
+    def get_url(self) -> str:
+        return self.track.uri
+
+    @classmethod
+    async def from_query(cls, query):
+        track = await wavelink.YouTubeTrack.search(query=query, return_first=True)
+        return cls(track)
 
 
 class YTDLStream:
