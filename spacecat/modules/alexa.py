@@ -179,11 +179,15 @@ class MusicPlayer(ABC):
         pass
 
     @abstractmethod
-    async def play(self, song):
+    async def play(self, song: AudioSource):
         pass
 
     @abstractmethod
-    async def add(self, song, index=0):
+    async def add(self, song: AudioSource, index=0):
+        pass
+
+    @abstractmethod
+    async def add_multiple(self, songs: list[AudioSource], index=0):
         pass
 
     @abstractmethod
@@ -295,6 +299,17 @@ class WavelinkMusicPlayer(MusicPlayer):
             await self.player.play(audio_source.get_stream(),)
             return PlayerResult.PLAYING
         self.queue.put(audio_source.get_stream())
+        return PlayerResult.QUEUEING
+
+    async def add_multiple(self, audio_sources: list[WavelinkAudioSource]):
+        if self.queue.is_empty:
+            await self.player.play(audio_sources[0].get_stream())
+            for audio_source in audio_sources[1:]:
+                self.queue.put(audio_source.get_stream())
+            return PlayerResult.PLAYING
+
+        for audio_source in audio_sources[1:]:
+            self.queue.put(audio_source.get_stream())
         return PlayerResult.QUEUEING
 
     async def remove(self, index=0):
