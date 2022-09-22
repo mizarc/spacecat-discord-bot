@@ -92,6 +92,10 @@ class AudioSource(ABC):
         pass
 
     @abstractmethod
+    def get_playlist(self) -> str:
+        pass
+
+    @abstractmethod
     async def get_url(self) -> str:
         pass
 
