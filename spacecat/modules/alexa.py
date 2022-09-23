@@ -826,7 +826,7 @@ class Alexa(commands.Cog):
         elif result == PlayerResult.QUEUEING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Song {song_name} added to #{len(await music_player.get_next_queue()) - 1} in queue")
+                description=f"Song {song_name} added to #{len(await music_player.get_next_queue())} in queue")
             await interaction.followup.send(embed=embed)
             return
 
