@@ -178,11 +178,7 @@ T_AudioSource = TypeVar("T_AudioSource", bound=AudioSource)
 
 class MusicPlayer(ABC, Generic[T_AudioSource]):
     @abstractmethod
-    async def connect(self, channel):
-        pass
-
-    @abstractmethod
-    async def disconnect(self):
+    async def is_looping(self) -> bool:
         pass
 
     @abstractmethod
@@ -199,6 +195,14 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
 
     @abstractmethod
     async def get_previous_queue(self) -> list[T_AudioSource]:
+        pass
+
+    @abstractmethod
+    async def connect(self, channel):
+        pass
+
+    @abstractmethod
+    async def disconnect(self):
         pass
 
     @abstractmethod
@@ -239,6 +243,14 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
 
     @abstractmethod
     async def resume(self):
+        pass
+
+    @abstractmethod
+    async def loop(self):
+        pass
+
+    @abstractmethod
+    async def unloop(self):
         pass
 
     @abstractmethod
@@ -333,6 +345,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         self.current: Optional[WavelinkAudioSource] = None
         self.next_queue: deque[WavelinkAudioSource] = deque()
         self.previous_queue: deque[WavelinkAudioSource] = deque()
+        self.looping = False
+
+    async def is_looping(self) -> bool:
+        return self.looping
 
     async def get_playing(self) -> WavelinkAudioSource:
         return self.current
@@ -392,6 +408,12 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     async def resume(self):
         await self.player.resume()
+
+    async def loop(self):
+        pass
+
+    async def unloop(self):
+        pass
 
     async def stop(self):
         await self.player.stop()
