@@ -1672,12 +1672,10 @@ class Alexa(commands.Cog):
 
     @playlist_group.command(name='play')
     @perms.check()
-    async def playlist_play(self, interaction, playlist_name: str):
+    async def playlist_play(self, interaction: discord.Interaction, playlist_name: str):
         """Play from a locally saved playlist"""
         # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.user.voice.channel.connect()
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Fetch songs from playlist if it exists
         playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
@@ -1698,7 +1696,7 @@ class Alexa(commands.Cog):
 
         stream = await self._get_songs(songs[0].webpage_url)
         result = await music_player.add(stream[0])
-        if result.PLAYING:
+        if result == PlayerResult.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Now playing playlist `{playlist.name}`")
@@ -1706,7 +1704,7 @@ class Alexa(commands.Cog):
         else:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Added playlist `{playlist.name}` to queue")
+                description=f"Adding playlist `{playlist.name}` to queue")
             await interaction.response.send_message(embed=embed)
 
         # Add remaining songs to queue
