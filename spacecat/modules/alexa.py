@@ -222,6 +222,14 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
         pass
 
     @abstractmethod
+    async def remove(self, index=0):
+        pass
+
+    @abstractmethod
+    async def clear(self):
+        pass
+
+    @abstractmethod
     async def next(self):
         pass
 
@@ -438,6 +446,11 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     async def unloop(self):
         pass
+
+    async def move(self, first_index, second_index):
+        song = self.next_queue[first_index]
+        await self.remove(first_index)
+        await self.add(song, second_index)
 
     async def shuffle(self):
         random.shuffle(self.next_queue)
@@ -1160,10 +1173,11 @@ class Alexa(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove song from queue using the specified index
+        queue = await music_player.get_next_queue()
         try:
             if original_pos < 1:
                 raise IndexError("Position can\'t be be less than 1")
-            song = music_player.song_queue[original_pos]
+            song = queue[original_pos-1]
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1172,20 +1186,19 @@ class Alexa(commands.Cog):
             return
 
         # Move song into new position in queue
-        if not 1 <= new_pos < len(music_player.song_queue):
+        if not 1 <= new_pos <= len(queue):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="You can't move the song into that position")
             await interaction.response.send_message(embed=embed)
             return
-        music_player.song_queue.pop(original_pos)
-        music_player.song_queue.insert(new_pos, song)
+        await music_player.move(original_pos-1, new_pos-1)
 
         # Output result to chat
-        duration = await self._format_duration(song.duration)
+        duration = await self._format_duration(song.get_duration())
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"[{song.title}]({song.webpage_url}) "
+            description=f"[{song.get_title()}]({song.get_url()}) "
                         f"`{duration}` has been moved from position #{original_pos} "
                         f"to position #{new_pos}")
         await interaction.response.send_message(embed=embed)
