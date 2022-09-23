@@ -438,10 +438,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         await self.player.resume()
 
     async def loop(self):
-        pass
+        self.looping = True
 
     async def unloop(self):
-        pass
+        self.looping = False
 
     async def move(self, first_index, second_index):
         song = self.next_queue[first_index]
@@ -1054,7 +1054,7 @@ class Alexa(commands.Cog):
     @app_commands.command()
     @perms.check()
     async def loop(self, interaction):
-        """Loop the currently playing song"""
+        """Loop the currently playing song."""
         # Get music player
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
@@ -1062,11 +1062,10 @@ class Alexa(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Disable loop if enabled
-        if music_player.loop_toggle:
-            await music_player.unloop()
+        if await music_player.is_looping():
             embed = discord.Embed(
                 colour=constants.EmbedStatus.NO.value,
-                description="Loop disabled")
+                description="Song is already looping.")
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1074,7 +1073,33 @@ class Alexa(commands.Cog):
         await music_player.loop()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description="Loop enabled")
+            description="Loop enabled.")
+        await interaction.response.send_message(embed=embed)
+        return
+
+    @app_commands.command()
+    @perms.check()
+    async def unloop(self, interaction: discord.Interaction):
+        """Unloops so that the queue resumes as usual."""
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            return
+        music_player = await self._get_music_player(interaction.user.voice.channel)
+
+        # Disable loop if enabled
+        if not await music_player.is_looping():
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.NO.value,
+                description="Song is not currently looping.")
+            await interaction.response.send_message(embed=embed)
+            return
+
+        # Enable loop if disabled
+        await music_player.unloop()
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description="Loop disabled.")
         await interaction.response.send_message(embed=embed)
         return
 
