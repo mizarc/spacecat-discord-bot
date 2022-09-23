@@ -426,8 +426,12 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         await self.player.stop()
 
     async def next(self):
-        next_song = self.next_queue.popleft()
-        await self.player.play(next_song.get_stream())
+        next_song = None
+        try:
+            next_song = self.next_queue.popleft()
+            await self.player.play(next_song.get_stream())
+        except IndexError:
+            pass
         self.previous_queue.append(self.current)
         self.current = next_song
 
