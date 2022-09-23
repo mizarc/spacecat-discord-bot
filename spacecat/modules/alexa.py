@@ -1715,7 +1715,8 @@ class Alexa(commands.Cog):
             self.music_players[channel.guild.id] = music_player
         return music_player
 
-    async def _get_songs(self, query: str):
+    @staticmethod
+    async def _get_songs(query: str):
         return await WavelinkAudioSource.from_query(query)
 
     # Format duration based on what values there are
