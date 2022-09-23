@@ -350,6 +350,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         self.next_queue: deque[WavelinkAudioSource] = deque()
         self.previous_queue: deque[WavelinkAudioSource] = deque()
         self.looping = False
+        self.disconnect_time = time() + self._get_disconnect_time_limit()
 
     async def is_looping(self) -> bool:
         return self.looping
@@ -430,6 +431,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         try:
             next_song = self.next_queue.popleft()
             await self.player.play(next_song.get_stream())
+            self._refresh_disconnect_timer()
         except IndexError:
             pass
         self.previous_queue.append(self.current)
@@ -440,6 +442,21 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         await self.player.play(previous_song.get_stream())
         self.next_queue.appendleft(self.current)
         self.current = previous_song
+
+    @tasks.loop(seconds=30)
+    async def _disconnect_timer(self):
+        if time() > self._get_disconnect_time_limit() and not self.player.is_playing():
+            await self.disconnect()
+
+    def _refresh_disconnect_timer(self):
+        self.disconnect_time = time() + self._get_disconnect_time_limit()
+
+    @staticmethod
+    def _get_disconnect_time_limit():
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        if config['music']['auto_disconnect']:
+            return 0
+        return config['music']['disconnect_time']
 
 
 class Playlist:
@@ -606,7 +623,8 @@ class Alexa(commands.Cog):
         await self.init_config()
         await self.init_wavelink()
 
-    async def init_config(self):
+    @staticmethod
+    async def init_config():
         config = toml.load(constants.DATA_DIR + 'config.toml')
         if 'lavalink' not in config:
             config['lavalink'] = {}
@@ -668,7 +686,7 @@ class Alexa(commands.Cog):
             await voice_client.disconnect()
 
     @commands.Cog.listener()
-    async def on_wavelink_track_end(self, player: wavelink.Player, track: wavelink.Track, reason):
+    async def on_wavelink_track_end(self, player: wavelink.Player, _, __):
         music_player = await self._get_music_player(player.channel)
         await music_player.next()
 
