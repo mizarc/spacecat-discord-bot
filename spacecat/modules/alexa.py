@@ -446,7 +446,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     @tasks.loop(seconds=30)
     async def _disconnect_timer(self):
-        if time() > self._get_disconnect_time_limit() and not self.player.is_playing():
+        if not self._is_auto_disconnect() and time() > self.disconnect_time and not self.player.is_playing():
             await self.disconnect()
 
     def _refresh_disconnect_timer(self):
@@ -455,9 +455,12 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
     @staticmethod
     def _get_disconnect_time_limit():
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        if config['music']['auto_disconnect']:
-            return 0
         return config['music']['disconnect_time']
+
+    @staticmethod
+    def _is_auto_disconnect():
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        return config['music']['auto_disconnect']
 
 
 class Playlist:
