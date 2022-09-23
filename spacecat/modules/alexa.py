@@ -4,7 +4,7 @@ import random
 import sqlite3
 from itertools import islice
 from time import gmtime, strftime, time
-from typing import Optional, Any
+from typing import Optional, Any, Generic, TypeVar
 
 from bs4 import BeautifulSoup as bs
 
@@ -173,25 +173,64 @@ class YTDLStream:
         return songs
 
 
-class MusicPlayer(ABC):
+T_AudioSource = TypeVar("T_AudioSource", bound=AudioSource)
+
+
+class MusicPlayer(ABC, Generic[T_AudioSource]):
     @abstractmethod
     async def connect(self, channel):
         pass
 
     @abstractmethod
-    async def play(self, song: AudioSource):
+    async def disconnect(self):
         pass
 
     @abstractmethod
-    async def add(self, song: AudioSource, index=0):
+    async def get_playing(self) -> T_AudioSource:
         pass
 
     @abstractmethod
-    async def add_multiple(self, songs: list[AudioSource], index=0):
+    async def get_next_queue(self) -> list[T_AudioSource]:
+        pass
+
+    @abstractmethod
+    async def get_previous_queue(self) -> list[T_AudioSource]:
+        pass
+
+    @abstractmethod
+    async def play(self, song: T_AudioSource):
+        pass
+
+    @abstractmethod
+    async def play_multiple(self, songs: list[T_AudioSource]):
+        pass
+
+    @abstractmethod
+    async def add(self, song: T_AudioSource, index=0):
+        pass
+
+    @abstractmethod
+    async def add_multiple(self, songs: list[T_AudioSource], index=0):
+        pass
+
+    @abstractmethod
+    async def next(self):
+        pass
+
+    @abstractmethod
+    async def previous(self):
         pass
 
     @abstractmethod
     async def remove(self, index=0):
+        pass
+
+    @abstractmethod
+    async def clear(self):
+        pass
+
+    @abstractmethod
+    async def pause(self):
         pass
 
     @abstractmethod
