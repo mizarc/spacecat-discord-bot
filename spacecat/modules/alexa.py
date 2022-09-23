@@ -1644,12 +1644,13 @@ class Alexa(commands.Cog):
         await interaction.response.send_message(embed=embed)
         return
 
-    async def _get_music_player(self, guild):
+    async def _get_music_player(self, channel: discord.VoiceChannel):
         try:
-            music_player = self.music_players[guild.id]
+            music_player = self.music_players[channel.guild.id]
         except KeyError:
-            music_player = MusicPlayer(guild.voice_client)
-            self.music_players[guild.id] = music_player
+            music_player = WavelinkMusicPlayer()
+            await music_player.connect(channel)
+            self.music_players[channel.guild.id] = music_player
         return music_player
 
     # Format duration based on what values there are
