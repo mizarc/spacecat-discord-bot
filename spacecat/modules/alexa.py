@@ -808,7 +808,7 @@ class Alexa(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist {songs} to "
-                                f"#{len(music_player.song_queue) - 1} in queue")
+                                f"#{len(music_player.song_queue)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
