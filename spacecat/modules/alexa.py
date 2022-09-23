@@ -435,6 +435,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         next_song = None
         try:
             next_song = self.next_queue.popleft()
+            self._refresh_disconnect_timer()
             await self.player.play(next_song.get_stream())
             self._refresh_disconnect_timer()
         except IndexError:
