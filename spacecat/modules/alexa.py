@@ -1083,7 +1083,7 @@ class Alexa(commands.Cog):
 
         # Set header depending on if looping or not, and whether to add a spacer
         queue_status = False
-        if music_player.is_looping():
+        if await music_player.is_looping():
             header = "Currently Playing (Looping)"
         else:
             header = "Currently Playing"
