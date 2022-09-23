@@ -190,6 +190,10 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
         pass
 
     @abstractmethod
+    async def get_seek_position(self) -> int:
+        pass
+
+    @abstractmethod
     async def get_next_queue(self) -> list[T_AudioSource]:
         pass
 
@@ -332,6 +336,9 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     async def get_playing(self) -> WavelinkAudioSource:
         return self.current
+
+    async def get_seek_position(self) -> int:
+        return int(self.player.position)
 
     async def get_next_queue(self) -> list[WavelinkAudioSource]:
         return list(self.next_queue)
