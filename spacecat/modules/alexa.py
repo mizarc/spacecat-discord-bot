@@ -238,14 +238,6 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
         pass
 
     @abstractmethod
-    async def remove(self, index=0):
-        pass
-
-    @abstractmethod
-    async def clear(self):
-        pass
-
-    @abstractmethod
     async def pause(self):
         pass
 
@@ -259,6 +251,10 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
 
     @abstractmethod
     async def unloop(self):
+        pass
+
+    @abstractmethod
+    async def move(self, first_index, second_index):
         pass
 
     @abstractmethod
