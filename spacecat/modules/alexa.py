@@ -1065,8 +1065,9 @@ class Alexa(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Notify user if nothing is in the queue
+        playing = await music_player.get_playing()
         queue = await music_player.get_next_queue()
-        if not queue:
+        if not playing and not queue:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue right now.")
@@ -1077,7 +1078,6 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Music Queue")
-        playing = await music_player.get_playing()
         duration = await self._format_duration(playing.get_duration())
         current_time = await self._format_duration(await music_player.get_seek_position())
 
