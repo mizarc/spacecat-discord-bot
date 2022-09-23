@@ -234,6 +234,10 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
         pass
 
     @abstractmethod
+    async def resume(self):
+        pass
+
+    @abstractmethod
     async def stop(self):
         pass
 
