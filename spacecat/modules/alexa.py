@@ -686,7 +686,8 @@ class Alexa(commands.Cog):
             await voice_client.disconnect()
 
     @commands.Cog.listener()
-    async def on_wavelink_track_end(self, player: wavelink.Player, _, __):
+    async def on_wavelink_track_end(self, player: wavelink.Player, track, reason):
+        _ = track, reason  # Disable warning for unused arguments
         music_player = await self._get_music_player(player.channel)
         await music_player.next()
 
