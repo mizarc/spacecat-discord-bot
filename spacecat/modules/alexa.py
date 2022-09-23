@@ -261,6 +261,10 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
     async def stop(self):
         pass
 
+    @abstractmethod
+    async def process_song_end(self):
+        pass
+
 
 class BuiltinMusicPlayer:
     def __init__(self, voice_client):
@@ -374,7 +378,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
     async def disconnect(self):
         await self.player.disconnect()
 
-    async def play(self, audio_source: WavelinkAudioSource, index=0) -> None:
+    async def play(self, audio_source: WavelinkAudioSource) -> None:
         await self.player.play(audio_source.get_stream())
 
     async def play_multiple(self, songs: list[WavelinkAudioSource]):
@@ -443,6 +447,12 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         await self.player.play(previous_song.get_stream())
         self.next_queue.appendleft(self.current)
         self.current = previous_song
+
+    async def process_song_end(self):
+        if self.looping:
+            await self.play(await self.get_playing())
+            return
+        await self.next()
 
     @tasks.loop(seconds=30)
     async def _disconnect_timer(self):
@@ -693,7 +703,7 @@ class Alexa(commands.Cog):
     async def on_wavelink_track_end(self, player: wavelink.Player, track, reason):
         _ = track, reason  # Disable warning for unused arguments
         music_player = await self._get_music_player(player.channel)
-        await music_player.next()
+        await music_player.process_song_end()
 
     queue_group = app_commands.Group(name="queue", description="Handles songs that will be played next.")
     playlist_group = app_commands.Group(name="playlist", description="Saved songs that can be played later.")
