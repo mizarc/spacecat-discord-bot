@@ -562,6 +562,29 @@ class Alexa(commands.Cog):
         self.playlists = PlaylistRepository(self.database)
         self.playlist_songs = PlaylistSongRepository(self.database)
 
+    async def cog_load(self):
+        await self.init_config()
+        await self.init_wavelink()
+
+    async def init_config(self):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        if 'lavalink' not in config:
+            config['lavalink'] = {}
+        if 'address' not in config['lavalink']:
+            config['lavalink']['address'] = "0.0.0.0"
+        if 'port' not in config['lavalink']:
+            config['lavalink']['port'] = "2333"
+        if 'password' not in config['lavalink']:
+            config['lavalink']['password'] = "password1"
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
+            toml.dump(config, config_file)
+
+    async def init_wavelink(self):
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        await wavelink.NodePool.create_node(
+            bot=self.bot, host=config['lavalink']['address'],
+            port=config['lavalink']['port'], password=config['lavalink']['password'])
+
     @commands.Cog.listener()
     async def on_ready(self):
         # Add config keys
