@@ -627,6 +627,11 @@ class Alexa(commands.Cog):
         if len(voice_client.channel.members) < 2:
             await voice_client.disconnect()
 
+    @commands.Cog.listener()
+    async def on_wavelink_track_end(self, player: wavelink.Player, track: wavelink.Track, reason):
+        music_player = await self._get_music_player(player.channel)
+        await music_player.next()
+
     queue_group = app_commands.Group(name="queue", description="Handles songs that will be played next.")
     playlist_group = app_commands.Group(name="playlist", description="Saved songs that can be played later.")
     musicsettings_group = app_commands.Group(name="musicsettings", description="Modify music settings.")
@@ -914,25 +919,26 @@ class Alexa(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def skip(self, interaction):
+    async def skip(self, interaction: discord.Interaction):
         """Skip the current song and play the next song"""
         # Get music player
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Check if there's queue is empty
-        if len(music_player.song_queue) <= 1:
-            embed = discord.Embed(
+        if len(await music_player.get_next_queue()) < 1:
+            await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the queue after this")
-            await interaction.response.send_message(embed=embed)
+                description="There's nothing in the queue after this"))
             return
 
         # Stop current song and flag that it has been skipped
-        music_player.skip_toggle = True
-        interaction.guild.voice_client.stop()
+        await music_player.stop()
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description="Song has been skipped."))
 
     @app_commands.command()
     @perms.check()
