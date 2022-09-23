@@ -745,7 +745,7 @@ class Alexa(commands.Cog):
         await interaction.response.defer()
 
         try:
-            songs = await WavelinkAudioSource.from_query(url)
+            songs = await self._get_songs(url)
         except VideoTooLongError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -880,19 +880,15 @@ class Alexa(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def stop(self, interaction):
+    async def stop(self, interaction: discord.Interaction):
         """Stops and clears the queue"""
-        # Get music player
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
-        # Stops and clears the queue
-        music_player.skip_toggle = True
-        music_player.song_queue.clear()
-        interaction.guild.voice_client.stop()
-
+        await music_player.clear()
+        await music_player.stop()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Music has been stopped & queue has been cleared")
@@ -902,11 +898,10 @@ class Alexa(commands.Cog):
     @perms.check()
     async def resume(self, interaction):
         """Resumes music if paused"""
-        # Get music player
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if music isn't paused
         if not interaction.guild.voice_client.is_paused():
@@ -917,9 +912,7 @@ class Alexa(commands.Cog):
             return
 
         # Resumes music playback
-        interaction.guild.voice_client.resume()
-        music_player.song_start_time = time() - music_player.song_pause_time
-        music_player.song_pause_time = None
+        await music_player.resume()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Music has been resumed")
@@ -933,7 +926,7 @@ class Alexa(commands.Cog):
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Check if music is paused
         if interaction.guild.voice_client.is_paused():
@@ -944,10 +937,7 @@ class Alexa(commands.Cog):
             return
 
         # Pauses music playback
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        music_player.disconnect_time = time() + config['music']['disconnect_time']
-        music_player.song_pause_time = time() - music_player.song_start_time
-        interaction.guild.voice_client.pause()
+        await music_player.pause()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Music has been paused")
@@ -984,22 +974,18 @@ class Alexa(commands.Cog):
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
-        # Alert if queue is empty
-        if len(music_player.song_queue) < 2:
+        # Alert if not enough songs in queue
+        if len(await music_player.get_next_queue()) < 2:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue to shuffle")
             await interaction.response.send_message(embed=embed)
             return
 
-        # Create temp queue excluding currently playing song to shuffle
-        temp_queue = music_player.song_queue[1:]
-        random.shuffle(temp_queue)
-        music_player.song_queue[1:] = temp_queue
-
-        # Output result to chat
+        # Shuffle queue
+        await music_player.shuffle()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Queue has been shuffled")
@@ -1014,11 +1000,11 @@ class Alexa(commands.Cog):
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Disable loop if enabled
         if music_player.loop_toggle:
-            music_player.loop_toggle = False
+            await music_player.unloop()
             embed = discord.Embed(
                 colour=constants.EmbedStatus.NO.value,
                 description="Loop disabled")
@@ -1026,7 +1012,7 @@ class Alexa(commands.Cog):
             return
 
         # Enable loop if disabled
-        music_player.loop_toggle = True
+        await music_player.loop()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Loop enabled")
@@ -1035,16 +1021,16 @@ class Alexa(commands.Cog):
 
     @queue_group.command(name="list")
     @perms.check()
-    async def queue_list(self, interaction, page: int = 1):
+    async def queue_list(self, interaction: discord.Interaction, page: int = 1):
         """List the current song queue"""
-        # Get music player
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Notify user if nothing is in the queue
-        if not music_player.song_queue:
+        queue = await music_player.get_next_queue()
+        if not queue:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue right now")
@@ -1055,27 +1041,24 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Music Queue")
-        duration = await self._format_duration(music_player.song_queue[0].duration)
-        if not music_player.song_pause_time:
-            current_time = int(time() - music_player.song_start_time)
-        else:
-            current_time = int(music_player.song_pause_time)
-        current_time = await self._format_duration(current_time)
+        playing = await music_player.get_playing()
+        duration = await self._format_duration(playing.get_duration())
+        current_time = await self._format_duration(await music_player.get_seek_position())
 
         # Set header depending on if looping or not, and whether to add a spacer
         queue_status = False
-        if music_player.loop_toggle:
+        if music_player.is_looping():
             header = "Currently Playing (Looping)"
         else:
             header = "Currently Playing"
-        if len(music_player.song_queue) > 1:
+        if len(queue) > 1:
             queue_status = True
             spacer = "\u200B"
         else:
             spacer = ""
         embed.add_field(
             name=header,
-            value=f"{music_player.song_queue[0].title} "
+            value=f"{playing.get_title()} "
                   f"`{current_time}/{duration}` \n{spacer}")
 
         # List remaining songs in queue plus total duration
@@ -1087,14 +1070,14 @@ class Alexa(commands.Cog):
             if page > 0:
                 page = page * 10
 
-            total_duration = -music_player.song_queue[0].duration
-            for song in music_player.song_queue:
-                total_duration += song.duration
+            total_duration = -queue[0].get_duration()
+            for song in queue:
+                total_duration += song.get_duration()
 
             for index, song in enumerate(
-                    islice(music_player.song_queue, page + 1, page + 11)):
-                duration = await self._format_duration(song.duration)
-                queue_info.append(f"{page + index + 1}. {song.title} `{duration}`")
+                    islice(queue, page, page + 10)):
+                duration = await self._format_duration(song.get_duration())
+                queue_info.append(f"{page + index + 1}. {song.get_title()} `{duration}`")
 
             # Alert if no songs are on the specified page
             if page > 0 and not queue_info:
@@ -1105,9 +1088,9 @@ class Alexa(commands.Cog):
                 return
 
             # Omit songs past 10 and just display amount instead
-            if len(music_player.song_queue) > page + 11:
+            if len(queue) > page + 11:
                 queue_info.append(
-                    f"`+{len(music_player.song_queue) - 11 - page} more in queue`")
+                    f"`+{len(queue) - 11 - page} more in queue`")
 
             # Output results to chat
             duration = await self._format_duration(total_duration)
@@ -1125,7 +1108,7 @@ class Alexa(commands.Cog):
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove song from queue using the specified index
         try:
@@ -1166,7 +1149,7 @@ class Alexa(commands.Cog):
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if too many songs in queue
         if len(music_player.song_queue) > 100:
@@ -1178,7 +1161,7 @@ class Alexa(commands.Cog):
 
         # Add the song to the queue and output result
         try:
-            songs = await self._fetch_songs(url)
+            songs = await self._get_songs(url)
         except VideoTooLongError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1192,32 +1175,33 @@ class Alexa(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        music_player.song_queue.insert(position, songs[0])
-        if position > len(music_player.song_queue):
-            position = len(music_player.song_queue) - 1
+        await music_player.add(songs[0], position)
+        #music_player.song_queue.insert(position, songs[0])
+        #if position > len(music_player.song_queue):
+        #    position = len(music_player.song_queue) - 1
 
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Added {songs[0].title} to #{position} in queue")
+            description=f"Added {songs[0].get_title()} to #{position} in queue")
         await interaction.response.send_message(embed=embed)
         return
 
     @queue_group.command(name="remove")
     @perms.check()
-    async def queue_remove(self, interaction, index: int):
+    async def queue_remove(self, interaction, position: int):
         """Remove a song from the queue"""
         # Get music player
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove song from queue using the specified index
         try:
-            if index < 1:
+            if position < 1:
                 raise IndexError('Position can\'t be less than 1')
-            song = music_player.song_queue[index]
-            music_player.song_queue.pop(index)
+            song = music_player.song_queue[position]
+            await music_player.remove(position)
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1230,7 +1214,7 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"[{song.title}]({song.webpage_url}) `{duration}` "
-                        f"has been removed from position #{index} of the queue")
+                        f"has been removed from position #{position} of the queue")
         await interaction.response.send_message(embed=embed)
 
     @queue_group.command(name="clear")
@@ -1240,18 +1224,17 @@ class Alexa(commands.Cog):
         if not interaction.guild.voice_client:
             interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove all but the currently playing song from the queue
-        if len(music_player.song_queue) < 2:
+        if len(await music_player.get_next_queue()) < 1:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue to clear")
             await interaction.response.send_message(embed=embed)
             return
-        music_player.song_queue = [music_player.song_queue[0]]
 
-        # Output result to chat
+        await music_player.clear()
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description="All songs have been removed from the queue")
@@ -1694,6 +1677,9 @@ class Alexa(commands.Cog):
             await music_player.connect(channel)
             self.music_players[channel.guild.id] = music_player
         return music_player
+
+    async def _get_songs(self, query: str):
+        return await WavelinkAudioSource.from_query(query)
 
     # Format duration based on what values there are
     @staticmethod
