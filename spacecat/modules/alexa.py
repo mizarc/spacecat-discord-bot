@@ -719,8 +719,7 @@ class Alexa(commands.Cog):
             if channel is None:
                 channel = interaction.user.voice.channel
 
-            await channel.connect()
-            self.music_players[interaction.guild_id] = WavelinkMusicPlayer()
+            await self._get_music_player(channel)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Joined voice channel `{channel.name}`")
@@ -1697,6 +1696,7 @@ class Alexa(commands.Cog):
         except KeyError:
             music_player = WavelinkMusicPlayer()
             await music_player.connect(channel)
+            await channel.guild.change_voice_state(channel=channel, self_deaf=True)
             self.music_players[channel.guild.id] = music_player
         return music_player
 
