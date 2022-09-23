@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import random
 import sqlite3
+from collections import deque
 from itertools import islice
 from time import gmtime, strftime, time
 from typing import Optional, Any, Generic, TypeVar
@@ -22,7 +23,6 @@ import uuid
 
 import wavelink
 
-import youtube_dl
 import yt_dlp
 
 from spacecat.helpers import constants
@@ -323,10 +323,21 @@ class BuiltinMusicPlayer:
             await self.voice_client.disconnect()
 
 
-class WavelinkMusicPlayer(MusicPlayer):
+class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
     def __init__(self):
         self.player: Optional[wavelink.Player] = None
-        self.queue: wavelink.Queue = wavelink.Queue()
+        self.current: Optional[WavelinkAudioSource] = None
+        self.next_queue: deque[WavelinkAudioSource] = deque()
+        self.previous_queue: deque[WavelinkAudioSource] = deque()
+
+    async def get_playing(self) -> WavelinkAudioSource:
+        return self.current
+
+    async def get_next_queue(self) -> list[WavelinkAudioSource]:
+        return list(self.next_queue)
+
+    async def get_previous_queue(self) -> list[WavelinkAudioSource]:
+        return list(self.previous_queue)
 
     async def connect(self, channel: discord.VoiceChannel):
         self.player = await channel.connect(cls=wavelink.Player)
@@ -337,31 +348,58 @@ class WavelinkMusicPlayer(MusicPlayer):
     async def play(self, audio_source: WavelinkAudioSource, index=0) -> None:
         await self.player.play(audio_source.get_stream())
 
+    async def play_multiple(self, songs: list[WavelinkAudioSource]):
+        await self.player.play(songs[0].get_stream())
+        for song in songs[1:]:
+            self.next_queue.appendleft(song)
+
     async def add(self, audio_source: WavelinkAudioSource, index=0) -> PlayerResult:
-        if self.queue.is_empty:
-            await self.player.play(audio_source.get_stream(),)
+        if not self.current:
+            await self.player.play(audio_source.get_stream())
+            self.current = audio_source
             return PlayerResult.PLAYING
-        self.queue.put(audio_source.get_stream())
+        self.next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
-    async def add_multiple(self, audio_sources: list[WavelinkAudioSource]):
-        if self.queue.is_empty:
+    async def add_multiple(self, audio_sources: list[WavelinkAudioSource], index=0):
+        if not self.current:
             await self.player.play(audio_sources[0].get_stream())
+            self.current = audio_sources[0]
             for audio_source in audio_sources[1:]:
-                self.queue.put(audio_source.get_stream())
+                self.next_queue.append(audio_source)
             return PlayerResult.PLAYING
 
-        for audio_source in audio_sources[1:]:
-            self.queue.put(audio_source.get_stream())
+        for audio_source in audio_sources:
+            self.next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
     async def remove(self, index=0):
-        self.queue.pop()
-        pass
+        self.next_queue.pop()
+
+    async def clear(self):
+        self.next_queue.clear()
+        self.previous_queue.clear()
+
+    async def pause(self):
+        await self.player.pause()
+
+    async def resume(self):
+        await self.player.resume()
 
     async def stop(self):
         await self.player.stop()
-        pass
+
+    async def next(self):
+        next_song = self.next_queue.popleft()
+        await self.player.play(next_song.get_stream())
+        self.previous_queue.append(self.current)
+        self.current = next_song
+
+    async def previous(self):
+        previous_song = self.previous_queue.pop()
+        await self.player.play(previous_song.get_stream())
+        self.next_queue.appendleft(self.current)
+        self.current = previous_song
 
 
 class Playlist:
