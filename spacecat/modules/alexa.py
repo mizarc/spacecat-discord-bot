@@ -1225,9 +1225,10 @@ class Alexa(commands.Cog):
         await music_player.add(songs[0], position)
         if position > len(queue):
             position = len(queue) + 1
+        duration = await self._format_duration(songs[0].get_duration())
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Added {songs[0].get_title()} to #{position} in queue")
+            description=f"Added [{songs[0].get_title()}]({songs[0].get_url()}) `{duration}` to #{position} in queue")
         await interaction.response.send_message(embed=embed)
         return
 
