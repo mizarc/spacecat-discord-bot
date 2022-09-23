@@ -418,6 +418,9 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         return PlayerResult.QUEUEING
 
     async def remove(self, index=0):
+        if index > 0:
+            del self.next_queue[index-1]
+            return
         self.next_queue.pop()
 
     async def clear(self):
@@ -1243,23 +1246,24 @@ class Alexa(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove song from queue using the specified index
+        queue = await music_player.get_next_queue()
         try:
             if position < 1:
                 raise IndexError('Position can\'t be less than 1')
-            song = music_player.song_queue[position]
+            song = queue[position-1]
             await music_player.remove(position)
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="That's an invalid queue position")
+                description="That's an invalid queue position.")
             await interaction.response.send_message(embed=embed)
             return
 
         # Output result to chat
-        duration = await self._format_duration(song.duration)
+        duration = await self._format_duration(song.get_duration())
         embed = discord.Embed(
-            colour=constants.EmbedStatus.NO.value,
-            description=f"[{song.title}]({song.webpage_url}) `{duration}` "
+            colour=constants.EmbedStatus.YES.value,
+            description=f"[{song.get_title()}]({song.get_url()}) `{duration}` "
                         f"has been removed from position #{position} of the queue")
         await interaction.response.send_message(embed=embed)
 
