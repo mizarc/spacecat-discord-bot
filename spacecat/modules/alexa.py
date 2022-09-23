@@ -1069,7 +1069,7 @@ class Alexa(commands.Cog):
         if not queue:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the queue right now")
+                description="There's nothing in the queue right now.")
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1087,8 +1087,7 @@ class Alexa(commands.Cog):
             header = "Currently Playing (Looping)"
         else:
             header = "Currently Playing"
-        if len(queue) > 1:
-            queue_status = True
+        if len(queue) >= 1:
             spacer = "\u200B"
         else:
             spacer = ""
@@ -1098,7 +1097,7 @@ class Alexa(commands.Cog):
                   f"`{current_time}/{duration}` \n{spacer}")
 
         # List remaining songs in queue plus total duration
-        if queue_status:
+        if len(queue) >= 1:
             queue_info = []
 
             # Modify page variable to get every ten results
@@ -1106,7 +1105,7 @@ class Alexa(commands.Cog):
             if page > 0:
                 page = page * 10
 
-            total_duration = -queue[0].get_duration()
+            total_duration = 0
             for song in queue:
                 total_duration += song.get_duration()
 
