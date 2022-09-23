@@ -351,6 +351,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         self.previous_queue: deque[WavelinkAudioSource] = deque()
         self.looping = False
         self.disconnect_time = time() + self._get_disconnect_time_limit()
+        self._disconnect_timer.start()
 
     async def is_looping(self) -> bool:
         return self.looping
