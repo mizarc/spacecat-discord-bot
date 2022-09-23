@@ -1198,10 +1198,11 @@ class Alexa(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if too many songs in queue
-        if len(music_player.song_queue) > 100:
+        queue = await music_player.get_next_queue()
+        if len(queue) > 100:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Too many songs in queue. Calm down.")
+                description="Too many songs in queue. Remove some songs first before adding mroe.")
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1222,10 +1223,8 @@ class Alexa(commands.Cog):
             return
 
         await music_player.add(songs[0], position)
-        #music_player.song_queue.insert(position, songs[0])
-        #if position > len(music_player.song_queue):
-        #    position = len(music_player.song_queue) - 1
-
+        if position > len(queue):
+            position = len(queue) + 1
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Added {songs[0].get_title()} to #{position} in queue")
