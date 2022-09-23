@@ -391,6 +391,11 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
             await self.player.play(audio_source.get_stream())
             self.current = audio_source
             return PlayerResult.PLAYING
+
+        if index > 0:
+            self.next_queue.insert(index-1, audio_source)
+            return PlayerResult.QUEUEING
+
         self.next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
@@ -401,6 +406,12 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
             for audio_source in audio_sources[1:]:
                 self.next_queue.append(audio_source)
             return PlayerResult.PLAYING
+
+        if index > 0:
+            insert_index = index
+            for audio_source in audio_sources:
+                self.next_queue.insert(insert_index-1, audio_source)
+                insert_index += 1
 
         for audio_source in audio_sources:
             self.next_queue.append(audio_source)
