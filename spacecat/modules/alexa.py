@@ -254,6 +254,10 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
         pass
 
     @abstractmethod
+    async def shuffle(self):
+        pass
+
+    @abstractmethod
     async def stop(self):
         pass
 
@@ -414,6 +418,9 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     async def unloop(self):
         pass
+
+    async def shuffle(self):
+        random.shuffle(self.next_queue)
 
     async def stop(self):
         await self.player.stop()
