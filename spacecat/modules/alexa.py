@@ -386,20 +386,20 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         for song in songs[1:]:
             self.next_queue.appendleft(song)
 
-    async def add(self, audio_source: WavelinkAudioSource, index=0) -> PlayerResult:
+    async def add(self, audio_source: WavelinkAudioSource, index=-1) -> PlayerResult:
         if not self.current:
             await self.player.play(audio_source.get_stream())
             self.current = audio_source
             return PlayerResult.PLAYING
 
-        if index > 0:
-            self.next_queue.insert(index-1, audio_source)
+        if index >= 0:
+            self.next_queue.insert(index, audio_source)
             return PlayerResult.QUEUEING
 
         self.next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
-    async def add_multiple(self, audio_sources: list[WavelinkAudioSource], index=0):
+    async def add_multiple(self, audio_sources: list[WavelinkAudioSource], index=-1):
         if not self.current:
             await self.player.play(audio_sources[0].get_stream())
             self.current = audio_sources[0]
@@ -407,19 +407,19 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
                 self.next_queue.append(audio_source)
             return PlayerResult.PLAYING
 
-        if index > 0:
+        if index >= 0:
             insert_index = index
             for audio_source in audio_sources:
-                self.next_queue.insert(insert_index-1, audio_source)
+                self.next_queue.insert(insert_index, audio_source)
                 insert_index += 1
 
         for audio_source in audio_sources:
             self.next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
-    async def remove(self, index=0):
-        if index > 0:
-            del self.next_queue[index-1]
+    async def remove(self, index=-1):
+        if index >= 0:
+            del self.next_queue[index]
             return
         self.next_queue.pop()
 
@@ -1225,7 +1225,7 @@ class Alexa(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        await music_player.add(songs[0], position)
+        await music_player.add(songs[0], position-1)
         if position > len(queue):
             position = len(queue) + 1
         duration = await self._format_duration(songs[0].get_duration())
@@ -1251,7 +1251,7 @@ class Alexa(commands.Cog):
             if position < 1:
                 raise IndexError('Position can\'t be less than 1')
             song = queue[position-1]
-            await music_player.remove(position)
+            await music_player.remove(position-1)
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
