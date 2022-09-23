@@ -657,7 +657,7 @@ class Alexa(commands.Cog):
                 channel = interaction.user.voice.channel
 
             await channel.connect()
-            self.music_players[interaction.guild_id] = MusicPlayer(interaction.guild.voice_client)
+            self.music_players[interaction.guild_id] = WavelinkMusicPlayer()
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Joined voice channel `{channel.name}`")
@@ -695,17 +695,16 @@ class Alexa(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def play(self, interaction, url: str):
+    async def play(self, interaction: discord.Interaction, url: str):
         """Plays from a url (almost anything youtube_dl supports)"""
         # Join channel and create music player instance if it doesn't exist
-        if not interaction.guild.voice_client:
-            await interaction.user.voice.channel.connect()
-        music_player = await self._get_music_player(interaction.guild)
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert due to song errors
         await interaction.response.defer()
+
         try:
-            songs = await self._fetch_songs(url)
+            songs = await WavelinkAudioSource.from_query(url)
         except VideoTooLongError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -721,7 +720,7 @@ class Alexa(commands.Cog):
 
         # Add playlist
         if len(songs) > 1:
-            result = await music_player.add_multiple(songs)
+            result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
@@ -737,9 +736,10 @@ class Alexa(commands.Cog):
                 return
 
         # Add song
-        result = await music_player.add(songs[0])
-        duration = await self._format_duration(songs[0].duration)
-        song_name = f"[{songs[0].title}]({songs[0].webpage_url}) `{duration}`"
+        song = songs[0]
+        result = await music_player.add(song)
+        duration = await self._format_duration(song.get_duration())
+        song_name = f"[{song.get_title()}]({song.get_url()}) `{duration}`"
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
@@ -749,7 +749,7 @@ class Alexa(commands.Cog):
         elif result == PlayerResult.QUEUEING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Song {song_name} added to #{len(music_player.song_queue) - 1} in queue")
+                description=f"Song {song_name} added to #{len(await music_player.get_next_queue()) - 1} in queue")
             await interaction.followup.send(embed=embed)
             return
 
