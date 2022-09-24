@@ -135,7 +135,7 @@ class WavelinkAudioSource(AudioSource):
     @classmethod
     async def from_spotify_playlist(cls, url) -> list['WavelinkAudioSource']:
         found_tracks = []
-        async for partial in spotify.SpotifyTrack.iterator(query=url, partial_tracks=True)
+        async for partial in spotify.SpotifyTrack.iterator(query=url, partial_tracks=True):
             found_tracks.append(partial)
         return [cls(track) for track in found_tracks]
 
