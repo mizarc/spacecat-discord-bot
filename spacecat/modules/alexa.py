@@ -458,10 +458,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         await self.player.stop()
 
     async def next(self):
+        self._refresh_disconnect_timer()
         next_song = None
         try:
             next_song = self.next_queue.popleft()
-            self._refresh_disconnect_timer()
             await self.player.play(next_song.get_stream())
         except IndexError:
             pass
@@ -475,6 +475,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         self.current = previous_song
 
     async def process_song_end(self):
+        self._refresh_disconnect_timer()
         if self.looping:
             await self.play(await self.get_playing())
             return
@@ -482,6 +483,8 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     @tasks.loop(seconds=30)
     async def _disconnect_timer(self):
+        print(time())
+        print(self.disconnect_time)
         if self._is_auto_disconnect() and time() > self.disconnect_time and not self.player.is_playing():
             await self.disconnect()
 
