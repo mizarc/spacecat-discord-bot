@@ -130,7 +130,7 @@ class WavelinkAudioSource(AudioSource):
     def get_url(self) -> str:
         return self.track.uri
 
-    async def get_location(self) -> SourceLocation:
+    def get_location(self) -> SourceLocation:
         return self.location
 
     @classmethod
@@ -872,7 +872,7 @@ class Alexa(commands.Cog):
             return
 
         # Add YouTube playlist
-        if await songs[0].get_location() == SourceLocation.YOUTUBE_PLAYLIST:
+        if songs[0].get_location() == SourceLocation.YOUTUBE_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -889,7 +889,7 @@ class Alexa(commands.Cog):
                 return
 
         # Add Spotify playlist
-        elif await songs[0].get_location() == SourceLocation.SPOTIFY_PLAYLIST:
+        elif songs[0].get_location() == SourceLocation.SPOTIFY_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -906,7 +906,7 @@ class Alexa(commands.Cog):
                 return
 
         # Add Spotify album
-        elif await songs[0].get_location() == SourceLocation.SPOTIFY_ALBUM:
+        elif songs[0].get_location() == SourceLocation.SPOTIFY_ALBUM:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
