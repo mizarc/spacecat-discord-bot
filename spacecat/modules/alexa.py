@@ -1911,7 +1911,7 @@ class Alexa(commands.Cog):
     @staticmethod
     def _parse_time(time_string):
         h, m, s = time_string.split(':')
-        int(h) * 3600 + int(m) * 60 + int(s)
+        return int(h) * 3600000 + int(m) * 60000 + int(s) * 1000
 
 
 async def setup(bot):
