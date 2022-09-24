@@ -7,15 +7,11 @@ from itertools import islice
 from time import gmtime, strftime, time
 from typing import Optional, Any, Generic, TypeVar
 
-from bs4 import BeautifulSoup as bs
-
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 from enum import Enum
-
-import requests
 
 import toml
 
@@ -24,6 +20,7 @@ import uuid
 import wavelink
 
 import yt_dlp
+from wavelink.ext import spotify
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
@@ -129,6 +126,11 @@ class WavelinkAudioSource(AudioSource):
     async def from_youtube_playlist(cls, url) -> list['WavelinkAudioSource']:
         found_playlist = await wavelink.YouTubePlaylist.search(query=url)
         return [cls(track, found_playlist.name) for track in found_playlist.tracks]
+
+    @classmethod
+    async def from_spotify(cls, url) -> list['WavelinkAudioSource']:
+        found_tracks = await spotify.SpotifyTrack.search(query=url)
+        return [cls(track) for track in found_tracks]
 
 
 class YTDLStream:
@@ -672,6 +674,13 @@ class Alexa(commands.Cog):
             config['lavalink']['port'] = "2333"
         if 'password' not in config['lavalink']:
             config['lavalink']['password'] = "password1"
+
+        if 'spotify' not in config:
+            config['spotify'] = {}
+        if 'client_id' not in config['spotify']:
+            config['spotify']['client_id'] = ""
+        if 'client_secret' not in config['spotify']:
+            config['spotify']['client_secret'] = ""
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
@@ -679,7 +688,9 @@ class Alexa(commands.Cog):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         await wavelink.NodePool.create_node(
             bot=self.bot, host=config['lavalink']['address'],
-            port=config['lavalink']['port'], password=config['lavalink']['password'])
+            port=config['lavalink']['port'], password=config['lavalink']['password'],
+            spotify_client=spotify.SpotifyClient(client_id=config['spotify']['client_id'],
+                                                 client_secret=config['spotify']['client_secret']))
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -1741,6 +1752,8 @@ class Alexa(commands.Cog):
     async def _get_songs(query: str):
         if "youtube.com" in query and "list" in query:
             return await WavelinkAudioSource.from_youtube_playlist(query)
+        elif "spotify.com" in query:
+            return await WavelinkAudioSource.from_spotify(query)
         return await WavelinkAudioSource.from_query(query)
 
     # Format duration based on what values there are
