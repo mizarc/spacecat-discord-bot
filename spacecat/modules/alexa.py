@@ -105,7 +105,7 @@ class AudioSource(ABC):
         pass
 
     @abstractmethod
-    async def get_from(self) -> str:
+    async def get_location(self) -> str:
         pass
 
 
@@ -523,8 +523,6 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     @tasks.loop(seconds=30)
     async def _disconnect_timer(self):
-        print(time())
-        print(self.disconnect_time)
         if self._is_auto_disconnect() and time() > self.disconnect_time and not self.player.is_playing():
             await self.disconnect()
 
@@ -1818,13 +1816,11 @@ class Alexa(commands.Cog):
     async def _get_music_player(self, channel: discord.VoiceChannel):
         try:
             music_player = self.music_players[channel.guild.id]
-            print("got it")
         except KeyError:
             music_player = WavelinkMusicPlayer()
             await music_player.connect(channel)
             await channel.guild.change_voice_state(channel=channel, self_deaf=True)
             self.music_players[channel.guild.id] = music_player
-            print("no got it")
         return music_player
 
     @staticmethod
