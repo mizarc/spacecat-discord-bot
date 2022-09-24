@@ -852,30 +852,13 @@ class Alexa(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def playsearch(self, interaction, search: str):
+    async def playsearch(self, interaction: discord.Interaction, search: str):
         # Join channel and create music player instance if it doesn't exist
-        if not interaction.guild.voice_client:
-            await interaction.user.voice.channel.connect()
-        music_player = await self._get_music_player(interaction.guild)
-
-        # Set urls to be used by the searcher
-        base_url = "https://www.youtube.com"
-        search_url = f"https://www.youtube.com/results?search_query={search}"
-
-        # Query YouTube with a search term and grab the title, duration and url
-        # of all videos on the page
-        headers = {'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; "\
-            "+http://www.google.com/bot.html)'}
-        source = requests.get(search_url, headers=headers)
-        soup = bs(source.text, 'lxml')
-        titles = soup.find_all('a', attrs={'class': 'yt-uix-tile-link'})
-        durations = soup.find_all('span', attrs={'class': 'video-time'})
-        urls = []
-        for title in titles:
-            urls.append(f"{base_url}{title.attrs['href']}")
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert user if search term returns no results
-        if not titles:
+        songs = await self._get_songs(search)
+        if not songs:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Search query returned no results")
@@ -883,17 +866,9 @@ class Alexa(commands.Cog):
             return
 
         # Format the data to be in a usable list
-        index = 0
         results_format = []
-        for title, duration, url in zip(titles, durations, urls):
-            # Stop at 5 songs
-            if index == 5:
-                break
-            # Skip playlists
-            if '&list=' in url:
-                continue
-            index += 1
-            results_format.append(f"{index}. [{title.get_text()}]({url}) `{duration.get_text()}`")
+        for i in range(0, 5):
+            results_format.append(f"{i+1}. [{songs[i].get_title()}]({songs[i].get_url()}) `{songs[i].get_duration()}`")
 
         # Output results to chat
         embed = discord.Embed(
