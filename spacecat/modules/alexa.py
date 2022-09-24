@@ -873,8 +873,8 @@ class Alexa(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
-        # Add playlist
-        if songs[0].get_playlist() is not None:
+        # Add YouTube playlist
+        if songs[0].location == SourceLocation.YOUTUBE_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -886,6 +886,40 @@ class Alexa(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist {songs[0].playlist} to "
+                                f"#{len(await music_player.get_next_queue()) - len(songs) + 1} in queue")
+                await interaction.followup.send(embed=embed)
+                return
+
+        # Add Spotify playlist
+        elif songs[0].location == SourceLocation.SPOTIFY_PLAYLIST:
+            result = await music_player.add_multiple(songs, )
+            if result == PlayerResult.PLAYING:
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Now playing Spotify playlist")
+                await interaction.followup.send(embed=embed)
+                return
+            elif result == PlayerResult.QUEUEING:
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Added `{len(songs)}` songs from Spotify playlist to "
+                                f"#{len(await music_player.get_next_queue()) - len(songs) + 1} in queue")
+                await interaction.followup.send(embed=embed)
+                return
+
+        # Add Spotify album
+        elif songs[0].location == SourceLocation.SPOTIFY_ALBUM:
+            result = await music_player.add_multiple(songs, )
+            if result == PlayerResult.PLAYING:
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Now playing Spotify album")
+                await interaction.followup.send(embed=embed)
+                return
+            elif result == PlayerResult.QUEUEING:
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Added `{len(songs)}` songs from Spotify album to "
                                 f"#{len(await music_player.get_next_queue()) - len(songs) + 1} in queue")
                 await interaction.followup.send(embed=embed)
                 return
