@@ -1,4 +1,3 @@
-import datetime
 from abc import ABC, abstractmethod
 import asyncio
 import random
@@ -20,14 +19,11 @@ import uuid
 
 import wavelink
 
-import yt_dlp
 from wavelink.ext import spotify
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers import reaction_buttons
-
-yt_dlp.utils.bug_reports_message = lambda: ''
 
 
 class VideoTooLongError(ValueError):
@@ -36,39 +32,6 @@ class VideoTooLongError(ValueError):
 
 class VideoUnavailableError(ValueError):
     pass
-
-
-class YTDLLogger(object):
-    def debug(self, msg):
-        pass
-
-    def warning(self, msg):
-        pass
-
-    def error(self, msg):
-        pass
-
-
-ytdl_format_options = {
-    'format': 'bestaudio/best',
-    'restrictfilenames': True,
-    'noplaylist': False,
-    'nocheckcertificate': True,
-    'ignoreerrors': True,
-    'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0',
-    'youtube_include_dash_manifest': False,
-    'logger': YTDLLogger()
-}
-
-ffmpeg_options = {
-    'options': '-vn -loglevel quiet'
-}
-
-ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
 
 class PlayerResult(Enum):
@@ -158,45 +121,6 @@ class WavelinkAudioSource(AudioSource):
     async def from_spotify_album(cls, url) -> list['WavelinkAudioSource']:
         found_tracks = await spotify.SpotifyTrack.search(query=url)
         return [cls(track, SourceLocation.SPOTIFY_ALBUM) for track in found_tracks]
-
-
-class YTDLStream:
-    def __init__(self, title, duration, webpage_url, playlist=None):
-        self.title = title
-        self.duration = duration
-        self.webpage_url = webpage_url
-        self.playlist = playlist
-
-    async def create_stream(self):
-        before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
-        loop = asyncio.get_event_loop()
-        metadata = await loop.run_in_executor(None, lambda: ytdl.extract_info(self.webpage_url, download=False))
-        return discord.PCMVolumeTransformer(
-            discord.FFmpegPCMAudio(metadata['url'], **ffmpeg_options, before_options=before_args), 0.5)
-
-    @classmethod
-    async def from_metadata(cls, metadata):
-        return cls(metadata.get('title'), metadata.get('duration'),
-                   metadata.get('webpage_url'), metadata.get('playlist'))
-
-    @classmethod
-    async def from_url(cls, webpage_url):
-        loop = asyncio.get_event_loop()
-        metadata = await loop.run_in_executor(None, lambda: ytdl.extract_info(webpage_url, download=False))
-        songs = []
-        try:
-            if 'entries' in metadata:
-                for entry in metadata['entries']:
-                    try:
-                        songs.append(await YTDLStream.from_metadata(entry))
-                    except AttributeError:
-                        continue
-            else:
-                songs.append(await YTDLStream.from_metadata(metadata))
-        except TypeError:
-            return
-
-        return songs
 
 
 T_AudioSource = TypeVar("T_AudioSource", bound=AudioSource)
@@ -306,87 +230,6 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
     @abstractmethod
     async def disable_auto_disconnect(self):
         pass
-
-
-class BuiltinMusicPlayer:
-    def __init__(self, voice_client):
-        self.voice_client = voice_client
-        self.song_queue = []
-        self.song_start_time = 0
-        self.song_pause_time = 0
-        self.loop_toggle = False
-        self.skip_toggle = False
-
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        self.disconnect_time = time() + config['music']['disconnect_time']
-        self._disconnect_timer.start()
-
-    async def play(self, song):
-        self.song_queue.insert(0, song)
-        self.song_start_time = time()
-        stream = await song.create_stream()
-        loop = asyncio.get_event_loop()
-        self.voice_client.play(stream, after=lambda e: loop.create_task(self.play_next()))
-
-    async def add(self, song):
-        self.song_queue.append(song)
-        if len(self.song_queue) <= 1:
-            stream = await song.create_stream()
-            loop = asyncio.get_event_loop()
-            self.voice_client.play(stream, after=lambda e: loop.create_task(self.play_next()))
-            self.song_start_time = time()
-            return PlayerResult.PLAYING
-        return PlayerResult.QUEUEING
-
-    async def add_multiple(self, songs):
-        self.song_queue.extend(songs)
-
-        if len(self.song_queue) <= len(songs):
-            stream = await songs[0].create_stream()
-            loop = asyncio.get_event_loop()
-            self.voice_client.play(stream, after=lambda e: loop.create_task(self.play_next()))
-            self.song_start_time = time()
-            return PlayerResult.PLAYING
-        return PlayerResult.QUEUEING
-
-    async def play_next(self):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        self.disconnect_time = time() + config['music']['disconnect_time']
-        loop = asyncio.get_event_loop()
-        # If looping, grab source from url again
-        if self.loop_toggle and not self.skip_toggle:
-            loop = asyncio.get_event_loop()
-            audio_stream = await loop.run_in_executor(None, lambda: self.song_queue[0].create_stream())
-            self.song_start_time = time()
-            self.voice_client.play(audio_stream, after=lambda e: loop.create_task(self.play_next()))
-            return
-
-        # Disable skip toggle to indicate that a skip has been completed
-        if self.skip_toggle:
-            self.skip_toggle = False
-
-        # Remove next in queue
-        try:
-            self.song_queue.pop(0)
-        except IndexError:
-            return
-
-        # Play the new first song in list
-        if self.song_queue:
-            self.song_start_time = time()
-            audio_stream = await self.song_queue[0].create_stream()
-            self.voice_client.play(audio_stream, after=lambda e: loop.create_task(self.play_next()))
-            return
-
-    async def stop(self):
-        self.song_queue.clear()
-        self.voice_client.stop()
-
-    @tasks.loop(seconds=30)
-    async def _disconnect_timer(self):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        if time() > self.disconnect_time and not self.voice_client.is_playing() and config['music']['auto_disconnect']:
-            await self.voice_client.disconnect()
 
 
 class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
@@ -1891,22 +1734,6 @@ class Alexa(commands.Cog):
             next_song = song_links.get(next_song.id)
 
         return ordered_songs
-
-    @staticmethod
-    async def _fetch_songs(query):
-        """Grab audio source from YouTube and check if longer than 3 hours"""
-        if "youtube" in query or "youtu.be" in query:
-            songs = await YTDLStream.from_url(query)
-        else:
-            songs = await YTDLStream.from_url(query)
-
-        if not songs:
-            raise VideoUnavailableError("Specified song is unavailable")
-
-        # if songs.duration >= 10800:
-        #     raise VideoTooLongError("Specified song is longer than 3 hours")
-
-        return songs
 
     @staticmethod
     def _parse_time(time_string):
