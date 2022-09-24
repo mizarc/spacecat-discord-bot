@@ -112,7 +112,7 @@ class AudioSource(ABC):
 class WavelinkAudioSource(AudioSource):
     def __init__(self, track, location, playlist=None):
         self.track: wavelink.Track = track
-        self.location: SourceLocation = SourceLocation.YOUTUBE_SINGULAR
+        self.location: SourceLocation = location
         self.playlist: str = playlist
 
     def get_stream(self) -> wavelink.Track:
@@ -872,7 +872,7 @@ class Alexa(commands.Cog):
             return
 
         # Add YouTube playlist
-        if songs[0].location == SourceLocation.YOUTUBE_PLAYLIST:
+        if await songs[0].get_location() == SourceLocation.YOUTUBE_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -889,7 +889,7 @@ class Alexa(commands.Cog):
                 return
 
         # Add Spotify playlist
-        elif songs[0].location == SourceLocation.SPOTIFY_PLAYLIST:
+        elif await songs[0].get_location() == SourceLocation.SPOTIFY_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -906,7 +906,7 @@ class Alexa(commands.Cog):
                 return
 
         # Add Spotify album
-        elif songs[0].location == SourceLocation.SPOTIFY_ALBUM:
+        elif await songs[0].get_location() == SourceLocation.SPOTIFY_ALBUM:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
