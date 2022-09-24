@@ -122,16 +122,13 @@ class WavelinkAudioSource(AudioSource):
 
     @classmethod
     async def from_query(cls, query) -> list['WavelinkAudioSource']:
-        try:
-            found_tracks = await wavelink.YouTubeTrack.search(query=query)
-        except IndexError:
-            raise VideoUnavailableError
+        found_tracks = await wavelink.YouTubeTrack.search(query=query)
+        return [cls(track) for track in found_tracks]
 
-        # The wavelink search method returns an unlisted type of "YouTubePlaylist". Bad practice, but we can use this
-        # to our advantage to check if a track is a playlist
-        if isinstance(found_tracks, wavelink.YouTubePlaylist):
-            return [cls(track, found_tracks.name) for track in found_tracks.tracks]
-        return [cls(found_tracks[0])]
+    @classmethod
+    async def from_youtube_playlist(cls, url) -> list['WavelinkAudioSource']:
+        found_playlist = await wavelink.YouTubePlaylist.search(query=url)
+        return [cls(track, found_playlist.name) for track in found_playlist.tracks]
 
 
 class YTDLStream:
@@ -1763,6 +1760,8 @@ class Alexa(commands.Cog):
 
     @staticmethod
     async def _get_songs(query: str):
+        if "youtube.com" in query and "list" in query:
+            return await WavelinkAudioSource.from_youtube_playlist(query)
         return await WavelinkAudioSource.from_query(query)
 
     # Format duration based on what values there are
