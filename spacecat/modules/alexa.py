@@ -816,7 +816,7 @@ class Alexa(commands.Cog):
             return
 
         # Add playlist
-        if len(songs) > 1:
+        if songs[0].get_playlist() is not None:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -827,8 +827,8 @@ class Alexa(commands.Cog):
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Added `{len(songs)}` songs from playlist {songs} to "
-                                f"#{len(music_player.song_queue)} in queue")
+                    description=f"Added `{len(songs)}` songs from playlist {songs[0].playlist} to "
+                                f"#{len(await music_player.get_next_queue()) - len(songs) + 1} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
