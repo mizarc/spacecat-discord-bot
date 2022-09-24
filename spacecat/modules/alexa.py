@@ -258,7 +258,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         return list(self.previous_queue)
 
     async def connect(self, channel: discord.VoiceChannel):
-        self.player = await channel.connect(cls=wavelink.Player)
+        self.player = await channel.connect(cls=wavelink.Player, self_deaf=True)
 
     async def disconnect(self):
         await self.player.disconnect()
@@ -1687,7 +1687,6 @@ class Alexa(commands.Cog):
         except KeyError:
             music_player = WavelinkMusicPlayer()
             await music_player.connect(channel)
-            await channel.guild.change_voice_state(channel=channel, self_deaf=True)
             self.music_players[channel.guild.id] = music_player
         return music_player
 
