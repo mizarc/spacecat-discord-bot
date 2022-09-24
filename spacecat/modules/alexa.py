@@ -380,15 +380,18 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         await self.player.disconnect()
 
     async def play(self, audio_source: WavelinkAudioSource) -> None:
+        self._refresh_disconnect_timer()
         await self.player.play(audio_source.get_stream())
 
     async def play_multiple(self, songs: list[WavelinkAudioSource]):
+        self._refresh_disconnect_timer()
         await self.player.play(songs[0].get_stream())
         for song in songs[1:]:
             self.next_queue.appendleft(song)
 
     async def add(self, audio_source: WavelinkAudioSource, index=-1) -> PlayerResult:
         if not self.current:
+            self._refresh_disconnect_timer()
             await self.player.play(audio_source.get_stream())
             self.current = audio_source
             return PlayerResult.PLAYING
@@ -402,6 +405,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     async def add_multiple(self, audio_sources: list[WavelinkAudioSource], index=-1):
         if not self.current:
+            self._refresh_disconnect_timer()
             await self.player.play(audio_sources[0].get_stream())
             self.current = audio_sources[0]
             for audio_source in audio_sources[1:]:
