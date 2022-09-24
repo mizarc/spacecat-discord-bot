@@ -1,3 +1,4 @@
+import datetime
 from abc import ABC, abstractmethod
 import asyncio
 import random
@@ -255,6 +256,10 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
         pass
 
     @abstractmethod
+    async def seek(self, position):
+        pass
+
+    @abstractmethod
     async def next(self):
         pass
 
@@ -467,6 +472,9 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
     async def clear(self):
         self.next_queue.clear()
         self.previous_queue.clear()
+
+    async def seek(self, position):
+        await self.player.seek(position)
 
     async def pause(self):
         await self.player.pause()
@@ -1062,6 +1070,23 @@ class Alexa(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Music has been paused")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command()
+    @perms.check()
+    async def seek(self, interaction: discord.Interaction, timestamp: str):
+        # Get music player
+        if not interaction.guild.voice_client:
+            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            return
+        music_player = await self._get_music_player(interaction.user.voice.channel)
+
+        # Pauses music playback
+        seconds = self._parse_time(timestamp)
+        await music_player.seek(seconds)
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Song timeline moved to position `{timestamp}`")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
@@ -1882,6 +1907,11 @@ class Alexa(commands.Cog):
         #     raise VideoTooLongError("Specified song is longer than 3 hours")
 
         return songs
+
+    @staticmethod
+    async def _parse_time(time_string):
+        h, m, s = time_string.split(':')
+        int(h) * 3600 + int(m) * 60 + int(s)
 
 
 async def setup(bot):
