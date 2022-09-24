@@ -1909,7 +1909,7 @@ class Alexa(commands.Cog):
         return songs
 
     @staticmethod
-    async def _parse_time(time_string):
+    def _parse_time(time_string):
         h, m, s = time_string.split(':')
         int(h) * 3600 + int(m) * 60 + int(s)
 
