@@ -132,6 +132,12 @@ class WavelinkAudioSource(AudioSource):
         found_tracks = await spotify.SpotifyTrack.search(query=url)
         return [cls(track) for track in found_tracks]
 
+    @classmethod
+    async def from_spotify_playlist(cls, url) -> list['WavelinkAudioSource']:
+        found_tracks = await spotify.SpotifyTrack.iterator(query=url, partial_tracks=True)
+        return [cls(track) for track in found_tracks]
+
+
 
 class YTDLStream:
     def __init__(self, title, duration, webpage_url, playlist=None):
@@ -1755,6 +1761,8 @@ class Alexa(commands.Cog):
     async def _get_songs(query: str):
         if "youtube.com" in query and "list" in query:
             return await WavelinkAudioSource.from_youtube_playlist(query)
+        elif "spotify.com" in query and "playlist" in query or "album" in query:
+            return await WavelinkAudioSource.from_spotify_playlist(query)
         elif "spotify.com" in query:
             return await WavelinkAudioSource.from_spotify(query)
         return await WavelinkAudioSource.from_query(query)
