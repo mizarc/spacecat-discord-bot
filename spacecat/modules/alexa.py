@@ -1910,8 +1910,15 @@ class Alexa(commands.Cog):
 
     @staticmethod
     def _parse_time(time_string):
-        h, m, s = time_string.split(':')
-        return int(h) * 3600000 + int(m) * 60000 + int(s) * 1000
+        time_split = time_string.split(':')
+        hours, minutes, seconds = 0, 0, 0
+        if len(time_split) >= 3:
+            hours = time_split[-3]
+        if len(time_split) >= 2:
+            minutes = time_split[-2]
+        if len(time_split) >= 1:
+            minutes = time_split[-1]
+        return int(hours) * 3600000 + int(minutes) * 60000 + int(seconds) * 1000
 
 
 async def setup(bot):
