@@ -275,6 +275,14 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
     async def process_song_end(self):
         pass
 
+    @abstractmethod
+    async def enable_auto_disconnect(self):
+        pass
+
+    @abstractmethod
+    async def disable_auto_disconnect(self):
+        pass
+
 
 class BuiltinMusicPlayer:
     def __init__(self, voice_client):
@@ -488,6 +496,12 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
             return
         await self.next()
 
+    async def enable_auto_disconnect(self):
+        self._disconnect_timer.start()
+
+    async def disable_auto_disconnect(self):
+        self._disconnect_timer.stop()
+
     @tasks.loop(seconds=30)
     async def _disconnect_timer(self):
         print(time())
@@ -664,7 +678,7 @@ class Alexa(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.music_players = {}
+        self.music_players: dict[int, MusicPlayer] = {}
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
         self.playlists = PlaylistRepository(self.database)
         self.playlist_songs = PlaylistSongRepository(self.database)
@@ -721,8 +735,8 @@ class Alexa(commands.Cog):
         # If bot disconnects from voice, remove music player
         if member.id == self.bot.user.id and after.channel is None:
             try:
-                pass
-                self.music_players.pop(member.guild.id)
+                music_player = self.music_players.pop(member.guild.id)
+                await music_player.disable_auto_disconnect()
             except KeyError:
                 pass
 
@@ -1751,11 +1765,13 @@ class Alexa(commands.Cog):
     async def _get_music_player(self, channel: discord.VoiceChannel):
         try:
             music_player = self.music_players[channel.guild.id]
+            print("got it")
         except KeyError:
             music_player = WavelinkMusicPlayer()
             await music_player.connect(channel)
             await channel.guild.change_voice_state(channel=channel, self_deaf=True)
             self.music_players[channel.guild.id] = music_player
+            print("no got it")
         return music_player
 
     @staticmethod
