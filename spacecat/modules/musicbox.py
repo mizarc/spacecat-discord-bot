@@ -348,10 +348,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
             return PlayerResult.PLAYING
 
         if index >= 0:
-            self.next_queue.insert(index, audio_source)
+            self._next_queue.insert(index, audio_source)
             return PlayerResult.QUEUEING
 
-        self.next_queue.append(audio_source)
+        self._next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
     async def add_multiple(self, audio_sources: list[WavelinkAudioSource], index=-1):
@@ -360,28 +360,28 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
             await self._player.play(audio_sources[0].stream)
             self._current = audio_sources[0]
             for audio_source in audio_sources[1:]:
-                self.next_queue.append(audio_source)
+                self._next_queue.append(audio_source)
             return PlayerResult.PLAYING
 
         if index >= 0:
             insert_index = index
             for audio_source in audio_sources:
-                self.next_queue.insert(insert_index, audio_source)
+                self._next_queue.insert(insert_index, audio_source)
                 insert_index += 1
 
         for audio_source in audio_sources:
-            self.next_queue.append(audio_source)
+            self._next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
     async def remove(self, index=-1):
         if index >= 0:
-            del self.next_queue[index]
+            del self._next_queue[index]
             return
-        self.next_queue.pop()
+        self._next_queue.pop()
 
     async def clear(self):
-        self.next_queue.clear()
-        self.previous_queue.clear()
+        self._next_queue.clear()
+        self._previous_queue.clear()
 
     async def seek(self, position):
         await self._player.seek(position)
@@ -399,12 +399,12 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         self._is_looping = False
 
     async def move(self, first_index, second_index):
-        song = self.next_queue[first_index]
+        song = self._next_queue[first_index]
         await self.remove(first_index)
         await self.add(song, second_index)
 
     async def shuffle(self):
-        random.shuffle(self.next_queue)
+        random.shuffle(self._next_queue)
 
     async def stop(self):
         await self._player.stop()
@@ -417,11 +417,11 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
             await self._player.play(next_song.stream)
         except IndexError:
             pass
-        self.previous_queue.append(self._current)
+        self._previous_queue.append(self._current)
         self._current = next_song
 
     async def previous(self):
-        previous_song = self.previous_queue.pop()
+        previous_song = self._previous_queue.pop()
         await self._player.play(previous_song.stream)
         self._next_queue.appendleft(self._current)
         self._current = previous_song
@@ -1141,7 +1141,7 @@ class Musicbox(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Music Queue")
-        duration = await self._format_duration(playing.get_duration())
+        duration = await self._format_duration(playing.duration)
         current_time = await self._format_duration(music_player.seek_position)
 
         # Set header depending on if looping or not, and whether to add a spacer
@@ -1154,11 +1154,11 @@ class Musicbox(commands.Cog):
         else:
             spacer = ""
         artist = ""
-        if playing.get_artist():
-            artist = f"{playing.get_artist()} - "
+        if playing.artist:
+            artist = f"{playing.artist} - "
         embed.add_field(
             name=header,
-            value=f"{artist}{playing.get_title()} "
+            value=f"{artist}{playing.title} "
                   f"`{current_time}/{duration}` \n{spacer}")
 
         # List remaining songs in queue plus total duration
@@ -1172,15 +1172,15 @@ class Musicbox(commands.Cog):
 
             total_duration = 0
             for song in queue:
-                total_duration += song.get_duration()
+                total_duration += song.duration
 
             for index, song in enumerate(
                     islice(queue, page, page + 10)):
-                duration = await self._format_duration(song.get_duration())
+                duration = await self._format_duration(song.duration)
                 artist = ""
-                if song.get_artist():
-                    artist = f"{song.get_artist()} - "
-                queue_info.append(f"{page + index + 1}. {artist}{song.get_title()} `{duration}`")
+                if song.artist:
+                    artist = f"{song.artist} - "
+                queue_info.append(f"{page + index + 1}. {artist}{song.title} `{duration}`")
 
             # Alert if no songs are on the specified page
             if page > 0 and not queue_info:
@@ -1236,10 +1236,10 @@ class Musicbox(commands.Cog):
         await music_player.move(original_pos-1, new_pos-1)
 
         # Output result to chat
-        duration = await self._format_duration(song.get_duration())
+        duration = await self._format_duration(song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"[{song.get_title()}]({song.get_url()}) "
+            description=f"[{song.title}]({song.url}) "
                         f"`{duration}` has been moved from position #{original_pos} "
                         f"to position #{new_pos}")
         await interaction.response.send_message(embed=embed)
@@ -1314,10 +1314,10 @@ class Musicbox(commands.Cog):
             return
 
         # Output result to chat
-        duration = await self._format_duration(song.get_duration())
+        duration = await self._format_duration(song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"[{song.get_title()}]({song.get_url()}) `{duration}` "
+            description=f"[{song.title}]({song.url}) `{duration}` "
                         f"has been removed from position #{position} of the queue")
         await interaction.response.send_message(embed=embed)
 
