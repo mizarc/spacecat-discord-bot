@@ -127,6 +127,9 @@ class WavelinkAudioSource(AudioSource):
     @classmethod
     async def from_youtube_playlist(cls, url) -> list['WavelinkAudioSource']:
         found_playlist = await wavelink.YouTubePlaylist.search(query=url)
+        if "Album -" in found_playlist.name:
+            return [cls(track, OriginalSource.YOUTUBE_ALBUM, found_playlist.name[8:])
+                    for track in found_playlist.tracks]
         return [cls(track, OriginalSource.YOUTUBE_PLAYLIST, found_playlist.name)
                 for track in found_playlist.tracks]
 
@@ -761,6 +764,23 @@ class Alexa(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist {songs[0].playlist} to "
+                                f"#{len(await music_player.get_next_queue()) - len(songs)} in queue")
+                await interaction.followup.send(embed=embed)
+                return
+
+        # Add YouTube album
+        if songs[0].get_original_source() == OriginalSource.YOUTUBE_ALBUM:
+            result = await music_player.add_multiple(songs, )
+            if result == PlayerResult.PLAYING:
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Now playing album {songs[0].playlist}")
+                await interaction.followup.send(embed=embed)
+                return
+            elif result == PlayerResult.QUEUEING:
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.YES.value,
+                    description=f"Added `{len(songs)}` songs from album {songs[0].playlist} to "
                                 f"#{len(await music_player.get_next_queue()) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
