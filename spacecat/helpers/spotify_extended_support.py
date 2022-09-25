@@ -9,12 +9,13 @@ import wavelink.ext
 
 
 class SpotifyPartialTrack(wavelink.PartialTrack):
-    def __init__(self, *, query: str, title: str, artist: str, duration: int, node: Optional[Node] = MISSING,
+    def __init__(self, *, query: str, title: str, artist: str, duration: int, url: str, node: Optional[Node] = MISSING,
                  cls: Optional[SearchableTrack] = YouTubeMusicTrack):
         super().__init__(query=query, node=node, cls=cls)
         self.title = title
         self.author = artist
         self.duration = duration
+        self.url = url
 
     @classmethod
     async def search(cls):
@@ -55,7 +56,8 @@ class SpotifyPlaylist(Searchable):
             track_sources.append(SpotifyPartialTrack(query=f'{track["name"]} - {track["artists"][0]["name"]}',
                                                      title=track["name"],
                                                      artist=track["artists"][0]["name"],
-                                                     duration=track["duration_ms"] / 1000))
+                                                     duration=track["duration_ms"] / 1000,
+                                                     url=track["external_urls"]["spotify"]))
         return cls(track_sources, playlist_name, url)
 
 
