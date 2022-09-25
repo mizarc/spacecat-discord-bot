@@ -4,7 +4,7 @@ import random
 import sqlite3
 from collections import deque
 from itertools import islice
-from time import gmtime, strftime, time
+from time import time
 from typing import Optional, Any, Generic, TypeVar
 
 import discord
@@ -40,13 +40,14 @@ class PlayerResult(Enum):
     QUEUEING = 1
 
 
-class SourceLocation(Enum):
-    YOUTUBE_MUSIC = 0
-    YOUTUBE_SINGULAR = 1
-    YOUTUBE_PLAYLIST = 2
-    SPOTIFY_SINGULAR = 3
-    SPOTIFY_PLAYLIST = 4
-    SPOTIFY_ALBUM = 5
+class OriginalSource(Enum):
+    YOUTUBE_VIDEO = "YouTube Video"
+    YOUTUBE_SONG = "YouTube Song"
+    YOUTUBE_PLAYLIST = "YouTube Playlist"
+    YOUTUBE_ALBUM = "YouTube Album"
+    SPOTIFY_SONG = "Spotify Song"
+    SPOTIFY_PLAYLIST = "Spotify Playlist"
+    SPOTIFY_ALBUM = "Spotify Album"
 
 
 class AudioSource(ABC):
@@ -78,14 +79,14 @@ class AudioSource(ABC):
         pass
 
     @abstractmethod
-    async def get_location(self) -> str:
+    async def get_original_source(self) -> str:
         pass
 
 
 class WavelinkAudioSource(AudioSource):
-    def __init__(self, track, location, playlist=None, playlist_url=None):
+    def __init__(self, track, original_source, playlist=None, playlist_url=None):
         self.track: wavelink.Track = track
-        self.location: SourceLocation = location
+        self.original_source: OriginalSource = original_source
         self.playlist: str = playlist
         self.playlist_url: str = playlist_url
 
@@ -110,39 +111,40 @@ class WavelinkAudioSource(AudioSource):
     def get_url(self) -> str:
         return self.track.uri
 
-    def get_location(self) -> SourceLocation:
-        return self.location
+    def get_original_source(self) -> OriginalSource:
+        return self.original_source
 
     @classmethod
     async def from_query(cls, query) -> list['WavelinkAudioSource']:
         found_tracks = await wavelink.YouTubeMusicTrack.search(query=query)
-        return [cls(track, SourceLocation.YOUTUBE_MUSIC) for track in found_tracks]
+        return [cls(track, OriginalSource.YOUTUBE_SONG) for track in found_tracks]
 
     @classmethod
     async def from_youtube(cls, url) -> ['WavelinkAudioSource']:
         found_tracks = await wavelink.YouTubeTrack.search(query=url)
-        return [cls(track, SourceLocation.YOUTUBE_SINGULAR) for track in found_tracks]
+        return [cls(track, OriginalSource.YOUTUBE_VIDEO) for track in found_tracks]
 
     @classmethod
     async def from_youtube_playlist(cls, url) -> list['WavelinkAudioSource']:
         found_playlist = await wavelink.YouTubePlaylist.search(query=url)
-        return [cls(track, SourceLocation.YOUTUBE_PLAYLIST, found_playlist.name) for track in found_playlist.tracks]
+        return [cls(track, OriginalSource.YOUTUBE_PLAYLIST, found_playlist.name)
+                for track in found_playlist.tracks]
 
     @classmethod
     async def from_spotify(cls, url) -> list['WavelinkAudioSource']:
         found_tracks = await spotify.SpotifyTrack.search(query=url)
-        return [cls(track, SourceLocation.SPOTIFY_SINGULAR) for track in found_tracks]
+        return [cls(track, OriginalSource.SPOTIFY_SONG) for track in found_tracks]
 
     @classmethod
     async def from_spotify_playlist(cls, url) -> list['WavelinkAudioSource']:
         found_playlist = await SpotifyPlaylist.search(query=url)
-        return [cls(track, SourceLocation.SPOTIFY_PLAYLIST, found_playlist.name, found_playlist.url)
+        return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, found_playlist.name, found_playlist.url)
                 for track in found_playlist.tracks]
 
     @classmethod
     async def from_spotify_album(cls, url) -> list['WavelinkAudioSource']:
         found_tracks = await spotify.SpotifyTrack.search(query=url)
-        return [cls(track, SourceLocation.SPOTIFY_ALBUM) for track in found_tracks]
+        return [cls(track, OriginalSource.SPOTIFY_ALBUM) for track in found_tracks]
 
 
 T_AudioSource = TypeVar("T_AudioSource", bound=AudioSource)
@@ -747,7 +749,7 @@ class Alexa(commands.Cog):
             return
 
         # Add YouTube playlist
-        if songs[0].get_location() == SourceLocation.YOUTUBE_PLAYLIST:
+        if songs[0].get_original_source() == OriginalSource.YOUTUBE_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -764,7 +766,7 @@ class Alexa(commands.Cog):
                 return
 
         # Add Spotify playlist
-        elif songs[0].get_location() == SourceLocation.SPOTIFY_PLAYLIST:
+        elif songs[0].get_original_source() == OriginalSource.SPOTIFY_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -782,7 +784,7 @@ class Alexa(commands.Cog):
                 return
 
         # Add Spotify album
-        elif songs[0].get_location() == SourceLocation.SPOTIFY_ALBUM:
+        elif songs[0].get_original_source() == OriginalSource.SPOTIFY_ALBUM:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
