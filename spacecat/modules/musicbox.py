@@ -24,7 +24,7 @@ from wavelink.ext import spotify
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers import reaction_buttons
-from spacecat.helpers.spotify_extended_support import SpotifyPlaylist
+from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
 class VideoTooLongError(ValueError):
@@ -164,7 +164,7 @@ class WavelinkAudioSource(AudioSource):
 
     @classmethod
     async def from_spotify_album(cls, url) -> list['WavelinkAudioSource']:
-        found_album = await SpotifyPlaylist.search(query=url)
+        found_album = await SpotifyAlbum.search(query=url)
         return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url, found_album.name, found_album.url)
                 for track in found_album.tracks]
 

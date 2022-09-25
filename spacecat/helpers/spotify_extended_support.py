@@ -77,6 +77,34 @@ class SpotifyPlaylist(Searchable):
         return cls(track_sources, playlist_name, url)
 
 
+class SpotifyAlbum(Searchable):
+    def __init__(self, tracks, name, url):
+        self.tracks: list[SpotifyPartialTrack] = tracks
+        self.name: str = name
+        self.url: str = url
+
+    @classmethod
+    async def search(cls, query: str, *, type: wavelink.ext.spotify.SpotifySearchType = None,
+                     node: wavelink.Node = MISSING, return_first: bool = False) -> 'SpotifyAlbum':
+        if node is MISSING:
+            node = NodePool.get_node()
+
+        spotify_client = node._spotify
+        data = await broad_spotify_search(spotify_client, query)
+        album_name = data['name']
+        url = data["external_urls"]["spotify"]
+
+        # Search page by page until all playlist tracks are found
+        tracks = [track for track in data['tracks']['items']]
+        track_sources = []
+        for track in tracks:
+            track_sources.append(SpotifyPartialTrack(query=f'{track["name"]} - {track["artists"][0]["name"]}',
+                                                     title=track["name"],
+                                                     artist=track["artists"][0]["name"],
+                                                     duration=track["duration_ms"] / 1000,
+                                                     url=track["external_urls"]["spotify"]))
+        return cls(track_sources, album_name, url)
+
 async def broad_spotify_search(spotify_client: SpotifyClient, query: str):
     if not spotify_client._bearer_token or time.time() >= spotify_client._expiry:
         await spotify_client._get_bearer_token()
