@@ -51,68 +51,80 @@ class OriginalSource(Enum):
 
 
 class AudioSource(ABC):
+    @property
     @abstractmethod
-    def get_stream(self) -> Any:
+    def stream(self) -> Any:
         pass
 
+    @property
     @abstractmethod
-    def get_title(self) -> str:
+    def title(self) -> str:
         pass
 
+    @property
     @abstractmethod
-    def get_artist(self) -> Optional[str]:
+    def artist(self) -> Optional[str]:
         pass
 
+    @property
     @abstractmethod
-    def get_duration(self) -> int:
+    def duration(self) -> int:
         pass
 
+    @property
     @abstractmethod
-    def get_playlist(self) -> str:
+    def playlist(self) -> str:
         pass
 
-    def get_playlist_url(self) -> str:
+    @property
+    @abstractmethod
+    def playlist_url(self) -> str:
         pass
 
+    @property
     @abstractmethod
-    async def get_url(self) -> str:
-        pass
-
-    @abstractmethod
-    async def get_original_source(self) -> str:
+    async def original_source(self) -> str:
         pass
 
 
 class WavelinkAudioSource(AudioSource):
     def __init__(self, track, original_source, playlist=None, playlist_url=None):
-        self.track: wavelink.Track = track
-        self.original_source: OriginalSource = original_source
-        self.playlist: str = playlist
-        self.playlist_url: str = playlist_url
+        self._track: wavelink.Track = track
+        self._original_source: OriginalSource = original_source
+        self._playlist: str = playlist
+        self._playlist_url: str = playlist_url
 
-    def get_stream(self) -> wavelink.Track:
-        return self.track
+    @property
+    def stream(self) -> wavelink.Track:
+        return self._track
 
-    def get_title(self) -> str:
-        return self.track.title
+    @property
+    def title(self) -> str:
+        return self._track.title
 
-    def get_artist(self) -> Optional[str]:
-        return self.track.author
+    @property
+    def artist(self) -> Optional[str]:
+        return self._track.author
 
-    def get_duration(self) -> int:
-        return int(self.track.duration)
+    @property
+    def duration(self) -> int:
+        return int(self._track.duration)
 
-    def get_playlist(self) -> Optional[str]:
-        return self.playlist
+    @property
+    def playlist(self) -> Optional[str]:
+        return self._playlist
 
-    def get_playlist_url(self):
+    @property
+    def playlist_url(self):
         return self.playlist_url
 
-    def get_url(self) -> str:
-        return self.track.uri
+    @property
+    def url(self) -> str:
+        return self._track.uri
 
-    def get_original_source(self) -> OriginalSource:
-        return self.original_source
+    @property
+    def original_source(self) -> OriginalSource:
+        return self._original_source
 
     @classmethod
     async def from_query(cls, query) -> list['WavelinkAudioSource']:
@@ -294,18 +306,18 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     async def play(self, audio_source: WavelinkAudioSource) -> None:
         self._refresh_disconnect_timer()
-        await self.player.play(audio_source.get_stream())
+        await self.player.play(audio_source.stream)
 
     async def play_multiple(self, songs: list[WavelinkAudioSource]):
         self._refresh_disconnect_timer()
-        await self.player.play(songs[0].get_stream())
+        await self.player.play(songs[0].stream)
         for song in songs[1:]:
             self.next_queue.appendleft(song)
 
     async def add(self, audio_source: WavelinkAudioSource, index=-1) -> PlayerResult:
         if not self.current:
             self._refresh_disconnect_timer()
-            await self.player.play(audio_source.get_stream())
+            await self.player.play(audio_source.stream)
             self.current = audio_source
             return PlayerResult.PLAYING
 
@@ -319,7 +331,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
     async def add_multiple(self, audio_sources: list[WavelinkAudioSource], index=-1):
         if not self.current:
             self._refresh_disconnect_timer()
-            await self.player.play(audio_sources[0].get_stream())
+            await self.player.play(audio_sources[0].stream)
             self.current = audio_sources[0]
             for audio_source in audio_sources[1:]:
                 self.next_queue.append(audio_source)
@@ -376,7 +388,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         next_song = None
         try:
             next_song = self.next_queue.popleft()
-            await self.player.play(next_song.get_stream())
+            await self.player.play(next_song.stream)
         except IndexError:
             pass
         self.previous_queue.append(self.current)
@@ -384,7 +396,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     async def previous(self):
         previous_song = self.previous_queue.pop()
-        await self.player.play(previous_song.get_stream())
+        await self.player.play(previous_song.stream)
         self.next_queue.appendleft(self.current)
         self.current = previous_song
 
@@ -752,7 +764,7 @@ class Musicbox(commands.Cog):
             return
 
         # Add YouTube playlist
-        if songs[0].get_original_source() == OriginalSource.YOUTUBE_PLAYLIST:
+        if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -769,7 +781,7 @@ class Musicbox(commands.Cog):
                 return
 
         # Add YouTube album
-        if songs[0].get_original_source() == OriginalSource.YOUTUBE_ALBUM:
+        if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -786,25 +798,25 @@ class Musicbox(commands.Cog):
                 return
 
         # Add Spotify playlist
-        elif songs[0].get_original_source() == OriginalSource.SPOTIFY_PLAYLIST:
+        elif songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist '[{songs[0].get_playlist()}]({songs[0].get_playlist_url()})'")
+                    description=f"Now playing playlist '[{songs[0].playlist}]({songs[0].playlist_url})'")
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist "
-                                f"{songs[0].get_playlist()}]({songs[0].get_playlist_url()}) to "
+                                f"{songs[0].playlist}]({songs[0].playlist_url}) to "
                                 f"#{len(await music_player.get_next_queue()) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
         # Add Spotify album
-        elif songs[0].get_original_source() == OriginalSource.SPOTIFY_ALBUM:
+        elif songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -823,8 +835,8 @@ class Musicbox(commands.Cog):
         # Add song
         song = songs[0]
         result = await music_player.add(song)
-        duration = await self._format_duration(song.get_duration())
-        song_name = f"[{song.get_title()}]({song.get_url()}) `{duration}`"
+        duration = await self._format_duration(song.duration)
+        song_name = f"[{song.title}]({song.url}) `{duration}`"
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
@@ -856,7 +868,7 @@ class Musicbox(commands.Cog):
         # Format the data to be in a usable list
         results_format = []
         for i in range(0, 5):
-            results_format.append(f"{i+1}. [{songs[i].get_title()}]({songs[i].get_url()}) `{songs[i].get_duration()}`")
+            results_format.append(f"{i+1}. [{songs[i].title}]({songs[i].url}) `{songs[i].duration}`")
 
         # Output results to chat
         embed = discord.Embed(
@@ -1244,10 +1256,10 @@ class Musicbox(commands.Cog):
         await music_player.add(songs[0], position-1)
         if position > len(queue):
             position = len(queue) + 1
-        duration = await self._format_duration(songs[0].get_duration())
+        duration = await self._format_duration(songs[0].duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Added [{songs[0].get_title()}]({songs[0].get_url()}) `{duration}` to #{position} in queue")
+            description=f"Added [{songs[0].title}]({songs[0].url}) `{duration}` to #{position} in queue")
         await interaction.response.send_message(embed=embed)
         return
 
@@ -1496,11 +1508,11 @@ class Musicbox(commands.Cog):
 
         # Add song to playlist
         self.playlist_songs.add(PlaylistSong.create_new(
-            songs[0].title, playlist.id, previous_song, songs[0].webpage_url, songs[0].duration))
+            songs[0].title, playlist.id, previous_song, songs[0].url, songs[0].duration))
         duration = await self._format_duration(songs[0].duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Added [{songs[0].title}]({songs[0].webpage_url}) "
+            description=f"Added [{songs[0].title}]({songs[0].url}) "
                         f"`{duration}` to position #{len(songs) + 1} "
                         f"in playlist `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
