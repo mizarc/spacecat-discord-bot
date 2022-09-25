@@ -70,6 +70,9 @@ class AudioSource(ABC):
     def get_playlist(self) -> str:
         pass
 
+    def get_playlist_url(self) -> str:
+        pass
+
     @abstractmethod
     async def get_url(self) -> str:
         pass
@@ -1734,17 +1737,30 @@ class Alexa(commands.Cog):
     # Format duration based on what values there are
     @staticmethod
     async def _format_duration(seconds):
-        try:
-            duration = strftime("%H:%M:%S", gmtime(seconds)).lstrip("0:")
-            if len(duration) < 1:
-                duration = "0:00"
-            if len(duration) < 2:
-                duration = f"0:0{duration}"
-            elif len(duration) < 3:
-                duration = f"0:{duration}"
-            return duration
-        except ValueError:
-            return "N/A"
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        formatted = ""
+        if hours:
+            if hours < 10:
+                formatted += f"0{str(hours)}:"
+            else:
+                formatted += f"{str(hours)}:"
+
+        if minutes:
+            if minutes < 10:
+                formatted += f"0{minutes}:"
+            else:
+                formatted += f"{minutes}:"
+        else:
+            formatted += "0:"
+
+        if seconds:
+            if seconds < 10:
+                formatted += f"0{seconds}"
+            else:
+                formatted += f"{seconds}"
+        return formatted
 
     @staticmethod
     async def _order_playlist_songs(playlist_songs):
