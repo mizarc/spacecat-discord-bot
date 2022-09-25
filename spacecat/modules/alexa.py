@@ -40,11 +40,12 @@ class PlayerResult(Enum):
 
 
 class SourceLocation(Enum):
-    YOUTUBE_SINGULAR = 0
-    YOUTUBE_PLAYLIST = 1
-    SPOTIFY_SINGULAR = 2
-    SPOTIFY_PLAYLIST = 3
-    SPOTIFY_ALBUM = 4
+    YOUTUBE_MUSIC = 0
+    YOUTUBE_SINGULAR = 1
+    YOUTUBE_PLAYLIST = 2
+    SPOTIFY_SINGULAR = 3
+    SPOTIFY_PLAYLIST = 4
+    SPOTIFY_ALBUM = 5
 
 
 class AudioSource(ABC):
@@ -99,8 +100,13 @@ class WavelinkAudioSource(AudioSource):
 
     @classmethod
     async def from_query(cls, query) -> list['WavelinkAudioSource']:
-        found_tracks = await wavelink.YouTubeTrack.search(query=query)
+        found_tracks = await wavelink.YouTubeMusicTrack.search(query=query)
         return [cls(track, SourceLocation.YOUTUBE_SINGULAR) for track in found_tracks]
+
+    @classmethod
+    async def from_youtube(cls, url) -> ['WavelinkAudioSource']:
+        found_tracks = await wavelink.YouTubeTrack.search(query=url)
+        return [cls(track, SourceLocation.YOUTUBE_MUSIC) for track in found_tracks]
 
     @classmethod
     async def from_youtube_playlist(cls, url) -> list['WavelinkAudioSource']:
@@ -1060,7 +1066,6 @@ class Alexa(commands.Cog):
         current_time = await self._format_duration(await music_player.get_seek_position())
 
         # Set header depending on if looping or not, and whether to add a spacer
-        queue_status = False
         if await music_player.is_looping():
             header = "Currently Playing (Looping)"
         else:
@@ -1694,6 +1699,8 @@ class Alexa(commands.Cog):
     async def _get_songs(query: str):
         if "youtube.com" in query and "list" in query:
             return await WavelinkAudioSource.from_youtube_playlist(query)
+        elif "youtube.com" in query:
+            return await WavelinkAudioSource.from_youtube(query)
         elif "spotify.com" in query and "playlist" in query:
             return await WavelinkAudioSource.from_spotify_playlist(query)
         elif "spotify.com" in query and "album" in query:
