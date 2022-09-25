@@ -166,24 +166,34 @@ T_AudioSource = TypeVar("T_AudioSource", bound=AudioSource)
 
 
 class MusicPlayer(ABC, Generic[T_AudioSource]):
+    @property
     @abstractmethod
-    async def is_looping(self) -> bool:
+    def is_looping(self) -> bool:
         pass
 
+    @is_looping.setter
     @abstractmethod
-    async def get_playing(self) -> T_AudioSource:
+    def is_looping(self, value):
         pass
 
+    @property
     @abstractmethod
-    async def get_seek_position(self) -> int:
+    def playing(self) -> T_AudioSource:
         pass
 
+    @property
     @abstractmethod
-    async def get_next_queue(self) -> list[T_AudioSource]:
+    def seek_position(self) -> int:
         pass
 
+    @property
     @abstractmethod
-    async def get_previous_queue(self) -> list[T_AudioSource]:
+    def next_queue(self) -> list[T_AudioSource]:
+        pass
+
+    @property
+    @abstractmethod
+    def previous_queue(self) -> list[T_AudioSource]:
         pass
 
     @abstractmethod
@@ -273,52 +283,61 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
 
 class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
     def __init__(self):
-        self.player: Optional[wavelink.Player] = None
-        self.current: Optional[WavelinkAudioSource] = None
-        self.next_queue: deque[WavelinkAudioSource] = deque()
-        self.previous_queue: deque[WavelinkAudioSource] = deque()
-        self.looping = False
-        self.disconnect_time = time() + self._get_disconnect_time_limit()
+        self._player: Optional[wavelink.Player] = None
+        self._current: Optional[WavelinkAudioSource] = None
+        self._next_queue: deque[WavelinkAudioSource] = deque()
+        self._previous_queue: deque[WavelinkAudioSource] = deque()
+        self._is_looping = False
+        self._disconnect_time = time() + self._get_disconnect_time_limit()
         self._disconnect_timer.start()
 
-    async def is_looping(self) -> bool:
-        return self.looping
+    @property
+    def is_looping(self) -> bool:
+        return self._is_looping
 
-    async def get_playing(self) -> WavelinkAudioSource:
-        return self.current
+    @is_looping.setter
+    def is_looping(self, value):
+        self._is_looping = value
 
-    async def get_seek_position(self) -> int:
-        return int(self.player.position)
+    @property
+    def playing(self) -> WavelinkAudioSource:
+        return self._current
 
-    async def get_next_queue(self) -> list[WavelinkAudioSource]:
-        return list(self.next_queue)
+    @property
+    def seek_position(self) -> int:
+        return int(self._player.position)
 
-    async def get_previous_queue(self) -> list[WavelinkAudioSource]:
-        return list(self.previous_queue)
+    @property
+    def next_queue(self) -> list[WavelinkAudioSource]:
+        return list(self._next_queue)
+
+    @property
+    def previous_queue(self) -> list[WavelinkAudioSource]:
+        return list(self._previous_queue)
 
     async def connect(self, channel: discord.VoiceChannel):
         # noinspection PyTypeChecker
         # Incorrectly warns this line
-        self.player = await channel.connect(cls=wavelink.Player, self_deaf=True)
+        self._player = await channel.connect(cls=wavelink.Player, self_deaf=True)
 
     async def disconnect(self):
-        await self.player.disconnect()
+        await self._player.disconnect()
 
     async def play(self, audio_source: WavelinkAudioSource) -> None:
         self._refresh_disconnect_timer()
-        await self.player.play(audio_source.stream)
+        await self._player.play(audio_source.stream)
 
     async def play_multiple(self, songs: list[WavelinkAudioSource]):
         self._refresh_disconnect_timer()
-        await self.player.play(songs[0].stream)
+        await self._player.play(songs[0].stream)
         for song in songs[1:]:
-            self.next_queue.appendleft(song)
+            self._next_queue.appendleft(song)
 
     async def add(self, audio_source: WavelinkAudioSource, index=-1) -> PlayerResult:
-        if not self.current:
+        if not self._current:
             self._refresh_disconnect_timer()
-            await self.player.play(audio_source.stream)
-            self.current = audio_source
+            await self._player.play(audio_source.stream)
+            self._current = audio_source
             return PlayerResult.PLAYING
 
         if index >= 0:
@@ -329,10 +348,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         return PlayerResult.QUEUEING
 
     async def add_multiple(self, audio_sources: list[WavelinkAudioSource], index=-1):
-        if not self.current:
+        if not self._current:
             self._refresh_disconnect_timer()
-            await self.player.play(audio_sources[0].stream)
-            self.current = audio_sources[0]
+            await self._player.play(audio_sources[0].stream)
+            self._current = audio_sources[0]
             for audio_source in audio_sources[1:]:
                 self.next_queue.append(audio_source)
             return PlayerResult.PLAYING
@@ -358,19 +377,19 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         self.previous_queue.clear()
 
     async def seek(self, position):
-        await self.player.seek(position)
+        await self._player.seek(position)
 
     async def pause(self):
-        await self.player.pause()
+        await self._player.pause()
 
     async def resume(self):
-        await self.player.resume()
+        await self._player.resume()
 
     async def loop(self):
-        self.looping = True
+        self._is_looping = True
 
     async def unloop(self):
-        self.looping = False
+        self._is_looping = False
 
     async def move(self, first_index, second_index):
         song = self.next_queue[first_index]
@@ -381,29 +400,29 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         random.shuffle(self.next_queue)
 
     async def stop(self):
-        await self.player.stop()
+        await self._player.stop()
 
     async def next(self):
         self._refresh_disconnect_timer()
         next_song = None
         try:
-            next_song = self.next_queue.popleft()
-            await self.player.play(next_song.stream)
+            next_song = self._next_queue.popleft()
+            await self._player.play(next_song.stream)
         except IndexError:
             pass
-        self.previous_queue.append(self.current)
-        self.current = next_song
+        self.previous_queue.append(self._current)
+        self._current = next_song
 
     async def previous(self):
         previous_song = self.previous_queue.pop()
-        await self.player.play(previous_song.stream)
-        self.next_queue.appendleft(self.current)
-        self.current = previous_song
+        await self._player.play(previous_song.stream)
+        self._next_queue.appendleft(self._current)
+        self._current = previous_song
 
     async def process_song_end(self):
         self._refresh_disconnect_timer()
-        if self.looping:
-            await self.play(await self.get_playing())
+        if self._is_looping:
+            await self.play(self._current)
             return
         await self.next()
 
@@ -415,7 +434,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     @tasks.loop(seconds=30)
     async def _disconnect_timer(self):
-        if self._is_auto_disconnect() and time() > self.disconnect_time and not self.player.is_playing():
+        if self._is_auto_disconnect() and time() > self.disconnect_time and not self._player.is_playing():
             await self.disconnect()
 
     def _refresh_disconnect_timer(self):
@@ -776,7 +795,7 @@ class Musicbox(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist {songs[0].playlist} to "
-                                f"#{len(await music_player.get_next_queue()) - len(songs)} in queue")
+                                f"#{len(music_player.next_queue) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
@@ -793,7 +812,7 @@ class Musicbox(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from album {songs[0].playlist} to "
-                                f"#{len(await music_player.get_next_queue()) - len(songs)} in queue")
+                                f"#{len(music_player.next_queue) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
@@ -811,7 +830,7 @@ class Musicbox(commands.Cog):
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist "
                                 f"{songs[0].playlist}]({songs[0].playlist_url}) to "
-                                f"#{len(await music_player.get_next_queue()) - len(songs)} in queue")
+                                f"#{len(music_player.next_queue) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
@@ -828,7 +847,7 @@ class Musicbox(commands.Cog):
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from Spotify album to "
-                                f"#{len(await music_player.get_next_queue()) - len(songs)} in queue")
+                                f"#{len(music_player.next_queue) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
@@ -846,7 +865,7 @@ class Musicbox(commands.Cog):
         elif result == PlayerResult.QUEUEING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Song {song_name} added to #{len(await music_player.get_next_queue())} in queue")
+                description=f"Song {song_name} added to #{len(music_player.next_queue)} in queue")
             await interaction.followup.send(embed=embed)
             return
 
@@ -1002,7 +1021,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Check if there's queue is empty
-        if len(await music_player.get_next_queue()) < 1:
+        if len(music_player.next_queue) < 1:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue after this"))
@@ -1025,7 +1044,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if not enough songs in queue
-        if len(await music_player.get_next_queue()) < 2:
+        if len(music_player.next_queue) < 2:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue to shuffle")
@@ -1051,7 +1070,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Disable loop if enabled
-        if await music_player.is_looping():
+        if music_player.is_looping:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.NO.value,
                 description="Song is already looping.")
@@ -1059,7 +1078,7 @@ class Musicbox(commands.Cog):
             return
 
         # Enable loop if disabled
-        await music_player.loop()
+        music_player.is_looping = True
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Loop enabled.")
@@ -1077,7 +1096,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Disable loop if enabled
-        if not await music_player.is_looping():
+        if not music_player.is_looping:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.NO.value,
                 description="Song is not currently looping.")
@@ -1085,7 +1104,7 @@ class Musicbox(commands.Cog):
             return
 
         # Enable loop if disabled
-        await music_player.unloop()
+        music_player.is_looping = False
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Loop disabled.")
@@ -1102,8 +1121,8 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Notify user if nothing is in the queue
-        playing = await music_player.get_playing()
-        queue = await music_player.get_next_queue()
+        playing = music_player.playing
+        queue = music_player.next_queue
         if not playing and not queue:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1116,10 +1135,10 @@ class Musicbox(commands.Cog):
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Music Queue")
         duration = await self._format_duration(playing.get_duration())
-        current_time = await self._format_duration(await music_player.get_seek_position())
+        current_time = await self._format_duration(music_player.seek_position)
 
         # Set header depending on if looping or not, and whether to add a spacer
-        if await music_player.is_looping():
+        if music_player.is_looping:
             header = "Currently Playing (Looping)"
         else:
             header = "Currently Playing"
@@ -1188,7 +1207,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove song from queue using the specified index
-        queue = await music_player.get_next_queue()
+        queue = music_player.next_queue
         try:
             if original_pos < 1:
                 raise IndexError("Position can\'t be be less than 1")
@@ -1229,7 +1248,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if too many songs in queue
-        queue = await music_player.get_next_queue()
+        queue = music_player.next_queue
         if len(queue) > 100:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1274,7 +1293,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove song from queue using the specified index
-        queue = await music_player.get_next_queue()
+        queue = music_player.next_queue
         try:
             if position < 1:
                 raise IndexError('Position can\'t be less than 1')
@@ -1305,7 +1324,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove all but the currently playing song from the queue
-        if len(await music_player.get_next_queue()) < 1:
+        if len(music_player.next_queue) < 1:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue to clear")
