@@ -264,6 +264,8 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         return list(self.previous_queue)
 
     async def connect(self, channel: discord.VoiceChannel):
+        # noinspection PyTypeChecker
+        # Incorrectly warns this line
         self.player = await channel.connect(cls=wavelink.Player, self_deaf=True)
 
     async def disconnect(self):
