@@ -80,10 +80,11 @@ class AudioSource(ABC):
 
 
 class WavelinkAudioSource(AudioSource):
-    def __init__(self, track, location, playlist=None):
+    def __init__(self, track, location, playlist=None, playlist_url=None):
         self.track: wavelink.Track = track
         self.location: SourceLocation = location
         self.playlist: str = playlist
+        self.playlist_url: str = playlist_url
 
     def get_stream(self) -> wavelink.Track:
         return self.track
@@ -100,6 +101,9 @@ class WavelinkAudioSource(AudioSource):
     def get_playlist(self) -> Optional[str]:
         return self.playlist
 
+    def get_playlist_url(self):
+        return self.playlist_url
+
     def get_url(self) -> str:
         return self.track.uri
 
@@ -109,12 +113,12 @@ class WavelinkAudioSource(AudioSource):
     @classmethod
     async def from_query(cls, query) -> list['WavelinkAudioSource']:
         found_tracks = await wavelink.YouTubeMusicTrack.search(query=query)
-        return [cls(track, SourceLocation.YOUTUBE_SINGULAR) for track in found_tracks]
+        return [cls(track, SourceLocation.YOUTUBE_MUSIC) for track in found_tracks]
 
     @classmethod
     async def from_youtube(cls, url) -> ['WavelinkAudioSource']:
         found_tracks = await wavelink.YouTubeTrack.search(query=url)
-        return [cls(track, SourceLocation.YOUTUBE_MUSIC) for track in found_tracks]
+        return [cls(track, SourceLocation.YOUTUBE_SINGULAR) for track in found_tracks]
 
     @classmethod
     async def from_youtube_playlist(cls, url) -> list['WavelinkAudioSource']:
@@ -129,7 +133,8 @@ class WavelinkAudioSource(AudioSource):
     @classmethod
     async def from_spotify_playlist(cls, url) -> list['WavelinkAudioSource']:
         found_playlist = await SpotifyPlaylist.search(query=url)
-        return [cls(track, SourceLocation.SPOTIFY_PLAYLIST, found_playlist.name) for track in found_playlist.tracks]
+        return [cls(track, SourceLocation.SPOTIFY_PLAYLIST, found_playlist.name, found_playlist.url)
+                for track in found_playlist.tracks]
 
     @classmethod
     async def from_spotify_album(cls, url) -> list['WavelinkAudioSource']:
@@ -761,13 +766,14 @@ class Alexa(commands.Cog):
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist '{songs[0].get_playlist()}'")
+                    description=f"Now playing playlist '[{songs[0].get_playlist()}]({songs[0].get_playlist_url()})'")
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Added `{len(songs)}` songs from playlist {songs[0].get_playlist()} to "
+                    description=f"Added `{len(songs)}` songs from playlist "
+                                f"{songs[0].get_playlist()}]({songs[0].get_playlist_url()}) to "
                                 f"#{len(await music_player.get_next_queue()) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
