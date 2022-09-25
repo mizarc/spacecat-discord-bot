@@ -116,11 +116,7 @@ class WavelinkAudioSource(AudioSource):
 
     @property
     def playlist_url(self):
-        return self.playlist_url
-
-    @property
-    def url(self) -> str:
-        return self._track.uri
+        return self._playlist_url
 
     @property
     def original_source(self) -> OriginalSource:
