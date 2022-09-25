@@ -22,9 +22,10 @@ class SpotifyPartialTrack(wavelink.PartialTrack):
 
 
 class SpotifyPlaylist(Searchable):
-    def __init__(self, name, tracks):
-        self.name: name = name
+    def __init__(self, tracks, name, url):
         self.tracks: list[SpotifyPartialTrack] = tracks
+        self.name: str = name
+        self.url: str = url
 
     @classmethod
     async def search(cls, query: str, *, type: wavelink.ext.spotify.SpotifySearchType = None,
@@ -34,9 +35,9 @@ class SpotifyPlaylist(Searchable):
 
         spotify_client = node._spotify
         data = await broad_spotify_search(spotify_client, query)
-
         tracks = [track['track'] for track in data['tracks']['items']]
         playlist_name = data["name"]
+        url = data["external_urls"]["spotify"]
         track_sources = []
 
         for track in tracks:
@@ -44,7 +45,7 @@ class SpotifyPlaylist(Searchable):
                                                      title=track["name"],
                                                      artist=track["artists"][0]["name"],
                                                      duration=track["duration_ms"] / 1000))
-        return cls(playlist_name, track_sources)
+        return cls(track_sources, playlist_name, url)
 
 
 async def broad_spotify_search(spotify_client: SpotifyClient, query: str):
