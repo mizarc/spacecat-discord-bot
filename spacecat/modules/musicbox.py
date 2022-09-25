@@ -73,6 +73,11 @@ class AudioSource(ABC):
 
     @property
     @abstractmethod
+    def url(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
     def playlist(self) -> str:
         pass
 
@@ -88,9 +93,10 @@ class AudioSource(ABC):
 
 
 class WavelinkAudioSource(AudioSource):
-    def __init__(self, track, original_source, playlist=None, playlist_url=None):
+    def __init__(self, track, original_source, url, playlist=None, playlist_url=None):
         self._track: wavelink.Track = track
         self._original_source: OriginalSource = original_source
+        self._url: str = url
         self._playlist: str = playlist
         self._playlist_url: str = playlist_url
 
@@ -111,6 +117,10 @@ class WavelinkAudioSource(AudioSource):
         return int(self._track.duration)
 
     @property
+    def url(self) -> str:
+        return self._url
+
+    @property
     def playlist(self) -> Optional[str]:
         return self._playlist
 
@@ -125,37 +135,38 @@ class WavelinkAudioSource(AudioSource):
     @classmethod
     async def from_query(cls, query) -> list['WavelinkAudioSource']:
         found_tracks = await wavelink.YouTubeMusicTrack.search(query=query)
-        return [cls(track, OriginalSource.YOUTUBE_SONG) for track in found_tracks]
+        return [cls(track, OriginalSource.YOUTUBE_SONG, track.uri) for track in found_tracks]
 
     @classmethod
     async def from_youtube(cls, url) -> ['WavelinkAudioSource']:
         found_tracks = await wavelink.YouTubeTrack.search(query=url)
-        return [cls(track, OriginalSource.YOUTUBE_VIDEO) for track in found_tracks]
+        return [cls(track, OriginalSource.YOUTUBE_VIDEO, track.uri) for track in found_tracks]
 
     @classmethod
     async def from_youtube_playlist(cls, url) -> list['WavelinkAudioSource']:
         found_playlist = await wavelink.YouTubePlaylist.search(query=url)
+        original_source = OriginalSource.YOUTUBE_PLAYLIST
         if "Album -" in found_playlist.name:
-            return [cls(track, OriginalSource.YOUTUBE_ALBUM, found_playlist.name[8:])
-                    for track in found_playlist.tracks]
-        return [cls(track, OriginalSource.YOUTUBE_PLAYLIST, found_playlist.name)
+            original_source = OriginalSource.YOUTUBE_ALBUM
+        return [cls(track, original_source, track.uri, found_playlist.name)
                 for track in found_playlist.tracks]
 
     @classmethod
     async def from_spotify(cls, url) -> list['WavelinkAudioSource']:
-        found_tracks = await spotify.SpotifyTrack.search(query=url)
-        return [cls(track, OriginalSource.SPOTIFY_SONG) for track in found_tracks]
+        found_tracks = await SpotifyTrack.search(query=url)
+        return [cls(track, OriginalSource.SPOTIFY_SONG, track.url) for track in found_tracks]
 
     @classmethod
     async def from_spotify_playlist(cls, url) -> list['WavelinkAudioSource']:
         found_playlist = await SpotifyPlaylist.search(query=url)
-        return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, found_playlist.name, found_playlist.url)
+        return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url, found_playlist.name, found_playlist.url)
                 for track in found_playlist.tracks]
 
     @classmethod
     async def from_spotify_album(cls, url) -> list['WavelinkAudioSource']:
-        found_tracks = await spotify.SpotifyTrack.search(query=url)
-        return [cls(track, OriginalSource.SPOTIFY_ALBUM) for track in found_tracks]
+        found_album = await SpotifyPlaylist.search(query=url)
+        return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url, found_album.name, found_album.url)
+                for track in found_album.tracks]
 
 
 T_AudioSource = TypeVar("T_AudioSource", bound=AudioSource)
