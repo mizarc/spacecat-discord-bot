@@ -35,11 +35,22 @@ class SpotifyPlaylist(Searchable):
 
         spotify_client = node._spotify
         data = await broad_spotify_search(spotify_client, query)
-        tracks = [track['track'] for track in data['tracks']['items']]
         playlist_name = data["name"]
         url = data["external_urls"]["spotify"]
-        track_sources = []
 
+        # Search page by page until all playlist tracks are found
+        tracks = [track['track'] for track in data['tracks']['items']]
+        if data['tracks']['next']:
+            next_page_url = data['tracks']['next']
+            while True:
+                async with spotify_client.session.get(next_page_url, headers=spotify_client .bearer_headers) as resp:
+                    data = await resp.json()
+                    tracks.extend([track['track'] for track in data['items']])
+                    if not data['next']:
+                        break
+                    next_page_url = data['next']
+
+        track_sources = []
         for track in tracks:
             track_sources.append(SpotifyPartialTrack(query=f'{track["name"]} - {track["artists"][0]["name"]}',
                                                      title=track["name"],
