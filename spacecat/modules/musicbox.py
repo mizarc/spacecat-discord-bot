@@ -566,8 +566,8 @@ class PlaylistSongRepository:
         self.db.commit()
 
 
-class Alexa(commands.Cog):
-    """Play some funky music in a voice chat"""
+class Musicbox(commands.Cog):
+    """Stream your favourite beats right to your local VC"""
     NOT_CONNECTED_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
         description="I need to be in a voice channel to execute music "
@@ -1815,4 +1815,4 @@ class Alexa(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(Alexa(bot))
+    await bot.add_cog(Musicbox(bot))
