@@ -13,7 +13,7 @@ class SpotifyPartialTrack(wavelink.PartialTrack):
                  cls: Optional[SearchableTrack] = YouTubeMusicTrack):
         super().__init__(query=query, node=node, cls=cls)
         self.title = title
-        self.artist = artist
+        self.author = artist
         self.duration = duration
 
     @classmethod

@@ -59,6 +59,10 @@ class AudioSource(ABC):
         pass
 
     @abstractmethod
+    def get_artist(self) -> Optional[str]:
+        pass
+
+    @abstractmethod
     def get_duration(self) -> int:
         pass
 
@@ -86,6 +90,9 @@ class WavelinkAudioSource(AudioSource):
 
     def get_title(self) -> str:
         return self.track.title
+
+    def get_artist(self) -> Optional[str]:
+        return self.track.author
 
     def get_duration(self) -> int:
         return int(self.track.duration)
@@ -1077,9 +1084,12 @@ class Alexa(commands.Cog):
             spacer = "\u200B"
         else:
             spacer = ""
+        artist = ""
+        if playing.get_artist():
+            artist = f"{playing.get_artist()} - "
         embed.add_field(
             name=header,
-            value=f"{playing.get_title()} "
+            value=f"{artist}{playing.get_title()} "
                   f"`{current_time}/{duration}` \n{spacer}")
 
         # List remaining songs in queue plus total duration
@@ -1098,7 +1108,10 @@ class Alexa(commands.Cog):
             for index, song in enumerate(
                     islice(queue, page, page + 10)):
                 duration = await self._format_duration(song.get_duration())
-                queue_info.append(f"{page + index + 1}. {song.get_title()} `{duration}`")
+                artist = ""
+                if song.get_artist():
+                    artist = f"{song.get_artist()} - "
+                queue_info.append(f"{page + index + 1}. {artist}{song.get_title()} `{duration}`")
 
             # Alert if no songs are on the specified page
             if page > 0 and not queue_info:
