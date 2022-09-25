@@ -710,7 +710,7 @@ class Alexa(commands.Cog):
         """Stops and leaves the voice channel"""
         # Alert of not in voice channel
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
 
         # Stop and Disconnect from voice channel
@@ -882,7 +882,7 @@ class Alexa(commands.Cog):
     async def stop(self, interaction: discord.Interaction):
         """Stops and clears the queue"""
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -898,7 +898,7 @@ class Alexa(commands.Cog):
     async def resume(self, interaction):
         """Resumes music if paused"""
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -923,7 +923,7 @@ class Alexa(commands.Cog):
         """Pauses the music"""
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -947,7 +947,7 @@ class Alexa(commands.Cog):
     async def seek(self, interaction: discord.Interaction, timestamp: str):
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -965,7 +965,7 @@ class Alexa(commands.Cog):
         """Skip the current song and play the next song"""
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -988,7 +988,7 @@ class Alexa(commands.Cog):
         """Randomly moves the contents of the queue around"""
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -1014,7 +1014,7 @@ class Alexa(commands.Cog):
         """Loop the currently playing song."""
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -1040,7 +1040,7 @@ class Alexa(commands.Cog):
         """Unloops so that the queue resumes as usual."""
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -1065,7 +1065,7 @@ class Alexa(commands.Cog):
     async def queue_list(self, interaction: discord.Interaction, page: int = 1):
         """List the current song queue"""
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -1151,7 +1151,7 @@ class Alexa(commands.Cog):
         """Move a song to a different position in the queue"""
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -1192,7 +1192,7 @@ class Alexa(commands.Cog):
         """Adds a song to the queue"""
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -1237,7 +1237,7 @@ class Alexa(commands.Cog):
         """Remove a song from the queue"""
         # Get music player
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
@@ -1268,7 +1268,7 @@ class Alexa(commands.Cog):
     async def queue_clear(self, interaction):
         """Clears the entire queue"""
         if not interaction.guild.voice_client:
-            interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
