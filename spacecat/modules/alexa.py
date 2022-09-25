@@ -712,11 +712,11 @@ class Alexa(commands.Cog):
         if not interaction.guild.voice_client:
             await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
             return
+        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Stop and Disconnect from voice channel
         voice_channel_name = interaction.guild.voice_client.channel.name
-        self.music_players.pop(interaction.guild_id)
-        await interaction.guild.voice_client.disconnect()
+        await music_player.disconnect()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Disconnected from voice channel `{voice_channel_name}`")
