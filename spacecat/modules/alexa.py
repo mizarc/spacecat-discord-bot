@@ -24,6 +24,7 @@ from wavelink.ext import spotify
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers import reaction_buttons
+from spacecat.helpers.spotify_extended_support import SpotifyPlaylist
 
 
 class VideoTooLongError(ValueError):
@@ -120,8 +121,8 @@ class WavelinkAudioSource(AudioSource):
 
     @classmethod
     async def from_spotify_playlist(cls, url) -> list['WavelinkAudioSource']:
-        found_tracks = await spotify.SpotifyTrack.search(query=url)
-        return [cls(track, SourceLocation.SPOTIFY_PLAYLIST) for track in found_tracks]
+        found_playlist = await SpotifyPlaylist.search(query=url)
+        return [cls(track, SourceLocation.SPOTIFY_PLAYLIST, found_playlist.name) for track in found_playlist.tracks]
 
     @classmethod
     async def from_spotify_album(cls, url) -> list['WavelinkAudioSource']:
@@ -753,13 +754,13 @@ class Alexa(commands.Cog):
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing Spotify playlist")
+                    description=f"Now playing playlist '{songs[0].get_playlist()}'")
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Added `{len(songs)}` songs from Spotify playlist to "
+                    description=f"Added `{len(songs)}` songs from playlist {songs[0].get_playlist()} to "
                                 f"#{len(await music_player.get_next_queue()) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return

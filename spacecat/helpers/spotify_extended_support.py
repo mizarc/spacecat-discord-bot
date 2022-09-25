@@ -23,7 +23,7 @@ class SpotifyPartialTrack(wavelink.PartialTrack):
 
 class SpotifyPlaylist(Searchable):
     def __init__(self, name, tracks):
-        self.name: name
+        self.name: name = name
         self.tracks: list[SpotifyPartialTrack] = tracks
 
     @classmethod
