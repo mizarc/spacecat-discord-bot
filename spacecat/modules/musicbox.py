@@ -884,35 +884,6 @@ class Musicbox(commands.Cog):
             value=results_output, inline=False)
         msg = await interaction.response.send_message(embed=embed)
 
-        # Add reaction button for every result
-        reactions = []
-        for index in range(len(results_format)):
-            emoji = reaction_buttons.number_to_emoji(index + 1)
-            await msg.add_reaction(emoji)
-            reactions.append(emoji)
-
-        # Check if the requester selects a valid reaction
-        def reaction_check(reaction, user):
-            return user == interaction.user and str(reaction) in reactions
-
-        # Request reaction within timeframe
-        try:
-            reaction, _ = await self.bot.wait_for(
-                'reaction_add', timeout=30.0, check=reaction_check)
-        except asyncio.TimeoutError:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="Song selection timed out.")
-            embed.set_author(name="Search Query", icon_url="attachment://image.png")
-            await msg.clear_reactions()
-            await msg.edit(file=None, embed=embed)
-            return
-
-        # Play selected song
-        number = reaction_buttons.emoji_to_number(str(reaction))
-        selected_song = urls[number - 1]
-        await music_player.add(selected_song)
-
     @app_commands.command()
     @perms.check()
     async def stop(self, interaction: discord.Interaction):
