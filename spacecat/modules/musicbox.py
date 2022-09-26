@@ -1522,9 +1522,12 @@ class Musicbox(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
+        artist = ""
+        if songs[0].artist:
+            artist = f"{songs[0].artist} - "
         await interaction.followup.send(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Added [{songs[0].title}]({songs[0].url}) "
+            description=f"Added [{artist}{songs[0].title}]({songs[0].url}) "
                         f"`{await self._format_duration(songs[0].duration)}` to position #{len(playlist_songs) + 1} "
                         f"in playlist '{playlist_name}'"))
 
@@ -1635,7 +1638,7 @@ class Musicbox(commands.Cog):
         # Modify page variable to get every ten results
         page -= 1
         if page > 0:
-            page = page * 10
+            page = page * 5
 
         # Get total duration
         total_duration = 0
@@ -1644,7 +1647,7 @@ class Musicbox(commands.Cog):
 
         # Make a formatted list of 10 songs on the page
         formatted_songs = []
-        for index, song in enumerate(islice(songs, page, page + 10)):
+        for index, song in enumerate(islice(songs, page, page + 5)):
             # Cut off song name to 90 chars
             if len(song.title) > 90:
                 song_name = f"{song.title[:87]}..."
@@ -1652,7 +1655,10 @@ class Musicbox(commands.Cog):
                 song_name = song.title
 
             duration = await self._format_duration(song.duration)
-            formatted_songs.append(f"{page + index + 1}. [{song_name}]({song.url}) `{duration}`")
+            artist = ""
+            if song.artist:
+                artist = f"{song.artist} - "
+            formatted_songs.append(f"{page + index + 1}. [{artist}{song_name}]({song.url}) `{duration}`")
 
         # Alert if no songs are on the specified page
         if not formatted_songs:
