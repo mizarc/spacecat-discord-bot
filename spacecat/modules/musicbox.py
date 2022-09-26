@@ -1202,7 +1202,7 @@ class Musicbox(commands.Cog):
             # Omit songs past 10 and just display amount instead
             if len(queue) > page + 6:
                 queue_info.append(
-                    f"`+{len(queue) - 6 - page} more in queue`")
+                    f"`+{len(queue) - 5 - page} more in queue`")
 
             # Output results to chat
             duration = await self._format_duration(total_duration)
@@ -1659,6 +1659,11 @@ class Musicbox(commands.Cog):
             if song.artist:
                 artist = f"{song.artist} - "
             formatted_songs.append(f"{page + index + 1}. [{artist}{song_name}]({song.url}) `{duration}`")
+
+        # Omit songs past 10 and just display amount instead
+        if len(songs) > page + 6:
+            formatted_songs.append(
+                f"`+{len(songs) - 5 - page} more in playlist`")
 
         # Alert if no songs are on the specified page
         if not formatted_songs:
