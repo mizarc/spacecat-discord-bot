@@ -284,10 +284,15 @@ class Song(ABC):
     def original_source(self) -> OriginalSource:
         pass
 
+    @property
+    @abstractmethod
+    def requester_id(self) -> int:
+        pass
+
 
 class WavelinkSong(Song):
     def __init__(self, track, original_source, url, group=None, group_url=None,
-                 title=None, artist=None, duration=None):
+                 title=None, artist=None, duration=None, requester_id=None):
         self._track: wavelink.Track = track
         self._original_source: OriginalSource = original_source
         self._url: str = url
@@ -296,6 +301,7 @@ class WavelinkSong(Song):
         self._title = title
         self._artist = artist
         self._duration = duration
+        self._requester_id = requester_id
 
     @property
     def stream(self) -> wavelink.Track:
@@ -329,49 +335,60 @@ class WavelinkSong(Song):
     def original_source(self) -> OriginalSource:
         return self._original_source
 
+    @property
+    def requester_id(self) -> int:
+        return self._requester_id
+
     @classmethod
-    async def from_local(cls, playlist_song: PlaylistSong, playlist: Playlist = None) -> list['WavelinkSong']:
+    async def from_local(cls, requester: discord.User, playlist_song: PlaylistSong,
+                         playlist: Playlist = None) -> list['WavelinkSong']:
         # noinspection PyTypeChecker
         track = wavelink.PartialTrack(query=f'{playlist_song.title} - {playlist_song.artist}', cls=YouTubeMusicTrack)
         return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
-                    artist=playlist_song.artist, duration=playlist_song.duration, group=playlist.name)]
+                    artist=playlist_song.artist, duration=playlist_song.duration,
+                    group=playlist.name, requester_id=requester.id)]
 
     @classmethod
-    async def from_query(cls, query) -> list['WavelinkSong']:
+    async def from_query(cls, query, requester: discord.User) -> list['WavelinkSong']:
         found_tracks = await wavelink.YouTubeMusicTrack.search(query=query)
-        return [cls(track, OriginalSource.YOUTUBE_SONG, track.uri) for track in found_tracks]
+        return [cls(track, OriginalSource.YOUTUBE_SONG, track.uri, requester_id=requester.id)
+                for track in found_tracks]
 
     @classmethod
-    async def from_youtube(cls, url) -> ['WavelinkSong']:
+    async def from_youtube(cls, url, requester: discord.User) -> ['WavelinkSong']:
         found_tracks = await wavelink.YouTubeTrack.search(query=url)
-        return [cls(track, OriginalSource.YOUTUBE_VIDEO, track.uri) for track in found_tracks]
+        return [cls(track, OriginalSource.YOUTUBE_VIDEO, track.uri, requester_id=requester.id)
+                for track in found_tracks]
 
     @classmethod
-    async def from_youtube_playlist(cls, url) -> list['WavelinkSong']:
+    async def from_youtube_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
         found_playlist = await wavelink.YouTubePlaylist.search(query=url)
         original_source = OriginalSource.YOUTUBE_PLAYLIST
         name = found_playlist.name
         if "Album -" in found_playlist.name:
             original_source = OriginalSource.YOUTUBE_ALBUM
             name = name[8:]
-        return [cls(track, original_source, track.uri, name, url)
+        return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
                 for track in found_playlist.tracks]
 
     @classmethod
-    async def from_spotify(cls, url) -> list['WavelinkSong']:
+    async def from_spotify(cls, url, requester: discord.User) -> list['WavelinkSong']:
         found_tracks = await SpotifyTrack.search(query=url)
-        return [cls(track, OriginalSource.SPOTIFY_SONG, track.url) for track in found_tracks]
+        return [cls(track, OriginalSource.SPOTIFY_SONG, track.url, requester_id=requester.id)
+                for track in found_tracks]
 
     @classmethod
-    async def from_spotify_playlist(cls, url) -> list['WavelinkSong']:
+    async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
         found_playlist = await SpotifyPlaylist.search(query=url)
-        return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url, found_playlist.name, found_playlist.url)
+        return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url,
+                    found_playlist.name, found_playlist.url, requester_id=requester.id)
                 for track in found_playlist.tracks]
 
     @classmethod
-    async def from_spotify_album(cls, url) -> list['WavelinkSong']:
+    async def from_spotify_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
         found_album = await SpotifyAlbum.search(query=url)
-        return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url, found_album.name, found_album.url)
+        return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url,
+                    found_album.name, found_album.url, requester_id=requester.id)
                 for track in found_album.tracks]
 
 
@@ -862,7 +879,7 @@ class Musicbox(commands.Cog):
         await interaction.response.defer()
 
         try:
-            songs = await self._get_songs(url)
+            songs = await self._get_songs(url, interaction.user)
         except SongUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -933,7 +950,7 @@ class Musicbox(commands.Cog):
     @perms.check()
     async def playsearch(self, interaction: discord.Interaction, search: str):
         # Alert user if search term returns no results
-        songs = await self._get_songs(search)
+        songs = await self._get_songs(search, interaction.user)
         if not songs:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1210,6 +1227,11 @@ class Musicbox(commands.Cog):
             embed.add_field(
                 name="Artist",
                 value=f"{song.artist}")
+
+        if song.requester_id:
+            embed.add_field(
+                name="Requested By",
+                value=f"<@{song.requester_id}>")
 
         await interaction.response.send_message(embed=embed)
 
@@ -1644,7 +1666,7 @@ class Musicbox(commands.Cog):
 
         # Find song from the specified query
         try:
-            songs = await self._get_songs(url)
+            songs = await self._get_songs(url, interaction.user)
         except SongUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1886,7 +1908,7 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        stream = await self._get_song_from_saved(songs[0], playlist)
+        stream = await self._get_song_from_saved(songs[0], playlist, interaction.user)
         result = await music_player.add(stream[0])
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
@@ -1901,7 +1923,7 @@ class Musicbox(commands.Cog):
 
         # Add remaining songs to queue
         for i in range(1, len(songs)):
-            stream = await self._get_song_from_saved(songs[i], playlist)
+            stream = await self._get_song_from_saved(songs[i], playlist, interaction.user)
             await music_player.add(stream[0])
 
     @musicsettings_group.command(name='autodisconnect')
@@ -1953,22 +1975,22 @@ class Musicbox(commands.Cog):
         return music_player
 
     @staticmethod
-    async def _get_songs(query: str):
+    async def _get_songs(query: str, requester: discord.User):
         if "youtube.com" in query and "list" in query:
-            return await WavelinkSong.from_youtube_playlist(query)
+            return await WavelinkSong.from_youtube_playlist(query, requester)
         elif "youtube.com" in query:
-            return await WavelinkSong.from_youtube(query)
+            return await WavelinkSong.from_youtube(query, requester)
         elif "spotify.com" in query and "playlist" in query:
-            return await WavelinkSong.from_spotify_playlist(query)
+            return await WavelinkSong.from_spotify_playlist(query, requester)
         elif "spotify.com" in query and "album" in query:
-            return await WavelinkSong.from_spotify_album(query)
+            return await WavelinkSong.from_spotify_album(query, requester)
         elif "spotify.com" in query:
-            return await WavelinkSong.from_spotify(query)
-        return await WavelinkSong.from_query(query)
+            return await WavelinkSong.from_spotify(query, requester)
+        return await WavelinkSong.from_query(query, requester)
 
     @staticmethod
-    async def _get_song_from_saved(playlist_song: PlaylistSong, playlist: Playlist):
-        return await WavelinkSong.from_local(playlist_song, playlist)
+    async def _get_song_from_saved(playlist_song: PlaylistSong, playlist: Playlist, requester: discord.User):
+        return await WavelinkSong.from_local(requester, playlist_song, playlist)
 
     # Format duration based on what values there are
     @staticmethod
