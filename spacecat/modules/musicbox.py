@@ -146,9 +146,11 @@ class WavelinkAudioSource(AudioSource):
     async def from_youtube_playlist(cls, url) -> list['WavelinkAudioSource']:
         found_playlist = await wavelink.YouTubePlaylist.search(query=url)
         original_source = OriginalSource.YOUTUBE_PLAYLIST
+        name = found_playlist.name
         if "Album -" in found_playlist.name:
             original_source = OriginalSource.YOUTUBE_ALBUM
-        return [cls(track, original_source, track.uri, found_playlist.name)
+            name = name[8:]
+        return [cls(track, original_source, track.uri, name, url)
                 for track in found_playlist.tracks]
 
     @classmethod
