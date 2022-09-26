@@ -178,6 +178,10 @@ class PlaylistSong:
         return self._playlist_id
 
     @property
+    def requester_id(self) -> int:
+        return self._requester_id
+
+    @property
     def title(self) -> str:
         return self._title
 
