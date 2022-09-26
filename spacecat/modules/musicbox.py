@@ -559,16 +559,44 @@ class PlaylistRepository:
 
 class PlaylistSong:
     def __init__(self, id_, title, playlist_id, previous_song_id, webpage_url, duration):
-        self.id = id_
-        self.title = title
-        self.playlist_id = playlist_id
-        self.previous_song_id = previous_song_id
-        self.webpage_url = webpage_url
-        self.duration = duration
+        self._id = id_
+        self._title = title
+        self._playlist_id = playlist_id
+        self._previous_song_id = previous_song_id
+        self._webpage_url = webpage_url
+        self._duration = duration
 
     @classmethod
     def create_new(cls, title, playlist_id, previous_song_id, webpage_url, duration):
         return cls(uuid.uuid4(), title, playlist_id, previous_song_id, webpage_url, duration)
+
+    @property
+    def id(self) -> uuid.UUID:
+        return self._id
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def playlist_id(self) -> uuid.UUID:
+        return self._playlist_id
+
+    @property
+    def previous_song_id(self) -> uuid.UUID:
+        return self._previous_song_id
+
+    @previous_song_id.setter
+    def previous_song_id(self, value: uuid.UUID):
+        self._previous_song_id = value
+
+    @property
+    def webpage_url(self) -> str:
+        return self._webpage_url
+
+    @property
+    def duration(self) -> int:
+        return self._duration
 
 
 class PlaylistSongRepository:
