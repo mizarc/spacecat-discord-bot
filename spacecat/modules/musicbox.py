@@ -858,7 +858,7 @@ class Musicbox(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
-        # Add YouTube playlist
+        # Add playlist
         if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST \
                 or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
             result = await music_player.add_multiple(songs, position-1)
@@ -877,7 +877,7 @@ class Musicbox(commands.Cog):
                 await interaction.followup.send(embed=embed)
                 return
 
-        # Add YouTube album
+        # Add album
         if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM \
                 or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
             result = await music_player.add_multiple(songs, position-1)
@@ -1460,6 +1460,7 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
+        # Check if playlist limit has been reached
         playlist_songs = self.playlist_songs.get_by_playlist(playlist.id)
         if len(playlist_songs) > 100:
             embed = discord.Embed(
@@ -1469,37 +1470,63 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        # Get song source to add to song list
+        # Defer response due to long processing times when provided a large playlist
+        await interaction.response.defer()
+
+        # Find song from the specified query
         try:
             songs = await self._get_songs(url)
         except SongUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="That song is unavailable. Maybe the link is invalid?")
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send_message(embed=embed)
             return
 
         # Set previous song as the last song in the playlist
         if not playlist_songs:
-            previous_song = uuid.UUID(int=0)
+            previous_id = uuid.UUID(int=0)
         else:
             song_ids = []
             previous_ids = []
             for playlist_song in playlist_songs:
                 song_ids.append(playlist_song.id)
                 previous_ids.append(playlist_song.previous_id)
-            previous_song = list(set(song_ids) - set(previous_ids))[0]
+            previous_id = list(set(song_ids) - set(previous_ids))[0]
 
-        # Add song to playlist
-        self.playlist_songs.add(PlaylistSong.create_new(
-            playlist.id, songs[0].title, songs[0].artist, songs[0].duration, songs[0].url, previous_song))
-        duration = await self._format_duration(songs[0].duration)
-        embed = discord.Embed(
+        for song in songs:
+            new_playlist_song = PlaylistSong.create_new(
+                playlist.id, song.title, song.artist, song.duration, song.url, previous_id)
+            self.playlist_songs.add(new_playlist_song)
+            previous_id = new_playlist_song.id
+
+        # Add playlist
+        if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST \
+                or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Added `{len(songs)}` songs from playlist "
+                            f"[{songs[0].group}]({songs[0].group_url}) to "
+                            f"#{len(playlist_songs) + 1} in playlist '{playlist_name}'")
+            await interaction.followup.send(embed=embed)
+            return
+
+        # Add album
+        if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM \
+                or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Added `{len(songs)}` songs from album "
+                            f"[{songs[0].group}]({songs[0].group_url}) to "
+                            f"#{len(playlist_songs) + 1} in playlist '{playlist_name}'")
+            await interaction.followup.send(embed=embed)
+            return
+
+        await interaction.followup.send(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Added [{songs[0].title}]({songs[0].url}) "
-                        f"`{duration}` to position #{len(playlist_songs) + 1} "
-                        f"in playlist `{playlist_name}`")
-        await interaction.response.send_message(embed=embed)
+                        f"`{await self._format_duration(songs[0].duration)}` to position #{len(playlist_songs) + 1} "
+                        f"in playlist '{playlist_name}'"))
 
     @playlist_group.command(name='remove')
     @perms.check()
