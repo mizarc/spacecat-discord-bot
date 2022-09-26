@@ -1247,6 +1247,90 @@ class Musicbox(commands.Cog):
                 value=queue_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
+    @queue_group.command(name="prevlist")
+    async def queue_prevlist(self, interaction: discord.Interaction, page: int = 1):
+        """List the current song queue"""
+        if not interaction.guild.voice_client:
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            return
+        music_player = await self._get_music_player(interaction.user.voice.channel)
+
+        # Notify user if nothing is in the queue
+        playing = music_player.playing
+        queue = music_player.previous_queue
+        if not playing and not queue:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="There's nothing in the previous played song list.")
+            await interaction.response.send_message(embed=embed)
+            return
+
+        # Output first in queue as currently playing
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.MUSIC} Previously Played Songs")
+        duration = await self._format_duration(playing.duration)
+        current_time = await self._format_duration(music_player.seek_position)
+
+        # Set header depending on if looping or not, and whether to add a spacer
+        if music_player.is_looping:
+            header = "Currently Playing (Looping)"
+        else:
+            header = "Currently Playing"
+        if len(queue) >= 1:
+            spacer = "\u200B"
+        else:
+            spacer = ""
+        artist = ""
+        if playing.artist:
+            artist = f"{playing.artist} - "
+        embed.add_field(
+            name=header,
+            value=f"[{artist}{playing.title}]({playing.url}) "
+                  f"`{current_time}/{duration}` \n{spacer}")
+
+        # List remaining songs in queue plus total duration
+        if len(queue) >= 1:
+            queue_info = []
+
+            # Modify page variable to get every ten results
+            page -= 1
+            if page > 0:
+                page = page * 5
+
+            total_duration = 0
+            for song in queue:
+                total_duration += song.duration
+
+            for index, song in enumerate(
+                    islice(queue, page, page + 5)):
+                duration = await self._format_duration(song.duration)
+                artist = ""
+                if song.artist:
+                    artist = f"{song.artist} - "
+                queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}`")
+
+            # Alert if no songs are on the specified page
+            if page > 0 and not queue_info:
+                embed = discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description="There are no songs on that page")
+                await interaction.response.send_message(embed=embed)
+                return
+
+            # Omit songs past 10 and just display amount instead
+            if len(queue) > page + 6:
+                queue_info.append(
+                    f"`+{len(queue) - 5 - page} more in queue`")
+
+            # Output results to chat
+            duration = await self._format_duration(total_duration)
+            queue_output = '\n'.join(queue_info)
+            embed.add_field(
+                name=f"Queue  `{duration}`",
+                value=queue_output, inline=False)
+        await interaction.response.send_message(embed=embed)
+
     @queue_group.command(name="move")
     @perms.check()
     async def queue_move(self, interaction, original_pos: int, new_pos: int):
