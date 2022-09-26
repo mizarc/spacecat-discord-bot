@@ -1514,7 +1514,7 @@ class Musicbox(commands.Cog):
         # Edit next song's previous song id if it exists
         try:
             next_song = songs[int(index)]
-            next_song.previous_song_id = selected_song.previous_id
+            next_song.previous_id = selected_song.previous_id
             self.playlist_songs.update(next_song)
         except IndexError:
             pass
@@ -1783,7 +1783,7 @@ class Musicbox(commands.Cog):
         # Use dictionary to pair songs with the next song
         song_links = {}
         for song in playlist_songs:
-            song_links[song.previous_song_id] = song
+            song_links[song.previous_id] = song
 
         # Order playlist songs into list
         ordered_songs = []
