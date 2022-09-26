@@ -1676,13 +1676,13 @@ class Musicbox(commands.Cog):
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}' Songs")
+            title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}'")
         if playlist.description and page == 0:
             embed.description = playlist.description
         formatted_duration = await self._format_duration(total_duration)
         playlist_songs_output = '\n'.join(formatted_songs)
         embed.add_field(
-            name=f"{len(songs)} songs available `{formatted_duration}`",
+            name=f"{len(songs)} Songs `{formatted_duration}`",
             value=playlist_songs_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
