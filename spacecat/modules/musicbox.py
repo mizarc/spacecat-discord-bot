@@ -1563,9 +1563,9 @@ class Musicbox(commands.Cog):
                         f"`{duration}` has been removed from `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
 
-    @playlist_group.command(name='move')
+    @playlist_group.command(name='reorder')
     @perms.check()
-    async def playlist_move(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
+    async def playlist_reorder(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
         """Moves a song to a specified position in a playlist"""
         # Get playlist from repo
         playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
@@ -1576,46 +1576,49 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        # Edit db to put selected song in other song's position
-        songs = self.playlist_songs.get_by_playlist(playlist.id)
-        selected_song = songs[int(original_pos) - 1]
-        other_song = songs[int(new_pos) - 1]
+        songs = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist.id))
 
-        # If moving down, shift other song down the list
+        if new_pos > len(songs):
+            new_pos = len(songs)
+        elif new_pos < 1:
+            new_pos = 1
+
+        selected_song = songs[original_pos - 1]
+        song_at_new_position = songs[new_pos - 1]
+
+        # If moving up, song after new position should be re-referenced to moved song
         if new_pos > original_pos:
-            values = [(other_song.id, selected_song.id)]
+            selected_song.previous_id = song_at_new_position.id
             try:
-                after_new_song = songs[int(new_pos)]
-                values.append((selected_song.id, after_new_song.id))
+                song_after_new_position = songs[new_pos]
+                song_after_new_position.previous_id = selected_song.id
+                self.playlist_songs.update(song_after_new_position)
             except IndexError:
                 pass
-        # If moving up, shift other song up the list
-        else:
-            values = [
-                (other_song.previous_id, selected_song.id),
-                (selected_song.id, other_song.id)]
 
-        # Connect the two songs beside the original song position
+        # If moving down, song at new position should be re-referenced to moved song
+        else:
+            selected_song.previous_id = song_at_new_position.previous_id
+            song_at_new_position.previous_id = selected_song.id
+            self.playlist_songs.update(song_at_new_position)
+
+        # Fill in the gap at the original song position
         try:
-            after_selected_song = songs[int(original_pos)]
-            values.append((selected_song.previous_id, after_selected_song.id))
+            song_after_old_position = songs[original_pos]
+            song_before_old_position = songs[original_pos - 2]
+            song_after_old_position.previous_id = song_before_old_position.id
+            self.playlist_songs.update(song_after_old_position)
         except IndexError:
             pass
 
-        # Execute all those values
-        db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-        cursor = db.cursor()
-        for value in values:
-            cursor.execute('UPDATE playlist_songs SET previous_song=? WHERE id=?', value)
-        db.commit()
-
         # Output result to chat
+        self.playlist_songs.update(selected_song)
         duration = await self._format_duration(selected_song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"[{selected_song.title}]({selected_song.url}) "
                         f"`{duration}` has been moved to position #{new_pos} "
-                        f"in playlist `{playlist_name}`")
+                        f"in playlist '{playlist_name}'")
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name='view')
@@ -1631,7 +1634,7 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        songs = self.playlist_songs.get_by_playlist(playlist.id)
+        songs = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist.id))
 
         # Modify page variable to get every ten results
         page -= 1
