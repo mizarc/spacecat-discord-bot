@@ -1827,7 +1827,7 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        songs = self.playlist_songs.get_by_playlist(playlist.id)
+        songs = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist.id))
         if not songs:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
