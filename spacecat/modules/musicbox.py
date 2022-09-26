@@ -25,10 +25,6 @@ from spacecat.helpers import perms
 from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
-class VideoTooLongError(ValueError):
-    pass
-
-
 class VideoUnavailableError(ValueError):
     pass
 
@@ -806,12 +802,6 @@ class Musicbox(commands.Cog):
 
         try:
             songs = await self._get_songs(url)
-        except VideoTooLongError:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="Woops, that video is too long")
-            await interaction.followup.send(embed=embed)
-            return
         except VideoUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
