@@ -769,12 +769,15 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def play(self, interaction: discord.Interaction, url: str):
+    async def play(self, interaction: discord.Interaction, url: str, position: int = -1):
         """Plays from a url (almost anything youtube_dl supports)"""
         # Join channel and create music player instance if it doesn't exist
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
-        # Alert due to song errors
+        if position > len(music_player.next_queue) or position < 1:
+            position = len(music_player.next_queue) + 1
+
+        # Defer response due to long processing times when provided a large playlist
         await interaction.response.defer()
 
         try:
@@ -795,7 +798,7 @@ class Musicbox(commands.Cog):
         # Add YouTube playlist
         if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST \
                 or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
-            result = await music_player.add_multiple(songs, )
+            result = await music_player.add_multiple(songs, position-1)
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
@@ -807,14 +810,14 @@ class Musicbox(commands.Cog):
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist "
                                 f"[{songs[0].playlist}]({songs[0].playlist_url}) to "
-                                f"#{len(music_player.next_queue) - len(songs)} in queue")
+                                f"#{position} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
         # Add YouTube album
         if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM \
                 or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
-            result = await music_player.add_multiple(songs, )
+            result = await music_player.add_multiple(songs, position-1)
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
@@ -826,13 +829,13 @@ class Musicbox(commands.Cog):
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from album "
                                 f"[{songs[0].playlist}]({songs[0].playlist_url}) to "
-                                f"#{len(music_player.next_queue) - len(songs)} in queue")
+                                f"#{position} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
         # Add song
         song = songs[0]
-        result = await music_player.add(song)
+        result = await music_player.add(song, position-1)
         duration = await self._format_duration(song.duration)
         artist = ""
         if song.artist:
@@ -847,7 +850,7 @@ class Musicbox(commands.Cog):
         elif result == PlayerResult.QUEUEING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Song {song_name} added to #{len(music_player.next_queue)} in queue")
+                description=f"Song {song_name} added to #{position} in queue")
             await interaction.followup.send(embed=embed)
             return
 
@@ -1218,51 +1221,6 @@ class Musicbox(commands.Cog):
                         f"`{duration}` has been moved from position #{original_pos} "
                         f"to position #{new_pos}")
         await interaction.response.send_message(embed=embed)
-
-    @queue_group.command(name="add")
-    @perms.check()
-    async def queue_add(self, interaction, position: int, url: str):
-        """Adds a song to the queue"""
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
-            return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
-
-        # Alert if too many songs in queue
-        queue = music_player.next_queue
-        if len(queue) > 100:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="Too many songs in queue. Remove some songs first before adding mroe.")
-            await interaction.response.send_message(embed=embed)
-            return
-
-        # Add the song to the queue and output result
-        try:
-            songs = await self._get_songs(url)
-        except VideoTooLongError:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="Woops, that video is too long")
-            await interaction.response.send_message(embed=embed)
-            return
-        except VideoUnavailableError:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="Woops, that video is unavailable")
-            await interaction.response.send_message(embed=embed)
-            return
-
-        await music_player.add(songs[0], position-1)
-        if position > len(queue):
-            position = len(queue) + 1
-        duration = await self._format_duration(songs[0].duration)
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"Added [{songs[0].title}]({songs[0].url}) `{duration}` to #{position} in queue")
-        await interaction.response.send_message(embed=embed)
-        return
 
     @queue_group.command(name="remove")
     @perms.check()
