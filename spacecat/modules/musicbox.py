@@ -1489,7 +1489,7 @@ class Musicbox(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Added [{songs[0].title}]({songs[0].url}) "
-                        f"`{duration}` to position #{len(songs) + 1} "
+                        f"`{duration}` to position #{len(playlist_songs) + 1} "
                         f"in playlist `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
 
