@@ -1050,6 +1050,29 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
+    async def prev(self, interaction: discord.Interaction):
+        """Go back in the queue to an already played song"""
+        # Get music player
+        if not interaction.guild.voice_client:
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            return
+        music_player = await self._get_music_player(interaction.user.voice.channel)
+
+        # Check if there's queue is empty
+        if len(music_player.previous_queue) < 1:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="There are no previously played songs."))
+            return
+
+        # Stop current song and flag that it has been skipped
+        await music_player.previous()
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description="Playing previous song."))
+
+    @app_commands.command()
+    @perms.check()
     async def shuffle(self, interaction):
         """Randomly moves the contents of the queue around"""
         # Get music player
