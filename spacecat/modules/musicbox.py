@@ -1462,7 +1462,7 @@ class Musicbox(commands.Cog):
 
         # Set previous song as the last song in the playlist
         if not playlist_songs:
-            previous_song = None
+            previous_song = uuid.UUID(int=0)
         else:
             song_ids = []
             previous_ids = []
