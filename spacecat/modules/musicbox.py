@@ -1864,6 +1864,8 @@ class Musicbox(commands.Cog):
                 formatted += f"0{seconds}"
             else:
                 formatted += f"{seconds}"
+        else:
+            formatted += "00"
         return formatted
 
     @staticmethod
