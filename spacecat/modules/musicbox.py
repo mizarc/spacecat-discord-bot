@@ -211,9 +211,9 @@ class PlaylistSongRepository:
         self.db = database
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS playlist_songs (id TEXT PRIMARY KEY, playlist_id TEXT, title TEXT, '
-                       'artist TEXT, duration INTEGER, url TEXT, previous_id INTEGER, '
-                       'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
+        cursor.execute('CREATE TABLE IF NOT EXISTS playlist_songs (id TEXT PRIMARY KEY, playlist_id TEXT, '
+                       'requester_id INTEGER, title TEXT, artist TEXT, duration INTEGER, url TEXT, '
+                       'previous_id INTEGER, FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
         self.db.commit()
 
     def get_by_id(self, id_):
@@ -233,15 +233,17 @@ class PlaylistSongRepository:
 
     def add(self, playlist_song: PlaylistSong):
         cursor = self.db.cursor()
-        values = (str(playlist_song.id), str(playlist_song.playlist_id), playlist_song.title, playlist_song.artist,
-                  playlist_song.duration, playlist_song.url, str(playlist_song.previous_id))
-        cursor.execute('INSERT INTO playlist_songs VALUES (?, ?, ?, ?, ?, ?, ?)', values)
+        values = (str(playlist_song.id), str(playlist_song.playlist_id), playlist_song.requester_id,
+                  playlist_song.title, playlist_song.artist, playlist_song.duration, playlist_song.url,
+                  str(playlist_song.previous_id))
+        cursor.execute('INSERT INTO playlist_songs VALUES (?, ?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, playlist_song: PlaylistSong):
         cursor = self.db.cursor()
-        values = (str(playlist_song.playlist_id), playlist_song.title, playlist_song.artist, playlist_song.duration,
-                  playlist_song.url, str(playlist_song.previous_id), str(playlist_song.id))
+        values = (str(playlist_song.playlist_id), playlist_song.requester_id, playlist_song.title,
+                  playlist_song.artist, playlist_song.duration, playlist_song.url, str(playlist_song.previous_id),
+                  str(playlist_song.id))
         cursor.execute('UPDATE playlist_songs SET playlist_id=?, title=?, '
                        'artist=?, duration=?, url=?, previous_id=? WHERE id=?', values)
         self.db.commit()
