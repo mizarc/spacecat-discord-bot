@@ -619,14 +619,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
     async def next(self):
         self._manual_skip = True
         self._refresh_disconnect_timer()
-        next_song = None
-        try:
-            next_song = self._next_queue.popleft()
-            await self._player.play(next_song.stream)
-        except IndexError:
-            pass
-        self._previous_queue.append(self._current)
-        self._current = next_song
+        await self._play_next_song()
 
     async def previous(self):
         self._manual_skip = True
@@ -650,7 +643,17 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         if self._is_looping:
             await self.play(self._current)
             return
-        await self.next()
+        await self._play_next_song()
+
+    async def _play_next_song(self):
+        next_song = None
+        try:
+            next_song = self._next_queue.popleft()
+            await self._player.play(next_song.stream)
+        except IndexError:
+            pass
+        self._previous_queue.append(self._current)
+        self._current = next_song
 
     async def enable_auto_disconnect(self):
         self._disconnect_timer.start()
