@@ -25,7 +25,7 @@ from spacecat.helpers import perms
 from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
-class VideoUnavailableError(ValueError):
+class SongUnavailableError(ValueError):
     pass
 
 
@@ -802,10 +802,10 @@ class Musicbox(commands.Cog):
 
         try:
             songs = await self._get_songs(url)
-        except VideoUnavailableError:
+        except SongUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Woops, that video is unavailable")
+                description="That song is unavailable. Maybe the link is invalid?")
             await interaction.followup.send(embed=embed)
             return
 
@@ -1425,17 +1425,11 @@ class Musicbox(commands.Cog):
 
         # Get song source to add to song list
         try:
-            songs = await self._fetch_songs(url)
-        except VideoTooLongError:
+            songs = await self._get_songs(url)
+        except SongUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Woops, that video is too long")
-            await interaction.response.send_message(embed=embed)
-            return
-        except VideoUnavailableError:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="Woops, that video is unavailable")
+                description="That song is unavailable. Maybe the link is invalid?")
             await interaction.response.send_message(embed=embed)
             return
 
