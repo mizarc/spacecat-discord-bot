@@ -139,10 +139,9 @@ class PlaylistRepository:
         cursor.execute('UPDATE playlist SET guild_id=?, name=?, description=? WHERE id=?', values)
         self.db.commit()
 
-    def remove(self, playlist):
+    def remove(self, id_: uuid.UUID):
         cursor = self.db.cursor()
-        values = (playlist.id,)
-        cursor.execute('DELETE FROM playlist WHERE id=?', values)
+        cursor.execute('DELETE FROM playlist WHERE id=?', (str(id_),))
         self.db.commit()
 
 
@@ -1342,17 +1341,16 @@ class Musicbox(commands.Cog):
         # Alert if playlist doesn't exist in db
         playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
         if not playlist:
-            embed = discord.Embed(
+            await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` doesn't exist")
-            await interaction.response.send_message(embed=embed)
+                description=f"Playlist `{playlist_name}` doesn't exist"))
             return
 
         # Remove playlist from database and all songs linked to it
-        self.playlists.remove(playlist)
         playlist_songs = self.playlist_songs.get_by_playlist(playlist.id)
         for song in playlist_songs:
-            self.playlist_songs.remove(song)
+            self.playlist_songs.remove(song.id)
+        self.playlists.remove(playlist.id)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been destroyed")
