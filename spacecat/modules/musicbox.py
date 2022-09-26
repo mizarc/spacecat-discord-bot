@@ -1634,20 +1634,15 @@ class Musicbox(commands.Cog):
             return
 
         # Get all playlist names and duration
-        playlist_names = []
-        for playlist in playlists:
+        playlist_info = []
+        for index, playlist in enumerate(islice(playlists, 0, 10)):
             songs = self.playlist_songs.get_by_playlist(playlist.id)
             song_duration = 0
             for song in songs:
                 song_duration += song.duration
-            playlist_names.append([playlist.name, song_duration])
-
-        # Format playlist songs into pretty list
-        playlist_info = []
-        for index, playlist_name in enumerate(islice(playlist_names, 0, 10)):
-            duration = await self._format_duration(playlist_name[1])
+            duration = await self._format_duration(song_duration)
             playlist_info.append(
-                f"{index + 1}. {playlist_name[0]} `{duration}`")
+                f"{index + 1}. {playlist.name} `{duration}` (Created by <@{playlist.creator_id}>)")
 
         # Output results to chat
         embed = discord.Embed(
@@ -1873,7 +1868,8 @@ class Musicbox(commands.Cog):
             artist = ""
             if song.artist:
                 artist = f"{song.artist} - "
-            formatted_songs.append(f"{page + index + 1}. [{artist}{song_name}]({song.url}) `{duration}`")
+            formatted_songs.append(f"{page + index + 1}. [{artist}{song_name}]({song.url}) `{duration}` "
+                                   f"(Added by <@{song.requester_id}>)")
 
         # Omit songs past 10 and just display amount instead
         if len(songs) > page + 6:
