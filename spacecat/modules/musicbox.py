@@ -35,6 +35,7 @@ class PlayerResult(Enum):
 
 
 class OriginalSource(Enum):
+    LOCAL = "Playlist"
     YOUTUBE_VIDEO = "YouTube Video"
     YOUTUBE_SONG = "YouTube Song"
     YOUTUBE_PLAYLIST = "YouTube Playlist"
@@ -72,12 +73,12 @@ class Song(ABC):
 
     @property
     @abstractmethod
-    def playlist(self) -> str:
+    def group(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def playlist_url(self) -> str:
+    def group_url(self) -> str:
         pass
 
     @property
@@ -87,12 +88,12 @@ class Song(ABC):
 
 
 class WavelinkSong(Song):
-    def __init__(self, track, original_source, url, playlist=None, playlist_url=None):
+    def __init__(self, track, original_source, url, group=None, group_url=None):
         self._track: wavelink.Track = track
         self._original_source: OriginalSource = original_source
         self._url: str = url
-        self._playlist: str = playlist
-        self._playlist_url: str = playlist_url
+        self._playlist: str = group
+        self._playlist_url: str = group_url
 
     @property
     def stream(self) -> wavelink.Track:
@@ -115,11 +116,11 @@ class WavelinkSong(Song):
         return self._url
 
     @property
-    def playlist(self) -> Optional[str]:
+    def group(self) -> Optional[str]:
         return self._playlist
 
     @property
-    def playlist_url(self):
+    def group_url(self):
         return self._playlist_url
 
     @property
@@ -844,14 +845,14 @@ class Musicbox(commands.Cog):
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist {songs[0].playlist}")
+                    description=f"Now playing playlist {songs[0].group}")
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist "
-                                f"[{songs[0].playlist}]({songs[0].playlist_url}) to "
+                                f"[{songs[0].group}]({songs[0].group_url}) to "
                                 f"#{position} in queue")
                 await interaction.followup.send(embed=embed)
                 return
@@ -863,14 +864,14 @@ class Musicbox(commands.Cog):
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing album [{songs[0].playlist}]({songs[0].playlist_url})")
+                    description=f"Now playing album [{songs[0].group}]({songs[0].group_url})")
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from album "
-                                f"[{songs[0].playlist}]({songs[0].playlist_url}) to "
+                                f"[{songs[0].group}]({songs[0].group_url}) to "
                                 f"#{position} in queue")
                 await interaction.followup.send(embed=embed)
                 return
