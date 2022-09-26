@@ -790,7 +790,8 @@ class Musicbox(commands.Cog):
             return
 
         # Add YouTube playlist
-        if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST:
+        if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST \
+                or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
@@ -801,59 +802,27 @@ class Musicbox(commands.Cog):
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Added `{len(songs)}` songs from playlist {songs[0].playlist} to "
+                    description=f"Added `{len(songs)}` songs from playlist "
+                                f"[{songs[0].playlist}]({songs[0].playlist_url}) to "
                                 f"#{len(music_player.next_queue) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
 
         # Add YouTube album
-        if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM:
+        if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM \
+                or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
             result = await music_player.add_multiple(songs, )
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing album {songs[0].playlist}")
+                    description=f"Now playing album [{songs[0].playlist}]({songs[0].playlist_url})")
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Added `{len(songs)}` songs from album {songs[0].playlist} to "
-                                f"#{len(music_player.next_queue) - len(songs)} in queue")
-                await interaction.followup.send(embed=embed)
-                return
-
-        # Add Spotify playlist
-        elif songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
-            result = await music_player.add_multiple(songs, )
-            if result == PlayerResult.PLAYING:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist '[{songs[0].playlist}]({songs[0].playlist_url})'")
-                await interaction.followup.send(embed=embed)
-                return
-            elif result == PlayerResult.QUEUEING:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
-                    description=f"Added `{len(songs)}` songs from playlist "
-                                f"{songs[0].playlist}]({songs[0].playlist_url}) to "
-                                f"#{len(music_player.next_queue) - len(songs)} in queue")
-                await interaction.followup.send(embed=embed)
-                return
-
-        # Add Spotify album
-        elif songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
-            result = await music_player.add_multiple(songs, )
-            if result == PlayerResult.PLAYING:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing Spotify album")
-                await interaction.followup.send(embed=embed)
-                return
-            elif result == PlayerResult.QUEUEING:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
-                    description=f"Added `{len(songs)}` songs from Spotify album to "
+                    description=f"Added `{len(songs)}` songs from album "
+                                f"[{songs[0].playlist}]({songs[0].playlist_url}) to "
                                 f"#{len(music_player.next_queue) - len(songs)} in queue")
                 await interaction.followup.send(embed=embed)
                 return
@@ -862,7 +831,10 @@ class Musicbox(commands.Cog):
         song = songs[0]
         result = await music_player.add(song)
         duration = await self._format_duration(song.duration)
-        song_name = f"[{song.title}]({song.url}) `{duration}`"
+        artist = ""
+        if song.artist:
+            artist = f"{song.artist} - "
+        song_name = f"[{artist}{song.title}]({song.url}) `{duration}`"
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
