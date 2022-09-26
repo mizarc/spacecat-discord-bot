@@ -1852,7 +1852,7 @@ class Musicbox(commands.Cog):
         if len(time_split) >= 2:
             minutes = time_split[-2]
         if len(time_split) >= 1:
-            minutes = time_split[-1]
+            seconds = time_split[-1]
         return int(hours) * 3600000 + int(minutes) * 60000 + int(seconds) * 1000
 
 
