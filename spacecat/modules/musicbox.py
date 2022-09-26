@@ -501,7 +501,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue: deque[WavelinkSong] = deque()
         self._previous_queue: deque[WavelinkSong] = deque()
         self._is_looping = False
-        self._skip_toggle = False
+        self._manual_skip = False
         self._disconnect_time = time() + self._get_disconnect_time_limit()
         self._disconnect_timer.start()
 
@@ -614,10 +614,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         random.shuffle(self._next_queue)
 
     async def stop(self):
-        self._skip_toggle = True
         await self._player.stop()
 
     async def next(self):
+        self._manual_skip = True
         self._refresh_disconnect_timer()
         next_song = None
         try:
@@ -629,17 +629,27 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._current = next_song
 
     async def previous(self):
-        previous_song = self._previous_queue.pop()
-        await self._player.play(previous_song.stream)
+        self._manual_skip = True
+        self._refresh_disconnect_timer()
+        previous_song = None
+        try:
+            previous_song = self._previous_queue.pop()
+            await self._player.play(previous_song.stream)
+        except IndexError:
+            pass
         self._next_queue.appendleft(self._current)
         self._current = previous_song
 
     async def process_song_end(self):
+        # Don't do anything if manually set to play next or previous song
+        if self._manual_skip:
+            self._manual_skip = False
+            return
+
         self._refresh_disconnect_timer()
-        if self._is_looping and not self._skip_toggle:
+        if self._is_looping:
             await self.play(self._current)
             return
-        self._skip_toggle = False
         await self.next()
 
     async def enable_auto_disconnect(self):
@@ -1043,7 +1053,7 @@ class Musicbox(commands.Cog):
             return
 
         # Stop current song and flag that it has been skipped
-        await music_player.stop()
+        await music_player.next()
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Song has been skipped."))
