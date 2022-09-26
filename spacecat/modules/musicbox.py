@@ -1356,7 +1356,7 @@ class Musicbox(commands.Cog):
         """Sets the description for the playlist"""
         # Alert if playlist doesn't exist
         playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
-        if playlist:
+        if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` doesn't exist")
