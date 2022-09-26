@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import asyncio
 import random
 import sqlite3
 from collections import deque
@@ -23,7 +22,6 @@ from wavelink.ext import spotify
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
-from spacecat.helpers import reaction_buttons
 from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
@@ -465,14 +463,38 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
 class Playlist:
     def __init__(self, id_, name, guild_id, description):
-        self.id = id_
-        self.name = name
-        self.guild_id = guild_id
-        self.description = description
+        self._id = id_
+        self._name = name
+        self._guild_id = guild_id
+        self._description = description
 
     @classmethod
     def create_new(cls, name, guild):
         return cls(uuid.uuid4(), name, guild.id, "")
+
+    @property
+    def id(self) -> uuid.UUID:
+        return self._id
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
+    def guild_id(self) -> int:
+        return self._guild_id
+
+    @property
+    def description(self) -> str:
+        return self._description
+
+    @description.setter
+    def description(self, value):
+        self._description = value
 
 
 class PlaylistRepository:
