@@ -626,7 +626,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._refresh_disconnect_timer()
         previous_song = None
         try:
-            previous_song = self._previous_queue.pop()
+            previous_song = self._previous_queue.popleft()
             await self._player.play(previous_song.stream)
         except IndexError:
             pass
@@ -652,7 +652,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
             await self._player.play(next_song.stream)
         except IndexError:
             pass
-        self._previous_queue.append(self._current)
+        self._previous_queue.appendleft(self._current)
         self._current = next_song
 
     async def enable_auto_disconnect(self):
