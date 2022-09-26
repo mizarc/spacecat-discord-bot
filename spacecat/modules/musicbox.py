@@ -36,9 +36,9 @@ class PlayerResult(Enum):
 
 
 class OriginalSource(Enum):
-    LOCAL = "Playlist"
+    LOCAL = "Saved Playlist"
     YOUTUBE_VIDEO = "YouTube Video"
-    YOUTUBE_SONG = "YouTube Song"
+    YOUTUBE_SONG = "YouTube Music"
     YOUTUBE_PLAYLIST = "YouTube Playlist"
     YOUTUBE_ALBUM = "YouTube Album"
     SPOTIFY_SONG = "Spotify Song"
@@ -281,7 +281,7 @@ class Song(ABC):
 
     @property
     @abstractmethod
-    def original_source(self) -> str:
+    def original_source(self) -> OriginalSource:
         pass
 
 
@@ -330,11 +330,11 @@ class WavelinkSong(Song):
         return self._original_source
 
     @classmethod
-    async def from_local(cls, playlist_song: PlaylistSong) -> list['WavelinkSong']:
+    async def from_local(cls, playlist_song: PlaylistSong, playlist: Playlist = None) -> list['WavelinkSong']:
         # noinspection PyTypeChecker
         track = wavelink.PartialTrack(query=f'{playlist_song.title} - {playlist_song.artist}', cls=YouTubeMusicTrack)
         return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
-                    artist=playlist_song.artist, duration=playlist_song.duration)]
+                    artist=playlist_song.artist, duration=playlist_song.duration, group=playlist.name)]
 
     @classmethod
     async def from_query(cls, query) -> list['WavelinkSong']:
@@ -1162,6 +1162,57 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
         return
 
+    @app_commands.command()
+    async def song(self, interaction: discord.Interaction):
+        """List information about the currently playing song."""
+        # Get music player
+        if not interaction.guild.voice_client:
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            return
+        music_player = await self._get_music_player(interaction.user.voice.channel)
+
+        # Alert if nothing is playing
+        song = music_player.playing
+        if not song:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="There's nothing currently playing."))
+            return
+
+        # Output playing song
+        duration = await self._format_duration(song.duration)
+        current_time = await self._format_duration(music_player.seek_position)
+        artist = ""
+        if song.artist:
+            artist = f"{song.artist} - "
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title=f"{constants.EmbedIcon.MUSIC} Currently Playing",
+            description=f"[{artist}{song.title}]({song.url}) "
+                  f"`{current_time}/{duration}`\n\u200B")
+
+        if song.original_source == OriginalSource.YOUTUBE_ALBUM \
+                or song.original_source == OriginalSource.SPOTIFY_ALBUM \
+                or song.original_source == OriginalSource.YOUTUBE_PLAYLIST \
+                or song.original_source == OriginalSource.SPOTIFY_PLAYLIST \
+                or song.original_source == OriginalSource.LOCAL:
+            embed.add_field(
+                name=f"Fetched from {song.original_source.value}",
+                value=f"[{song.group}]({song.group_url})",
+                inline=False)
+        else:
+            embed.add_field(
+                name=f"Fetched from ",
+                value=f"{song.original_source.value}",
+                inline=False)
+
+        if song.artist:
+            embed.add_field(
+                name="Artist",
+                value=f"{song.artist}")
+
+        await interaction.response.send_message(embed=embed)
+
     @queue_group.command(name="list")
     @perms.check()
     async def queue_list(self, interaction: discord.Interaction, page: int = 1):
@@ -1835,7 +1886,7 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        stream = await self._get_song_from_saved(songs[0])
+        stream = await self._get_song_from_saved(songs[0], playlist)
         result = await music_player.add(stream[0])
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
@@ -1850,7 +1901,7 @@ class Musicbox(commands.Cog):
 
         # Add remaining songs to queue
         for i in range(1, len(songs)):
-            stream = await self._get_song_from_saved(songs[i])
+            stream = await self._get_song_from_saved(songs[i], playlist)
             await music_player.add(stream[0])
 
     @musicsettings_group.command(name='autodisconnect')
@@ -1916,8 +1967,8 @@ class Musicbox(commands.Cog):
         return await WavelinkSong.from_query(query)
 
     @staticmethod
-    async def _get_song_from_saved(playlist_song: PlaylistSong):
-        return await WavelinkSong.from_local(playlist_song)
+    async def _get_song_from_saved(playlist_song: PlaylistSong, playlist: Playlist):
+        return await WavelinkSong.from_local(playlist_song, playlist)
 
     # Format duration based on what values there are
     @staticmethod
