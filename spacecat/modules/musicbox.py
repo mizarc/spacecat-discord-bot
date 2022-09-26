@@ -460,7 +460,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
 
 class Playlist:
     def __init__(self, id_, name, guild_id, description):
-        self._id = id_
+        self._id: uuid.UUID = id_
         self._name = name
         self._guild_id = guild_id
         self._description = description
@@ -559,45 +559,50 @@ class PlaylistRepository:
 
 
 class PlaylistSong:
-    def __init__(self, id_, title, playlist_id, previous_song_id, webpage_url, duration):
-        self._id = id_
-        self._title = title
+    def __init__(self, id_, playlist_id, title, artist, duration, url, previous_id):
+        self._id: uuid.UUID = id_
         self._playlist_id = playlist_id
-        self._previous_song_id = previous_song_id
-        self._webpage_url = webpage_url
+        self._title = title
+        self._artist = artist
+        self._url = url
         self._duration = duration
+        self._previous_id = previous_id
 
     @classmethod
-    def create_new(cls, title, playlist_id, previous_song_id, webpage_url, duration):
-        return cls(uuid.uuid4(), title, playlist_id, previous_song_id, webpage_url, duration)
+    def create_new(cls, playlist_id, title, artist, duration, url, previous_id):
+        return cls(uuid.uuid4(), playlist_id, title, artist, duration, url, previous_id)
 
     @property
     def id(self) -> uuid.UUID:
         return self._id
 
     @property
-    def title(self) -> str:
-        return self._title
-
-    @property
     def playlist_id(self) -> uuid.UUID:
         return self._playlist_id
 
     @property
-    def previous_song_id(self) -> uuid.UUID:
-        return self._previous_song_id
-
-    @previous_song_id.setter
-    def previous_song_id(self, value: uuid.UUID):
-        self._previous_song_id = value
+    def title(self) -> str:
+        return self._title
 
     @property
-    def webpage_url(self) -> str:
-        return self._webpage_url
+    def artist(self) -> Optional[str]:
+        return self._artist
 
     @property
     def duration(self) -> int:
         return self._duration
+
+    @property
+    def url(self) -> str:
+        return self._url
+
+    @property
+    def previous_id(self) -> uuid.UUID:
+        return self._previous_id
+
+    @previous_id.setter
+    def previous_id(self, value: uuid.UUID):
+        self._previous_id = value
 
 
 class PlaylistSongRepository:
@@ -605,48 +610,39 @@ class PlaylistSongRepository:
         self.db = database
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS playlist_songs (id TEXT PRIMARY KEY, title TEXT, '
-                       'playlist_id TEXT, previous_song_id INTEGER, webpage_url TEXT, duration INTEGER, '
+        cursor.execute('CREATE TABLE IF NOT EXISTS playlist_songs (id TEXT PRIMARY KEY, playlist_id TEXT, title TEXT, '
+                       'artist TEXT, duration INTEGER, url TEXT, previous_id INTEGER, '
                        'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
         self.db.commit()
 
-    def get_all(self):
-        """Get list of all playlists"""
-        results = self.db.cursor().execute('SELECT * FROM playlist_songs').fetchall()
-        playlists = []
-        for result in results:
-            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
-        return playlists
-
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM playlist_songs WHERE id=?', (id_,)).fetchone()
-        return PlaylistSong(result[0], result[1], result[2], result[3], result[4], result[5])
+        return self._result_to_playlist_song(result)
 
     def get_by_playlist(self, playlist):
         # Get list of all songs in playlist
         cursor = self.db.cursor()
-        values = (playlist.id,)
-        cursor.execute('SELECT * FROM playlist_songs WHERE playlist_id=?', values)
+        cursor.execute('SELECT * FROM playlist_songs WHERE playlist_id=?', (playlist.id,))
         results = cursor.fetchall()
 
         songs = []
         for result in results:
-            songs.append(PlaylistSong(result[0], result[1], result[2], result[3], result[4], result[5]))
+            songs.append(self._result_to_playlist_song(result))
         return songs
 
     def add(self, playlist_song: PlaylistSong):
         cursor = self.db.cursor()
-        values = (str(playlist_song.id), playlist_song.title, playlist_song.playlist_id,
-                  playlist_song.previous_song_id, playlist_song.webpage_url, playlist_song.duration)
-        cursor.execute('INSERT INTO playlist_songs VALUES (?, ?, ?, ?, ?, ?)', values)
+        values = (str(playlist_song.id), str(playlist_song.playlist_id), playlist_song.title, playlist_song.artist,
+                  playlist_song.duration, playlist_song.url, str(playlist_song.previous_id))
+        cursor.execute('INSERT INTO playlist_songs VALUES (?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, playlist_song: PlaylistSong):
         cursor = self.db.cursor()
-        values = (playlist_song.title, playlist_song.playlist_id, playlist_song.previous_song_id,
-                  playlist_song.webpage_url, playlist_song.duration, playlist_song.id)
-        cursor.execute('UPDATE playlist_songs SET title=?, playlist_id=?, '
-                       'previous_song_id=?, webpage_url=?, duration=? WHERE id=?', values)
+        values = (str(playlist_song.playlist_id), playlist_song.title, playlist_song.artist, playlist_song.duration,
+                  playlist_song.url, str(playlist_song.previous_id), str(playlist_song.id))
+        cursor.execute('UPDATE playlist_songs SET playlist_id=?, title=?, '
+                       'artist=?, duration=?, url=?, previous_id=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, playlist):
@@ -654,6 +650,11 @@ class PlaylistSongRepository:
         values = (playlist.id,)
         cursor.execute('DELETE FROM playlist_songs WHERE id=?', values)
         self.db.commit()
+
+    @staticmethod
+    def _result_to_playlist_song(result):
+        return PlaylistSong(uuid.UUID(result[0]), uuid.UUID(result[1]), result[2], result[3],
+                            result[4], result[5], uuid.UUID(result[6])) if result else None
 
 
 class Musicbox(commands.Cog):
@@ -1467,12 +1468,12 @@ class Musicbox(commands.Cog):
             previous_ids = []
             for playlist_song in playlist_songs:
                 song_ids.append(playlist_song.id)
-                previous_ids.append(playlist_song.previous_song_id)
+                previous_ids.append(playlist_song.previous_id)
             previous_song = list(set(song_ids) - set(previous_ids))[0]
 
         # Add song to playlist
         self.playlist_songs.add(PlaylistSong.create_new(
-            songs[0].title, playlist.id, previous_song, songs[0].url, songs[0].duration))
+            playlist.id, songs[0].title, songs[0].artist, songs[0].duration, songs[0].url, previous_song))
         duration = await self._format_duration(songs[0].duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -1501,7 +1502,7 @@ class Musicbox(commands.Cog):
         # Edit next song's previous song id if it exists
         try:
             next_song = songs[int(index)]
-            next_song.previous_song_id = selected_song.previous_song_id
+            next_song.previous_song_id = selected_song.previous_id
             self.playlist_songs.update(next_song)
         except IndexError:
             pass
@@ -1511,7 +1512,7 @@ class Musicbox(commands.Cog):
         duration = await self._format_duration(selected_song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
-            description=f"[{selected_song.title}]({selected_song.webpage_url}) "
+            description=f"[{selected_song.title}]({selected_song.url}) "
                         f"`{duration}` has been removed from `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
 
@@ -1544,13 +1545,13 @@ class Musicbox(commands.Cog):
         # If moving up, shift other song up the list
         else:
             values = [
-                (other_song.previous_song_id, selected_song.id),
+                (other_song.previous_id, selected_song.id),
                 (selected_song.id, other_song.id)]
 
         # Connect the two songs beside the original song position
         try:
             after_selected_song = songs[int(original_pos)]
-            values.append((selected_song.previous_song_id, after_selected_song.id))
+            values.append((selected_song.previous_id, after_selected_song.id))
         except IndexError:
             pass
 
@@ -1565,7 +1566,7 @@ class Musicbox(commands.Cog):
         duration = await self._format_duration(selected_song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"[{selected_song.title}]({selected_song.webpage_url}) "
+            description=f"[{selected_song.title}]({selected_song.url}) "
                         f"`{duration}` has been moved to position #{new_pos} "
                         f"in playlist `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
@@ -1605,7 +1606,7 @@ class Musicbox(commands.Cog):
                 song_name = song.title
 
             duration = await self._format_duration(song.duration)
-            formatted_songs.append(f"{page + index + 1}. [{song_name}]({song.webpage_url}) `{duration}`")
+            formatted_songs.append(f"{page + index + 1}. [{song_name}]({song.url}) `{duration}`")
 
         # Alert if no songs are on the specified page
         if not formatted_songs:
@@ -1652,7 +1653,7 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        stream = await self._get_songs(songs[0].webpage_url)
+        stream = await self._get_songs(songs[0].url)
         result = await music_player.add(stream[0])
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
@@ -1667,7 +1668,7 @@ class Musicbox(commands.Cog):
 
         # Add remaining songs to queue
         for i in range(1, len(songs)):
-            stream = await self._get_songs(songs[i].webpage_url)
+            stream = await self._get_songs(songs[i].url)
             await music_player.add(stream[0])
 
     @musicsettings_group.command(name='autodisconnect')
