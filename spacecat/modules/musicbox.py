@@ -44,7 +44,7 @@ class OriginalSource(Enum):
     SPOTIFY_ALBUM = "Spotify Album"
 
 
-class AudioSource(ABC):
+class Song(ABC):
     @property
     @abstractmethod
     def stream(self) -> Any:
@@ -82,11 +82,11 @@ class AudioSource(ABC):
 
     @property
     @abstractmethod
-    async def original_source(self) -> str:
+    def original_source(self) -> str:
         pass
 
 
-class WavelinkAudioSource(AudioSource):
+class WavelinkSong(Song):
     def __init__(self, track, original_source, url, playlist=None, playlist_url=None):
         self._track: wavelink.Track = track
         self._original_source: OriginalSource = original_source
@@ -127,17 +127,17 @@ class WavelinkAudioSource(AudioSource):
         return self._original_source
 
     @classmethod
-    async def from_query(cls, query) -> list['WavelinkAudioSource']:
+    async def from_query(cls, query) -> list['WavelinkSong']:
         found_tracks = await wavelink.YouTubeMusicTrack.search(query=query)
         return [cls(track, OriginalSource.YOUTUBE_SONG, track.uri) for track in found_tracks]
 
     @classmethod
-    async def from_youtube(cls, url) -> ['WavelinkAudioSource']:
+    async def from_youtube(cls, url) -> ['WavelinkSong']:
         found_tracks = await wavelink.YouTubeTrack.search(query=url)
         return [cls(track, OriginalSource.YOUTUBE_VIDEO, track.uri) for track in found_tracks]
 
     @classmethod
-    async def from_youtube_playlist(cls, url) -> list['WavelinkAudioSource']:
+    async def from_youtube_playlist(cls, url) -> list['WavelinkSong']:
         found_playlist = await wavelink.YouTubePlaylist.search(query=url)
         original_source = OriginalSource.YOUTUBE_PLAYLIST
         name = found_playlist.name
@@ -148,27 +148,27 @@ class WavelinkAudioSource(AudioSource):
                 for track in found_playlist.tracks]
 
     @classmethod
-    async def from_spotify(cls, url) -> list['WavelinkAudioSource']:
+    async def from_spotify(cls, url) -> list['WavelinkSong']:
         found_tracks = await SpotifyTrack.search(query=url)
         return [cls(track, OriginalSource.SPOTIFY_SONG, track.url) for track in found_tracks]
 
     @classmethod
-    async def from_spotify_playlist(cls, url) -> list['WavelinkAudioSource']:
+    async def from_spotify_playlist(cls, url) -> list['WavelinkSong']:
         found_playlist = await SpotifyPlaylist.search(query=url)
         return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url, found_playlist.name, found_playlist.url)
                 for track in found_playlist.tracks]
 
     @classmethod
-    async def from_spotify_album(cls, url) -> list['WavelinkAudioSource']:
+    async def from_spotify_album(cls, url) -> list['WavelinkSong']:
         found_album = await SpotifyAlbum.search(query=url)
         return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url, found_album.name, found_album.url)
                 for track in found_album.tracks]
 
 
-T_AudioSource = TypeVar("T_AudioSource", bound=AudioSource)
+T_Song = TypeVar("T_Song", bound=Song)
 
 
-class MusicPlayer(ABC, Generic[T_AudioSource]):
+class MusicPlayer(ABC, Generic[T_Song]):
     @property
     @abstractmethod
     def is_looping(self) -> bool:
@@ -181,7 +181,7 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
 
     @property
     @abstractmethod
-    def playing(self) -> T_AudioSource:
+    def playing(self) -> T_Song:
         pass
 
     @property
@@ -191,12 +191,12 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
 
     @property
     @abstractmethod
-    def next_queue(self) -> list[T_AudioSource]:
+    def next_queue(self) -> list[T_Song]:
         pass
 
     @property
     @abstractmethod
-    def previous_queue(self) -> list[T_AudioSource]:
+    def previous_queue(self) -> list[T_Song]:
         pass
 
     @abstractmethod
@@ -208,19 +208,19 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
         pass
 
     @abstractmethod
-    async def play(self, song: T_AudioSource):
+    async def play(self, song: T_Song):
         pass
 
     @abstractmethod
-    async def play_multiple(self, songs: list[T_AudioSource]):
+    async def play_multiple(self, songs: list[T_Song]):
         pass
 
     @abstractmethod
-    async def add(self, song: T_AudioSource, index=0):
+    async def add(self, song: T_Song, index=0):
         pass
 
     @abstractmethod
-    async def add_multiple(self, songs: list[T_AudioSource], index=0):
+    async def add_multiple(self, songs: list[T_Song], index=0):
         pass
 
     @abstractmethod
@@ -284,12 +284,12 @@ class MusicPlayer(ABC, Generic[T_AudioSource]):
         pass
 
 
-class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
+class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
     def __init__(self):
         self._player: Optional[wavelink.Player] = None
-        self._current: Optional[WavelinkAudioSource] = None
-        self._next_queue: deque[WavelinkAudioSource] = deque()
-        self._previous_queue: deque[WavelinkAudioSource] = deque()
+        self._current: Optional[WavelinkSong] = None
+        self._next_queue: deque[WavelinkSong] = deque()
+        self._previous_queue: deque[WavelinkSong] = deque()
         self._is_looping = False
         self._skip_toggle = False
         self._disconnect_time = time() + self._get_disconnect_time_limit()
@@ -304,7 +304,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         self._is_looping = value
 
     @property
-    def playing(self) -> WavelinkAudioSource:
+    def playing(self) -> WavelinkSong:
         return self._current
 
     @property
@@ -312,11 +312,11 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         return int(self._player.position)
 
     @property
-    def next_queue(self) -> list[WavelinkAudioSource]:
+    def next_queue(self) -> list[WavelinkSong]:
         return list(self._next_queue)
 
     @property
-    def previous_queue(self) -> list[WavelinkAudioSource]:
+    def previous_queue(self) -> list[WavelinkSong]:
         return list(self._previous_queue)
 
     async def connect(self, channel: discord.VoiceChannel):
@@ -327,17 +327,17 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
     async def disconnect(self):
         await self._player.disconnect()
 
-    async def play(self, audio_source: WavelinkAudioSource) -> None:
+    async def play(self, audio_source: WavelinkSong) -> None:
         self._refresh_disconnect_timer()
         await self._player.play(audio_source.stream)
 
-    async def play_multiple(self, songs: list[WavelinkAudioSource]):
+    async def play_multiple(self, songs: list[WavelinkSong]):
         self._refresh_disconnect_timer()
         await self._player.play(songs[0].stream)
         for song in songs[1:]:
             self._next_queue.appendleft(song)
 
-    async def add(self, audio_source: WavelinkAudioSource, index=-1) -> PlayerResult:
+    async def add(self, audio_source: WavelinkSong, index=-1) -> PlayerResult:
         if not self._current:
             self._refresh_disconnect_timer()
             await self._player.play(audio_source.stream)
@@ -351,7 +351,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         self._next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
-    async def add_multiple(self, audio_sources: list[WavelinkAudioSource], index=-1):
+    async def add_multiple(self, audio_sources: list[WavelinkSong], index=-1):
         if not self._current:
             self._refresh_disconnect_timer()
             await self._player.play(audio_sources[0].stream)
@@ -899,9 +899,6 @@ class Musicbox(commands.Cog):
     @app_commands.command()
     @perms.check()
     async def playsearch(self, interaction: discord.Interaction, search: str):
-        # Join channel and create music player instance if it doesn't exist
-        music_player = await self._get_music_player(interaction.user.voice.channel)
-
         # Alert user if search term returns no results
         songs = await self._get_songs(search)
         if not songs:
@@ -924,7 +921,7 @@ class Musicbox(commands.Cog):
         embed.add_field(
             name=f"Results for '{search}'",
             value=results_output, inline=False)
-        msg = await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
     @perms.check()
@@ -1723,16 +1720,16 @@ class Musicbox(commands.Cog):
     @staticmethod
     async def _get_songs(query: str):
         if "youtube.com" in query and "list" in query:
-            return await WavelinkAudioSource.from_youtube_playlist(query)
+            return await WavelinkSong.from_youtube_playlist(query)
         elif "youtube.com" in query:
-            return await WavelinkAudioSource.from_youtube(query)
+            return await WavelinkSong.from_youtube(query)
         elif "spotify.com" in query and "playlist" in query:
-            return await WavelinkAudioSource.from_spotify_playlist(query)
+            return await WavelinkSong.from_spotify_playlist(query)
         elif "spotify.com" in query and "album" in query:
-            return await WavelinkAudioSource.from_spotify_album(query)
+            return await WavelinkSong.from_spotify_album(query)
         elif "spotify.com" in query:
-            return await WavelinkAudioSource.from_spotify(query)
-        return await WavelinkAudioSource.from_query(query)
+            return await WavelinkSong.from_spotify(query)
+        return await WavelinkSong.from_query(query)
 
     # Format duration based on what values there are
     @staticmethod
