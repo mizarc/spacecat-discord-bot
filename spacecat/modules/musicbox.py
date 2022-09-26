@@ -37,25 +37,26 @@ class PlayerResult(Enum):
 
 class OriginalSource(Enum):
     LOCAL = "Saved Playlist"
-    YOUTUBE_VIDEO = "YouTube Video"
+    YOUTUBE_VIDEO = "YouTube"
     YOUTUBE_SONG = "YouTube Music"
     YOUTUBE_PLAYLIST = "YouTube Playlist"
     YOUTUBE_ALBUM = "YouTube Album"
-    SPOTIFY_SONG = "Spotify Song"
+    SPOTIFY_SONG = "Spotify"
     SPOTIFY_PLAYLIST = "Spotify Playlist"
     SPOTIFY_ALBUM = "Spotify Album"
 
 
 class Playlist:
-    def __init__(self, id_, name, guild_id, description):
+    def __init__(self, id_, name, guild_id, creator_id, description):
         self._id: uuid.UUID = id_
         self._name = name
         self._guild_id = guild_id
+        self._creator_id = creator_id
         self._description = description
 
     @classmethod
-    def create_new(cls, name, guild):
-        return cls(uuid.uuid4(), name, guild.id, "")
+    def create_new(cls, name, guild, creator: discord.User):
+        return cls(uuid.uuid4(), name, guild.id, creator.id, "")
 
     @property
     def id(self) -> uuid.UUID:
@@ -74,6 +75,10 @@ class Playlist:
         return self._guild_id
 
     @property
+    def creator_id(self) -> int:
+        return self._creator_id
+
+    @property
     def description(self) -> str:
         return self._description
 
@@ -88,7 +93,7 @@ class PlaylistRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
-                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, description TEXT)')
+                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, creator_id INTEGER, description TEXT)')
         self.db.commit()
 
     def get_all(self):
@@ -96,12 +101,12 @@ class PlaylistRepository:
         results = self.db.cursor().execute('SELECT * FROM playlist').fetchall()
         playlists = []
         for result in results:
-            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+            playlists.append(self._result_to_playlist(result))
         return playlists
 
     def get_by_id(self, id_):
         result = self.db.cursor().execute('SELECT * FROM playlist WHERE id=?', (id_,)).fetchone()
-        return Playlist(result[0], result[1], result[2], result[3])
+        return self._result_to_playlist(result)
 
     def get_by_guild(self, guild):
         # Get list of all playlists in a guild
@@ -112,7 +117,7 @@ class PlaylistRepository:
 
         playlists = []
         for result in results:
-            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+            playlists.append(self._result_to_playlist(result))
         return playlists
 
     def get_by_guild_and_name(self, guild, name):
@@ -124,25 +129,29 @@ class PlaylistRepository:
 
         playlists = []
         for result in results:
-            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+            playlists.append(self._result_to_playlist(result))
         return playlists
 
     def add(self, playlist):
         cursor = self.db.cursor()
-        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.description)
-        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?)', values)
+        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id, playlist.description)
+        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, playlist):
         cursor = self.db.cursor()
-        values = (playlist.guild_id, playlist.name, playlist.description, playlist.id)
-        cursor.execute('UPDATE playlist SET guild_id=?, name=?, description=? WHERE id=?', values)
+        values = (playlist.guild_id, playlist.creator_id, playlist.name, playlist.description, playlist.id)
+        cursor.execute('UPDATE playlist SET guild_id=?, creator_id=?, name=?, description=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, id_: uuid.UUID):
         cursor = self.db.cursor()
         cursor.execute('DELETE FROM playlist WHERE id=?', (str(id_),))
         self.db.commit()
+
+    @staticmethod
+    def _result_to_playlist(result):
+        return Playlist(result[0], result[1], result[2], result[3], result[4]) if result else None
 
 
 class PlaylistSong:
@@ -1217,10 +1226,15 @@ class Musicbox(commands.Cog):
                 name=f"Fetched from {song.original_source.value}",
                 value=f"[{song.group}]({song.group_url})",
                 inline=False)
-        else:
+        elif song.original_source == OriginalSource.YOUTUBE_SONG:
             embed.add_field(
-                name=f"Fetched from ",
-                value=f"{song.original_source.value}",
+                name=f"Fetched from Site",
+                value=f"[{song.original_source.value}](https://music.youtube.com)",
+                inline=False)
+        elif song.original_source == OriginalSource.SPOTIFY_SONG:
+            embed.add_field(
+                name=f"Fetched from Site",
+                value=f"[{song.original_source.value}](https://open.spotify.com)",
                 inline=False)
 
         if song.artist:
@@ -1502,7 +1516,7 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name='create')
     @perms.check()
-    async def playlist_create(self, interaction, playlist_name: str):
+    async def playlist_create(self, interaction: discord.Interaction, playlist_name: str):
         """Create a new playlist"""
         # Limit playlist name to 30 chars
         if len(playlist_name) > 30:
@@ -1521,7 +1535,7 @@ class Musicbox(commands.Cog):
             return
 
         # Add playlist to database
-        self.playlists.add(Playlist.create_new(playlist_name, interaction.guild))
+        self.playlists.add(Playlist.create_new(playlist_name, interaction.guild, interaction.user))
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
             description=f"Playlist `{playlist_name}` has been created")
