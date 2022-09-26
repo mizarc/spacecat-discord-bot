@@ -1130,7 +1130,7 @@ class Musicbox(commands.Cog):
             artist = f"{playing.artist} - "
         embed.add_field(
             name=header,
-            value=f"{artist}{playing.title} "
+            value=f"[{artist}{playing.title}]({playing.url}) "
                   f"`{current_time}/{duration}` \n{spacer}")
 
         # List remaining songs in queue plus total duration
@@ -1140,19 +1140,19 @@ class Musicbox(commands.Cog):
             # Modify page variable to get every ten results
             page -= 1
             if page > 0:
-                page = page * 10
+                page = page * 5
 
             total_duration = 0
             for song in queue:
                 total_duration += song.duration
 
             for index, song in enumerate(
-                    islice(queue, page, page + 10)):
+                    islice(queue, page, page + 5)):
                 duration = await self._format_duration(song.duration)
                 artist = ""
                 if song.artist:
                     artist = f"{song.artist} - "
-                queue_info.append(f"{page + index + 1}. {artist}{song.title} `{duration}`")
+                queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}`")
 
             # Alert if no songs are on the specified page
             if page > 0 and not queue_info:
@@ -1163,9 +1163,9 @@ class Musicbox(commands.Cog):
                 return
 
             # Omit songs past 10 and just display amount instead
-            if len(queue) > page + 11:
+            if len(queue) > page + 6:
                 queue_info.append(
-                    f"`+{len(queue) - 11 - page} more in queue`")
+                    f"`+{len(queue) - 6 - page} more in queue`")
 
             # Output results to chat
             duration = await self._format_duration(total_duration)
