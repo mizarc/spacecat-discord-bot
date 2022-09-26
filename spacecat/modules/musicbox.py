@@ -295,6 +295,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         self._next_queue: deque[WavelinkAudioSource] = deque()
         self._previous_queue: deque[WavelinkAudioSource] = deque()
         self._is_looping = False
+        self._skip_toggle = False
         self._disconnect_time = time() + self._get_disconnect_time_limit()
         self._disconnect_timer.start()
 
@@ -407,6 +408,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
         random.shuffle(self._next_queue)
 
     async def stop(self):
+        self._skip_toggle = True
         await self._player.stop()
 
     async def next(self):
@@ -428,9 +430,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkAudioSource]):
 
     async def process_song_end(self):
         self._refresh_disconnect_timer()
-        if self._is_looping:
+        if self._is_looping and not self._skip_toggle:
             await self.play(self._current)
             return
+        self._skip_toggle = False
         await self.next()
 
     async def enable_auto_disconnect(self):
