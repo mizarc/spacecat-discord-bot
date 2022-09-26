@@ -673,7 +673,11 @@ class Musicbox(commands.Cog):
     NOT_CONNECTED_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
         description="I need to be in a voice channel to execute music "
-                    "commands. \nUse **/join** or **/play** to connect me to a channel")
+                    "commands. \nUse **/join** or **/play** to connect me to a channel.")
+
+    NO_VOICE_CHANNEL_EMBED = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description="You need to be in a voice channel to start playing songs.")
 
     def __init__(self, bot):
         self.bot = bot
@@ -775,7 +779,7 @@ class Musicbox(commands.Cog):
         if channel is None and not interaction.user.voice:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="You must specify or be in a voice channel")
+                description="You must be in or specify a voice channel.")
             await interaction.response.send_message(embed=embed)
             return
 
@@ -833,7 +837,11 @@ class Musicbox(commands.Cog):
     async def play(self, interaction: discord.Interaction, url: str, position: int = -1):
         """Plays from a url (almost anything youtube_dl supports)"""
         # Join channel and create music player instance if it doesn't exist
-        music_player = await self._get_music_player(interaction.user.voice.channel)
+        try:
+            music_player = await self._get_music_player(interaction.user.voice.channel)
+        except AttributeError:
+            await interaction.response.send_message(embed=self.NO_VOICE_CHANNEL_EMBED)
+            return
 
         if position > len(music_player.next_queue) or position < 1:
             position = len(music_player.next_queue) + 1
@@ -1645,7 +1653,11 @@ class Musicbox(commands.Cog):
     async def playlist_play(self, interaction: discord.Interaction, playlist_name: str):
         """Play from a locally saved playlist"""
         # Get music player
-        music_player = await self._get_music_player(interaction.user.voice.channel)
+        try:
+            music_player = await self._get_music_player(interaction.user.voice.channel)
+        except AttributeError:
+            await interaction.response.send_message(embed=self.NO_VOICE_CHANNEL_EMBED)
+            return
 
         # Fetch songs from playlist if it exists
         playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
