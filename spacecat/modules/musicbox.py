@@ -1817,7 +1817,10 @@ class Musicbox(commands.Cog):
             else:
                 formatted += f"{minutes}:"
         else:
-            formatted += "0:"
+            if hours:
+                formatted += "00:"
+            else:
+                formatted += "0:"
 
         if seconds:
             if seconds < 10:
