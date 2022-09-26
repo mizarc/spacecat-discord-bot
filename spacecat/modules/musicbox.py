@@ -17,6 +17,7 @@ import toml
 import uuid
 
 import wavelink
+from wavelink import YouTubeMusicTrack
 
 from wavelink.ext import spotify
 
@@ -43,6 +44,205 @@ class OriginalSource(Enum):
     SPOTIFY_SONG = "Spotify Song"
     SPOTIFY_PLAYLIST = "Spotify Playlist"
     SPOTIFY_ALBUM = "Spotify Album"
+
+
+class Playlist:
+    def __init__(self, id_, name, guild_id, description):
+        self._id: uuid.UUID = id_
+        self._name = name
+        self._guild_id = guild_id
+        self._description = description
+
+    @classmethod
+    def create_new(cls, name, guild):
+        return cls(uuid.uuid4(), name, guild.id, "")
+
+    @property
+    def id(self) -> uuid.UUID:
+        return self._id
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
+    def guild_id(self) -> int:
+        return self._guild_id
+
+    @property
+    def description(self) -> str:
+        return self._description
+
+    @description.setter
+    def description(self, value):
+        self._description = value
+
+
+class PlaylistRepository:
+    def __init__(self, database):
+        self.db = database
+        cursor = self.db.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
+                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, description TEXT)')
+        self.db.commit()
+
+    def get_all(self):
+        """Get list of all playlists"""
+        results = self.db.cursor().execute('SELECT * FROM playlist').fetchall()
+        playlists = []
+        for result in results:
+            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+        return playlists
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM playlist WHERE id=?', (id_,)).fetchone()
+        return Playlist(result[0], result[1], result[2], result[3])
+
+    def get_by_guild(self, guild):
+        # Get list of all playlists in a guild
+        cursor = self.db.cursor()
+        values = (guild.id,)
+        cursor.execute('SELECT * FROM playlist WHERE guild_id=?', values)
+        results = cursor.fetchall()
+
+        playlists = []
+        for result in results:
+            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+        return playlists
+
+    def get_by_guild_and_name(self, guild, name):
+        # Get playlist by guild and playlist name
+        cursor = self.db.cursor()
+        values = (guild.id, name)
+        cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values)
+        results = cursor.fetchall()
+
+        playlists = []
+        for result in results:
+            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
+        return playlists
+
+    def add(self, playlist):
+        cursor = self.db.cursor()
+        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.description)
+        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?)', values)
+        self.db.commit()
+
+    def update(self, playlist):
+        cursor = self.db.cursor()
+        values = (playlist.guild_id, playlist.name, playlist.description, playlist.id)
+        cursor.execute('UPDATE playlist SET guild_id=?, name=?, description=? WHERE id=?', values)
+        self.db.commit()
+
+    def remove(self, playlist):
+        cursor = self.db.cursor()
+        values = (playlist.id,)
+        cursor.execute('DELETE FROM playlist WHERE id=?', values)
+        self.db.commit()
+
+
+class PlaylistSong:
+    def __init__(self, id_, playlist_id, title, artist, duration, url, previous_id):
+        self._id: uuid.UUID = id_
+        self._playlist_id = playlist_id
+        self._title = title
+        self._artist = artist
+        self._url = url
+        self._duration = duration
+        self._previous_id = previous_id
+
+    @classmethod
+    def create_new(cls, playlist_id, title, artist, duration, url, previous_id):
+        return cls(uuid.uuid4(), playlist_id, title, artist, duration, url, previous_id)
+
+    @property
+    def id(self) -> uuid.UUID:
+        return self._id
+
+    @property
+    def playlist_id(self) -> uuid.UUID:
+        return self._playlist_id
+
+    @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def artist(self) -> Optional[str]:
+        return self._artist
+
+    @property
+    def duration(self) -> int:
+        return self._duration
+
+    @property
+    def url(self) -> str:
+        return self._url
+
+    @property
+    def previous_id(self) -> uuid.UUID:
+        return self._previous_id
+
+    @previous_id.setter
+    def previous_id(self, value: uuid.UUID):
+        self._previous_id = value
+
+
+class PlaylistSongRepository:
+    def __init__(self, database):
+        self.db = database
+        cursor = self.db.cursor()
+        cursor.execute('PRAGMA foreign_keys = ON')
+        cursor.execute('CREATE TABLE IF NOT EXISTS playlist_songs (id TEXT PRIMARY KEY, playlist_id TEXT, title TEXT, '
+                       'artist TEXT, duration INTEGER, url TEXT, previous_id INTEGER, '
+                       'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
+        self.db.commit()
+
+    def get_by_id(self, id_):
+        result = self.db.cursor().execute('SELECT * FROM playlist_songs WHERE id=?', (id_,)).fetchone()
+        return self._result_to_playlist_song(result)
+
+    def get_by_playlist(self, playlist):
+        # Get list of all songs in playlist
+        cursor = self.db.cursor()
+        cursor.execute('SELECT * FROM playlist_songs WHERE playlist_id=?', (playlist.id,))
+        results = cursor.fetchall()
+
+        songs = []
+        for result in results:
+            songs.append(self._result_to_playlist_song(result))
+        return songs
+
+    def add(self, playlist_song: PlaylistSong):
+        cursor = self.db.cursor()
+        values = (str(playlist_song.id), str(playlist_song.playlist_id), playlist_song.title, playlist_song.artist,
+                  playlist_song.duration, playlist_song.url, str(playlist_song.previous_id))
+        cursor.execute('INSERT INTO playlist_songs VALUES (?, ?, ?, ?, ?, ?, ?)', values)
+        self.db.commit()
+
+    def update(self, playlist_song: PlaylistSong):
+        cursor = self.db.cursor()
+        values = (str(playlist_song.playlist_id), playlist_song.title, playlist_song.artist, playlist_song.duration,
+                  playlist_song.url, str(playlist_song.previous_id), str(playlist_song.id))
+        cursor.execute('UPDATE playlist_songs SET playlist_id=?, title=?, '
+                       'artist=?, duration=?, url=?, previous_id=? WHERE id=?', values)
+        self.db.commit()
+
+    def remove(self, playlist):
+        cursor = self.db.cursor()
+        values = (playlist.id,)
+        cursor.execute('DELETE FROM playlist_songs WHERE id=?', values)
+        self.db.commit()
+
+    @staticmethod
+    def _result_to_playlist_song(result):
+        return PlaylistSong(uuid.UUID(result[0]), uuid.UUID(result[1]), result[2], result[3],
+                            result[4], result[5], uuid.UUID(result[6])) if result else None
 
 
 class Song(ABC):
@@ -88,12 +288,16 @@ class Song(ABC):
 
 
 class WavelinkSong(Song):
-    def __init__(self, track, original_source, url, group=None, group_url=None):
+    def __init__(self, track, original_source, url, group=None, group_url=None,
+                 title=None, artist=None, duration=None):
         self._track: wavelink.Track = track
         self._original_source: OriginalSource = original_source
         self._url: str = url
         self._playlist: str = group
         self._playlist_url: str = group_url
+        self._title = title
+        self._artist = artist
+        self._duration = duration
 
     @property
     def stream(self) -> wavelink.Track:
@@ -101,15 +305,15 @@ class WavelinkSong(Song):
 
     @property
     def title(self) -> str:
-        return self._track.title
+        return self._title if self._title else self._track.title
 
     @property
     def artist(self) -> Optional[str]:
-        return self._track.author
+        return self._artist if self._artist else self._track.author
 
     @property
     def duration(self) -> int:
-        return int(self._track.duration)
+        return self._duration if self._duration else int(self._track.duration)
 
     @property
     def url(self) -> str:
@@ -126,6 +330,13 @@ class WavelinkSong(Song):
     @property
     def original_source(self) -> OriginalSource:
         return self._original_source
+
+    @classmethod
+    async def from_local(cls, playlist_song: PlaylistSong) -> list['WavelinkSong']:
+        # noinspection PyTypeChecker
+        track = wavelink.PartialTrack(query=f'{playlist_song.title} - {playlist_song.artist}', cls=YouTubeMusicTrack)
+        return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
+                    artist=playlist_song.artist, duration=playlist_song.duration)]
 
     @classmethod
     async def from_query(cls, query) -> list['WavelinkSong']:
@@ -456,205 +667,6 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
     def _is_auto_disconnect():
         config = toml.load(constants.DATA_DIR + 'config.toml')
         return config['music']['auto_disconnect']
-
-
-class Playlist:
-    def __init__(self, id_, name, guild_id, description):
-        self._id: uuid.UUID = id_
-        self._name = name
-        self._guild_id = guild_id
-        self._description = description
-
-    @classmethod
-    def create_new(cls, name, guild):
-        return cls(uuid.uuid4(), name, guild.id, "")
-
-    @property
-    def id(self) -> uuid.UUID:
-        return self._id
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        self._name = value
-
-    @property
-    def guild_id(self) -> int:
-        return self._guild_id
-
-    @property
-    def description(self) -> str:
-        return self._description
-
-    @description.setter
-    def description(self, value):
-        self._description = value
-
-
-class PlaylistRepository:
-    def __init__(self, database):
-        self.db = database
-        cursor = self.db.cursor()
-        cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
-                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, description TEXT)')
-        self.db.commit()
-
-    def get_all(self):
-        """Get list of all playlists"""
-        results = self.db.cursor().execute('SELECT * FROM playlist').fetchall()
-        playlists = []
-        for result in results:
-            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
-        return playlists
-
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM playlist WHERE id=?', (id_,)).fetchone()
-        return Playlist(result[0], result[1], result[2], result[3])
-
-    def get_by_guild(self, guild):
-        # Get list of all playlists in a guild
-        cursor = self.db.cursor()
-        values = (guild.id,)
-        cursor.execute('SELECT * FROM playlist WHERE guild_id=?', values)
-        results = cursor.fetchall()
-
-        playlists = []
-        for result in results:
-            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
-        return playlists
-
-    def get_by_guild_and_name(self, guild, name):
-        # Get playlist by guild and playlist name
-        cursor = self.db.cursor()
-        values = (guild.id, name)
-        cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values)
-        results = cursor.fetchall()
-
-        playlists = []
-        for result in results:
-            playlists.append(Playlist(result[0], result[1], result[2], result[3]))
-        return playlists
-
-    def add(self, playlist):
-        cursor = self.db.cursor()
-        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.description)
-        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?)', values)
-        self.db.commit()
-
-    def update(self, playlist):
-        cursor = self.db.cursor()
-        values = (playlist.guild_id, playlist.name, playlist.description, playlist.id)
-        cursor.execute('UPDATE playlist SET guild_id=?, name=?, description=? WHERE id=?', values)
-        self.db.commit()
-
-    def remove(self, playlist):
-        cursor = self.db.cursor()
-        values = (playlist.id,)
-        cursor.execute('DELETE FROM playlist WHERE id=?', values)
-        self.db.commit()
-
-
-class PlaylistSong:
-    def __init__(self, id_, playlist_id, title, artist, duration, url, previous_id):
-        self._id: uuid.UUID = id_
-        self._playlist_id = playlist_id
-        self._title = title
-        self._artist = artist
-        self._url = url
-        self._duration = duration
-        self._previous_id = previous_id
-
-    @classmethod
-    def create_new(cls, playlist_id, title, artist, duration, url, previous_id):
-        return cls(uuid.uuid4(), playlist_id, title, artist, duration, url, previous_id)
-
-    @property
-    def id(self) -> uuid.UUID:
-        return self._id
-
-    @property
-    def playlist_id(self) -> uuid.UUID:
-        return self._playlist_id
-
-    @property
-    def title(self) -> str:
-        return self._title
-
-    @property
-    def artist(self) -> Optional[str]:
-        return self._artist
-
-    @property
-    def duration(self) -> int:
-        return self._duration
-
-    @property
-    def url(self) -> str:
-        return self._url
-
-    @property
-    def previous_id(self) -> uuid.UUID:
-        return self._previous_id
-
-    @previous_id.setter
-    def previous_id(self, value: uuid.UUID):
-        self._previous_id = value
-
-
-class PlaylistSongRepository:
-    def __init__(self, database):
-        self.db = database
-        cursor = self.db.cursor()
-        cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS playlist_songs (id TEXT PRIMARY KEY, playlist_id TEXT, title TEXT, '
-                       'artist TEXT, duration INTEGER, url TEXT, previous_id INTEGER, '
-                       'FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
-        self.db.commit()
-
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM playlist_songs WHERE id=?', (id_,)).fetchone()
-        return self._result_to_playlist_song(result)
-
-    def get_by_playlist(self, playlist):
-        # Get list of all songs in playlist
-        cursor = self.db.cursor()
-        cursor.execute('SELECT * FROM playlist_songs WHERE playlist_id=?', (playlist.id,))
-        results = cursor.fetchall()
-
-        songs = []
-        for result in results:
-            songs.append(self._result_to_playlist_song(result))
-        return songs
-
-    def add(self, playlist_song: PlaylistSong):
-        cursor = self.db.cursor()
-        values = (str(playlist_song.id), str(playlist_song.playlist_id), playlist_song.title, playlist_song.artist,
-                  playlist_song.duration, playlist_song.url, str(playlist_song.previous_id))
-        cursor.execute('INSERT INTO playlist_songs VALUES (?, ?, ?, ?, ?, ?, ?)', values)
-        self.db.commit()
-
-    def update(self, playlist_song: PlaylistSong):
-        cursor = self.db.cursor()
-        values = (str(playlist_song.playlist_id), playlist_song.title, playlist_song.artist, playlist_song.duration,
-                  playlist_song.url, str(playlist_song.previous_id), str(playlist_song.id))
-        cursor.execute('UPDATE playlist_songs SET playlist_id=?, title=?, '
-                       'artist=?, duration=?, url=?, previous_id=? WHERE id=?', values)
-        self.db.commit()
-
-    def remove(self, playlist):
-        cursor = self.db.cursor()
-        values = (playlist.id,)
-        cursor.execute('DELETE FROM playlist_songs WHERE id=?', values)
-        self.db.commit()
-
-    @staticmethod
-    def _result_to_playlist_song(result):
-        return PlaylistSong(uuid.UUID(result[0]), uuid.UUID(result[1]), result[2], result[3],
-                            result[4], result[5], uuid.UUID(result[6])) if result else None
 
 
 class Musicbox(commands.Cog):
@@ -1653,22 +1665,22 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        stream = await self._get_songs(songs[0].url)
+        stream = await self._get_song_from_saved(songs[0])
         result = await music_player.add(stream[0])
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Now playing playlist `{playlist.name}`")
+                description=f"Now playing saved playlist '{playlist.name}'")
             await interaction.response.send_message(embed=embed)
         else:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Adding playlist `{playlist.name}` to queue")
+                description=f"Adding saved playlist '{playlist.name}' to queue")
             await interaction.response.send_message(embed=embed)
 
         # Add remaining songs to queue
         for i in range(1, len(songs)):
-            stream = await self._get_songs(songs[i].url)
+            stream = await self._get_song_from_saved(songs[i])
             await music_player.add(stream[0])
 
     @musicsettings_group.command(name='autodisconnect')
@@ -1732,6 +1744,10 @@ class Musicbox(commands.Cog):
         elif "spotify.com" in query:
             return await WavelinkSong.from_spotify(query)
         return await WavelinkSong.from_query(query)
+
+    @staticmethod
+    async def _get_song_from_saved(playlist_song: PlaylistSong):
+        return await WavelinkSong.from_local(playlist_song)
 
     # Format duration based on what values there are
     @staticmethod
