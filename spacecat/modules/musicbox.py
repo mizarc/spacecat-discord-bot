@@ -155,9 +155,10 @@ class PlaylistRepository:
 
 
 class PlaylistSong:
-    def __init__(self, id_, playlist_id, title, artist, duration, url, previous_id):
+    def __init__(self, id_, playlist_id, requester_id, title, artist, duration, url, previous_id):
         self._id: uuid.UUID = id_
         self._playlist_id = playlist_id
+        self._requester_id = requester_id
         self._title = title
         self._artist = artist
         self._url = url
@@ -165,8 +166,8 @@ class PlaylistSong:
         self._previous_id = previous_id
 
     @classmethod
-    def create_new(cls, playlist_id, title, artist, duration, url, previous_id):
-        return cls(uuid.uuid4(), playlist_id, title, artist, duration, url, previous_id)
+    def create_new(cls, playlist_id, requester_id, title, artist, duration, url, previous_id):
+        return cls(uuid.uuid4(), playlist_id, requester_id, title, artist, duration, url, previous_id)
 
     @property
     def id(self) -> uuid.UUID:
@@ -249,7 +250,7 @@ class PlaylistSongRepository:
     @staticmethod
     def _result_to_playlist_song(result):
         return PlaylistSong(uuid.UUID(result[0]), uuid.UUID(result[1]), result[2], result[3],
-                            result[4], result[5], uuid.UUID(result[6])) if result else None
+                            result[4], result[5], result[6], uuid.UUID(result[7])) if result else None
 
 
 class Song(ABC):
@@ -1701,7 +1702,7 @@ class Musicbox(commands.Cog):
 
         for song in songs:
             new_playlist_song = PlaylistSong.create_new(
-                playlist.id, song.title, song.artist, song.duration, song.url, previous_id)
+                playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
             self.playlist_songs.add(new_playlist_song)
             previous_id = new_playlist_song.id
 
