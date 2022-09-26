@@ -207,10 +207,10 @@ class PlaylistSongRepository:
         result = self.db.cursor().execute('SELECT * FROM playlist_songs WHERE id=?', (id_,)).fetchone()
         return self._result_to_playlist_song(result)
 
-    def get_by_playlist(self, playlist):
+    def get_by_playlist(self, playlist_id: uuid.UUID):
         # Get list of all songs in playlist
         cursor = self.db.cursor()
-        cursor.execute('SELECT * FROM playlist_songs WHERE playlist_id=?', (playlist.id,))
+        cursor.execute('SELECT * FROM playlist_songs WHERE playlist_id=?', (str(playlist_id),))
         results = cursor.fetchall()
 
         songs = []
@@ -233,10 +233,9 @@ class PlaylistSongRepository:
                        'artist=?, duration=?, url=?, previous_id=? WHERE id=?', values)
         self.db.commit()
 
-    def remove(self, playlist):
+    def remove(self, id_):
         cursor = self.db.cursor()
-        values = (playlist.id,)
-        cursor.execute('DELETE FROM playlist_songs WHERE id=?', values)
+        cursor.execute('DELETE FROM playlist_songs WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
@@ -1343,7 +1342,7 @@ class Musicbox(commands.Cog):
 
         # Remove playlist from database and all songs linked to it
         self.playlists.remove(playlist)
-        playlist_songs = self.playlist_songs.get_by_playlist(playlist)
+        playlist_songs = self.playlist_songs.get_by_playlist(playlist.id)
         for song in playlist_songs:
             self.playlist_songs.remove(song)
         embed = discord.Embed(
@@ -1417,7 +1416,7 @@ class Musicbox(commands.Cog):
         # Get all playlist names and duration
         playlist_names = []
         for playlist in playlists:
-            songs = self.playlist_songs.get_by_playlist(playlist)
+            songs = self.playlist_songs.get_by_playlist(playlist.id)
             song_duration = 0
             for song in songs:
                 song_duration += song.duration
@@ -1453,7 +1452,7 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        playlist_songs = self.playlist_songs.get_by_playlist(playlist)
+        playlist_songs = self.playlist_songs.get_by_playlist(playlist.id)
         if len(playlist_songs) > 100:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1508,7 +1507,7 @@ class Musicbox(commands.Cog):
             return
 
         # Fetch selected song and the song after
-        songs: list[PlaylistSong] = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist))
+        songs: list[PlaylistSong] = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist.id))
         selected_song = songs[int(index) - 1]
 
         # Edit next song's previous song id if it exists
@@ -1520,7 +1519,7 @@ class Musicbox(commands.Cog):
             pass
 
         # Remove selected song from playlist
-        self.playlist_songs.remove(selected_song)
+        self.playlist_songs.remove(selected_song.id)
         duration = await self._format_duration(selected_song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.NO.value,
@@ -1542,7 +1541,7 @@ class Musicbox(commands.Cog):
             return
 
         # Edit db to put selected song in other song's position
-        songs = self.playlist_songs.get_by_playlist(playlist)
+        songs = self.playlist_songs.get_by_playlist(playlist.id)
         selected_song = songs[int(original_pos) - 1]
         other_song = songs[int(new_pos) - 1]
 
@@ -1596,7 +1595,7 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        songs = self.playlist_songs.get_by_playlist(playlist)
+        songs = self.playlist_songs.get_by_playlist(playlist.id)
 
         # Modify page variable to get every ten results
         page -= 1
@@ -1657,7 +1656,7 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        songs = self.playlist_songs.get_by_playlist(playlist)
+        songs = self.playlist_songs.get_by_playlist(playlist.id)
         if not songs:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1787,7 +1786,7 @@ class Musicbox(commands.Cog):
 
         # Order playlist songs into list
         ordered_songs = []
-        next_song = song_links.get(None)
+        next_song = song_links.get(uuid.UUID(int=0))
         while next_song is not None:
             ordered_songs.append(next_song)
             next_song = song_links.get(next_song.id)
