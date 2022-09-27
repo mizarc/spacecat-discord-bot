@@ -17,7 +17,7 @@ import toml
 import uuid
 
 import wavelink
-from wavelink import YouTubeMusicTrack
+from wavelink import YouTubeMusicTrack, YouTubeTrack
 
 from wavelink.ext import spotify
 
@@ -244,7 +244,7 @@ class PlaylistSongRepository:
         values = (str(playlist_song.playlist_id), playlist_song.requester_id, playlist_song.title,
                   playlist_song.artist, playlist_song.duration, playlist_song.url, str(playlist_song.previous_id),
                   str(playlist_song.id))
-        cursor.execute('UPDATE playlist_songs SET playlist_id=?, title=?, '
+        cursor.execute('UPDATE playlist_songs SET playlist_id=?, requester_id=?, title=?, '
                        'artist=?, duration=?, url=?, previous_id=? WHERE id=?', values)
         self.db.commit()
 
@@ -358,8 +358,13 @@ class WavelinkSong(Song):
     @classmethod
     async def from_local(cls, requester: discord.User, playlist_song: PlaylistSong,
                          playlist: Playlist = None) -> list['WavelinkSong']:
+        # If url is from YouTube, no need to filter to just YouTube Music
+        search_type = YouTubeMusicTrack
+        if "youtube.com" in playlist_song.url:
+            search_type = YouTubeTrack
+
         # noinspection PyTypeChecker
-        track = wavelink.PartialTrack(query=f'{playlist_song.title} - {playlist_song.artist}', cls=YouTubeMusicTrack)
+        track = wavelink.PartialTrack(query=playlist_song.url, cls=search_type)
         return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
                     artist=playlist_song.artist, duration=playlist_song.duration,
                     group=playlist.name, requester_id=requester.id)]
@@ -1618,7 +1623,7 @@ class Musicbox(commands.Cog):
         self.playlists.update(playlist)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Playlist `{playlist_name}` has been renamed to `{new_name}`")
+            description=f"Playlist '{playlist_name}' has been renamed to '{new_name}'")
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name='list')
