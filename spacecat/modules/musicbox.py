@@ -377,7 +377,7 @@ class WavelinkSong(Song):
 
     @classmethod
     async def from_youtube(cls, url, requester: discord.User) -> ['WavelinkSong']:
-        found_tracks = await wavelink.YouTubeTrack.search(query=url)
+        found_tracks = await wavelink.LocalTrack.search(query=url)
         return [cls(track, OriginalSource.YOUTUBE_VIDEO, track.uri, requester_id=requester.id)
                 for track in found_tracks]
 
@@ -1237,6 +1237,11 @@ class Musicbox(commands.Cog):
             embed.add_field(
                 name=f"Fetched from {song.original_source.value}",
                 value=f"[{song.group}]({song.group_url})",
+                inline=False)
+        elif song.original_source == OriginalSource.YOUTUBE_VIDEO:
+            embed.add_field(
+                name=f"Fetched from Site",
+                value=f"[{song.original_source.value}](https://youtube.com)",
                 inline=False)
         elif song.original_source == OriginalSource.YOUTUBE_SONG:
             embed.add_field(
