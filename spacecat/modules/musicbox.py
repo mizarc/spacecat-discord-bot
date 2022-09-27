@@ -1436,9 +1436,9 @@ class Musicbox(commands.Cog):
                 value=queue_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
-    @queue_group.command(name="move")
+    @queue_group.command(name="reorder")
     @perms.check()
-    async def queue_move(self, interaction, original_pos: int, new_pos: int):
+    async def queue_reorder(self, interaction, original_pos: int, new_pos: int):
         """Move a song to a different position in the queue"""
         # Get music player
         if not interaction.guild.voice_client:
