@@ -1889,8 +1889,11 @@ class Musicbox(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}'")
-        if playlist.description and page == 0:
-            embed.description = playlist.description
+        embed.description = f"Created by: <@{playlist.creator_id}>\n"
+        if playlist.description:
+            embed.description += playlist.description + "\n\u200B"
+        else:
+            embed.description += "\n\u200B"
         formatted_duration = await self._format_duration(total_duration)
         playlist_songs_output = '\n'.join(formatted_songs)
         embed.add_field(
