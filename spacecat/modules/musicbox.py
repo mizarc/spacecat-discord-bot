@@ -1605,10 +1605,10 @@ class Musicbox(commands.Cog):
         """Rename an existing playlist"""
         # Get the playlist
         playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
-        if playlist:
+        if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` doesn't exist")
+                description=f"Playlist '{playlist_name}' doesn't exist")
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1617,7 +1617,7 @@ class Musicbox(commands.Cog):
         self.playlists.update(playlist)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Playlist `{playlist}` has been renamed to `{new_name}`")
+            description=f"Playlist `{playlist_name}` has been renamed to `{new_name}`")
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name='list')
