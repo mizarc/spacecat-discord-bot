@@ -1318,7 +1318,8 @@ class Musicbox(commands.Cog):
                 artist = ""
                 if song.artist:
                     artist = f"{song.artist} - "
-                queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}`")
+                queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}` "
+                                  f"| <@{playing.requester_id}>")
 
             # Alert if no songs are on the specified page
             if page > 0 and not queue_info:
@@ -1579,7 +1580,7 @@ class Musicbox(commands.Cog):
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` doesn't exist")
+                description=f"Playlist '{playlist_name}' doesn't exist")
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1596,7 +1597,7 @@ class Musicbox(commands.Cog):
         self.playlists.update(playlist)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Description set for playlist `{playlist_name}`")
+            description=f"Description set for playlist '{playlist_name}'")
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name='rename')
