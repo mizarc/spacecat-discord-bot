@@ -697,7 +697,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._disconnect_timer.start()
 
     async def disable_auto_disconnect(self):
-        self._disconnect_timer.stop()
+        self._disconnect_timer.cancel()
 
     @tasks.loop(seconds=30)
     async def _disconnect_timer(self):
@@ -798,7 +798,7 @@ class Musicbox(commands.Cog):
         if not voice_client:
             return
 
-        # Check if auto disconnect is disabled
+        # Check if auto channel disconnect is disabled
         config = toml.load(constants.DATA_DIR + 'config.toml')
         if not config['music']['auto_disconnect']:
             return
