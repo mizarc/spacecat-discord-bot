@@ -1550,7 +1550,7 @@ class Musicbox(commands.Cog):
         # Add playlist to database
         self.playlists.add(Playlist.create_new(playlist_name, interaction.guild, interaction.user))
         embed = discord.Embed(
-            colour=constants.EmbedStatus.NO.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Playlist `{playlist_name}` has been created")
         await interaction.response.send_message(embed=embed)
 
@@ -1572,7 +1572,7 @@ class Musicbox(commands.Cog):
             self.playlist_songs.remove(song.id)
         self.playlists.remove(playlist.id)
         embed = discord.Embed(
-            colour=constants.EmbedStatus.NO.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Playlist `{playlist_name}` has been destroyed")
         await interaction.response.send_message(embed=embed)
 
