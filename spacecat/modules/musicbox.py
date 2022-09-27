@@ -1642,7 +1642,7 @@ class Musicbox(commands.Cog):
                 song_duration += song.duration
             duration = await self._format_duration(song_duration)
             playlist_info.append(
-                f"{index + 1}. {playlist.name} `{duration}` (Created by <@{playlist.creator_id}>)")
+                f"{index + 1}. {playlist.name} `{duration}` | Created by <@{playlist.creator_id}>")
 
         # Output results to chat
         embed = discord.Embed(
@@ -1869,7 +1869,7 @@ class Musicbox(commands.Cog):
             if song.artist:
                 artist = f"{song.artist} - "
             formatted_songs.append(f"{page + index + 1}. [{artist}{song_name}]({song.url}) `{duration}` "
-                                   f"(Added by <@{song.requester_id}>)")
+                                   f"| <@{song.requester_id}>")
 
         # Omit songs past 10 and just display amount instead
         if len(songs) > page + 6:
