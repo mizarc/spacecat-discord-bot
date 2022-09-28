@@ -878,7 +878,7 @@ class Automation(commands.Cog):
     @app_commands.command()
     async def remindme(self, interaction, message: str, seconds: int = 0, minutes: int = 0, hours: int = 0,
                        days: int = 0, weeks: int = 0, months: int = 0, years: int = 0):
-        if self.is_over_reminder_limit(interaction.guild_id, interaction.user.id):
+        if await self.is_over_reminder_limit(interaction.guild_id, interaction.user.id):
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"You have reached your reminder limit. Delete one before adding another one."))
