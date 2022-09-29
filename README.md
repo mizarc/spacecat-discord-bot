@@ -37,6 +37,24 @@ You'll go through this stuff when you run the program, don't worry.
 5. Exit user settings.
 6. Right click on your user and click "Copy ID".
 
+## Music
+To make use of the Musicbox module in order to stream songs from sources such as YouTube or Spotify, you must set up a
+Lavalink server. This is an efficient audio playback server that the module is designed to interface with. A reworked 
+built-in solution may be implemented at a later date, but will likely still not be as performant as Lavalink.
+
+Here are some steps to set it all up:
+1. Install a minimum of [Java 13](https://www.azul.com/downloads/?package=jdk#download-openjdk).
+2. Download [Lavalink](https://github.com/freyacodes/Lavalink/releases) from GitHub and save it to a known location.
+3. Create a file called `application.yml` with the contents of [this example]
+(https://github.com/freyacodes/Lavalink/blob/master/LavalinkServer/application.yml.example)
+4. Find the line labelled "password" and set it to your own secure password.
+5. Run Lavalink using Java with the command `java -jar Lavalink.jar`.
+6. Ensure that SpaceCat Discord Bot has been run at least once, and an instance has been created.
+7. Navigate to data/\<instance name> in the SpaceCat files.
+8. Open the config and edit the IP address, port, and password of the Lavalink server. 
+(Default IP of 0.0.0.0 works if the Lavalink server is on the same computer as SpaceCat)
+9. Restart the bot and have fun!
+
 ## Inviting Bot to Server
 The bot can be invited to servers you have admistrator permissions in.
 
