@@ -45,8 +45,8 @@ built-in solution may be implemented at a later date, but will likely still not 
 Here are some steps to set it all up:
 1. Install a minimum of [Java 13](https://www.azul.com/downloads/?package=jdk#download-openjdk).
 2. Download [Lavalink](https://github.com/freyacodes/Lavalink/releases) from GitHub and save it to a known location.
-3. Create a file called `application.yml` with the contents of [this example]
-(https://github.com/freyacodes/Lavalink/blob/master/LavalinkServer/application.yml.example)
+3. Create a file called `application.yml` with the contents of 
+[this example](https://github.com/freyacodes/Lavalink/blob/master/LavalinkServer/application.yml.example)
 4. Find the line labelled "password" and set it to your own secure password.
 5. Run Lavalink using Java with the command `java -jar Lavalink.jar`.
 6. Ensure that SpaceCat Discord Bot has been run at least once, and an instance has been created.
@@ -54,6 +54,16 @@ Here are some steps to set it all up:
 8. Open the config and edit the IP address, port, and password of the Lavalink server. 
 (Default IP of 0.0.0.0 works if the Lavalink server is on the same computer as SpaceCat)
 9. Restart the bot and have fun!
+
+### Spotify Support
+If you want Spotify support, here are additional steps to get it to work:
+1. Go to the [Spotify Developer Dashbard](https://developer.spotify.com/dashboard/)
+(Ensure you already have a spotify account)
+2. Create an App with whatever name you want.
+3. Take the Client ID and Client Secret from the top left corner.
+4. Navigate to data/\<instance name> in the SpaceCat files.
+5. Open the config and edit the client_id and client_secret of the Spotify API.
+6. Restart the bot and have fun!
 
 ## Inviting Bot to Server
 The bot can be invited to servers you have admistrator permissions in.
