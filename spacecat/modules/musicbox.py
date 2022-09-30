@@ -1,3 +1,4 @@
+import asyncio
 from abc import ABC, abstractmethod
 import random
 import sqlite3
@@ -671,10 +672,15 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue.appendleft(self._current)
         self._current = previous_song
 
+    async def process_song_start(self):
+        if self._manual_skip:
+            await asyncio.sleep(2)
+            self._manual_skip = False
+            return
+
     async def process_song_end(self):
         # Don't do anything if manually set to play next or previous song
         if self._manual_skip:
-            self._manual_skip = False
             return
 
         self._refresh_disconnect_timer()
@@ -810,6 +816,12 @@ class Musicbox(commands.Cog):
         # Disconnect if the bot is the only user left
         if len(voice_client.channel.members) < 2:
             await voice_client.disconnect()
+
+    @commands.Cog.listener()
+    async def on_wavelink_track_start(self, player: wavelink.Player, track):
+        _ = track  # Disable warning for unused arguments
+        music_player = await self._get_music_player(player.channel)
+        await music_player.process_song_start()
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, player: wavelink.Player, track, reason):
