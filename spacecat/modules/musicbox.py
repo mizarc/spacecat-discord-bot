@@ -540,7 +540,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue: deque[WavelinkSong] = deque()
         self._previous_queue: deque[WavelinkSong] = deque()
         self._is_looping = False
-        self._manual_skip = False
+        self._queue_direction = 1
         self._disconnect_time = time() + self._get_disconnect_time_limit()
         self._disconnect_timer.start()
 
@@ -656,38 +656,27 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._player.stop()
 
     async def next(self):
-        self._manual_skip = True
-        self._refresh_disconnect_timer()
-        await self._play_next_song()
+        self._queue_direction = 1
+        await self._player.stop()
 
     async def previous(self):
-        self._manual_skip = True
-        self._refresh_disconnect_timer()
-        previous_song = None
-        try:
-            previous_song = self._previous_queue.popleft()
-            await self._player.play(previous_song.stream)
-        except IndexError:
-            pass
-        self._next_queue.appendleft(self._current)
-        self._current = previous_song
-
-    async def process_song_start(self):
-        if self._manual_skip:
-            await asyncio.sleep(2)
-            self._manual_skip = False
-            return
+        self._queue_direction = 0
+        await self._player.stop()
 
     async def process_song_end(self):
-        # Don't do anything if manually set to play next or previous song
-        if self._manual_skip:
-            return
-
         self._refresh_disconnect_timer()
+
+        # Play current song again if set to loop.
         if self._is_looping:
             await self.play(self._current)
             return
-        await self._play_next_song()
+
+        # Don't do anything if manually set to play next or previous song
+        if self._queue_direction:
+            await self._play_next_song()
+            return
+        await self._play_previous_song()
+        self._queue_direction = 1
 
     async def _play_next_song(self):
         next_song = None
@@ -698,6 +687,16 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
             pass
         self._previous_queue.appendleft(self._current)
         self._current = next_song
+
+    async def _play_previous_song(self):
+        previous_song = None
+        try:
+            previous_song = self._previous_queue.popleft()
+            await self._player.play(previous_song.stream)
+        except IndexError:
+            pass
+        self._next_queue.appendleft(self._current)
+        self._current = previous_song
 
     async def enable_auto_disconnect(self):
         self._disconnect_timer.start()
@@ -816,12 +815,6 @@ class Musicbox(commands.Cog):
         # Disconnect if the bot is the only user left
         if len(voice_client.channel.members) < 2:
             await voice_client.disconnect()
-
-    @commands.Cog.listener()
-    async def on_wavelink_track_start(self, player: wavelink.Player, track):
-        _ = track  # Disable warning for unused arguments
-        music_player = await self._get_music_player(player.channel)
-        await music_player.process_song_start()
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, player: wavelink.Player, track, reason):
