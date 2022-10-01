@@ -922,7 +922,7 @@ class Musicbox(commands.Cog):
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist {songs[0].group}")
+                    description=f"Now playing playlist [{songs[0].group}]({songs[0].group_url})")
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
