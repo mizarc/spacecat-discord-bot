@@ -1177,7 +1177,7 @@ class Musicbox(commands.Cog):
         # Disable loop if enabled
         if music_player.is_looping:
             embed = discord.Embed(
-                colour=constants.EmbedStatus.NO.value,
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Song is already looping.")
             await interaction.response.send_message(embed=embed)
             return
@@ -1203,7 +1203,7 @@ class Musicbox(commands.Cog):
         # Disable loop if enabled
         if not music_player.is_looping:
             embed = discord.Embed(
-                colour=constants.EmbedStatus.NO.value,
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Song is not currently looping.")
             await interaction.response.send_message(embed=embed)
             return
@@ -1544,7 +1544,7 @@ class Musicbox(commands.Cog):
 
         await music_player.clear()
         embed = discord.Embed(
-            colour=constants.EmbedStatus.NO.value,
+            colour=constants.EmbedStatus.FAIL.value,
             description="All songs have been removed from the queue")
         await interaction.response.send_message(embed=embed)
 
@@ -1794,7 +1794,7 @@ class Musicbox(commands.Cog):
         self.playlist_songs.remove(selected_song.id)
         duration = await self._format_duration(selected_song.duration)
         embed = discord.Embed(
-            colour=constants.EmbedStatus.NO.value,
+            colour=constants.EmbedStatus.FAIL.value,
             description=f"[{selected_song.title}]({selected_song.url}) "
                         f"`{duration}` has been removed from `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
