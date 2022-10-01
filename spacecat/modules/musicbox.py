@@ -539,7 +539,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue: deque[WavelinkSong] = deque()
         self._previous_queue: deque[WavelinkSong] = deque()
         self._is_looping = False
-        self._is_skipping = True
+        self._is_skipping = False
         self._queue_direction = 1
         self._disconnect_time = time() + self._get_disconnect_time_limit()
         self._disconnect_timer.start()
