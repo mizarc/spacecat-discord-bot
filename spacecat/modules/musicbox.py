@@ -1,4 +1,3 @@
-import asyncio
 from abc import ABC, abstractmethod
 import random
 import sqlite3
@@ -656,8 +655,11 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._player.stop()
 
     async def next(self):
+        if not self._player.is_playing():
+            return False
         self._queue_direction = 1
         await self._player.stop()
+        return True
 
     async def previous(self):
         self._queue_direction = 0
@@ -671,7 +673,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
             await self.play(self._current)
             return
 
-        # Don't do anything if manually set to play next or previous song
+        # Play next or previous based on direction toggle
         if self._queue_direction:
             await self._play_next_song()
             return
@@ -1095,11 +1097,16 @@ class Musicbox(commands.Cog):
         if len(music_player.next_queue) < 1:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the queue after this"))
+                description="There's nothing in the queue after this."))
             return
 
         # Stop current song and flag that it has been skipped
-        await music_player.next()
+        result = await music_player.next()
+        if not result:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Please slow down, you can't skip while the next song hasn't even started yet."))
+            return
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Song has been skipped."))
