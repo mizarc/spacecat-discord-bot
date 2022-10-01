@@ -539,7 +539,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue: deque[WavelinkSong] = deque()
         self._previous_queue: deque[WavelinkSong] = deque()
         self._is_looping = False
-        self._manual_skip = False
+        self._queue_direction = 1
         self._disconnect_time = time() + self._get_disconnect_time_limit()
         self._disconnect_timer.start()
 
@@ -655,33 +655,30 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._player.stop()
 
     async def next(self):
-        self._manual_skip = True
-        self._refresh_disconnect_timer()
-        await self._play_next_song()
+        if not self._player.is_playing():
+            return False
+        self._queue_direction = 1
+        await self._player.stop()
+        return True
 
     async def previous(self):
-        self._manual_skip = True
-        self._refresh_disconnect_timer()
-        previous_song = None
-        try:
-            previous_song = self._previous_queue.popleft()
-            await self._player.play(previous_song.stream)
-        except IndexError:
-            pass
-        self._next_queue.appendleft(self._current)
-        self._current = previous_song
+        self._queue_direction = 0
+        await self._player.stop()
 
     async def process_song_end(self):
-        # Don't do anything if manually set to play next or previous song
-        if self._manual_skip:
-            self._manual_skip = False
-            return
-
         self._refresh_disconnect_timer()
+
+        # Play current song again if set to loop.
         if self._is_looping:
             await self.play(self._current)
             return
-        await self._play_next_song()
+
+        # Play next or previous based on direction toggle
+        if self._queue_direction:
+            await self._play_next_song()
+            return
+        await self._play_previous_song()
+        self._queue_direction = 1
 
     async def _play_next_song(self):
         next_song = None
@@ -692,6 +689,16 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
             pass
         self._previous_queue.appendleft(self._current)
         self._current = next_song
+
+    async def _play_previous_song(self):
+        previous_song = None
+        try:
+            previous_song = self._previous_queue.popleft()
+            await self._player.play(previous_song.stream)
+        except IndexError:
+            pass
+        self._next_queue.appendleft(self._current)
+        self._current = previous_song
 
     async def enable_auto_disconnect(self):
         self._disconnect_timer.start()
@@ -915,7 +922,7 @@ class Musicbox(commands.Cog):
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist {songs[0].group}")
+                    description=f"Now playing playlist [{songs[0].group}]({songs[0].group_url})")
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
@@ -1090,11 +1097,16 @@ class Musicbox(commands.Cog):
         if len(music_player.next_queue) < 1:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the queue after this"))
+                description="There's nothing in the queue after this."))
             return
 
         # Stop current song and flag that it has been skipped
-        await music_player.next()
+        result = await music_player.next()
+        if not result:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Please slow down, you can't skip while the next song hasn't even started yet."))
+            return
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Song has been skipped."))
