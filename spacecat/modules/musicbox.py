@@ -539,6 +539,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue: deque[WavelinkSong] = deque()
         self._previous_queue: deque[WavelinkSong] = deque()
         self._is_looping = False
+        self._is_skipping = True
         self._queue_direction = 1
         self._disconnect_time = time() + self._get_disconnect_time_limit()
         self._disconnect_timer.start()
@@ -658,20 +659,23 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         if not self._player.is_playing():
             return False
         self._queue_direction = 1
+        self._is_skipping = True
         await self._player.stop()
         return True
 
     async def previous(self):
         self._queue_direction = 0
+        self._is_skipping = True
         await self._player.stop()
 
     async def process_song_end(self):
         self._refresh_disconnect_timer()
 
         # Play current song again if set to loop.
-        if self._is_looping:
+        if self._is_looping and not self._is_skipping:
             await self.play(self._current)
             return
+        self._is_skipping = False
 
         # Play next or previous based on direction toggle
         if self._queue_direction:
