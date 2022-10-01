@@ -539,9 +539,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue: deque[WavelinkSong] = deque()
         self._previous_queue: deque[WavelinkSong] = deque()
         self._is_looping = False
-        self._queue_direction = 1
+        self._is_skipping = False
+        self._queue_reverse = False
         self._disconnect_time = time() + self._get_disconnect_time_limit()
-        self._disconnect_timer.start()
+        self._disconnect_job.start()
 
     @property
     def is_looping(self) -> bool:
@@ -657,28 +658,31 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
     async def next(self):
         if not self._player.is_playing():
             return False
-        self._queue_direction = 1
+        self._queue_reverse = False
+        self._is_skipping = True
         await self._player.stop()
         return True
 
     async def previous(self):
-        self._queue_direction = 0
+        self._queue_reverse = True
+        self._is_skipping = True
         await self._player.stop()
 
     async def process_song_end(self):
         self._refresh_disconnect_timer()
 
         # Play current song again if set to loop.
-        if self._is_looping:
+        if self._is_looping and not self._is_skipping:
             await self.play(self._current)
             return
+        self._is_skipping = False
 
         # Play next or previous based on direction toggle
-        if self._queue_direction:
-            await self._play_next_song()
+        if self._queue_reverse:
+            await self._play_previous_song()
             return
-        await self._play_previous_song()
-        self._queue_direction = 1
+        await self._play_next_song()
+        self._queue_reverse = False
 
     async def _play_next_song(self):
         next_song = None
@@ -701,13 +705,13 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._current = previous_song
 
     async def enable_auto_disconnect(self):
-        self._disconnect_timer.start()
+        self._disconnect_job.start()
 
     async def disable_auto_disconnect(self):
-        self._disconnect_timer.cancel()
+        self._disconnect_job.cancel()
 
     @tasks.loop(seconds=30)
-    async def _disconnect_timer(self):
+    async def _disconnect_job(self):
         if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.is_playing():
             await self.disconnect()
 
@@ -1173,7 +1177,7 @@ class Musicbox(commands.Cog):
         # Disable loop if enabled
         if music_player.is_looping:
             embed = discord.Embed(
-                colour=constants.EmbedStatus.NO.value,
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Song is already looping.")
             await interaction.response.send_message(embed=embed)
             return
@@ -1199,7 +1203,7 @@ class Musicbox(commands.Cog):
         # Disable loop if enabled
         if not music_player.is_looping:
             embed = discord.Embed(
-                colour=constants.EmbedStatus.NO.value,
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Song is not currently looping.")
             await interaction.response.send_message(embed=embed)
             return
@@ -1540,7 +1544,7 @@ class Musicbox(commands.Cog):
 
         await music_player.clear()
         embed = discord.Embed(
-            colour=constants.EmbedStatus.NO.value,
+            colour=constants.EmbedStatus.FAIL.value,
             description="All songs have been removed from the queue")
         await interaction.response.send_message(embed=embed)
 
@@ -1790,7 +1794,7 @@ class Musicbox(commands.Cog):
         self.playlist_songs.remove(selected_song.id)
         duration = await self._format_duration(selected_song.duration)
         embed = discord.Embed(
-            colour=constants.EmbedStatus.NO.value,
+            colour=constants.EmbedStatus.FAIL.value,
             description=f"[{selected_song.title}]({selected_song.url}) "
                         f"`{duration}` has been removed from `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
