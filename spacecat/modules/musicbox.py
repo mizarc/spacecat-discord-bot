@@ -542,7 +542,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._is_skipping = False
         self._queue_reverse = False
         self._disconnect_time = time() + self._get_disconnect_time_limit()
-        self._disconnect_timer.start()
+        self._disconnect_job.start()
 
     @property
     def is_looping(self) -> bool:
@@ -705,13 +705,13 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._current = previous_song
 
     async def enable_auto_disconnect(self):
-        self._disconnect_timer.start()
+        self._disconnect_job.start()
 
     async def disable_auto_disconnect(self):
-        self._disconnect_timer.cancel()
+        self._disconnect_job.cancel()
 
     @tasks.loop(seconds=30)
-    async def _disconnect_timer(self):
+    async def _disconnect_job(self):
         if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.is_playing():
             await self.disconnect()
 
