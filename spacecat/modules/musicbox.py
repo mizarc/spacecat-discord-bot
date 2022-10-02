@@ -147,15 +147,17 @@ class PlaylistRepository:
 
     def add(self, playlist):
         cursor = self.db.cursor()
-        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id, playlist.creation_date,
-                  playlist.modified_date, playlist.description)
+        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id,
+                  int(playlist.creation_date.timestamp()), int(playlist.modified_date.timestamp()),
+                  playlist.description)
         cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, playlist):
         cursor = self.db.cursor()
-        values = (playlist.guild_id, playlist.creator_id, playlist.name, playlist.description, playlist.id)
-        cursor.execute('UPDATE playlist SET guild_id=?, creator_id=?, creation_date=?, modified_date=? name=?, '
+        values = (playlist.name, playlist.guild_id, playlist.creator_id, int(playlist.creation_date.timestamp()),
+                  int(playlist.modified_date.timestamp()), playlist.description, playlist.id)
+        cursor.execute('UPDATE playlist SET name=?, guild_id=?, creator_id=?, creation_date=?, modified_date=?, '
                        'description=? WHERE id=?', values)
         self.db.commit()
 
