@@ -1,3 +1,4 @@
+import datetime
 from abc import ABC, abstractmethod
 import random
 import sqlite3
@@ -47,16 +48,19 @@ class OriginalSource(Enum):
 
 
 class Playlist:
-    def __init__(self, id_, name, guild_id, creator_id, description):
+    def __init__(self, id_, name, guild_id, creator_id, creation_date, modified_date, description):
         self._id: uuid.UUID = id_
         self._name = name
         self._guild_id = guild_id
         self._creator_id = creator_id
+        self._creation_date: datetime.datetime = creation_date
+        self._modified_date: datetime.datetime = modified_date
         self._description = description
 
     @classmethod
     def create_new(cls, name, guild, creator: discord.User):
-        return cls(uuid.uuid4(), name, guild.id, creator.id, "")
+        return cls(uuid.uuid4(), name, guild.id, creator.id, datetime.datetime.now(tz=datetime.timezone.utc),
+                   datetime.datetime.now(tz=datetime.timezone.utc), "")
 
     @property
     def id(self) -> uuid.UUID:
@@ -79,6 +83,14 @@ class Playlist:
         return self._creator_id
 
     @property
+    def creation_date(self) -> datetime.datetime:
+        return self._creation_date
+
+    @property
+    def modified_date(self) -> datetime.datetime:
+        return self._creation_date
+
+    @property
     def description(self) -> str:
         return self._description
 
@@ -93,7 +105,8 @@ class PlaylistRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
-                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, creator_id INTEGER, description TEXT)')
+                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, creator_id INTEGER, creation_date INTEGER,'
+                       ' modified_date INTEGER, description TEXT)')
         self.db.commit()
 
     def get_all(self):
@@ -134,14 +147,16 @@ class PlaylistRepository:
 
     def add(self, playlist):
         cursor = self.db.cursor()
-        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id, playlist.description)
-        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?)', values)
+        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id, playlist.creation_date,
+                  playlist.modified_date, playlist.description)
+        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, playlist):
         cursor = self.db.cursor()
         values = (playlist.guild_id, playlist.creator_id, playlist.name, playlist.description, playlist.id)
-        cursor.execute('UPDATE playlist SET guild_id=?, creator_id=?, name=?, description=? WHERE id=?', values)
+        cursor.execute('UPDATE playlist SET guild_id=?, creator_id=?, creation_date=?, modified_date=? name=?, '
+                       'description=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, id_: uuid.UUID):
@@ -151,7 +166,10 @@ class PlaylistRepository:
 
     @staticmethod
     def _result_to_playlist(result):
-        return Playlist(result[0], result[1], result[2], result[3], result[4]) if result else None
+        return Playlist(result[0], result[1], result[2], result[3],
+                        datetime.datetime.fromtimestamp(result[4], tz=datetime.timezone.utc),
+                        datetime.datetime.fromtimestamp(result[5], tz=datetime.timezone.utc),
+                        result[6]) if result else None
 
 
 class PlaylistSong:
