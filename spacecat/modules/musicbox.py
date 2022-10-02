@@ -90,6 +90,10 @@ class Playlist:
     def modified_date(self) -> datetime.datetime:
         return self._creation_date
 
+    @modified_date.setter
+    def modified_date(self, value: datetime.datetime):
+        self._creation_date = value
+
     @property
     def description(self) -> str:
         return self._description
@@ -1638,6 +1642,10 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Update playlist description
         playlist.description = description
         self.playlists.update(playlist)
@@ -1658,6 +1666,10 @@ class Musicbox(commands.Cog):
                 description=f"Playlist '{playlist_name}' doesn't exist")
             await interaction.response.send_message(embed=embed)
             return
+
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
 
         # Update playlist name
         playlist.name = new_name
@@ -1737,6 +1749,10 @@ class Musicbox(commands.Cog):
             await interaction.followup.send_message(embed=embed)
             return
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Set previous song as the last song in the playlist
         if not playlist_songs:
             previous_id = uuid.UUID(int=0)
@@ -1810,6 +1826,10 @@ class Musicbox(commands.Cog):
         except IndexError:
             pass
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Remove selected song from playlist
         self.playlist_songs.remove(selected_song.id)
         duration = await self._format_duration(selected_song.duration)
@@ -1866,6 +1886,10 @@ class Musicbox(commands.Cog):
             self.playlist_songs.update(song_after_old_position)
         except IndexError:
             pass
+
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
 
         # Output result to chat
         self.playlist_songs.update(selected_song)
