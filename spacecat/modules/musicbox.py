@@ -1764,15 +1764,14 @@ class Musicbox(commands.Cog):
                 previous_ids.append(playlist_song.previous_id)
             previous_id = list(set(song_ids) - set(previous_ids))[0]
 
-        for song in songs:
-            new_playlist_song = PlaylistSong.create_new(
-                playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
-            self.playlist_songs.add(new_playlist_song)
-            previous_id = new_playlist_song.id
-
         # Add playlist
         if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST \
                 or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
+            for song in songs:
+                new_playlist_song = PlaylistSong.create_new(
+                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                self.playlist_songs.add(new_playlist_song)
+                previous_id = new_playlist_song.id
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from playlist "
@@ -1784,6 +1783,11 @@ class Musicbox(commands.Cog):
         # Add album
         if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM \
                 or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
+            for song in songs:
+                new_playlist_song = PlaylistSong.create_new(
+                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                self.playlist_songs.add(new_playlist_song)
+                previous_id = new_playlist_song.id
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from album "
@@ -1792,6 +1796,10 @@ class Musicbox(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
+        song = songs[0]
+        new_playlist_song = PlaylistSong.create_new(
+            playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+        self.playlist_songs.add(new_playlist_song)
         artist = ""
         if songs[0].artist:
             artist = f"{songs[0].artist} - "
