@@ -141,13 +141,8 @@ class PlaylistRepository:
         # Get playlist by guild and playlist name
         cursor = self.db.cursor()
         values = (guild.id, name)
-        cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values)
-        results = cursor.fetchall()
-
-        playlists = []
-        for result in results:
-            playlists.append(self._result_to_playlist(result))
-        return playlists
+        result = cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values).fetchone()
+        return self._result_to_playlist(result)
 
     def add(self, playlist):
         cursor = self.db.cursor()
@@ -1604,7 +1599,7 @@ class Musicbox(commands.Cog):
     async def playlist_destroy(self, interaction, playlist_name: str):
         """Deletes an existing playlist"""
         # Alert if playlist doesn't exist in db
-        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1626,7 +1621,7 @@ class Musicbox(commands.Cog):
     async def playlist_description(self, interaction, playlist_name: str, description: str):
         """Sets the description for the playlist"""
         # Alert if playlist doesn't exist
-        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1659,7 +1654,7 @@ class Musicbox(commands.Cog):
     async def playlist_rename(self, interaction, playlist_name: str, new_name: str):
         """Rename an existing playlist"""
         # Get the playlist
-        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1718,7 +1713,7 @@ class Musicbox(commands.Cog):
     async def playlist_add(self, interaction, playlist_name: str, url: str):
         """Adds a song to a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1814,7 +1809,7 @@ class Musicbox(commands.Cog):
     async def playlist_remove(self, interaction, playlist_name: str, index: int):
         """Removes a song from a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1852,7 +1847,7 @@ class Musicbox(commands.Cog):
     async def playlist_reorder(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
         """Moves a song to a specified position in a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1914,7 +1909,7 @@ class Musicbox(commands.Cog):
     async def playlist_view(self, interaction, playlist_name: str, page: int = 1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
-        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1995,7 +1990,7 @@ class Musicbox(commands.Cog):
             return
 
         # Fetch songs from playlist if it exists
-        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
