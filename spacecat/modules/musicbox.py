@@ -1767,7 +1767,7 @@ class Musicbox(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="That song is unavailable. Maybe the link is invalid?")
-            await interaction.followup.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
             return
 
         # Update playlist last modified
