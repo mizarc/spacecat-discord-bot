@@ -1,4 +1,5 @@
 import datetime
+import re
 from abc import ABC, abstractmethod
 import random
 import sqlite3
@@ -419,6 +420,9 @@ class WavelinkSong(Song):
 
     @classmethod
     async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
+        if "/user/" in url:
+            url = re.sub(r'user/[A-z]+/', '', url)
+
         found_playlist = await SpotifyPlaylist.search(query=url)
         return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url,
                     found_playlist.name, found_playlist.url, requester_id=requester.id)
