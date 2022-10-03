@@ -1,3 +1,4 @@
+import datetime
 from abc import ABC, abstractmethod
 import random
 import sqlite3
@@ -47,16 +48,19 @@ class OriginalSource(Enum):
 
 
 class Playlist:
-    def __init__(self, id_, name, guild_id, creator_id, description):
+    def __init__(self, id_, name, guild_id, creator_id, creation_date, modified_date, description):
         self._id: uuid.UUID = id_
         self._name = name
         self._guild_id = guild_id
         self._creator_id = creator_id
+        self._creation_date: datetime.datetime = creation_date
+        self._modified_date: datetime.datetime = modified_date
         self._description = description
 
     @classmethod
     def create_new(cls, name, guild, creator: discord.User):
-        return cls(uuid.uuid4(), name, guild.id, creator.id, "")
+        return cls(uuid.uuid4(), name, guild.id, creator.id, datetime.datetime.now(tz=datetime.timezone.utc),
+                   datetime.datetime.now(tz=datetime.timezone.utc), "")
 
     @property
     def id(self) -> uuid.UUID:
@@ -79,6 +83,18 @@ class Playlist:
         return self._creator_id
 
     @property
+    def creation_date(self) -> datetime.datetime:
+        return self._creation_date
+
+    @property
+    def modified_date(self) -> datetime.datetime:
+        return self._creation_date
+
+    @modified_date.setter
+    def modified_date(self, value: datetime.datetime):
+        self._creation_date = value
+
+    @property
     def description(self) -> str:
         return self._description
 
@@ -93,7 +109,8 @@ class PlaylistRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
-                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, creator_id INTEGER, description TEXT)')
+                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, creator_id INTEGER, creation_date INTEGER,'
+                       ' modified_date INTEGER, description TEXT)')
         self.db.commit()
 
     def get_all(self):
@@ -120,28 +137,27 @@ class PlaylistRepository:
             playlists.append(self._result_to_playlist(result))
         return playlists
 
-    def get_by_guild_and_name(self, guild, name):
+    def get_by_name_in_guild(self, name, guild):
         # Get playlist by guild and playlist name
         cursor = self.db.cursor()
         values = (guild.id, name)
-        cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values)
-        results = cursor.fetchall()
-
-        playlists = []
-        for result in results:
-            playlists.append(self._result_to_playlist(result))
-        return playlists
+        result = cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values).fetchone()
+        return self._result_to_playlist(result)
 
     def add(self, playlist):
         cursor = self.db.cursor()
-        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id, playlist.description)
-        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?)', values)
+        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id,
+                  int(playlist.creation_date.timestamp()), int(playlist.modified_date.timestamp()),
+                  playlist.description)
+        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, playlist):
         cursor = self.db.cursor()
-        values = (playlist.guild_id, playlist.creator_id, playlist.name, playlist.description, playlist.id)
-        cursor.execute('UPDATE playlist SET guild_id=?, creator_id=?, name=?, description=? WHERE id=?', values)
+        values = (playlist.name, playlist.guild_id, playlist.creator_id, int(playlist.creation_date.timestamp()),
+                  int(playlist.modified_date.timestamp()), playlist.description, playlist.id)
+        cursor.execute('UPDATE playlist SET name=?, guild_id=?, creator_id=?, creation_date=?, modified_date=?, '
+                       'description=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, id_: uuid.UUID):
@@ -151,7 +167,10 @@ class PlaylistRepository:
 
     @staticmethod
     def _result_to_playlist(result):
-        return Playlist(result[0], result[1], result[2], result[3], result[4]) if result else None
+        return Playlist(result[0], result[1], result[2], result[3],
+                        datetime.datetime.fromtimestamp(result[4], tz=datetime.timezone.utc),
+                        datetime.datetime.fromtimestamp(result[5], tz=datetime.timezone.utc),
+                        result[6]) if result else None
 
 
 class PlaylistSong:
@@ -1561,7 +1580,7 @@ class Musicbox(commands.Cog):
             return
 
         # Alert if playlist with specified name already exists
-        if self.playlists.get_by_guild_and_name(interaction.guild, playlist_name):
+        if self.playlists.get_by_name_in_guild(playlist_name, interaction.guild):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` already exists")
@@ -1580,7 +1599,7 @@ class Musicbox(commands.Cog):
     async def playlist_destroy(self, interaction, playlist_name: str):
         """Deletes an existing playlist"""
         # Alert if playlist doesn't exist in db
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1602,7 +1621,7 @@ class Musicbox(commands.Cog):
     async def playlist_description(self, interaction, playlist_name: str, description: str):
         """Sets the description for the playlist"""
         # Alert if playlist doesn't exist
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1618,6 +1637,10 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Update playlist description
         playlist.description = description
         self.playlists.update(playlist)
@@ -1631,13 +1654,17 @@ class Musicbox(commands.Cog):
     async def playlist_rename(self, interaction, playlist_name: str, new_name: str):
         """Rename an existing playlist"""
         # Get the playlist
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist '{playlist_name}' doesn't exist")
             await interaction.response.send_message(embed=embed)
             return
+
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
 
         # Update playlist name
         playlist.name = new_name
@@ -1686,7 +1713,7 @@ class Musicbox(commands.Cog):
     async def playlist_add(self, interaction, playlist_name: str, url: str):
         """Adds a song to a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1717,6 +1744,10 @@ class Musicbox(commands.Cog):
             await interaction.followup.send_message(embed=embed)
             return
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Set previous song as the last song in the playlist
         if not playlist_songs:
             previous_id = uuid.UUID(int=0)
@@ -1728,15 +1759,14 @@ class Musicbox(commands.Cog):
                 previous_ids.append(playlist_song.previous_id)
             previous_id = list(set(song_ids) - set(previous_ids))[0]
 
-        for song in songs:
-            new_playlist_song = PlaylistSong.create_new(
-                playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
-            self.playlist_songs.add(new_playlist_song)
-            previous_id = new_playlist_song.id
-
         # Add playlist
         if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST \
                 or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
+            for song in songs:
+                new_playlist_song = PlaylistSong.create_new(
+                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                self.playlist_songs.add(new_playlist_song)
+                previous_id = new_playlist_song.id
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from playlist "
@@ -1748,6 +1778,11 @@ class Musicbox(commands.Cog):
         # Add album
         if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM \
                 or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
+            for song in songs:
+                new_playlist_song = PlaylistSong.create_new(
+                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                self.playlist_songs.add(new_playlist_song)
+                previous_id = new_playlist_song.id
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from album "
@@ -1756,6 +1791,10 @@ class Musicbox(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
+        song = songs[0]
+        new_playlist_song = PlaylistSong.create_new(
+            playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+        self.playlist_songs.add(new_playlist_song)
         artist = ""
         if songs[0].artist:
             artist = f"{songs[0].artist} - "
@@ -1770,7 +1809,7 @@ class Musicbox(commands.Cog):
     async def playlist_remove(self, interaction, playlist_name: str, index: int):
         """Removes a song from a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1790,6 +1829,10 @@ class Musicbox(commands.Cog):
         except IndexError:
             pass
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Remove selected song from playlist
         self.playlist_songs.remove(selected_song.id)
         duration = await self._format_duration(selected_song.duration)
@@ -1804,7 +1847,7 @@ class Musicbox(commands.Cog):
     async def playlist_reorder(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
         """Moves a song to a specified position in a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1847,6 +1890,10 @@ class Musicbox(commands.Cog):
         except IndexError:
             pass
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Output result to chat
         self.playlist_songs.update(selected_song)
         duration = await self._format_duration(selected_song.duration)
@@ -1862,7 +1909,7 @@ class Musicbox(commands.Cog):
     async def playlist_view(self, interaction, playlist_name: str, page: int = 1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1915,11 +1962,15 @@ class Musicbox(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}'")
-        embed.description = f"Created by: <@{playlist.creator_id}>\n"
+
+        embed.description = ""
         if playlist.description:
-            embed.description += playlist.description + "\n\u200B"
-        else:
-            embed.description += "\n\u200B"
+            embed.description = f"{playlist.description}\n\u200B\n"
+
+        embed.description += f"**Created by:** <@{playlist.creator_id}>\n"
+        embed.description += f"**Creation Date:** {playlist.creation_date.strftime('%d %b, %Y')}\n"
+        embed.description += f"**Last Modifed Date:** {playlist.modified_date.strftime('%d %b, %Y')}\n\u200B"
+
         formatted_duration = await self._format_duration(total_duration)
         playlist_songs_output = '\n'.join(formatted_songs)
         embed.add_field(
@@ -1939,7 +1990,7 @@ class Musicbox(commands.Cog):
             return
 
         # Fetch songs from playlist if it exists
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
