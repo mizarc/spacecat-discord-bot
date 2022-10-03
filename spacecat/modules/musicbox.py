@@ -1959,11 +1959,15 @@ class Musicbox(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}'")
-        embed.description = f"Created by: <@{playlist.creator_id}>\n"
+
+        embed.description = ""
         if playlist.description:
-            embed.description += playlist.description + "\n\u200B"
-        else:
-            embed.description += "\n\u200B"
+            embed.description = f"{playlist.description}\n\u200B\n"
+
+        embed.description += f"**Created by:** <@{playlist.creator_id}>\n"
+        embed.description += f"**Creation Date:** {playlist.creation_date.strftime('%d %b, %Y')}\n"
+        embed.description += f"**Last Modifed Date:** {playlist.modified_date.strftime('%d %b, %Y')}\n\u200B"
+
         formatted_duration = await self._format_duration(total_duration)
         playlist_songs_output = '\n'.join(formatted_songs)
         embed.add_field(
