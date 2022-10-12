@@ -2102,7 +2102,7 @@ class Musicbox(commands.Cog):
     async def _get_songs(query: str, requester: discord.User):
         if "youtube.com" in query and "list" in query:
             return await WavelinkSong.from_youtube_playlist(query, requester)
-        elif "youtube.com" in query:
+        elif "youtube.com" or "youtu.be" in query:
             return await WavelinkSong.from_youtube(query, requester)
         elif "spotify.com" in query and "playlist" in query:
             return await WavelinkSong.from_spotify_playlist(query, requester)
