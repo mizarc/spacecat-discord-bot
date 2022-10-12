@@ -1474,7 +1474,8 @@ class Musicbox(commands.Cog):
                 artist = ""
                 if song.artist:
                     artist = f"{song.artist} - "
-                queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}`")
+                queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}` "
+                                  f"| <@{song.requester_id}>")
 
             # Alert if no songs are on the specified page
             if page > 0 and not queue_info:
