@@ -1409,7 +1409,7 @@ class Musicbox(commands.Cog):
             duration = await self._format_duration(total_duration)
             queue_output = '\n'.join(queue_info)
             embed.add_field(
-                name=f"Queue  `{duration}`",
+                name=f"Queue `{duration}`",
                 value=queue_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
@@ -1494,7 +1494,7 @@ class Musicbox(commands.Cog):
             duration = await self._format_duration(total_duration)
             queue_output = '\n'.join(queue_info)
             embed.add_field(
-                name=f"Queue  `{duration}`",
+                name=f"Previous Queue `{duration}`",
                 value=queue_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
