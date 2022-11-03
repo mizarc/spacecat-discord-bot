@@ -286,6 +286,52 @@ class ActionRepository(ABC, Generic[T_Action]):
         pass
 
 
+class MessageAction(Action):
+    def __init__(self, id_: uuid.UUID, text_channel_id, message):
+        super().__init__(id_)
+        self.text_channel_id = text_channel_id
+        self.message = message
+
+    @classmethod
+    def create_new(cls, text_channel_id, message):
+        return cls(uuid.uuid4(), text_channel_id, message)
+
+    @classmethod
+    def get_name(cls):
+        return "message"
+
+    def get_formatted_output(self):
+        return f"Sends a message starting with '{self.message[:20]}' to channel <#{self.text_channel_id}>."
+
+
+class MessageActionRepository(ActionRepository[MessageAction]):
+    def __init__(self, database):
+        super().__init__(database)
+        cursor = self.db.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS action_message '
+                       '(id TEXT PRIMARY KEY, text_channel INTEGER, message TEXT)')
+        self.db.commit()
+
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM action_message WHERE id=?', (str(id_),)).fetchone()
+        return self._result_to_action(result)
+
+    def add(self, action: MessageAction):
+        values = (str(action.id), action.text_channel_id, action.message)
+        cursor = self.db.cursor()
+        cursor.execute('INSERT INTO action_message VALUES (?, ?, ?)', values)
+        self.db.commit()
+
+    def remove(self, id_: uuid.UUID):
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM action_message WHERE id=?', (str(id_),))
+        self.db.commit()
+
+    @staticmethod
+    def _result_to_action(result):
+        return MessageAction(uuid.UUID(result[0]), result[1], result[2]) if result else None
+
+
 class BroadcastAction(Action):
     def __init__(self, id_: uuid.UUID, text_channel_id, title, message):
         super().__init__(id_)
