@@ -314,7 +314,7 @@ class BroadcastActionRepository(ActionRepository[BroadcastAction]):
         self.db.commit()
 
     def get_by_id(self, id_: uuid.UUID):
-        result = self.db.cursor().execute('SELECT * FROM action_message WHERE id=?', (str(id_),)).fetchone()
+        result = self.db.cursor().execute('SELECT * FROM action_broadcast WHERE id=?', (str(id_),)).fetchone()
         return self._result_to_action(result)
 
     def add(self, action: BroadcastAction):
@@ -330,7 +330,7 @@ class BroadcastActionRepository(ActionRepository[BroadcastAction]):
 
     @staticmethod
     def _result_to_action(result):
-        return MessageAction(uuid.UUID(result[0]), result[1], result[2], result[3]) if result else None
+        return BroadcastAction(uuid.UUID(result[0]), result[1], result[2], result[3]) if result else None
 
 
 class VoiceKickAction(Action):
