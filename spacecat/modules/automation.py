@@ -893,6 +893,11 @@ class Automation(commands.Cog):
     @commands.Cog.listener()
     async def on_message_action(self, action: MessageAction):
         channel = await self.bot.fetch_channel(action.text_channel_id)
+        await channel.send(action.message)
+
+    @commands.Cog.listener()
+    async def on_broadcast_action(self, action: BroadcastAction):
+        channel = await self.bot.fetch_channel(action.text_channel_id)
         await channel.send(embed=discord.Embed(
             colour=constants.EmbedStatus.SPECIAL.value,
             title=f"{action.title}",
