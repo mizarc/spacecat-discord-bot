@@ -1390,7 +1390,7 @@ class Musicbox(commands.Cog):
                 if song.artist:
                     artist = f"{song.artist} - "
                 queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}` "
-                                  f"| <@{playing.requester_id}>")
+                                  f"| <@{song.requester_id}>")
 
             # Alert if no songs are on the specified page
             if page > 0 and not queue_info:
@@ -1409,7 +1409,7 @@ class Musicbox(commands.Cog):
             duration = await self._format_duration(total_duration)
             queue_output = '\n'.join(queue_info)
             embed.add_field(
-                name=f"Queue  `{duration}`",
+                name=f"Queue `{duration}`",
                 value=queue_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
@@ -1474,7 +1474,8 @@ class Musicbox(commands.Cog):
                 artist = ""
                 if song.artist:
                     artist = f"{song.artist} - "
-                queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}`")
+                queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}` "
+                                  f"| <@{song.requester_id}>")
 
             # Alert if no songs are on the specified page
             if page > 0 and not queue_info:
@@ -1493,7 +1494,7 @@ class Musicbox(commands.Cog):
             duration = await self._format_duration(total_duration)
             queue_output = '\n'.join(queue_info)
             embed.add_field(
-                name=f"Queue  `{duration}`",
+                name=f"Previous Queue `{duration}`",
                 value=queue_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
@@ -2102,7 +2103,7 @@ class Musicbox(commands.Cog):
     async def _get_songs(query: str, requester: discord.User):
         if "youtube.com" in query and "list" in query:
             return await WavelinkSong.from_youtube_playlist(query, requester)
-        elif "youtube.com" or "youtu.be" in query in query:
+        elif "youtube.com" in query or "youtu.be" in query:
             return await WavelinkSong.from_youtube(query, requester)
         elif "spotify.com" in query and "playlist" in query:
             return await WavelinkSong.from_spotify_playlist(query, requester)
