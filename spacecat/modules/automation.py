@@ -1152,7 +1152,7 @@ class Automation(commands.Cog):
 
     @event_add_group.command(name="message")
     async def event_add_message(self, interaction: discord.Interaction, event_name: str, channel: discord.TextChannel,
-                                title: str, message: str):
+                                message: str):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
@@ -1162,11 +1162,29 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
-        action = MessageAction.create_new(channel.id, title, message)
+        action = MessageAction.create_new(channel.id, message)
         self.event_service.add_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Message action has been added to event '{event_name}'"))
+
+    @event_add_group.command(name="broadcast")
+    async def event_add_broadcast(self, interaction: discord.Interaction, event_name: str, channel: discord.TextChannel,
+                                  title: str, message: str):
+        event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
+        if not event:
+            await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
+            return
+
+        if await self.is_over_action_limit(event):
+            await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
+            return
+
+        action = BroadcastAction.create_new(channel.id, title, message)
+        self.event_service.add_action(event, action)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Broadcast action has been added to event '{event_name}'"))
 
     @event_add_group.command(name="voicekick")
     async def event_add_voicekick(self, interaction, event_name: str, voice_channel: discord.VoiceChannel):
