@@ -23,6 +23,7 @@ from wavelink.ext import spotify
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
+from spacecat.helpers.paginator import PaginatedView
 from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
@@ -1861,14 +1862,12 @@ class Musicbox(commands.Cog):
         if page > 0:
             page = page * 5
 
-        # Get total duration
+        # Make a formatted list of 10 songs on the page
         total_duration = 0
+        formatted_songs = []
         for song in songs:
             total_duration += song.duration
 
-        # Make a formatted list of 10 songs on the page
-        formatted_songs = []
-        for index, song in enumerate(islice(songs, page, page + 5)):
             # Cut off song name to 90 chars
             if len(song.title) > 90:
                 song_name = f"{song.title[:87]}..."
@@ -1879,21 +1878,7 @@ class Musicbox(commands.Cog):
             artist = ""
             if song.artist:
                 artist = f"{song.artist} - "
-            formatted_songs.append(f"{page + index + 1}. [{artist}{song_name}]({song.url}) `{duration}` "
-                                   f"| <@{song.requester_id}>")
-
-        # Omit songs past 10 and just display amount instead
-        if len(songs) > page + 6:
-            formatted_songs.append(
-                f"`+{len(songs) - 5 - page} more in playlist`")
-
-        # Alert if no songs are on the specified page
-        if not formatted_songs:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="There are no songs on that page")
-            await interaction.response.send_message(embed=embed)
-            return
+            formatted_songs.append(f"[{artist}{song_name}]({song.url}) `{duration}` | <@{song.requester_id}>")
 
         # Output results to chat
         embed = discord.Embed(
@@ -1906,10 +1891,12 @@ class Musicbox(commands.Cog):
             embed.description += "\n\u200B"
         formatted_duration = await self._format_duration(total_duration)
         playlist_songs_output = '\n'.join(formatted_songs)
-        embed.add_field(
+        """embed.add_field(
             name=f"{len(songs)} Songs `{formatted_duration}`",
-            value=playlist_songs_output, inline=False)
-        await interaction.response.send_message(embed=embed)
+            value=playlist_songs_output, inline=False)"""
+        paginated_view = PaginatedView(embed, f"{len(songs)} Songs `{formatted_duration}`", formatted_songs, 5)
+        await paginated_view.send(interaction)
+        #await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name='play')
     @perms.check()
