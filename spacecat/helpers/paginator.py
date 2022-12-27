@@ -1,3 +1,4 @@
+import copy
 import math
 
 import discord.ui
@@ -29,16 +30,17 @@ class PaginatedView(discord.ui.View):
         first_item = last_item - self.items_per_page
         items_to_add = self.items[first_item:last_item]
         for index, item in enumerate(items_to_add):
-            items_field.append(f"{self.current_page * index+1}. {item}")
+            items_field.append(f"{self.current_page * self.items_per_page - self.items_per_page + index+1}. {item}")
 
-        self.current_embed = self.base_embed
+        self.current_embed = copy.copy(self.base_embed)
         self.current_embed.add_field(
             name=self.items_header,
             value='\n'.join(items_field), inline=False)
 
-    async def update_message(self):
+    async def update_message(self, interaction):
         self.update_buttons()
-        await self.message.edit(embed=self.create_embed(), view=self)
+        self.create_embed()
+        await interaction.edit_original_response(embed=self.current_embed, view=self)
 
     def update_buttons(self):
         if self.current_page == 1:
@@ -53,7 +55,7 @@ class PaginatedView(discord.ui.View):
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         self.current_page -= 1
-        await self.update_message()
+        await self.update_message(interaction)
 
     @discord.ui.button(label=f"Page 1/1", style=discord.ButtonStyle.gray, disabled=True)
     async def pages_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -63,5 +65,5 @@ class PaginatedView(discord.ui.View):
     async def forward_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         self.current_page += 1
-        await self.update_message()
+        await self.update_message(interaction)
 
