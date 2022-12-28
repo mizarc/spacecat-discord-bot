@@ -16,7 +16,7 @@ class PaginatedView(discord.ui.View):
 
         # Current state
         self.current_embed = None
-        self.current_page = starting_page
+        self.current_page = min(starting_page, math.ceil(len(self.items) / self.items_per_page))
 
     async def send(self, interaction):
         self.update_buttons()
