@@ -1857,11 +1857,6 @@ class Musicbox(commands.Cog):
 
         songs = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist.id))
 
-        # Modify page variable to get every ten results
-        page -= 1
-        if page > 0:
-            page = page * 5
-
         # Make a formatted list of 10 songs on the page
         total_duration = 0
         formatted_songs = []
@@ -1894,7 +1889,7 @@ class Musicbox(commands.Cog):
         """embed.add_field(
             name=f"{len(songs)} Songs `{formatted_duration}`",
             value=playlist_songs_output, inline=False)"""
-        paginated_view = PaginatedView(embed, f"{len(songs)} Songs `{formatted_duration}`", formatted_songs, 5)
+        paginated_view = PaginatedView(embed, f"{len(songs)} Songs `{formatted_duration}`", formatted_songs, 5, page)
         await paginated_view.send(interaction)
         #await interaction.response.send_message(embed=embed)
 
