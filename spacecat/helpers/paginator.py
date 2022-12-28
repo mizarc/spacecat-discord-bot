@@ -43,9 +43,18 @@ class PaginatedView(discord.ui.View):
         await interaction.edit_original_response(embed=self.current_embed, view=self)
 
     def update_buttons(self):
+        is_page_count = self.current_page > len(self.items) / self.items_per_page
+        self.first_button.disabled = self.current_page == 1
         self.back_button.disabled = self.current_page == 1
-        self.forward_button.disabled = self.current_page > len(self.items) / self.items_per_page
+        self.forward_button.disabled = is_page_count
+        self.last_button.disabled = is_page_count
         self.pages_button.label = f"Page {self.current_page} / {math.ceil(len(self.items) / self.items_per_page)}"
+
+    @discord.ui.button(label="|<", style=discord.ButtonStyle.green)
+    async def first_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.current_page = 1
+        await self.update_message(interaction)
 
     @discord.ui.button(label="<", style=discord.ButtonStyle.primary)
     async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -63,3 +72,8 @@ class PaginatedView(discord.ui.View):
         self.current_page += 1
         await self.update_message(interaction)
 
+    @discord.ui.button(label=">|", style=discord.ButtonStyle.green)
+    async def last_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.current_page = math.ceil(len(self.items) / self.items_per_page)
+        await self.update_message(interaction)
