@@ -1884,7 +1884,7 @@ class Musicbox(commands.Cog):
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}'")
         embed.description = f"Created by: <@{playlist.creator_id}>\n"
-        embed.description += playlist.description + "\n\u200B" if playlist.description else "\n\u200B"
+        embed.description += playlist.description + "\n\u200B" if playlist.description else "\u200B"
         formatted_duration = await self._format_duration(total_duration)
         paginated_view = PaginatedView(embed, f"{len(songs)} Songs `{formatted_duration}`", formatted_songs, 5, page)
         await paginated_view.send(interaction)
