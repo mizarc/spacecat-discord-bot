@@ -48,16 +48,18 @@ class OriginalSource(Enum):
 
 
 class Playlist:
-    def __init__(self, id_, name, guild_id, creator_id, description):
+    def __init__(self, id_, name, guild_id, creator_id, creation_date, modified_date, description):
         self._id: uuid.UUID = id_
         self._name = name
         self._guild_id = guild_id
         self._creator_id = creator_id
+        self._creation_date = creation_date
+        self._modified_date = modified_date
         self._description = description
 
     @classmethod
     def create_new(cls, name, guild, creator: discord.User):
-        return cls(uuid.uuid4(), name, guild.id, creator.id, "")
+        return cls(uuid.uuid4(), name, guild.id, creator.id, time(), time(), "")
 
     @property
     def id(self) -> uuid.UUID:
@@ -78,6 +80,14 @@ class Playlist:
     @property
     def creator_id(self) -> int:
         return self._creator_id
+
+    @property
+    def creation_date(self) -> int:
+        return self.creation_date
+
+    @property
+    def modified_date(self) -> int:
+        return self.modified_date
 
     @property
     def description(self) -> str:
@@ -135,14 +145,17 @@ class PlaylistRepository:
 
     def add(self, playlist):
         cursor = self.db.cursor()
-        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id, playlist.description)
-        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?)', values)
+        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id, playlist.creation_date,
+                  playlist.modified_date, playlist.description)
+        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?, ? ,?)', values)
         self.db.commit()
 
     def update(self, playlist):
         cursor = self.db.cursor()
-        values = (playlist.guild_id, playlist.creator_id, playlist.name, playlist.description, playlist.id)
-        cursor.execute('UPDATE playlist SET guild_id=?, creator_id=?, name=?, description=? WHERE id=?', values)
+        values = (playlist.guild_id, playlist.creator_id, playlist.creation_date, playlist.modified_date,
+                  playlist.name, playlist.description, playlist.id)
+        cursor.execute('UPDATE playlist SET guild_id=?, creator_id=?, creation_date=?, modified_date=? name=?, '
+                       'description=? WHERE id=?', values)
         self.db.commit()
 
     def remove(self, id_: uuid.UUID):
@@ -152,7 +165,7 @@ class PlaylistRepository:
 
     @staticmethod
     def _result_to_playlist(result):
-        return Playlist(result[0], result[1], result[2], result[3], result[4]) if result else None
+        return Playlist(result[0], result[1], result[2], result[3], result[4], result[5], result[6]) if result else None
 
 
 class PlaylistSong:
@@ -1854,25 +1867,16 @@ class Musicbox(commands.Cog):
                 description=f"Playlist `{playlist_name}` does not exist")
             await interaction.response.send_message(embed=embed)
             return
-
         songs = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist.id))
 
-        # Make a formatted list of 10 songs on the page
+        # Format the text of each song
         total_duration = 0
         formatted_songs = []
         for song in songs:
             total_duration += song.duration
-
-            # Cut off song name to 90 chars
-            if len(song.title) > 90:
-                song_name = f"{song.title[:87]}..."
-            else:
-                song_name = song.title
-
+            song_name = song.title[:87] + "..." if len(song.title) > 90 else song.title
             duration = await self._format_duration(song.duration)
-            artist = ""
-            if song.artist:
-                artist = f"{song.artist} - "
+            artist = f"{song.artist} - " if song.artist else ""
             formatted_songs.append(f"[{artist}{song_name}]({song.url}) `{duration}` | <@{song.requester_id}>")
 
         # Output results to chat
@@ -1880,18 +1884,10 @@ class Musicbox(commands.Cog):
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}'")
         embed.description = f"Created by: <@{playlist.creator_id}>\n"
-        if playlist.description:
-            embed.description += playlist.description + "\n\u200B"
-        else:
-            embed.description += "\n\u200B"
+        embed.description += playlist.description + "\n\u200B" if playlist.description else "\n\u200B"
         formatted_duration = await self._format_duration(total_duration)
-        playlist_songs_output = '\n'.join(formatted_songs)
-        """embed.add_field(
-            name=f"{len(songs)} Songs `{formatted_duration}`",
-            value=playlist_songs_output, inline=False)"""
         paginated_view = PaginatedView(embed, f"{len(songs)} Songs `{formatted_duration}`", formatted_songs, 5, page)
         await paginated_view.send(interaction)
-        #await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name='play')
     @perms.check()
