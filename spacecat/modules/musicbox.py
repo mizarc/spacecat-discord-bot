@@ -1647,7 +1647,7 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name='list')
     @perms.check()
-    async def playlist_list(self, interaction):
+    async def playlist_list(self, interaction: discord.Interaction, page: int = 1):
         """List all available playlists"""
         # Get playlist from repo
         playlists = self.playlists.get_by_guild(interaction.guild)
@@ -1658,26 +1658,22 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        # Get all playlist names and duration
+        # Format playlist info
         playlist_info = []
-        for index, playlist in enumerate(islice(playlists, 0, 10)):
+        for playlist in playlists:
             songs = self.playlist_songs.get_by_playlist(playlist.id)
             song_duration = 0
             for song in songs:
                 song_duration += song.duration
             duration = await self._format_duration(song_duration)
-            playlist_info.append(
-                f"{index + 1}. {playlist.name} `{duration}` | Created by <@{playlist.creator_id}>")
+            playlist_info.append(f"{playlist.name} `{duration}` | Created by <@{playlist.creator_id}>")
 
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Music Playlists")
-        playlist_output = '\n'.join(playlist_info)
-        embed.add_field(
-            name=f"{len(playlists)} available",
-            value=playlist_output, inline=False)
-        await interaction.response.send_message(embed=embed)
+        paginated_view = PaginatedView(embed, f"{len(playlists)} available", playlist_info, 5, page)
+        await paginated_view.send(interaction)
 
     @playlist_group.command(name='add')
     @perms.check()
