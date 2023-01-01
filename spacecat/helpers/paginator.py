@@ -42,7 +42,7 @@ class PaginatedView(discord.ui.View):
         await interaction.edit_original_response(embed=self.current_embed, view=self)
 
     def update_buttons(self):
-        is_page_count = self.current_page > len(self.items) / self.items_per_page
+        is_page_count = self.current_page >= len(self.items) / self.items_per_page
         self.first_button.disabled = self.current_page == 1
         self.back_button.disabled = self.current_page == 1
         self.forward_button.disabled = is_page_count
