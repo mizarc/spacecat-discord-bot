@@ -30,6 +30,8 @@ class PaginatedView(discord.ui.View):
         items_to_add = self.items[first_item:last_item]
         for index, item in enumerate(items_to_add):
             items_field.append(f"{self.current_page * self.items_per_page - self.items_per_page + index+1}. {item}")
+        if not items_field:
+            items_field.append("\u200B")
 
         self.current_embed = copy.copy(self.base_embed)
         self.current_embed.add_field(
@@ -76,3 +78,53 @@ class PaginatedView(discord.ui.View):
         await interaction.response.defer()
         self.current_page = math.ceil(len(self.items) / self.items_per_page)
         await self.update_message(interaction)
+
+
+class EmptyPaginatedView(discord.ui.View):
+    def __init__(self, base_embed: discord.Embed, items_header: str, message: str):
+        super().__init__()
+        # Included data
+        self.base_embed = base_embed
+        self.items_header = items_header
+        self.message = message
+
+        # Current state
+        self.current_embed = None
+
+    async def send(self, interaction):
+        self.update_buttons()
+        self.create_embed()
+        await interaction.response.send_message(embed=self.current_embed, view=self)
+
+    def create_embed(self):
+        self.current_embed = copy.copy(self.base_embed)
+        self.current_embed.add_field(
+            name=self.items_header,
+            value=self.message, inline=False)
+
+    def update_buttons(self):
+        self.first_button.disabled = True
+        self.back_button.disabled = True
+        self.forward_button.disabled = True
+        self.last_button.disabled = True
+        self.pages_button.label = f"Page 1 / 1"
+
+    @discord.ui.button(label="|<", style=discord.ButtonStyle.green)
+    async def first_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+    @discord.ui.button(label="<", style=discord.ButtonStyle.primary)
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+    @discord.ui.button(label=f"Page 1/1", style=discord.ButtonStyle.gray, disabled=True)
+    async def pages_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+    @discord.ui.button(label=">", style=discord.ButtonStyle.primary)
+    async def forward_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass
+
+    @discord.ui.button(label=">|", style=discord.ButtonStyle.green)
+    async def last_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        pass

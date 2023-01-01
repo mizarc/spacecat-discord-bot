@@ -23,7 +23,7 @@ from wavelink.ext import spotify
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
-from spacecat.helpers.paginator import PaginatedView
+from spacecat.helpers.paginator import PaginatedView, EmptyPaginatedView
 from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
@@ -1324,8 +1324,12 @@ class Musicbox(commands.Cog):
                 f"[{artist}{song.title}]({song.url}) `{duration}` | <@{playing.requester_id}>")
 
         # Output results to chat
-        duration = await self._format_duration(total_duration)
-        paginated_view = PaginatedView(embed, f"Queue  `{duration}`", queue_display_items, 5, page)
+        if queue_display_items:
+            duration = await self._format_duration(total_duration)
+            paginated_view = PaginatedView(embed, f"Queue  `{duration}`", queue_display_items, 5, page)
+        else:
+            paginated_view = EmptyPaginatedView(
+                embed, f"Queue `0:00`", "Nothing else is queued up. Add more songs and they will appear here.")
         await paginated_view.send(interaction)
 
     @queue_group.command(name="prevlist")
