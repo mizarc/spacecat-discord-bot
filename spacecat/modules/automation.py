@@ -16,7 +16,7 @@ import time
 import uuid
 
 from spacecat.helpers import constants
-from spacecat.helpers.paginator import PaginatedView
+from spacecat.helpers.paginator import PaginatedView, EmptyPaginatedView
 from spacecat.modules.administration import ServerSettingsRepository
 from spacecat.spacecat import SpaceCat
 
@@ -1037,7 +1037,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="view")
-    async def event_view(self, interaction: discord.Interaction, name: str):
+    async def event_view(self, interaction: discord.Interaction, name: str, page: int = 1):
         event = self.events.get_by_name(name)
         if not event:
             await interaction.response.send_message(embed=discord.Embed(
@@ -1050,22 +1050,17 @@ class Automation(commands.Cog):
             title=f"Event '{event.name}'",
             description=event.description)
 
-        # Embed category to do with execution time and interval
+        # Embed category for time and interval
         time_fields = []
         timezone = await self.get_guild_timezone(interaction.guild_id)
 
         if event.dispatch_time:
             dispatch_time = datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone).strftime('%X %x')
-            if event.repeat_interval is not Repeat.No:
-                time_fields.append(f"**Initial Time:** {dispatch_time}")
-            else:
-                time_fields.append(f"**Dispatch Time:** {dispatch_time}")
+            label = "Initial Time" if event.repeat_interval is not Repeat.No else "Dispatch Time"
+            time_fields.append(f"**{label}:** {dispatch_time}")
 
         repeating = await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)
-        if event.is_paused:
-            time_fields.append(f"**Repeating:** {repeating} (Paused)")
-        else:
-            time_fields.append(f"**Repeating:** {repeating}")
+        time_fields.append(f"**Repeating:** {repeating} ({' (Paused)' if event.is_paused else ''})")
 
         if event.last_run_time:
             time_fields.append(
@@ -1079,19 +1074,18 @@ class Automation(commands.Cog):
 
         embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
 
-        # Embed category to do with actions
+        # Embed category for actions
         event_actions = self.event_service.get_event_actions(event)
-        if event_actions:
-            action_fields = []
-            index = 1
-            for event_action in self.event_service.get_event_actions(event):
-                action_fields.append(f"{index}. {self.event_service.get_action(event_action).get_formatted_output()}")
-                index += 1
-            embed.add_field(name="Actions", value='\n'.join(action_fields))
-        else:
-            embed.add_field(name="Actions", value="No actions have been set.")
+        action_fields = []
+        for event_action in self.event_service.get_event_actions(event):
+            action_fields.append(f"{self.event_service.get_action(event_action).get_formatted_output()}")
 
-        await interaction.response.send_message(embed=embed)
+        if event_actions:
+            paginated_view = PaginatedView(embed, "Actions", action_fields, 5, page)
+        else:
+            paginated_view = EmptyPaginatedView(
+                embed, f"Actions", "No actions have been set.")
+        await paginated_view.send(interaction)
 
     @event_add_group.command(name="message")
     async def event_add_message(self, interaction: discord.Interaction, event_name: str, channel: discord.TextChannel,
