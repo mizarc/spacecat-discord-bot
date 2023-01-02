@@ -16,6 +16,7 @@ import time
 import uuid
 
 from spacecat.helpers import constants
+from spacecat.helpers.paginator import PaginatedView
 from spacecat.modules.administration import ServerSettingsRepository
 from spacecat.spacecat import SpaceCat
 
@@ -907,7 +908,7 @@ class Automation(commands.Cog):
         parent=event_group, name="add", description="Add a new scheudled event.")
 
     @reminder_group.command(name="list")
-    async def reminder_list(self, interaction: discord.Interaction):
+    async def reminder_list(self, interaction: discord.Interaction, page: int = 1):
         reminders = self.reminders.get_by_guild_and_user(interaction.guild.id, interaction.user.id)
         if not reminders:
             await interaction.response.send_message(embed=discord.Embed(
@@ -917,19 +918,15 @@ class Automation(commands.Cog):
 
         # Reminders into pretty listings
         reminder_listings = []
-        for index, reminder in enumerate(islice(reminders, 0, 10)):
-            listing = f"{index + 1}. {reminder.message[0:30]} | <t:{int(reminder.dispatch_time)}:R>"
-            reminder_listings.append(listing)
+        for reminder in reminders:
+            reminder_listings.append(f"{reminder.message[0:30]} | <t:{int(reminder.dispatch_time)}:R>")
 
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Your Reminders")
-        reminder_output = '\n'.join(reminder_listings)
-        embed.add_field(
-            name=f"{len(reminders)} available",
-            value=reminder_output, inline=False)
-        await interaction.response.send_message(embed=embed)
+        paginated_view = PaginatedView(embed, f"{len(reminders)} available", reminder_listings, 5, page)
+        await paginated_view.send(interaction)
 
     @reminder_group.command(name="remove")
     async def reminder_remove(self, interaction: discord.Interaction, index: int):
@@ -959,7 +956,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="list")
-    async def event_list(self, interaction):
+    async def event_list(self, interaction, page: int = 1):
         events = self.events.get_by_guild(interaction.guild_id)
         if not events:
             embed = discord.Embed(
@@ -970,8 +967,8 @@ class Automation(commands.Cog):
 
         # Format playlist songs into pretty listings
         event_listings = []
-        for index, event in enumerate(islice(events, 0, 10)):
-            listing = f"{index + 1}. {event.name}"
+        for event in events:
+            listing = f"{event.name}"
             if not event.dispatch_time:
                 listing += f" | `Expired`"
             if event.repeat_interval != Repeat.No:
@@ -982,11 +979,8 @@ class Automation(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Events")
-        playlist_output = '\n'.join(event_listings)
-        embed.add_field(
-            name=f"{len(events)} available",
-            value=playlist_output, inline=False)
-        await interaction.response.send_message(embed=embed)
+        paginated_view = PaginatedView(embed, f"{len(events)} available", event_listings, 5, page)
+        await paginated_view.send(interaction)
 
     @event_group.command(name="create")
     async def event_create(self, interaction: discord.Interaction, name: str, time_string: str, date_string: str,
