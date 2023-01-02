@@ -1,3 +1,5 @@
+import datetime
+import re
 from abc import ABC, abstractmethod
 import random
 import sqlite3
@@ -53,13 +55,14 @@ class Playlist:
         self._name = name
         self._guild_id = guild_id
         self._creator_id = creator_id
-        self._creation_date = creation_date
-        self._modified_date = modified_date
+        self._creation_date: datetime.datetime = creation_date
+        self._modified_date: datetime.datetime = modified_date
         self._description = description
 
     @classmethod
     def create_new(cls, name, guild, creator: discord.User):
-        return cls(uuid.uuid4(), name, guild.id, creator.id, time(), time(), "")
+        return cls(uuid.uuid4(), name, guild.id, creator.id, datetime.datetime.now(tz=datetime.timezone.utc),
+                   datetime.datetime.now(tz=datetime.timezone.utc), "")
 
     @property
     def id(self) -> uuid.UUID:
@@ -82,12 +85,16 @@ class Playlist:
         return self._creator_id
 
     @property
-    def creation_date(self) -> int:
-        return self.creation_date
+    def creation_date(self) -> datetime.datetime:
+        return self._creation_date
 
     @property
-    def modified_date(self) -> int:
-        return self.modified_date
+    def modified_date(self) -> datetime.datetime:
+        return self._creation_date
+
+    @modified_date.setter
+    def modified_date(self, value: datetime.datetime):
+        self._creation_date = value
 
     @property
     def description(self) -> str:
@@ -104,7 +111,8 @@ class PlaylistRepository:
         cursor = self.db.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
         cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
-                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, creator_id INTEGER, description TEXT)')
+                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, creator_id INTEGER, creation_date INTEGER,'
+                       ' modified_date INTEGER, description TEXT)')
         self.db.commit()
 
     def get_all(self):
@@ -131,30 +139,26 @@ class PlaylistRepository:
             playlists.append(self._result_to_playlist(result))
         return playlists
 
-    def get_by_guild_and_name(self, guild, name):
+    def get_by_name_in_guild(self, name, guild):
         # Get playlist by guild and playlist name
         cursor = self.db.cursor()
         values = (guild.id, name)
-        cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values)
-        results = cursor.fetchall()
-
-        playlists = []
-        for result in results:
-            playlists.append(self._result_to_playlist(result))
-        return playlists
+        result = cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values).fetchone()
+        return self._result_to_playlist(result)
 
     def add(self, playlist):
         cursor = self.db.cursor()
-        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id, playlist.creation_date,
-                  playlist.modified_date, playlist.description)
-        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?, ? ,?)', values)
+        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id,
+                  int(playlist.creation_date.timestamp()), int(playlist.modified_date.timestamp()),
+                  playlist.description)
+        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?, ?, ?)', values)
         self.db.commit()
 
     def update(self, playlist):
         cursor = self.db.cursor()
-        values = (playlist.guild_id, playlist.creator_id, playlist.creation_date, playlist.modified_date,
-                  playlist.name, playlist.description, playlist.id)
-        cursor.execute('UPDATE playlist SET guild_id=?, creator_id=?, creation_date=?, modified_date=? name=?, '
+        values = (playlist.name, playlist.guild_id, playlist.creator_id, int(playlist.creation_date.timestamp()),
+                  int(playlist.modified_date.timestamp()), playlist.description, playlist.id)
+        cursor.execute('UPDATE playlist SET name=?, guild_id=?, creator_id=?, creation_date=?, modified_date=?, '
                        'description=? WHERE id=?', values)
         self.db.commit()
 
@@ -165,7 +169,10 @@ class PlaylistRepository:
 
     @staticmethod
     def _result_to_playlist(result):
-        return Playlist(result[0], result[1], result[2], result[3], result[4], result[5], result[6]) if result else None
+        return Playlist(result[0], result[1], result[2], result[3],
+                        datetime.datetime.fromtimestamp(result[4], tz=datetime.timezone.utc),
+                        datetime.datetime.fromtimestamp(result[5], tz=datetime.timezone.utc),
+                        result[6]) if result else None
 
 
 class PlaylistSong:
@@ -386,18 +393,28 @@ class WavelinkSong(Song):
     @classmethod
     async def from_query(cls, query, requester: discord.User) -> list['WavelinkSong']:
         found_tracks = await wavelink.YouTubeMusicTrack.search(query=query)
+        if not found_tracks:
+            raise SongUnavailableError
+
         return [cls(track, OriginalSource.YOUTUBE_SONG, track.uri, requester_id=requester.id)
                 for track in found_tracks]
 
     @classmethod
     async def from_youtube(cls, url, requester: discord.User) -> ['WavelinkSong']:
         found_tracks = await wavelink.LocalTrack.search(query=url)
+        if not found_tracks:
+            raise SongUnavailableError
+
         return [cls(track, OriginalSource.YOUTUBE_VIDEO, track.uri, requester_id=requester.id)
                 for track in found_tracks]
 
     @classmethod
     async def from_youtube_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        found_playlist = await wavelink.YouTubePlaylist.search(query=url)
+        try:
+            found_playlist = await wavelink.YouTubePlaylist.search(query=url)
+        except wavelink.LoadTrackError:
+            raise SongUnavailableError
+
         original_source = OriginalSource.YOUTUBE_PLAYLIST
         name = found_playlist.name
         if "Album -" in found_playlist.name:
@@ -408,20 +425,35 @@ class WavelinkSong(Song):
 
     @classmethod
     async def from_spotify(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        found_tracks = await SpotifyTrack.search(query=url)
+        try:
+            found_tracks = await SpotifyTrack.search(query=url)
+        except spotify.SpotifyRequestError:
+            raise SongUnavailableError
+
         return [cls(track, OriginalSource.SPOTIFY_SONG, track.url, requester_id=requester.id)
                 for track in found_tracks]
 
     @classmethod
     async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        found_playlist = await SpotifyPlaylist.search(query=url)
+        if "/user/" in url:
+            url = re.sub(r'user/[A-z]+/', '', url)
+
+        try:
+            found_playlist = await SpotifyPlaylist.search(query=url)
+        except spotify.SpotifyRequestError:
+            raise SongUnavailableError
+
         return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url,
                     found_playlist.name, found_playlist.url, requester_id=requester.id)
                 for track in found_playlist.tracks]
 
     @classmethod
     async def from_spotify_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        found_album = await SpotifyAlbum.search(query=url)
+        try:
+            found_album = await SpotifyAlbum.search(query=url)
+        except spotify.SpotifyRequestError:
+            raise SongUnavailableError
+
         return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url,
                     found_album.name, found_album.url, requester_id=requester.id)
                 for track in found_album.tracks]
@@ -553,9 +585,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue: deque[WavelinkSong] = deque()
         self._previous_queue: deque[WavelinkSong] = deque()
         self._is_looping = False
-        self._manual_skip = False
+        self._is_skipping = False
+        self._queue_reverse = False
         self._disconnect_time = time() + self._get_disconnect_time_limit()
-        self._disconnect_timer.start()
+        self._disconnect_job.start()
 
     @property
     def is_looping(self) -> bool:
@@ -669,33 +702,33 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._player.stop()
 
     async def next(self):
-        self._manual_skip = True
-        self._refresh_disconnect_timer()
-        await self._play_next_song()
+        if not self._player.is_playing():
+            return False
+        self._queue_reverse = False
+        self._is_skipping = True
+        await self._player.stop()
+        return True
 
     async def previous(self):
-        self._manual_skip = True
-        self._refresh_disconnect_timer()
-        previous_song = None
-        try:
-            previous_song = self._previous_queue.popleft()
-            await self._player.play(previous_song.stream)
-        except IndexError:
-            pass
-        self._next_queue.appendleft(self._current)
-        self._current = previous_song
+        self._queue_reverse = True
+        self._is_skipping = True
+        await self._player.stop()
 
     async def process_song_end(self):
-        # Don't do anything if manually set to play next or previous song
-        if self._manual_skip:
-            self._manual_skip = False
-            return
-
         self._refresh_disconnect_timer()
-        if self._is_looping:
+
+        # Play current song again if set to loop.
+        if self._is_looping and not self._is_skipping:
             await self.play(self._current)
             return
+        self._is_skipping = False
+
+        # Play next or previous based on direction toggle
+        if self._queue_reverse:
+            await self._play_previous_song()
+            return
         await self._play_next_song()
+        self._queue_reverse = False
 
     async def _play_next_song(self):
         next_song = None
@@ -707,14 +740,24 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._previous_queue.appendleft(self._current)
         self._current = next_song
 
+    async def _play_previous_song(self):
+        previous_song = None
+        try:
+            previous_song = self._previous_queue.popleft()
+            await self._player.play(previous_song.stream)
+        except IndexError:
+            pass
+        self._next_queue.appendleft(self._current)
+        self._current = previous_song
+
     async def enable_auto_disconnect(self):
-        self._disconnect_timer.start()
+        self._disconnect_job.start()
 
     async def disable_auto_disconnect(self):
-        self._disconnect_timer.cancel()
+        self._disconnect_job.cancel()
 
     @tasks.loop(seconds=30)
-    async def _disconnect_timer(self):
+    async def _disconnect_job(self):
         if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.is_playing():
             await self.disconnect()
 
@@ -929,7 +972,7 @@ class Musicbox(commands.Cog):
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist {songs[0].group}")
+                    description=f"Now playing playlist [{songs[0].group}]({songs[0].group_url})")
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
@@ -1104,11 +1147,16 @@ class Musicbox(commands.Cog):
         if len(music_player.next_queue) < 1:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the queue after this"))
+                description="There's nothing in the queue after this."))
             return
 
         # Stop current song and flag that it has been skipped
-        await music_player.next()
+        result = await music_player.next()
+        if not result:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="Please slow down, you can't skip while the next song hasn't even started yet."))
+            return
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description="Song has been skipped."))
@@ -1175,7 +1223,7 @@ class Musicbox(commands.Cog):
         # Disable loop if enabled
         if music_player.is_looping:
             embed = discord.Embed(
-                colour=constants.EmbedStatus.NO.value,
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Song is already looping.")
             await interaction.response.send_message(embed=embed)
             return
@@ -1201,7 +1249,7 @@ class Musicbox(commands.Cog):
         # Disable loop if enabled
         if not music_player.is_looping:
             embed = discord.Embed(
-                colour=constants.EmbedStatus.NO.value,
+                colour=constants.EmbedStatus.FAIL.value,
                 description="Song is not currently looping.")
             await interaction.response.send_message(embed=embed)
             return
@@ -1474,7 +1522,7 @@ class Musicbox(commands.Cog):
 
         await music_player.clear()
         embed = discord.Embed(
-            colour=constants.EmbedStatus.NO.value,
+            colour=constants.EmbedStatus.FAIL.value,
             description="All songs have been removed from the queue")
         await interaction.response.send_message(embed=embed)
 
@@ -1491,7 +1539,7 @@ class Musicbox(commands.Cog):
             return
 
         # Alert if playlist with specified name already exists
-        if self.playlists.get_by_guild_and_name(interaction.guild, playlist_name):
+        if self.playlists.get_by_name_in_guild(playlist_name, interaction.guild):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist `{playlist_name}` already exists")
@@ -1510,7 +1558,7 @@ class Musicbox(commands.Cog):
     async def playlist_destroy(self, interaction, playlist_name: str):
         """Deletes an existing playlist"""
         # Alert if playlist doesn't exist in db
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1532,7 +1580,7 @@ class Musicbox(commands.Cog):
     async def playlist_description(self, interaction, playlist_name: str, description: str):
         """Sets the description for the playlist"""
         # Alert if playlist doesn't exist
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1548,6 +1596,10 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Update playlist description
         playlist.description = description
         self.playlists.update(playlist)
@@ -1561,13 +1613,17 @@ class Musicbox(commands.Cog):
     async def playlist_rename(self, interaction, playlist_name: str, new_name: str):
         """Rename an existing playlist"""
         # Get the playlist
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description=f"Playlist '{playlist_name}' doesn't exist")
             await interaction.response.send_message(embed=embed)
             return
+
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
 
         # Update playlist name
         playlist.name = new_name
@@ -1612,7 +1668,7 @@ class Musicbox(commands.Cog):
     async def playlist_add(self, interaction, playlist_name: str, url: str):
         """Adds a song to a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1640,8 +1696,12 @@ class Musicbox(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="That song is unavailable. Maybe the link is invalid?")
-            await interaction.followup.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
             return
+
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
 
         # Set previous song as the last song in the playlist
         if not playlist_songs:
@@ -1654,15 +1714,14 @@ class Musicbox(commands.Cog):
                 previous_ids.append(playlist_song.previous_id)
             previous_id = list(set(song_ids) - set(previous_ids))[0]
 
-        for song in songs:
-            new_playlist_song = PlaylistSong.create_new(
-                playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
-            self.playlist_songs.add(new_playlist_song)
-            previous_id = new_playlist_song.id
-
         # Add playlist
         if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST \
                 or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
+            for song in songs:
+                new_playlist_song = PlaylistSong.create_new(
+                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                self.playlist_songs.add(new_playlist_song)
+                previous_id = new_playlist_song.id
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from playlist "
@@ -1674,6 +1733,11 @@ class Musicbox(commands.Cog):
         # Add album
         if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM \
                 or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
+            for song in songs:
+                new_playlist_song = PlaylistSong.create_new(
+                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                self.playlist_songs.add(new_playlist_song)
+                previous_id = new_playlist_song.id
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from album "
@@ -1682,6 +1746,10 @@ class Musicbox(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
+        song = songs[0]
+        new_playlist_song = PlaylistSong.create_new(
+            playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+        self.playlist_songs.add(new_playlist_song)
         artist = ""
         if songs[0].artist:
             artist = f"{songs[0].artist} - "
@@ -1696,7 +1764,7 @@ class Musicbox(commands.Cog):
     async def playlist_remove(self, interaction, playlist_name: str, index: int):
         """Removes a song from a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1716,11 +1784,15 @@ class Musicbox(commands.Cog):
         except IndexError:
             pass
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Remove selected song from playlist
         self.playlist_songs.remove(selected_song.id)
         duration = await self._format_duration(selected_song.duration)
         embed = discord.Embed(
-            colour=constants.EmbedStatus.NO.value,
+            colour=constants.EmbedStatus.FAIL.value,
             description=f"[{selected_song.title}]({selected_song.url}) "
                         f"`{duration}` has been removed from `{playlist_name}`")
         await interaction.response.send_message(embed=embed)
@@ -1730,7 +1802,7 @@ class Musicbox(commands.Cog):
     async def playlist_reorder(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
         """Moves a song to a specified position in a playlist"""
         # Get playlist from repo
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1773,6 +1845,10 @@ class Musicbox(commands.Cog):
         except IndexError:
             pass
 
+        # Update playlist last modified
+        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.playlists.update(playlist)
+
         # Output result to chat
         self.playlist_songs.update(selected_song)
         duration = await self._format_duration(selected_song.duration)
@@ -1788,7 +1864,7 @@ class Musicbox(commands.Cog):
     async def playlist_view(self, interaction, playlist_name: str, page: int = 1):
         """List all songs in a playlist"""
         # Fetch songs from playlist if it exists
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1829,7 +1905,7 @@ class Musicbox(commands.Cog):
             return
 
         # Fetch songs from playlist if it exists
-        playlist = self.playlists.get_by_guild_and_name(interaction.guild, playlist_name)[0]
+        playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -1915,7 +1991,7 @@ class Musicbox(commands.Cog):
     async def _get_songs(query: str, requester: discord.User):
         if "youtube.com" in query and "list" in query:
             return await WavelinkSong.from_youtube_playlist(query, requester)
-        elif "youtube.com" in query:
+        elif "youtube.com" in query or "youtu.be" in query:
             return await WavelinkSong.from_youtube(query, requester)
         elif "spotify.com" in query and "playlist" in query:
             return await WavelinkSong.from_spotify_playlist(query, requester)

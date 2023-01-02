@@ -288,6 +288,52 @@ class ActionRepository(ABC, Generic[T_Action]):
 
 
 class MessageAction(Action):
+    def __init__(self, id_: uuid.UUID, text_channel_id, message):
+        super().__init__(id_)
+        self.text_channel_id = text_channel_id
+        self.message = message
+
+    @classmethod
+    def create_new(cls, text_channel_id, message):
+        return cls(uuid.uuid4(), text_channel_id, message)
+
+    @classmethod
+    def get_name(cls):
+        return "message"
+
+    def get_formatted_output(self):
+        return f"Sends a message starting with '{self.message[:20]}' to channel <#{self.text_channel_id}>."
+
+
+class MessageActionRepository(ActionRepository[MessageAction]):
+    def __init__(self, database):
+        super().__init__(database)
+        cursor = self.db.cursor()
+        cursor.execute('CREATE TABLE IF NOT EXISTS action_message '
+                       '(id TEXT PRIMARY KEY, text_channel INTEGER, message TEXT)')
+        self.db.commit()
+
+    def get_by_id(self, id_: uuid.UUID):
+        result = self.db.cursor().execute('SELECT * FROM action_message WHERE id=?', (str(id_),)).fetchone()
+        return self._result_to_action(result)
+
+    def add(self, action: MessageAction):
+        values = (str(action.id), action.text_channel_id, action.message)
+        cursor = self.db.cursor()
+        cursor.execute('INSERT INTO action_message VALUES (?, ?, ?)', values)
+        self.db.commit()
+
+    def remove(self, id_: uuid.UUID):
+        cursor = self.db.cursor()
+        cursor.execute('DELETE FROM action_message WHERE id=?', (str(id_),))
+        self.db.commit()
+
+    @staticmethod
+    def _result_to_action(result):
+        return MessageAction(uuid.UUID(result[0]), result[1], result[2]) if result else None
+
+
+class BroadcastAction(Action):
     def __init__(self, id_: uuid.UUID, text_channel_id, title, message):
         super().__init__(id_)
         self.text_channel_id = text_channel_id
@@ -303,35 +349,35 @@ class MessageAction(Action):
         return "message"
 
     def get_formatted_output(self):
-        return f"Sends a message titled '{self.title}' to channel <#{self.text_channel_id}>."
+        return f"Sends a broadcast titled '{self.title}' to channel <#{self.text_channel_id}>."
 
 
-class MessageActionRepository(ActionRepository[MessageAction]):
+class BroadcastActionRepository(ActionRepository[BroadcastAction]):
     def __init__(self, database):
         super().__init__(database)
         cursor = self.db.cursor()
-        cursor.execute('CREATE TABLE IF NOT EXISTS action_message '
+        cursor.execute('CREATE TABLE IF NOT EXISTS action_broadcast '
                        '(id TEXT PRIMARY KEY, text_channel INTEGER, title TEXT, message TEXT)')
         self.db.commit()
 
     def get_by_id(self, id_: uuid.UUID):
-        result = self.db.cursor().execute('SELECT * FROM action_message WHERE id=?', (str(id_),)).fetchone()
+        result = self.db.cursor().execute('SELECT * FROM action_broadcast WHERE id=?', (str(id_),)).fetchone()
         return self._result_to_action(result)
 
-    def add(self, action: MessageAction):
+    def add(self, action: BroadcastAction):
         values = (str(action.id), action.text_channel_id, action.title, action.message)
         cursor = self.db.cursor()
-        cursor.execute('INSERT INTO action_message VALUES (?, ?, ?, ?)', values)
+        cursor.execute('INSERT INTO action_broadcast VALUES (?, ?, ?, ?)', values)
         self.db.commit()
 
     def remove(self, id_: uuid.UUID):
         cursor = self.db.cursor()
-        cursor.execute('DELETE FROM action_message WHERE id=?', (str(id_),))
+        cursor.execute('DELETE FROM action_broadcast WHERE id=?', (str(id_),))
         self.db.commit()
 
     @staticmethod
     def _result_to_action(result):
-        return MessageAction(uuid.UUID(result[0]), result[1], result[2], result[3]) if result else None
+        return BroadcastAction(uuid.UUID(result[0]), result[1], result[2], result[3]) if result else None
 
 
 class VoiceKickAction(Action):
@@ -848,6 +894,11 @@ class Automation(commands.Cog):
     @commands.Cog.listener()
     async def on_message_action(self, action: MessageAction):
         channel = await self.bot.fetch_channel(action.text_channel_id)
+        await channel.send(action.message)
+
+    @commands.Cog.listener()
+    async def on_broadcast_action(self, action: BroadcastAction):
+        channel = await self.bot.fetch_channel(action.text_channel_id)
         await channel.send(embed=discord.Embed(
             colour=constants.EmbedStatus.SPECIAL.value,
             title=f"{action.title}",
@@ -1089,7 +1140,7 @@ class Automation(commands.Cog):
 
     @event_add_group.command(name="message")
     async def event_add_message(self, interaction: discord.Interaction, event_name: str, channel: discord.TextChannel,
-                                title: str, message: str):
+                                message: str):
         event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
         if not event:
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
@@ -1099,11 +1150,29 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
             return
 
-        action = MessageAction.create_new(channel.id, title, message)
+        action = MessageAction.create_new(channel.id, message)
         self.event_service.add_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Message action has been added to event '{event_name}'"))
+
+    @event_add_group.command(name="broadcast")
+    async def event_add_broadcast(self, interaction: discord.Interaction, event_name: str, channel: discord.TextChannel,
+                                  title: str, message: str):
+        event = self.events.get_by_name_in_guild(event_name, interaction.guild_id)
+        if not event:
+            await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
+            return
+
+        if await self.is_over_action_limit(event):
+            await interaction.response.send_message(embed=self.MAX_ACTIONS_EMBED)
+            return
+
+        action = BroadcastAction.create_new(channel.id, title, message)
+        self.event_service.add_action(event, action)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Broadcast action has been added to event '{event_name}'"))
 
     @event_add_group.command(name="voicekick")
     async def event_add_voicekick(self, interaction, event_name: str, voice_channel: discord.VoiceChannel):
