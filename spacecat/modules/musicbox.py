@@ -1350,71 +1350,37 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        # Output first in queue as currently playing
+        # Output currently playing song
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.MUSIC} Previously Played Songs")
-        duration = await self._format_duration(playing.duration)
+            title=f"{constants.EmbedIcon.MUSIC} Music Queue")
+        header = "Currently Playing (Looping)" if music_player.is_looping else "Currently Playing"
+        artist = f"{playing.artist} - " if playing.artist else ""
         current_time = await self._format_duration(music_player.seek_position)
-
-        # Set header depending on if looping or not, and whether to add a spacer
-        if music_player.is_looping:
-            header = "Currently Playing (Looping)"
-        else:
-            header = "Currently Playing"
-        if len(queue) >= 1:
-            spacer = "\u200B"
-        else:
-            spacer = ""
-        artist = ""
-        if playing.artist:
-            artist = f"{playing.artist} - "
+        duration = await self._format_duration(playing.duration)
+        spacer = "\u200B" if len(queue) >= 1 else ""
         embed.add_field(
             name=header,
             value=f"[{artist}{playing.title}]({playing.url}) "
                   f"`{current_time}/{duration}` \n{spacer}")
 
         # List remaining songs in queue plus total duration
-        if len(queue) >= 1:
-            queue_info = []
+        queue_display_items = []
+        total_duration = 0
+        for song in queue:
+            total_duration += song.duration
+            duration = await self._format_duration(song.duration)
+            artist = f"{song.artist} - " if song.artist else ""
+            queue_display_items.append(f"[{artist}{song.title}]({song.url}) `{duration}`")
 
-            # Modify page variable to get every ten results
-            page -= 1
-            if page > 0:
-                page = page * 5
-
-            total_duration = 0
-            for song in queue:
-                total_duration += song.duration
-
-            for index, song in enumerate(
-                    islice(queue, page, page + 5)):
-                duration = await self._format_duration(song.duration)
-                artist = ""
-                if song.artist:
-                    artist = f"{song.artist} - "
-                queue_info.append(f"{page + index + 1}. [{artist}{song.title}]({song.url}) `{duration}`")
-
-            # Alert if no songs are on the specified page
-            if page > 0 and not queue_info:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.FAIL.value,
-                    description="There are no songs on that page")
-                await interaction.response.send_message(embed=embed)
-                return
-
-            # Omit songs past 10 and just display amount instead
-            if len(queue) > page + 6:
-                queue_info.append(
-                    f"`+{len(queue) - 5 - page} more in queue`")
-
-            # Output results to chat
+        # Output results to chat
+        if queue_display_items:
             duration = await self._format_duration(total_duration)
-            queue_output = '\n'.join(queue_info)
-            embed.add_field(
-                name=f"Queue  `{duration}`",
-                value=queue_output, inline=False)
-        await interaction.response.send_message(embed=embed)
+            paginated_view = PaginatedView(embed, f"Queue  `{duration}`", queue_display_items, 5, page)
+        else:
+            paginated_view = EmptyPaginatedView(
+                embed, f"Queue `0:00`", "Nothing here yet. Songs that have previously played with appear here.")
+        await paginated_view.send(interaction)
 
     @queue_group.command(name="reorder")
     @perms.check()
