@@ -8,7 +8,7 @@ from spacecat.helpers import perms
 
 
 class Throwing:
-    def __init__(self, thrower: discord.User, target: discord.User):
+    def __init__(self, thrower: discord.Member, target: discord.Member):
         self.thrower = thrower
         self.target = target
         self.timeout_time = time.time() + 5.0
@@ -18,6 +18,7 @@ class Seethreepio(commands.Cog):
     """Random text response based features"""
     def __init__(self, bot):
         self.bot = bot
+        self.throwings: dict[int, Throwing] = {}
 
     @app_commands.command()
     @perms.check()
@@ -40,16 +41,16 @@ class Seethreepio(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def throw(self, interaction, member: discord.Member, *, item: str = None):
+    async def throw(self, interaction: discord.Interaction, member: discord.Member, *, item: str = None):
+        if member.id == self.bot.user.id:
+            await interaction.response.send_message("No u. \n'(∩⚆ᗝ⚆)⊃ --==(O)     " + interaction.user.mention)
+            return
+
         if item is not None:
-            await interaction.response.send_message("(∩⚆ᗝ⚆)⊃ --==(" + item + ")     "
-                           + member.mention)
+            await interaction.response.send_message("(∩⚆ᗝ⚆)⊃ --==(" + item + ")     " + member.mention)
         else:
-            if member.id != self.bot.user.id:
-                await interaction.response.send_message("(∩⚆ᗝ⚆)⊃ --==(O)     " + member.mention)
-            else:
-                await interaction.response.send_message("Bitch please. \n'(∩⚆ᗝ⚆)⊃ --==(O)     "
-                               + interaction.user.mention)
+            await interaction.response.send_message("(∩⚆ᗝ⚆)⊃ --==(O)     " + member.mention)
+        self.throwings[member.id] = Throwing(interaction.user, member)
 
     @app_commands.command()
     @perms.check()
