@@ -1,3 +1,5 @@
+import random
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -15,6 +17,14 @@ class Seethreepio(commands.Cog):
     async def echo(self, interaction, *, message: str):
         """Repeats a given message"""
         await interaction.response.send_message(message)
+
+    @app_commands.command()
+    async def coinflip(self, interaction):
+        coin = random.randint(0, 1)
+        if coin:
+            await interaction.response.send_message("Heads")
+        else:
+            await interaction.response.send_message("Tails")
 
     @app_commands.command()
     @perms.check()
