@@ -3,8 +3,9 @@ import random
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.ui import View, Button
 
-from spacecat.helpers import perms
+from spacecat.helpers import perms, constants
 
 
 class Seethreepio(commands.Cog):
@@ -25,6 +26,24 @@ class Seethreepio(commands.Cog):
             await interaction.response.send_message("Heads")
         else:
             await interaction.response.send_message("Tails")
+
+    @app_commands.command()
+    async def rps(self, interaction: discord.Member, target: discord.Member):
+        embed = discord.Embed(
+            colour=constants.EmbedStatus.INFO.value,
+            title="Rock Paper Scissors",
+            description=f"<@{target.user_id}> has been challenged by <@{interaction.user}>. Make your moves.")
+
+        # Add buttons
+        view = View()
+        rock_button = Button(emoji="✊", label="Rock", style=discord.ButtonStyle.green)
+        view.add_item(rock_button)
+        paper_button = Button(emoji="✋", label="Paper", style=discord.ButtonStyle.green)
+        view.add_item(paper_button)
+        scissors_button = Button(emoji="✌️", label="Scissors", style=discord.ButtonStyle.green)
+        view.add_item(scissors_button)
+
+        await interaction.response.send_message(embed=embed, view=view)
 
     @app_commands.command()
     @perms.check()
