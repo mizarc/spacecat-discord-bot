@@ -1,3 +1,4 @@
+import enum
 import random
 
 import discord
@@ -6,6 +7,63 @@ from discord.ext import commands
 from discord.ui import View, Button
 
 from spacecat.helpers import perms, constants
+
+
+class RPSAction(enum.Enum):
+    Rock = 0
+    Paper = 1
+    Scissors = 2
+
+
+class RPSGame:
+    def __init__(self, challenger: discord.User, target: discord.User):
+        self.challenger = challenger
+        self.target = target
+        self.challenger_action = None
+        self.target_action = None
+
+    def has_both_chosen(self):
+        if self.challenger_action and self.target_action:
+            return True
+        return False
+
+    def play_action(self, user: discord.User, action: RPSAction):
+        if user == self.challenger:
+            self.challenger_action = action
+        elif user == self.target:
+            self.target_action = action
+
+    def get_winner(self):
+        if self.challenger_action == self.target_action:
+            return None
+        elif self.challenger_action == RPSAction.Rock:
+            if self.target_action == RPSAction.Scissors:
+                return self.challenger
+            else:
+                return self.target
+        elif self.challenger_action == RPSAction.Paper:
+            if self.target_action == RPSAction.Rock:
+                return self.challenger
+            else:
+                return self.target
+        elif self.challenger_action == RPSAction.Scissors:
+            if self.target_action == RPSAction.Paper:
+                return self.challenger
+            else:
+                return self.target
+
+
+class RPSButton(Button):
+    def __init__(self, rps_game: RPSGame, action: RPSAction, label: str,
+                 emoji: discord.PartialEmoji, style: discord.ButtonStyle):
+        super().__init__(label=label, emoji=emoji, style=style)
+        self.rps_game = rps_game
+        self.action = action
+
+    async def callback(self, interaction):
+        self.rps_game.play_action(interaction.user, self.action)
+        if self.rps_game.has_both_chosen():
+            self.rps_game.get_winner()
 
 
 class Seethreepio(commands.Cog):
@@ -28,19 +86,19 @@ class Seethreepio(commands.Cog):
             await interaction.response.send_message("Tails")
 
     @app_commands.command()
-    async def rps(self, interaction: discord.Member, target: discord.Member):
+    async def rps(self, interaction: discord.Interaction, target: discord.Member):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title="Rock Paper Scissors",
-            description=f"<@{target.user_id}> has been challenged by <@{interaction.user}>. Make your moves.")
+            description=f"<@{target.id}> has been challenged by <@{interaction.user.id}>. Make your moves.")
 
         # Add buttons
         view = View()
-        rock_button = Button(emoji="✊", label="Rock", style=discord.ButtonStyle.green)
+        rock_button = RPSButton(emoji="✊", label="Rock", style=discord.ButtonStyle.green)
         view.add_item(rock_button)
-        paper_button = Button(emoji="✋", label="Paper", style=discord.ButtonStyle.green)
+        paper_button = RPSButton(emoji="✋", label="Paper", style=discord.ButtonStyle.green)
         view.add_item(paper_button)
-        scissors_button = Button(emoji="✌️", label="Scissors", style=discord.ButtonStyle.green)
+        scissors_button = RPSButton(emoji="✌️", label="Scissors", style=discord.ButtonStyle.green)
         view.add_item(scissors_button)
 
         await interaction.response.send_message(embed=embed, view=view)
