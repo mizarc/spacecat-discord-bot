@@ -10,9 +10,9 @@ from spacecat.helpers import perms, constants
 
 
 class RPSAction(enum.Enum):
-    Rock = "✊ Rock"
-    Paper = "✋ Paper"
-    Scissors = "✌️ Scissors"
+    Rock = "✊"
+    Paper = "✋"
+    Scissors = "✌️"
 
 
 class RPSGame:
@@ -71,10 +71,13 @@ class RPSButton(Button):
 
         if self.rps_game.has_both_chosen():
             self.rps_game.get_winner()
-            await interaction.followup.send(
-                content=f"{self.rps_game.challenger} has chosen `{self.rps_game.challenger_action.name}`, "
-                        f"\n{self.rps_game.target} has chosen {self.rps_game.target_action.name}. "
-                        f"\n\n{self.rps_game.get_winner()} has won!")
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.INFO.value,
+                title="Rock Paper Scissors",
+                description=f"<@{self.rps_game.challenger.id}> {self.rps_game.challenger_action.value} vs"
+                            f" {self.rps_game.target_action.value} <@{self.rps_game.target.id}>"
+                            f"\n\n<@{self.rps_game.get_winner().id}> has won!")
+            await interaction.followup.send(embed=embed)
 
 
 class Seethreepio(commands.Cog):
