@@ -10,9 +10,9 @@ from spacecat.helpers import perms, constants
 
 
 class RPSAction(enum.Enum):
-    Rock = 0
-    Paper = 1
-    Scissors = 2
+    Rock = "✊ Rock"
+    Paper = "✋ Paper"
+    Scissors = "✌️ Scissors"
 
 
 class RPSGame:
@@ -55,15 +55,24 @@ class RPSGame:
 
 class RPSButton(Button):
     def __init__(self, rps_game: RPSGame, action: RPSAction, label: str,
-                 emoji: discord.PartialEmoji, style: discord.ButtonStyle):
+                 emoji: discord.PartialEmoji | str, style: discord.ButtonStyle):
         super().__init__(label=label, emoji=emoji, style=style)
         self.rps_game = rps_game
         self.action = action
 
     async def callback(self, interaction):
+        if not (interaction.user == self.rps_game.challenger or interaction.user == self.rps_game.target):
+            await interaction.response.send_message(content="You're not a part of this game.", ephemeral=True)
+
         self.rps_game.play_action(interaction.user, self.action)
+        await interaction.response.send_message(content=f"You have chosen {self.action.name}", ephemeral=True)
+
         if self.rps_game.has_both_chosen():
             self.rps_game.get_winner()
+            await interaction.response.send_message(
+                content=f"{self.rps_game.challenger} has chosen `{self.rps_game.challenger_action.name}`, "
+                        f"\n{self.rps_game.target} has chosen {self.rps_game.target_action.name}. "
+                        f"\n\n{self.rps_game.get_winner()} has won!")
 
 
 class Seethreepio(commands.Cog):
@@ -86,19 +95,22 @@ class Seethreepio(commands.Cog):
             await interaction.response.send_message("Tails")
 
     @app_commands.command()
-    async def rps(self, interaction: discord.Interaction, target: discord.Member):
+    async def rps(self, interaction: discord.Interaction, target: discord.User):
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title="Rock Paper Scissors",
             description=f"<@{target.id}> has been challenged by <@{interaction.user.id}>. Make your moves.")
 
+        rps_game = RPSGame(interaction.user, target)
+
         # Add buttons
         view = View()
-        rock_button = RPSButton(emoji="✊", label="Rock", style=discord.ButtonStyle.green)
+        rock_button = RPSButton(rps_game, RPSAction.Rock, emoji="✊", label="Rock", style=discord.ButtonStyle.green)
         view.add_item(rock_button)
-        paper_button = RPSButton(emoji="✋", label="Paper", style=discord.ButtonStyle.green)
+        paper_button = RPSButton(rps_game, RPSAction.Paper, emoji="✋", label="Paper", style=discord.ButtonStyle.green)
         view.add_item(paper_button)
-        scissors_button = RPSButton(emoji="✌️", label="Scissors", style=discord.ButtonStyle.green)
+        scissors_button = RPSButton(rps_game, RPSAction.Scissors, emoji="✌️",
+                                    label="Scissors", style=discord.ButtonStyle.green)
         view.add_item(scissors_button)
 
         await interaction.response.send_message(embed=embed, view=view)
