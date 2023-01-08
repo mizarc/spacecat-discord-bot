@@ -61,15 +61,17 @@ class RPSButton(Button):
         self.action = action
 
     async def callback(self, interaction):
+        await interaction.response.defer()
+
         if not (interaction.user == self.rps_game.challenger or interaction.user == self.rps_game.target):
-            await interaction.response.send_message(content="You're not a part of this game.", ephemeral=True)
+            await interaction.followup.send(content="You're not a part of this game.", ephemeral=True)
 
         self.rps_game.play_action(interaction.user, self.action)
-        await interaction.response.send_message(content=f"You have chosen {self.action.name}", ephemeral=True)
+        await interaction.followup.send(content=f"You have chosen {self.action.name}", ephemeral=True)
 
         if self.rps_game.has_both_chosen():
             self.rps_game.get_winner()
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 content=f"{self.rps_game.challenger} has chosen `{self.rps_game.challenger_action.name}`, "
                         f"\n{self.rps_game.target} has chosen {self.rps_game.target_action.name}. "
                         f"\n\n{self.rps_game.get_winner()} has won!")
