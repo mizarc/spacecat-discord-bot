@@ -118,6 +118,11 @@ class Seethreepio(commands.Cog):
             await interaction.response.send_message("Tails")
 
     @app_commands.command()
+    async def diceroll(self, interaction, sides: int = 6):
+        result = random.randint(1, sides)
+        await interaction.response.send_message(f"You rolled a {result} on a {sides} sided dice")
+
+    @app_commands.command()
     async def rps(self, interaction: discord.Interaction, target: discord.User):
         embed = discord.Embed(
             colour=constants.EmbedStatus.GAME.value,
