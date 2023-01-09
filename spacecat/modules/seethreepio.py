@@ -80,6 +80,13 @@ class RPSButton(Button):
                             f"\n\n{win_text}")
             await interaction.followup.send(embed=embed)
 
+            # Disable buttons after game has completed
+            buttons = self.view.children
+            for button in buttons:
+                button.disabled = True
+            self.disabled = True
+            await interaction.edit_original_response(view=self.view)
+
 
 class Seethreepio(commands.Cog):
     """Random text response based features"""
