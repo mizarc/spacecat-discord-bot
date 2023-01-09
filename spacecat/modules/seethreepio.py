@@ -83,7 +83,7 @@ class RPSButton(Button):
             self.rps_game.get_winner()
             win_text = f"<@{self.rps_game.get_winner().id}> has won!" if self.rps_game.get_winner() else "It's a draw!"
             embed = discord.Embed(
-                colour=constants.EmbedStatus.INFO.value,
+                colour=constants.EmbedStatus.GAME.value,
                 title="Rock Paper Scissors",
                 description=f"<@{self.rps_game.challenger.id}> {self.rps_game.challenger_action.value} vs"
                             f" {self.rps_game.target_action.value} <@{self.rps_game.target.id}>"
@@ -120,7 +120,7 @@ class Seethreepio(commands.Cog):
     @app_commands.command()
     async def rps(self, interaction: discord.Interaction, target: discord.User):
         embed = discord.Embed(
-            colour=constants.EmbedStatus.INFO.value,
+            colour=constants.EmbedStatus.GAME.value,
             title="Rock Paper Scissors",
             description=f"<@{target.id}> has been challenged by <@{interaction.user.id}>. Make your moves.")
 
