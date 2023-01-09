@@ -71,12 +71,13 @@ class RPSButton(Button):
 
         if self.rps_game.has_both_chosen():
             self.rps_game.get_winner()
+            win_text = f"<@{self.rps_game.get_winner().id}> has won!" if self.rps_game.get_winner() else "It's a draw!"
             embed = discord.Embed(
                 colour=constants.EmbedStatus.INFO.value,
                 title="Rock Paper Scissors",
                 description=f"<@{self.rps_game.challenger.id}> {self.rps_game.challenger_action.value} vs"
                             f" {self.rps_game.target_action.value} <@{self.rps_game.target.id}>"
-                            f"\n\n<@{self.rps_game.get_winner().id}> has won!")
+                            f"\n\n{win_text}")
             await interaction.followup.send(embed=embed)
 
 
