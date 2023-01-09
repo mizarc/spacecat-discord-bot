@@ -27,11 +27,14 @@ class RPSGame:
             return True
         return False
 
-    def play_action(self, user: discord.User, action: RPSAction):
-        if user == self.challenger:
+    def play_action(self, user: discord.User, action: RPSAction) -> bool:
+        if user == self.challenger and not self.challenger_action:
             self.challenger_action = action
-        elif user == self.target:
+            return True
+        elif user == self.target and not self.target_action:
             self.target_action = action
+            return True
+        return False
 
     def get_winner(self):
         if self.challenger_action == self.target_action:
@@ -63,12 +66,18 @@ class RPSButton(Button):
     async def callback(self, interaction):
         await interaction.response.defer()
 
+        # Tell non-players that they cannot play this game
         if not (interaction.user == self.rps_game.challenger or interaction.user == self.rps_game.target):
             await interaction.followup.send(content="You're not a part of this game.", ephemeral=True)
 
-        self.rps_game.play_action(interaction.user, self.action)
-        await interaction.followup.send(content=f"You have chosen {self.action.name}", ephemeral=True)
+        # Alert user of choice
+        action_result = self.rps_game.play_action(interaction.user, self.action)
+        if action_result:
+            await interaction.followup.send(content=f"You have chosen {self.action.value}", ephemeral=True)
+        else:
+            await interaction.followup.send(content="You have already made a selection.", ephemeral=True)
 
+        # Declare winner
         if self.rps_game.has_both_chosen():
             self.rps_game.get_winner()
             win_text = f"<@{self.rps_game.get_winner().id}> has won!" if self.rps_game.get_winner() else "It's a draw!"
