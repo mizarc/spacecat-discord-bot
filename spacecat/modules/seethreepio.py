@@ -2,6 +2,7 @@ import enum
 import random
 
 import discord
+import typing
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import View, Button
@@ -58,7 +59,7 @@ class RPSGame:
 
 class RPSButton(Button):
     def __init__(self, rps_game: RPSGame, action: RPSAction, label: str,
-                 emoji: discord.PartialEmoji | str, style: discord.ButtonStyle):
+                 emoji: typing.Union[discord.PartialEmoji, str], style: discord.ButtonStyle):
         super().__init__(label=label, emoji=emoji, style=style)
         self.rps_game = rps_game
         self.action = action
