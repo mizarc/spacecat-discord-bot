@@ -16,6 +16,16 @@ class RPSAction(enum.Enum):
     Scissors = "✌️"
 
 
+class DefaultView(View):
+    def __init__(self, timeout: int = 300):
+        super().__init__(timeout=timeout)
+
+    def on_timeout(self) -> None:
+        for item in self.children:
+            if isinstance(item, Button):
+                item.disabled = True
+
+
 class RPSGame:
     def __init__(self, challenger: discord.User, target: discord.User):
         self.challenger = challenger
@@ -97,6 +107,9 @@ class RPSButton(Button):
             self.disabled = True
             await interaction.edit_original_response(view=self.view)
 
+    async def on_timeout(self):
+        self.disabled = True
+
 
 class Seethreepio(commands.Cog):
     """Random text response based features"""
@@ -132,7 +145,7 @@ class Seethreepio(commands.Cog):
         rps_game = RPSGame(interaction.user, target)
 
         # Add buttons
-        view = View()
+        view = DefaultView()
         rock_button = RPSButton(rps_game, RPSAction.Rock, emoji="✊", label="Rock", style=discord.ButtonStyle.green)
         view.add_item(rock_button)
         paper_button = RPSButton(rps_game, RPSAction.Paper, emoji="✋", label="Paper", style=discord.ButtonStyle.green)
