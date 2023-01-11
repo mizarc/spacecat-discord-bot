@@ -154,6 +154,10 @@ class Seethreepio(commands.Cog):
                                     label="Scissors", style=discord.ButtonStyle.green)
         view.add_item(scissors_button)
 
+        # If playing against the bot, set target action randomly
+        if target.id == self.bot.user.id:
+            rps_game.target_action = random.choice(list(RPSAction))
+
         await interaction.response.send_message(embed=embed, view=view)
 
     @app_commands.command()
