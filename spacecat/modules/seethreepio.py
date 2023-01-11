@@ -19,11 +19,17 @@ class RPSAction(enum.Enum):
 class DefaultView(View):
     def __init__(self, timeout: int = 300):
         super().__init__(timeout=timeout)
+        self.message = None
 
-    def on_timeout(self) -> None:
+    async def on_timeout(self) -> None:
         for item in self.children:
             if isinstance(item, Button):
                 item.disabled = True
+        await self.message.edit(view=self)
+
+    async def send(self, interaction: discord.Interaction, embed: discord.Embed = None) -> None:
+        await interaction.response.send_message(view=self, embed=embed)
+        self.message = await interaction.original_response()
 
 
 class RPSGame:
@@ -158,7 +164,7 @@ class Seethreepio(commands.Cog):
         if target.id == self.bot.user.id:
             rps_game.target_action = random.choice(list(RPSAction))
 
-        await interaction.response.send_message(embed=embed, view=view)
+        await view.send(interaction, embed=embed)
 
     @app_commands.command()
     @perms.check()
