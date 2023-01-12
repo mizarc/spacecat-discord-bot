@@ -8,6 +8,7 @@ from discord.ext import commands
 from discord.ui import View, Button
 
 from spacecat.helpers import perms, constants
+from spacecat.helpers.views import DefaultView
 
 
 class RPSAction(enum.Enum):
@@ -135,7 +136,7 @@ class Seethreepio(commands.Cog):
         rps_game = RPSGame(interaction.user, target)
 
         # Add buttons
-        view = DefaultView()
+        view = DefaultView(embed)
         rock_button = RPSButton(rps_game, RPSAction.Rock, emoji="✊", label="Rock", style=discord.ButtonStyle.green)
         view.add_item(rock_button)
         paper_button = RPSButton(rps_game, RPSAction.Paper, emoji="✋", label="Paper", style=discord.ButtonStyle.green)
@@ -148,7 +149,7 @@ class Seethreepio(commands.Cog):
         if target.id == self.bot.user.id:
             rps_game.target_action = random.choice(list(RPSAction))
 
-        await view.send(interaction, embed=embed)
+        await view.send(interaction)
 
     @app_commands.command()
     @perms.check()

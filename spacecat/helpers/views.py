@@ -26,19 +26,20 @@ class PaginatedView(DefaultView):
     def __init__(self, base_embed: discord.Embed, items_header: str, items: list[str],
                  items_per_page: int = 5, starting_page: int = 1):
         super().__init__(base_embed)
+
         # Included data
         self.items_header = items_header
         self.items = items
         self.items_per_page = items_per_page
+        self.base_embed = base_embed
 
         # Current state
-        self.current_embed = None
         self.current_page = min(starting_page, math.ceil(len(self.items) / self.items_per_page))
 
     async def send(self, interaction):
         self.update_buttons()
         self.create_embed()
-        await interaction.response.send_message(embed=self.current_embed, view=self)
+        await super().send(interaction)
 
     def create_embed(self):
         items_field = []
@@ -50,15 +51,15 @@ class PaginatedView(DefaultView):
         if not items_field:
             items_field.append("\u200B")
 
-        self.current_embed = copy.copy(self.embed)
-        self.current_embed.add_field(
+        self.embed = copy.copy(self.base_embed)
+        self.embed.add_field(
             name=self.items_header,
             value='\n'.join(items_field), inline=False)
 
     async def update_message(self, interaction):
         self.update_buttons()
         self.create_embed()
-        await interaction.edit_original_response(embed=self.current_embed, view=self)
+        await interaction.edit_original_response(embed=self.embed, view=self)
 
     def update_buttons(self):
         is_page_count = self.current_page >= len(self.items) / self.items_per_page
@@ -98,25 +99,23 @@ class PaginatedView(DefaultView):
 
 
 class EmptyPaginatedView(DefaultView):
-    def __init__(self, base_embed: discord.Embed, items_header: str, message: str):
+    def __init__(self, base_embed: discord.Embed, items_header: str, text_content: str):
         super().__init__(base_embed)
+
         # Included data
         self.items_header = items_header
-        self.message = message
-
-        # Current state
-        self.current_embed = None
+        self.text_content = text_content
 
     async def send(self, interaction):
         self.update_buttons()
         self.create_embed()
-        await interaction.response.send_message(embed=self.current_embed, view=self)
+        await super().send(interaction)
 
     def create_embed(self):
-        self.current_embed = copy.copy(self.embed)
-        self.current_embed.add_field(
+        self.embed = copy.copy(self.embed)
+        self.embed.add_field(
             name=self.items_header,
-            value=self.message, inline=False)
+            value=self.text_content, inline=False)
 
     def update_buttons(self):
         self.first_button.disabled = True
