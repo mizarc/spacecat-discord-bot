@@ -25,7 +25,7 @@ from wavelink.ext import spotify
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
-from spacecat.helpers.paginator import PaginatedView, EmptyPaginatedView
+from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
 from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
