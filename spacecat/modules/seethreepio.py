@@ -5,7 +5,7 @@ import discord
 import typing
 from discord import app_commands
 from discord.ext import commands
-from discord.ui import View, Button
+from discord.ui import Button
 
 from spacecat.helpers import perms, constants
 from spacecat.helpers.views import DefaultView

@@ -2,7 +2,6 @@ import asyncio
 import sqlite3
 from abc import ABC, abstractmethod
 from enum import Enum
-from itertools import islice
 from typing import Generic, TypeVar, get_args
 
 import discord
