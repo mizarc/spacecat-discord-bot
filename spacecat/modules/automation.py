@@ -2,7 +2,6 @@ import asyncio
 import sqlite3
 from abc import ABC, abstractmethod
 from enum import Enum
-from itertools import islice
 from typing import Generic, TypeVar, get_args
 
 import discord
@@ -16,7 +15,7 @@ import time
 import uuid
 
 from spacecat.helpers import constants
-from spacecat.helpers.paginator import PaginatedView, EmptyPaginatedView
+from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
 from spacecat.modules.administration import ServerSettingsRepository
 from spacecat.spacecat import SpaceCat
 

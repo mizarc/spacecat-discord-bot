@@ -1,12 +1,10 @@
 import sqlite3
-from itertools import islice
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from spacecat.helpers import constants
-from spacecat.helpers import perms
 
 
 class ServerSettings:

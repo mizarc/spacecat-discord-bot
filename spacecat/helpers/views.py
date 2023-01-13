@@ -2,26 +2,44 @@ import copy
 import math
 
 import discord.ui
+from discord.ui import View, Button
 
 
-class PaginatedView(discord.ui.View):
+class DefaultView(View):
+    def __init__(self, embed: discord.Embed, timeout: int = 300):
+        super().__init__(timeout=timeout)
+        self.embed = embed
+        self.message = None
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            if isinstance(item, Button):
+                item.disabled = True
+        await self.message.edit(view=self)
+
+    async def send(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(view=self, embed=self.embed)
+        self.message = await interaction.original_response()
+
+
+class PaginatedView(DefaultView):
     def __init__(self, base_embed: discord.Embed, items_header: str, items: list[str],
                  items_per_page: int = 5, starting_page: int = 1):
-        super().__init__()
+        super().__init__(base_embed)
+
         # Included data
-        self.base_embed = base_embed
         self.items_header = items_header
         self.items = items
         self.items_per_page = items_per_page
+        self.base_embed = base_embed
 
         # Current state
-        self.current_embed = None
         self.current_page = min(starting_page, math.ceil(len(self.items) / self.items_per_page))
 
     async def send(self, interaction):
         self.update_buttons()
         self.create_embed()
-        await interaction.response.send_message(embed=self.current_embed, view=self)
+        await super().send(interaction)
 
     def create_embed(self):
         items_field = []
@@ -33,15 +51,15 @@ class PaginatedView(discord.ui.View):
         if not items_field:
             items_field.append("\u200B")
 
-        self.current_embed = copy.copy(self.base_embed)
-        self.current_embed.add_field(
+        self.embed = copy.copy(self.base_embed)
+        self.embed.add_field(
             name=self.items_header,
             value='\n'.join(items_field), inline=False)
 
     async def update_message(self, interaction):
         self.update_buttons()
         self.create_embed()
-        await interaction.edit_original_response(embed=self.current_embed, view=self)
+        await interaction.edit_original_response(embed=self.embed, view=self)
 
     def update_buttons(self):
         is_page_count = self.current_page >= len(self.items) / self.items_per_page
@@ -52,13 +70,13 @@ class PaginatedView(discord.ui.View):
         self.pages_button.label = f"Page {self.current_page} / {math.ceil(len(self.items) / self.items_per_page)}"
 
     @discord.ui.button(label="|<", style=discord.ButtonStyle.green)
-    async def first_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def first_button(self, interaction: discord.Interaction, _):
         await interaction.response.defer()
         self.current_page = 1
         await self.update_message(interaction)
 
     @discord.ui.button(label="<", style=discord.ButtonStyle.primary)
-    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def back_button(self, interaction: discord.Interaction, _):
         await interaction.response.defer()
         self.current_page -= 1
         await self.update_message(interaction)
@@ -68,39 +86,36 @@ class PaginatedView(discord.ui.View):
         pass
 
     @discord.ui.button(label=">", style=discord.ButtonStyle.primary)
-    async def forward_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def forward_button(self, interaction: discord.Interaction, _):
         await interaction.response.defer()
         self.current_page += 1
         await self.update_message(interaction)
 
     @discord.ui.button(label=">|", style=discord.ButtonStyle.green)
-    async def last_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def last_button(self, interaction: discord.Interaction, _):
         await interaction.response.defer()
         self.current_page = math.ceil(len(self.items) / self.items_per_page)
         await self.update_message(interaction)
 
 
-class EmptyPaginatedView(discord.ui.View):
-    def __init__(self, base_embed: discord.Embed, items_header: str, message: str):
-        super().__init__()
-        # Included data
-        self.base_embed = base_embed
-        self.items_header = items_header
-        self.message = message
+class EmptyPaginatedView(DefaultView):
+    def __init__(self, base_embed: discord.Embed, items_header: str, text_content: str):
+        super().__init__(base_embed)
 
-        # Current state
-        self.current_embed = None
+        # Included data
+        self.items_header = items_header
+        self.text_content = text_content
 
     async def send(self, interaction):
         self.update_buttons()
         self.create_embed()
-        await interaction.response.send_message(embed=self.current_embed, view=self)
+        await super().send(interaction)
 
     def create_embed(self):
-        self.current_embed = copy.copy(self.base_embed)
-        self.current_embed.add_field(
+        self.embed = copy.copy(self.embed)
+        self.embed.add_field(
             name=self.items_header,
-            value=self.message, inline=False)
+            value=self.text_content, inline=False)
 
     def update_buttons(self):
         self.first_button.disabled = True
