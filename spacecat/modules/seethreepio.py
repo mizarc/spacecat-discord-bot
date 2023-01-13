@@ -70,7 +70,8 @@ class RPSButton(Button):
 
         # Tell non-players that they cannot play this game
         if not (interaction.user == self.rps_game.challenger or interaction.user == self.rps_game.target):
-            await interaction.followup.send(content="You're not a part of this game.", ephemeral=True)
+            await interaction.followup.send(content="You are not included in this game.", ephemeral=True)
+            return
 
         # Alert user of choice
         action_result = self.rps_game.play_action(interaction.user, self.action)
