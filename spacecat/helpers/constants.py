@@ -19,6 +19,7 @@ class EmbedStatus(enum.Enum):
     YES = discord.Color.from_rgb(67, 160, 71)
     NO = discord.Color.from_rgb(218, 120, 16)
     INFO = discord.Color.from_rgb(3, 169, 244)
+    GAME = discord.Color.from_rgb(229, 226, 41)
     FAIL = discord.Color.from_rgb(211, 47, 47)
     SPECIAL = discord.Color.from_rgb(103, 58, 183)
 
