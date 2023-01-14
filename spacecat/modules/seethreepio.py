@@ -115,12 +115,19 @@ class Throwing:
         # Current State
         self.caught = False
 
+
 class CatchButton(Button):
     def __init__(self, throwing):
+        super().__init__(label="Catch", emoji="🫴", style=discord.ButtonStyle.green)
         self.throwing = throwing
 
     async def callback(self, interaction):
+        if self.throwing.target.id is not interaction.user.id:
+            await interaction.response.send_message("You are not the target.", ephemeral=True)
+            return
+
         self.throwing.caught = True
+        await interaction.response.send_message("You are prepared to catch.", ephemeral=True)
 
 
 class Seethreepio(commands.Cog):
@@ -200,24 +207,28 @@ class Seethreepio(commands.Cog):
 
         # Throw the item, giving the target a prompt to catch it
         throwing = Throwing(interaction.user, member)
-        await interaction.response.defer()
-        await interaction.edit_original_response(
-            content=f"{interaction.user.mention} (∩òᗝó)⊃ --==({item})          ∩(óᗝò)∩ " + member.mention)
+        view = DefaultView()
+        view.add_item(CatchButton(throwing))
+        await interaction.response.send_message(
+            content=f"{interaction.user.mention} (∩òᗝó)⊃ --==({item})                                             "
+                    f"∩(óᗝò)∩ " + member.mention,
+            view=view)
 
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
         await interaction.edit_original_response(
-            content=f"{interaction.user.mention} (∩òᗝó)⊃      --==({item})     ∩(óᗝò)∩ {member.mention}")
+            content=f"{interaction.user.mention} (∩òᗝó)⊃                 --==({item})                             "
+                    f"∩(óᗝò)∩ {member.mention}",
+            view=view)
 
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
         if throwing.caught:
             await interaction.edit_original_response(
-                content=f"{interaction.user.mention} (∩óᗝò)⊃             "
-                        f"({item})⸦(òᗝó⸦) {member.mention} has caught it!")
+                content=f"{interaction.user.mention} (∩óᗝò)⊃                                                      "
+                        f"({item})⸦(òᗝó⸦) {member.mention} has caught it!", view=None)
             return
         await interaction.edit_original_response(
-            content=f"{interaction.user.mention} (∩òᗝó)⊃                "
-                    f"--==({item})Д⨱)∩ {member.mention} got dunked!")
-
+            content=f"{interaction.user.mention} (∩òᗝó)⊃                                                          "
+                    f"--==({item})Д⨱)∩ {member.mention} got dunked!", view=None)
 
     @app_commands.command()
     @perms.check()
