@@ -13,10 +13,11 @@ class DefaultView(View):
         self.message = None
 
     async def on_timeout(self) -> None:
-        for item in self.children:
-            if isinstance(item, Button):
-                item.disabled = True
-        await self.message.edit(view=self)
+        if self.message is not None:
+            for item in self.children:
+                if isinstance(item, Button):
+                    item.disabled = True
+            await self.message.edit(view=self)
 
     async def send(self, interaction: discord.Interaction) -> None:
         await interaction.response.send_message(self.text, view=self, embed=self.embed)
