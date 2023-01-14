@@ -182,19 +182,6 @@ class Seethreepio(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def flip(self, interaction, member: discord.Member = None):
-        """Flips a table... Or a person"""
-        if member is None:
-            await interaction.response.send_message("(╯°□°）╯︵ ┻━┻")
-            return
-
-        if member.id != self.bot.user.id:
-            await interaction.response.send_message("(╯°□°）╯︵ " + member.mention)
-        else:
-            await interaction.response.send_message("Bitch please. \n'(╯°□°）╯︵ " + interaction.user.mention)
-
-    @app_commands.command()
-    @perms.check()
     async def throw(self, interaction: discord.Interaction, member: discord.Member, *, item: str = None):
         if item is None:
             item = "O"
