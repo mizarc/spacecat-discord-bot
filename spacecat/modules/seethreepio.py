@@ -158,7 +158,7 @@ class Seethreepio(commands.Cog):
         rps_game = RPSGame(interaction.user, target)
 
         # Add buttons
-        view = DefaultView(embed)
+        view = DefaultView(embed=embed)
         rock_button = RPSButton(rps_game, RPSAction.Rock, emoji="✊", label="Rock", style=discord.ButtonStyle.green)
         view.add_item(rock_button)
         paper_button = RPSButton(rps_game, RPSAction.Paper, emoji="✋", label="Paper", style=discord.ButtonStyle.green)
