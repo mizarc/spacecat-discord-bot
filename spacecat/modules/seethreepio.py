@@ -216,12 +216,14 @@ class Seethreepio(commands.Cog):
                     f"∩(óᗝò)∩ " + member.mention,
             view=view, allowed_mentions=allowed_mentions)
 
+        # Moves the item closer
         await asyncio.sleep(2)
         await interaction.edit_original_response(
-            content=f"{interaction.user.mention} (∩òᗝó)⊃                 --==({item})                             "
+            content=f"{interaction.user.mention} (∩òᗝó)⊃                     --==({item})                         "
                     f"∩(óᗝò)∩ {member.mention}",
             view=view, allowed_mentions=allowed_mentions)
 
+        # Change result depending on whether the target user caught it or not
         await asyncio.sleep(2)
         if throwing.caught:
             await interaction.edit_original_response(
