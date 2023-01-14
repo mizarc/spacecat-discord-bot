@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 import random
 import sqlite3
 from collections import deque
-from itertools import islice
 from time import time
 from typing import Optional, Any, Generic, TypeVar
 
@@ -25,7 +24,7 @@ from wavelink.ext import spotify
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
-from spacecat.helpers.paginator import PaginatedView, EmptyPaginatedView
+from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
 from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
