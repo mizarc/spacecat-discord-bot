@@ -206,29 +206,33 @@ class Seethreepio(commands.Cog):
             return
 
         # Throw the item, giving the target a prompt to catch it
+        allowed_mentions = discord.AllowedMentions()
+        allowed_mentions.users = [member]
         throwing = Throwing(interaction.user, member)
         view = DefaultView()
         view.add_item(CatchButton(throwing))
         await interaction.response.send_message(
             content=f"{interaction.user.mention} (∩òᗝó)⊃ --==({item})                                             "
                     f"∩(óᗝò)∩ " + member.mention,
-            view=view)
+            view=view, allowed_mentions=allowed_mentions)
 
         await asyncio.sleep(2)
         await interaction.edit_original_response(
             content=f"{interaction.user.mention} (∩òᗝó)⊃                 --==({item})                             "
                     f"∩(óᗝò)∩ {member.mention}",
-            view=view)
+            view=view, allowed_mentions=allowed_mentions)
 
         await asyncio.sleep(2)
         if throwing.caught:
             await interaction.edit_original_response(
                 content=f"{interaction.user.mention} (∩óᗝò)⊃                                                      "
-                        f"({item})⸦(òᗝó⸦) {member.mention} has caught it!", view=None)
+                        f"({item})⸦(òᗝó⸦) {member.mention} has caught it!",
+                view=None, allowed_mentions=allowed_mentions)
             return
         await interaction.edit_original_response(
             content=f"{interaction.user.mention} (∩òᗝó)⊃                                                          "
-                    f"--==({item})Д⨱)∩ {member.mention} got dunked!", view=None)
+                    f"--==({item})Д⨱)∩ {member.mention} got dunked!",
+            view=None, allowed_mentions=allowed_mentions)
 
     @app_commands.command()
     @perms.check()
