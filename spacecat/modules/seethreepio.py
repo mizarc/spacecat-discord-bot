@@ -202,8 +202,8 @@ class Seethreepio(commands.Cog):
         # Have the bot throw the item at the user if the bot is targeted
         if member.id == self.bot.user.id:
             await interaction.response.send_message(
-                f"No u. '(∩òᗝó)⊃ --==({item})                                                                   "
-                f"--==({item})Д⨱)∩ {member.mention}")
+                f"No u. (∩òᗝó)⊃ --==({item})                                                                   "
+                f"--==({item})Д⨱)∩ {interaction.user.mention}")
             return
 
         # Throw the item, giving the target a prompt to catch it
