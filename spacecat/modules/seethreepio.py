@@ -185,6 +185,8 @@ class Seethreepio(commands.Cog):
     async def throw(self, interaction: discord.Interaction, member: discord.Member, *, item: str = None):
         if item is None:
             item = "O"
+        allowed_mentions = discord.AllowedMentions()
+        allowed_mentions.users = False
 
         # Have the bot throw the item at the user if the bot is targeted
         if member.id == self.bot.user.id:
@@ -193,8 +195,30 @@ class Seethreepio(commands.Cog):
                 f"--==({item})Д⨱)∩ {interaction.user.mention}")
             return
 
+        # Have the item boomerang back at the user if they're throwing at themselves
+        if member.id == interaction.user.id:
+            await interaction.response.send_message(
+                f"But why? {interaction.user.mention} (∩òᗝó)⊃ --==({item})",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"But why? {interaction.user.mention} (∩òᗝó)⊃                 -=({item})",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"But why? {interaction.user.mention} (∩òᗝó)⊃                                         ({item})",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"But why? {interaction.user.mention} (∩òᗝó)⊃                    ({item})=-",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"But why? {interaction.user.mention} ∩(⨱Д({item})==--",
+                allowed_mentions=allowed_mentions)
+            return
+
         # Throw the item, giving the target a prompt to catch it
-        allowed_mentions = discord.AllowedMentions()
         allowed_mentions.users = [member]
         throwing = Throwing(interaction.user, member)
         view = DefaultView()
