@@ -191,8 +191,16 @@ class Seethreepio(commands.Cog):
         # Have the bot throw the item at the user if the bot is targeted
         if member.id == self.bot.user.id:
             await interaction.response.send_message(
-                f"No u. (∩òᗝó)⊃ --==({item})                                                                   "
-                f"--==({item})Д⨱)∩ {interaction.user.mention}")
+                f"No u. {interaction.user.mention} ∩(óᗝò)∩                                 ({item})==-- ⸦(òᗝó∩) ",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"No u. {interaction.user.mention} ∩(óᗝò)∩                   ({item})==-                 "
+                        f"⸦(òᗝó∩)", allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"No u. {interaction.user.mention} ∩(⨱Д({item})==--                                         "
+                        f"⸦(òᗝó∩)", allowed_mentions=allowed_mentions)
             return
 
         # Have the item boomerang back at the user if they're throwing at themselves
@@ -244,7 +252,7 @@ class Seethreepio(commands.Cog):
                 view=None, allowed_mentions=allowed_mentions)
             return
         await interaction.edit_original_response(
-            content=f"{interaction.user.mention} (∩òᗝó)⊃                                                          "
+            content=f"{interaction.user.mention} (∩òᗝó)⊃                                                     "
                     f"--==({item})Д⨱)∩ {member.mention} got dunked!",
             view=None, allowed_mentions=allowed_mentions)
 
