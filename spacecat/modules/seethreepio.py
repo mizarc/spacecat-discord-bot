@@ -214,11 +214,11 @@ class Seethreepio(commands.Cog):
                 allowed_mentions=allowed_mentions)
             await asyncio.sleep(1)
             await interaction.edit_original_response(
-                content=f"But why? {interaction.user.mention} (∩òᗝó)⊃                                         ({item})",
+                content=f"But why? {interaction.user.mention} (∩òᗝó)⊃                                ({item})",
                 allowed_mentions=allowed_mentions)
             await asyncio.sleep(1)
             await interaction.edit_original_response(
-                content=f"But why? {interaction.user.mention} (∩òᗝó)⊃                    ({item})=-",
+                content=f"But why? {interaction.user.mention} ∩(óᗝò)∩                    ({item})=-",
                 allowed_mentions=allowed_mentions)
             await asyncio.sleep(1)
             await interaction.edit_original_response(
