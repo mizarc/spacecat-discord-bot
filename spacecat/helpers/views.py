@@ -6,26 +6,28 @@ from discord.ui import View, Button
 
 
 class DefaultView(View):
-    def __init__(self, embed: discord.Embed, timeout: int = 300):
+    def __init__(self, text: str = None, embed: discord.Embed = None, timeout: int = 300):
         super().__init__(timeout=timeout)
+        self.text = text
         self.embed = embed
         self.message = None
 
     async def on_timeout(self) -> None:
-        for item in self.children:
-            if isinstance(item, Button):
-                item.disabled = True
-        await self.message.edit(view=self)
+        if self.message is not None:
+            for item in self.children:
+                if isinstance(item, Button):
+                    item.disabled = True
+            await self.message.edit(view=self)
 
     async def send(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(view=self, embed=self.embed)
+        await interaction.response.send_message(self.text, view=self, embed=self.embed)
         self.message = await interaction.original_response()
 
 
 class PaginatedView(DefaultView):
     def __init__(self, base_embed: discord.Embed, items_header: str, items: list[str],
                  items_per_page: int = 5, starting_page: int = 1):
-        super().__init__(base_embed)
+        super().__init__(embed=base_embed)
 
         # Included data
         self.items_header = items_header
@@ -100,7 +102,7 @@ class PaginatedView(DefaultView):
 
 class EmptyPaginatedView(DefaultView):
     def __init__(self, base_embed: discord.Embed, items_header: str, text_content: str):
-        super().__init__(base_embed)
+        super().__init__(embed=base_embed)
 
         # Included data
         self.items_header = items_header
