@@ -1,6 +1,9 @@
 import enum
 import random
 
+import asyncio
+import time
+
 import discord
 import typing
 from discord import app_commands
@@ -103,10 +106,35 @@ class RPSButton(Button):
         self.disabled = True
 
 
+class Throwing:
+    def __init__(self, thrower: discord.Member, target: discord.Member):
+        self.thrower = thrower
+        self.target = target
+        self.timeout_time = time.time() + 5.0
+
+        # Current State
+        self.caught = False
+
+
+class CatchButton(Button):
+    def __init__(self, throwing):
+        super().__init__(label="Catch", emoji="🫴", style=discord.ButtonStyle.green)
+        self.throwing = throwing
+
+    async def callback(self, interaction):
+        if self.throwing.target.id is not interaction.user.id:
+            await interaction.response.send_message("You are not the target.", ephemeral=True)
+            return
+
+        self.throwing.caught = True
+        await interaction.response.send_message("You are prepared to catch.", ephemeral=True)
+
+
 class Seethreepio(commands.Cog):
     """Random text response based features"""
     def __init__(self, bot):
         self.bot = bot
+        self.throwings: dict[int, Throwing] = {}
 
     @app_commands.command()
     @perms.check()
@@ -137,7 +165,7 @@ class Seethreepio(commands.Cog):
         rps_game = RPSGame(interaction.user, target)
 
         # Add buttons
-        view = DefaultView(embed)
+        view = DefaultView(embed=embed)
         rock_button = RPSButton(rps_game, RPSAction.Rock, emoji="✊", label="Rock", style=discord.ButtonStyle.green)
         view.add_item(rock_button)
         paper_button = RPSButton(rps_game, RPSAction.Paper, emoji="✋", label="Paper", style=discord.ButtonStyle.green)
@@ -154,29 +182,79 @@ class Seethreepio(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def flip(self, interaction, member: discord.Member = None):
-        """Flips a table... Or a person"""
-        if member is None:
-            await interaction.response.send_message("(╯°□°）╯︵ ┻━┻")
+    async def throw(self, interaction: discord.Interaction, member: discord.Member, *, item: str = None):
+        if item is None:
+            item = "O"
+        allowed_mentions = discord.AllowedMentions()
+        allowed_mentions.users = False
+
+        # Have the bot throw the item at the user if the bot is targeted
+        if member.id == self.bot.user.id:
+            await interaction.response.send_message(
+                f"No u. {interaction.user.mention} ∩(óᗝò)∩                                 ({item})==-- ⸦(òᗝó∩) ",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"No u. {interaction.user.mention} ∩(óᗝò)∩                   ({item})==-                 "
+                        f"⸦(òᗝó∩)", allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"No u. {interaction.user.mention} ∩(⨱Д({item})==--                                         "
+                        f"⸦(òᗝó∩)", allowed_mentions=allowed_mentions)
             return
 
-        if member.id != self.bot.user.id:
-            await interaction.response.send_message("(╯°□°）╯︵ " + member.mention)
-        else:
-            await interaction.response.send_message("Bitch please. \n'(╯°□°）╯︵ " + interaction.user.mention)
+        # Have the item boomerang back at the user if they're throwing at themselves
+        if member.id == interaction.user.id:
+            await interaction.response.send_message(
+                f"But why? {interaction.user.mention} (∩òᗝó)⊃ --==({item})",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"But why? {interaction.user.mention} (∩òᗝó)⊃                 -=({item})",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"But why? {interaction.user.mention} (∩òᗝó)⊃                                ({item})",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"But why? {interaction.user.mention} ∩(óᗝò)∩                    ({item})=-",
+                allowed_mentions=allowed_mentions)
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(
+                content=f"But why? {interaction.user.mention} ∩(⨱Д({item})==--",
+                allowed_mentions=allowed_mentions)
+            return
 
-    @app_commands.command()
-    @perms.check()
-    async def throw(self, interaction, member: discord.Member, *, item: str = None):
-        if item is not None:
-            await interaction.response.send_message("(∩⚆ᗝ⚆)⊃ --==(" + item + ")     "
-                           + member.mention)
-        else:
-            if member.id != self.bot.user.id:
-                await interaction.response.send_message("(∩⚆ᗝ⚆)⊃ --==(O)     " + member.mention)
-            else:
-                await interaction.response.send_message("Bitch please. \n'(∩⚆ᗝ⚆)⊃ --==(O)     "
-                               + interaction.user.mention)
+        # Throw the item, giving the target a prompt to catch it
+        allowed_mentions.users = [member]
+        throwing = Throwing(interaction.user, member)
+        view = DefaultView()
+        view.add_item(CatchButton(throwing))
+        await interaction.response.send_message(
+            content=f"{interaction.user.mention} (∩òᗝó)⊃ --==({item})                                             "
+                    f"∩(óᗝò)∩ " + member.mention,
+            view=view, allowed_mentions=allowed_mentions)
+
+        # Moves the item closer
+        await asyncio.sleep(2)
+        await interaction.edit_original_response(
+            content=f"{interaction.user.mention} (∩òᗝó)⊃                     --==({item})                         "
+                    f"∩(óᗝò)∩ {member.mention}",
+            view=view, allowed_mentions=allowed_mentions)
+
+        # Change result depending on whether the target user caught it or not
+        await asyncio.sleep(2)
+        if throwing.caught:
+            await interaction.edit_original_response(
+                content=f"{interaction.user.mention} (∩óᗝò)⊃                                                      "
+                        f"({item})⸦(òᗝó⸦) {member.mention} has caught it!",
+                view=None, allowed_mentions=allowed_mentions)
+            return
+        await interaction.edit_original_response(
+            content=f"{interaction.user.mention} (∩òᗝó)⊃                                                     "
+                    f"--==({item})Д⨱)∩ {member.mention} got dunked!",
+            view=None, allowed_mentions=allowed_mentions)
 
     @app_commands.command()
     @perms.check()
