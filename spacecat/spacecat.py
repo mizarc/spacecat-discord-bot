@@ -2,6 +2,7 @@ import asyncio
 import os
 import shutil
 import sqlite3
+import threading
 import time
 
 import discord
@@ -474,6 +475,7 @@ def run(firstrun=False):
         intents.members = True
         intents.message_content = True
         bot = SpaceCat(command_prefix=get_prefix, intents=intents)
+        console_input()
         bot.run(apikey)
     except discord.LoginFailure:
         if firstrun:
@@ -489,3 +491,22 @@ def run(firstrun=False):
             "with the --apikey argument.\n"
             "Eg. ./spacecat --apikey <insert_key>")
         return
+
+
+def wait_for_input():
+    cmd = input("")
+    print(cmd)
+
+
+def run_thread():
+    thread = threading.Thread(target=wait_for_input())
+    thread.start()
+    return thread
+
+
+def console_input():
+    thread = run_thread()
+    while 1:
+        if not thread.is_alive():
+            thread = run_thread()
+        time.sleep(1)
