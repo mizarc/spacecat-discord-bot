@@ -1446,6 +1446,21 @@ class Automation(commands.Cog):
             description=f"Interval has been changed for event {name}."))
         return
 
+    @event_group.command(name="trigger")
+    async def event_trigger(self, interaction, name: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
+            return
+
+        self.event_service.dispatch_event(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Event '{event.name}' has been manually triggered."))
+        return
+
     async def load_event(self, event):
         if event.repeat_interval == Repeat.No:
             self.event_task.cancel()
