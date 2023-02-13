@@ -632,6 +632,16 @@ class EventActionRepository:
 
 
 class EventService:
+    """
+    A layer for creating, destroying, and dispatching events and their associated actions
+
+    Attributes:
+        bot: The bot instance, required to know where to dispatch objects to
+        events: A collection of events
+        actions_collection: A dictionary linking a keyword to a certain type of action collection
+        event_actions: A collection of event actions
+    """
+
     def __init__(self, bot: discord.ext.commands.Bot, event_actions, events):
         self.bot = bot
         self.events: EventRepository = events
@@ -639,9 +649,15 @@ class EventService:
         self.event_actions: EventActionRepository = event_actions
 
     def add_action_repository(self, action_repository: ActionRepository):
+        """Adds a specific type of action repository to be able to query from"""
         self.actions_collection[get_args(type(action_repository).__orig_bases__[0])[0].get_name()] = action_repository
 
     def remove_event(self, event: Event):
+        """Removes an event and all associated actions from storage.
+
+        Args:
+            event (Event): The selected event to remove from the collection
+        """
         found_event_actions = self.event_actions.get_by_event(event.id)
         for event_action in found_event_actions:
             self.actions_collection.get(event_action.action_type).remove(event_action.action_id)
@@ -649,6 +665,14 @@ class EventService:
         self.events.remove(event.id)
 
     def get_event_actions(self, event: Event) -> list[EventAction]:
+        """Returns all EventActions associated with an event
+
+        Args:
+            event: The selected event to query
+
+        Returns:
+            list of EventAction: The EventActions associated with the event
+        """
         event_action_links = {}
         event_actions = self.event_actions.get_by_event(event.id)
         for event_action in event_actions:
@@ -664,10 +688,27 @@ class EventService:
         return sorted_actions
 
     def get_action(self, event_action: EventAction) -> Action:
+        """Returns the Action associated with an EventAction
+
+        Args:
+            event_action: The EventAction to query
+
+        Returns:
+            Action: The Action linked to the EventAction
+        """
         actions = self.actions_collection.get(event_action.action_type)
         return actions.get_by_id(event_action.action_id)
 
     def add_action(self, event: Event, action: Action):
+        """Links a new action to a specified event
+
+        The action is added to the Actions collection, with a new EventActions object being created for the purposes of
+        associating the action with an Event.
+
+        Args:
+            event: The event to link the action to
+            action: The action to be linked
+        """
         actions = self.actions_collection.get(action.get_name())
         actions.add(action)
 
@@ -680,23 +721,38 @@ class EventService:
         self.event_actions.add(event_action)
 
     def remove_action(self, event: Event, action: Action):
+        """Removes and unlinks an action from an event
+
+        The specified action is removed from the Actions collection, while also removing the linked EventAction from the
+        EventAction collection.
+
+        Args:
+            event: The event to remove the action from
+            action: The action to remove
+        """
         actions = self.actions_collection.get(action.get_name())
         actions.remove(action.id)
 
         event_action = self.event_actions.get_by_action_in_event(action.id, event.id)
         next_action = self.event_actions.get_by_previous(event_action.id)
 
-        # Ensure next song in list is relinked
+        # Ensure that the action after the one that was removed is relinked
         if next_action:
             if event_action.previous_id:
                 next_action.previous_id = event_action.previous_id
             else:
                 next_action.previous_id = None
             self.event_actions.update(next_action)
-
         self.event_actions.remove(event_action.id)
 
     def dispatch_event(self, event: Event):
+        """Triggers all the actions linked to an event
+
+        Each action is triggered sequentially in the order that was specified by the user.
+
+        Args:
+            event: The event to run
+        """
         event_actions = self.get_event_actions(event)
         for event_action in event_actions:
             action = self.get_action(event_action)
@@ -822,6 +878,7 @@ class Automation(commands.Cog):
             event_service.add_action_repository(action_repository)
         return event_service
 
+    # Execute reminders. Only one is ever loaded at once.
     async def reminder_loop(self):
         try:
             while not self.bot.is_closed():
@@ -841,6 +898,7 @@ class Automation(commands.Cog):
         self.reminders.remove(reminder.id)
         self.bot.dispatch("reminder", reminder)
 
+    # Execute non repeating events. Only one is ever loaded at once.
     async def event_loop(self):
         try:
             while not self.bot.is_closed():
@@ -1460,6 +1518,15 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.YES.value,
             description=f"Event '{event.name}' has been manually triggered."))
         return
+
+    @event_group.command(name="pause")
+    async def event_pause(self, interaction, name: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
+            return
 
     async def load_event(self, event):
         if event.repeat_interval == Repeat.No:
