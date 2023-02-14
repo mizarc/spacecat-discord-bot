@@ -761,6 +761,8 @@ class EventService:
 
 
 class RepeatJob:
+    """An automated wrapper for an event that triggers the actions of the event at the set interval"""
+
     def __init__(self, event_service: EventService, event: Event, timezone: pytz.tzinfo):
         self.event_service = event_service
         self.event = event
@@ -770,9 +772,11 @@ class RepeatJob:
         self.job_task = None
 
     def run_task(self):
+        """Creates an asyncronous task to dispatch the event at its set intervals"""
         self.job_task = asyncio.create_task(self.job_loop())
 
     def calculate_next_run(self) -> float:
+        """Calculates the time for when the event should run next"""
         next_run_time = self.event.dispatch_time
         if self.event.last_run_time is not None and self.event.last_run_time > self.event.dispatch_time:
             next_run_time = self.event.last_run_time
@@ -781,15 +785,21 @@ class RepeatJob:
         return next_run_time
 
     def calculate_interval(self):
+        """Calculates the total interval of the repeat job based on the set interval and multiplier"""
         return self.event.repeat_interval.value * self.event.repeat_multiplier
 
     async def job_loop(self):
+        """An indefinite loop to dispatch events. Should only be run through the task"""
         while True:
             if self.next_run_time >= time.time():
                 await asyncio.sleep(self.next_run_time - time.time())
             await self.dispatch_event()
 
     async def dispatch_event(self):
+        """Triggers all the actions linked to this event
+
+        Each action is triggered sequentially in the order that was specified by the user.
+        """
         self.event.last_run_time = self.next_run_time
         self.next_run_time = self.calculate_next_run()
         self.event_service.dispatch_event(self.event)
