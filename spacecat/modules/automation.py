@@ -689,17 +689,18 @@ class EventService:
 
         return sorted_actions
 
-    def get_action(self, event_action: EventAction) -> Action:
-        """Returns the Action associated with an EventAction
+    def get_action_at_position(self, event: Event, index: int) -> Action:
+        """Returns the action of an event at a specified index
 
         Args:
-            event_action: The EventAction to query
+            event: The event to get the action from
+            index: The position of the action
 
         Returns:
-            Action: The Action linked to the EventAction
+            Action: The action at the position in the event
         """
-        actions = self.actions_collection.get(event_action.action_type)
-        return actions.get_by_id(event_action.action_id)
+        actions = self.get_actions(event)
+        return actions[index]
 
     def add_action(self, event: Event, action: Action):
         """Links a new action to a specified event
@@ -714,7 +715,7 @@ class EventService:
         actions = self.actions_collection.get(action.get_name())
         actions.add(action)
 
-        event_actions = self.get_event_actions(event)
+        event_actions = self.get_actions(event)
         if event_actions:
             previous_id = event_actions[-1].id
         else:
