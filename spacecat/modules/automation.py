@@ -665,7 +665,7 @@ class EventService:
             self.event_actions.remove(event_action.id)
         self.events.remove(event.id)
 
-    def get_event_actions(self, event: Event) -> list[EventAction]:
+    def get_actions(self, event: Event) -> list[Action]:
         """Returns all EventActions associated with an event
 
         Args:
@@ -680,11 +680,12 @@ class EventService:
             event_action_links[event_action.previous_id] = event_action
 
         # Sort actions using linked previous_id
-        sorted_actions: list[EventAction] = []
-        next_action = event_action_links.get(uuid.UUID(int=0))
-        while next_action is not None:
-            sorted_actions.append(next_action)
-            next_action = event_action_links.get(next_action.id)
+        sorted_actions: list[Action] = []
+        next_event_action = event_action_links.get(uuid.UUID(int=0))
+        while next_event_action is not None:
+            actions = self.actions_collection.get(next_event_action.action_type)
+            sorted_actions.append(actions.get_by_id(next_event_action.action_id))
+            next_event_action = event_action_links.get(next_event_action.id)
 
         return sorted_actions
 
