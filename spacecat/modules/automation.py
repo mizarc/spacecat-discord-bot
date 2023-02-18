@@ -748,6 +748,51 @@ class EventService:
             self.event_actions.update(next_action)
         self.event_actions.remove(event_action.id)
 
+    def reorder_action(self, event: Event, action_index: int, new_index: int):
+        """Changes the position of an action in the event's execution order
+
+        Args:
+            event: The event to reorder the action's of
+            action_index: The index of the target action
+            new_index: The new position of the action
+        """
+        event_actions = self.event_actions.get_by_event(event.id)
+
+        # Automatically put new position within bounds
+        if new_index > len(event_actions):
+            new_index = len(event_actions)
+        elif new_index < 1:
+            new_index = 1
+
+        action_to_move = event_actions[action_index - 1]
+        action_to_replace = event_actions[new_index - 1]
+
+        # If moving up, song after new position should be re-referenced to moved song
+        if new_index > action_index:
+            action_to_move.previous_id = action_to_replace.id
+            try:
+                action_after_new = event_actions[new_index]
+                action_after_new.previous_id = action_to_move.id
+                self.event_actions.update(action_after_new)
+            except IndexError:
+                pass
+
+        # If moving down, song at new position should be re-referenced to moved song
+        else:
+            action_to_move.previous_id = action_to_replace.previous_id
+            action_to_replace.previous_id = action_to_move.id
+            self.event_actions.update(action_to_replace)
+
+        # Fill in the gap at the original song position
+        try:
+            action_after_selected = event_actions[action_index]
+            action_before_selected = event_actions[action_index - 2]
+            action_after_selected.previous_id = action_before_selected.id
+            self.event_actions.update(action_after_selected)
+        except IndexError:
+            pass
+        self.event_actions.update(action_to_move)
+
     def dispatch_event(self, event: Event):
         """Triggers all the actions linked to an event
 
@@ -756,10 +801,8 @@ class EventService:
         Args:
             event: The event to run
         """
-        event_actions = self.get_event_actions(event)
-        for event_action in event_actions:
-            action = self.get_action(event_action)
-            self.bot.dispatch(f"{event_action.action_type}_action", action)
+        for action in self.get_actions(event):
+            self.bot.dispatch(f"{action.get_name()}_action", action)
         self.events.update(event)
 
 
@@ -929,9 +972,8 @@ class Automation(commands.Cog):
             self.event_task = self.bot.loop.create_task(self.event_loop())
 
     async def dispatch_event(self, event: Event):
-        event_actions = self.event_service.get_event_actions(event)
-        for event_action in event_actions:
-            action = self.event_service.get_action(event_action)
+        actions = self.event_service.get_actions(event)
+        for action in actions:
             self.bot.dispatch(f"{action.get_name()}_action", action)
         event.last_run_time = event.dispatch_time
         event.dispatch_time = None
@@ -943,7 +985,7 @@ class Automation(commands.Cog):
         for event in events:
             if event.id in self.repeating_events:
                 continue
-            repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(event.guild_id))
+            repeat_job = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
             repeat_job.run_task()
             self.repeating_events[event.id] = repeat_job
 
@@ -1196,16 +1238,15 @@ class Automation(commands.Cog):
         embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
 
         # Embed category for actions
-        event_actions = self.event_service.get_event_actions(event)
         action_fields = []
-        for event_action in self.event_service.get_event_actions(event):
-            action_fields.append(f"{self.event_service.get_action(event_action).get_formatted_output()}")
+        actions = self.event_service.get_actions(event)
+        for action in actions:
+            action_fields.append(f"{action.get_formatted_output()}")
 
-        if event_actions:
+        if actions:
             paginated_view = PaginatedView(embed, "Actions", action_fields, 5, page)
         else:
-            paginated_view = EmptyPaginatedView(
-                embed, f"Actions", "No actions have been set.")
+            paginated_view = EmptyPaginatedView(embed, f"Actions", "No actions have been set.")
         await paginated_view.send(interaction)
 
     @event_add_group.command(name="message")
@@ -1320,13 +1361,11 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        event_actions = self.event_service.get_event_actions(event)
-        action = self.event_service.get_action(event_actions[index - 1])
+        action = self.event_service.get_action_at_position(event, index - 1)
         self.event_service.remove_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Action '{event_actions[index - 1].action_type}' at index {index} has been removed from "
-                        f"event {event.name}."))
+            description=f"Action '{action.get_name()}' at index {index} has been removed from event {event.name}."))
 
     @event_group.command(name="reorder")
     async def event_reorder(self, interaction, name: str, original_position: int, new_position: int):
@@ -1337,46 +1376,11 @@ class Automation(commands.Cog):
                 description=f"An event going by the name '{name}' does not exist."))
             return
 
-        event_actions = self.event_service.get_event_actions(event)
-
-        # Automatically put new position within bounds
-        if new_position > len(event_actions):
-            new_position = len(event_actions)
-        elif new_position < 1:
-            new_position = 1
-
-        action_to_move = event_actions[original_position - 1]
-        action_to_replace = event_actions[new_position - 1]
-
-        # If moving up, song after new position should be re-referenced to moved song
-        if new_position > original_position:
-            action_to_move.previous_id = action_to_replace.id
-            try:
-                action_after_new = event_actions[new_position]
-                action_after_new.previous_id = action_to_move.id
-                self.event_actions.update(action_after_new)
-            except IndexError:
-                pass
-
-        # If moving down, song at new position should be re-referenced to moved song
-        else:
-            action_to_move.previous_id = action_to_replace.previous_id
-            action_to_replace.previous_id = action_to_move.id
-            self.event_actions.update(action_to_replace)
-
-        # Fill in the gap at the original song position
-        try:
-            action_after_selected = event_actions[original_position]
-            action_before_selected = event_actions[original_position - 2]
-            action_after_selected.previous_id = action_before_selected.id
-            self.event_actions.update(action_after_selected)
-        except IndexError:
-            pass
-
-        self.event_actions.update(action_to_move)
+        action = self.event_service.get_action_at_position(event, original_position)
+        self.event_service.reorder_action(event, original_position, new_position)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
-            description=f"Action of type '{action_to_move.action_type}' in event '{name}' has been moved from position "
+            description=f"Action of type '{action.get_name()}' in event '{name}' has been moved from position "
                         f"`{original_position}` to `{new_position}`"))
         return
 
@@ -1601,7 +1605,7 @@ class Automation(commands.Cog):
 
     async def is_over_action_limit(self, event):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        return len(self.event_service.get_event_actions(event)) > config['automation']['max_actions_per_event']
+        return len(self.event_service.get_actions(event)) > config['automation']['max_actions_per_event']
 
     @staticmethod
     async def parse_time(time_string):
