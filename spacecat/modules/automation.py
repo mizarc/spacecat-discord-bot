@@ -888,12 +888,11 @@ class EventScheduler:
         Returns:
             float: The timestamp for when the event should next dispatch
         """
-        next_run_time = event.dispatch_time
-        if event.last_run_time is not None and event.last_run_time > event.dispatch_time:
-            next_run_time = event.last_run_time
-        while next_run_time <= datetime.datetime.now().timestamp() + 1:
-            next_run_time += event.repeat_interval.value * event.repeat_multiplier
-        return next_run_time
+        interval = event.repeat_interval.value * event.repeat_multiplier
+        elapsed_seconds = (datetime.datetime.now().timestamp() - event.dispatch_time)
+        next_dispatch_delta = math.ceil(elapsed_seconds / interval) * interval
+        next_dispatch_time = event.dispatch_time + datetime.timedelta(seconds=next_dispatch_delta)
+        return next_dispatch_time
 
 
 class Automation(commands.Cog):
