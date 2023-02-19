@@ -807,22 +807,57 @@ class EventService:
 
 
 class EventScheduler:
+    """A scheduler that handles the automated dispatching of events
+
+    Its usage is as simple as passing an event through the schedule function. The event should have data pertaining
+    to the execution time, which should then process the action through the event service.
+
+    Attributes:
+        event_service: The service to dispatch events to
+        scheduled_events: A dictionary of events currently being scheduled for dispatch
+    """
+
     def __init__(self, event_service: EventService):
         self.event_service = event_service
         self.scheduled_events: dict[Event, asyncio.Task] = {}
 
     def is_scheduled(self, event: Event) -> bool:
+        """Returns true if the specified event is currently scheduled
+
+        Args:
+            event: The event to query
+
+        Returns:
+            bool: True if event is scheduled
+        """
         return event in self.scheduled_events
 
     def schedule(self, event: Event):
+        """Schedules an event to run at its next dispatch time
+
+        Args:
+            event: The event to schedule
+        """
         self.scheduled_events[event] = asyncio.create_task(self._task_loop(event))
 
-    def unschedule(self, event):
+    def unschedule(self, event: Event):
+        """Stops the event from running at its next dispatch time
+
+        Args:
+            event: The event to unschedule
+
+        Returns:
+
+        """
         self.scheduled_events[event].cancel()
         self.scheduled_events.pop(event)
 
     async def _task_loop(self, event):
-        """An indefinite loop to dispatch events. Should only be run through the task"""
+        """An indefinite loop to dispatch events. Should only be run through the task
+
+        Args:
+            event: The event to run
+        """
         dispatch_time = self.calculate_next_run(event)
         while True:
             if dispatch_time >= time.time():
@@ -833,6 +868,10 @@ class EventScheduler:
         """Triggers all the actions linked to this event
 
         Each action is triggered sequentially in the order that was specified by the user.
+
+        Args:
+            event: The event to dispatch
+            dispatch_time: The time at which the event was dispatched
         """
         event.last_run_time = dispatch_time
         self.event_service.dispatch_event(event)
@@ -841,7 +880,14 @@ class EventScheduler:
 
     @staticmethod
     def calculate_next_run(event) -> float:
-        """Calculates the time for when the event should run next"""
+        """Calculates the time for when the event should run next
+
+        Args:
+            event: The event to get calculate the interval of
+
+        Returns:
+            float: The timestamp for when the event should next dispatch
+        """
         next_run_time = event.dispatch_time
         if event.last_run_time is not None and event.last_run_time > event.dispatch_time:
             next_run_time = event.last_run_time
