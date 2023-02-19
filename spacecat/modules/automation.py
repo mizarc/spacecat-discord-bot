@@ -1586,6 +1586,14 @@ class Automation(commands.Cog):
                 description=f"An event going by the name '{name}' does not exist."))
             return
 
+        if not self.event_scheduler.is_scheduled(event):
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"Event '{name}' isn't currently active."))
+            return
+
+        self.event_scheduler.unschedule(event)
+
     async def load_event(self, event):
         if event.repeat_interval == Repeat.No:
             self.event_task.cancel()
