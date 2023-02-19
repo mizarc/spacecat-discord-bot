@@ -806,51 +806,48 @@ class EventService:
         self.events.update(event)
 
 
-class RepeatJob:
-    """An automated wrapper for an event that triggers the actions of the event at the set interval"""
+class EventScheduler:
+    def __init__(self, event_service: EventService):
+        self.event_service = event_service
+        self.scheduled_events: dict[Event, asyncio.Task] = {}
 
-    def __init__(self, bot: discord.ext.commands.Bot, event: Event, timezone: pytz.tzinfo):
-        self.bot = bot
-        self.event = event
-        self.timezone = timezone
-        self.interval = self._calculate_interval()
-        self.next_run_time: float = self._calculate_next_run()
-        self.job_task = None
+    def is_scheduled(self, event: Event) -> bool:
+        return event in self.scheduled_events
 
-    def run_task(self):
-        """Creates an asyncronous task to dispatch the event at its set intervals"""
-        self.job_task = asyncio.create_task(self._job_loop())
+    def schedule(self, event: Event):
+        self.scheduled_events[event] = asyncio.create_task(self._task_loop(event))
 
-    def _calculate_next_run(self) -> float:
-        """Calculates the time for when the event should run next"""
-        next_run_time = self.event.dispatch_time
-        if self.event.last_run_time is not None and self.event.last_run_time > self.event.dispatch_time:
-            next_run_time = self.event.last_run_time
-        while next_run_time <= datetime.datetime.now(tz=self.timezone).timestamp() + 1:
-            next_run_time += self.interval
-        return next_run_time
+    def unschedule(self, event):
+        self.scheduled_events[event].cancel()
+        self.scheduled_events.pop(event)
 
-    def _calculate_interval(self):
-        """Calculates the total interval of the repeat job based on the set interval and multiplier"""
-        return self.event.repeat_interval.value * self.event.repeat_multiplier
-
-    async def _job_loop(self):
+    async def _task_loop(self, event):
         """An indefinite loop to dispatch events. Should only be run through the task"""
+        dispatch_time = self.calculate_next_run(event)
         while True:
-            if self.next_run_time >= time.time():
-                await asyncio.sleep(self.next_run_time - time.time())
-            await self._dispatch_event()
+            if dispatch_time >= time.time():
+                await asyncio.sleep(dispatch_time - time.time())
+            await self._dispatch_event(event, dispatch_time)
 
-    async def _dispatch_event(self):
+    async def _dispatch_event(self, event, dispatch_time):
         """Triggers all the actions linked to this event
 
         Each action is triggered sequentially in the order that was specified by the user.
         """
-        self.event.last_run_time = self.next_run_time
-        self.next_run_time = self._calculate_next_run()
-        self.event_service.dispatch_event(self.event)
-        self.job_task.cancel()
-        self.job_task = asyncio.create_task(self._job_loop())
+        event.last_run_time = dispatch_time
+        self.event_service.dispatch_event(event)
+        self.unschedule(event)
+        self.schedule(event)
+
+    @staticmethod
+    def calculate_next_run(event) -> float:
+        """Calculates the time for when the event should run next"""
+        next_run_time = event.dispatch_time
+        if event.last_run_time is not None and event.last_run_time > event.dispatch_time:
+            next_run_time = event.last_run_time
+        while next_run_time <= datetime.datetime.now().timestamp() + 1:
+            next_run_time += event.repeat_interval.value * event.repeat_multiplier
+        return next_run_time
 
 
 class Automation(commands.Cog):
@@ -900,8 +897,8 @@ class Automation(commands.Cog):
         self.event_actions = EventActionRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_task = bot.loop.create_task(self.event_loop())
-        self.repeating_events: dict[uuid.UUID, RepeatJob] = {}
         self.event_service = self.init_event_service()
+        self.event_scheduler = EventScheduler(self.event_service)
 
     async def cog_load(self):
         self.load_upcoming_events.start()
@@ -983,11 +980,8 @@ class Automation(commands.Cog):
     async def load_upcoming_events(self):
         events = self.events.get_repeating_before_timestamp(time.time() + 90000)
         for event in events:
-            if event.id in self.repeating_events:
-                continue
-            repeat_job = RepeatJob(self.bot, event, await self.get_guild_timezone(event.guild_id))
-            repeat_job.run_task()
-            self.repeating_events[event.id] = repeat_job
+            if event not in self.event_scheduler:
+                self.event_scheduler.schedule(event)
 
     @commands.Cog.listener()
     async def on_reminder(self, reminder):
@@ -1231,8 +1225,8 @@ class Automation(commands.Cog):
                 f"{datetime.datetime.fromtimestamp(event.last_run_time).astimezone(timezone).strftime('%X %x')}")
 
         if event.repeat_interval is not Repeat.No:
-            repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(interaction.guild.id))
-            next_run_time = datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).astimezone(timezone)
+            next_run_time = datetime.datetime.fromtimestamp(EventScheduler.calculate_next_run(event))\
+                .astimezone(timezone)
             time_fields.append(f"**Next Run:** {next_run_time.strftime('%X %x')}")
 
         embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
@@ -1513,9 +1507,10 @@ class Automation(commands.Cog):
         event.repeat_multiplier = multiplier
         self.events.update(event)
 
-        if self.repeating_events.get(event.id):
+        if self.event_scheduler.is_scheduled(event):
             await self.unload_event(event)
             await self.load_event(event)
+
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Interval has been changed for event {name}."))
@@ -1550,20 +1545,14 @@ class Automation(commands.Cog):
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
             return
-        repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(event.guild_id))
-        repeat_job.run_task()
-        self.repeating_events[event.id] = repeat_job
+        self.event_scheduler.schedule(event)
 
     async def unload_event(self, event):
         if event.repeat_interval == Repeat.No:
             self.event_task.cancel()
             self.event_task = self.bot.loop.create_task(self.event_loop())
             return
-
-        repeat_job = self.repeating_events[event.id]
-        if repeat_job:
-            repeat_job.job_task.cancel()
-            self.repeating_events.pop(event.id)
+        self.event_scheduler.unschedule(event)
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
         try:
