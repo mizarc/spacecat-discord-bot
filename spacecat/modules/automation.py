@@ -1577,40 +1577,6 @@ class Automation(commands.Cog):
             description=f"Event '{event.name}' has been manually triggered."))
         return
 
-    @event_group.command(name="pause")
-    async def event_pause(self, interaction, name: str):
-        event = self.events.get_by_name(name)
-        if not event:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"An event going by the name '{name}' does not exist."))
-            return
-
-        if not self.event_scheduler.is_scheduled(event):
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"Event '{name}' isn't currently active."))
-            return
-
-        self.event_scheduler.unschedule(event)
-
-    @event_group.command(name="resume")
-    async def event_resume(self, interaction, name: str):
-        event = self.events.get_by_name(name)
-        if not event:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"An event going by the name '{name}' does not exist."))
-            return
-
-        if not self.event_scheduler.is_scheduled(event):
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"Event '{name}' is already active."))
-            return
-
-        self.event_scheduler.schedule(event)
-
     async def load_event(self, event):
         if event.repeat_interval == Repeat.No:
             self.event_task.cancel()
