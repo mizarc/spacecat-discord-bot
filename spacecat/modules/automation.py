@@ -209,11 +209,9 @@ class EventRepository:
             reminders.append(self._result_to_event(result))
         return reminders
 
-    def get_repeating_before_timestamp(self, timestamp):
+    def get_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
-        results = cursor.execute('SELECT * FROM events '
-                                 'WHERE dispatch_time < ? AND NOT repeat_interval="No" '
-                                 'ORDER BY dispatch_time',
+        results = cursor.execute('SELECT * FROM events WHERE dispatch_time < ? ORDER BY dispatch_time',
                                  (timestamp,)).fetchall()
 
         reminders = []
@@ -960,7 +958,6 @@ class Automation(commands.Cog):
         self.events = EventRepository(self.database)
         self.event_actions = EventActionRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
-        self.event_task = bot.loop.create_task(self.event_loop())
         self.event_service = self.init_event_service()
         self.event_scheduler = EventScheduler(self.event_service)
 
@@ -1015,23 +1012,6 @@ class Automation(commands.Cog):
         self.reminders.remove(reminder.id)
         self.bot.dispatch("reminder", reminder)
 
-    # Execute non repeating events. Only one is ever loaded at once.
-    async def event_loop(self):
-        try:
-            while not self.bot.is_closed():
-                # Get timers within 24 hours
-                event = self.events.get_first_non_repeating_before_timestamp(time.time() + 86400)
-                if event.dispatch_time >= time.time():
-                    sleep_duration = (event.dispatch_time - time.time())
-                    await asyncio.sleep(sleep_duration)
-
-                await self.dispatch_event(event)
-        except asyncio.CancelledError:
-            raise
-        except (OSError, discord.ConnectionClosed):
-            self.event_task.cancel()
-            self.event_task = self.bot.loop.create_task(self.event_loop())
-
     async def dispatch_event(self, event: Event):
         actions = self.event_service.get_actions(event)
         for action in actions:
@@ -1042,7 +1022,7 @@ class Automation(commands.Cog):
 
     @tasks.loop(hours=24)
     async def load_upcoming_events(self):
-        events = self.events.get_repeating_before_timestamp(time.time() + 90000)
+        events = self.events.get_before_timestamp(time.time() + 90000)
         for event in events:
             if not self.event_scheduler.is_scheduled(event):
                 self.event_scheduler.schedule(event)
@@ -1230,7 +1210,7 @@ class Automation(commands.Cog):
 
         event = Event.create_new(interaction.guild_id, selected_datetime.timestamp(), repeat, repeat_multiplier, name)
         self.events.add(event)
-        await self.load_event(event)
+        self.event_scheduler.schedule(event)
 
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -1465,7 +1445,7 @@ class Automation(commands.Cog):
 
         event.is_paused = True
         self.events.update(event)
-        await self.unload_event(event)
+        self.event_scheduler.unschedule(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
             description=f"Event '{name}' has been paused and will not run on its next scheduled run time."))
@@ -1488,7 +1468,7 @@ class Automation(commands.Cog):
 
         event.is_paused = False
         self.events.update(event)
-        await self.load_event(event)
+        self.event_scheduler.schedule(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
             description=f"Event {name} has now been resumed and will run at the scheduled time."))
@@ -1551,8 +1531,8 @@ class Automation(commands.Cog):
 
         event.dispatch_time = selected_datetime.timestamp()
         self.events.update(event)
-        await self.unload_event(event)
-        await self.load_event(event)
+        self.event_scheduler.unschedule(event)
+        self.event_scheduler.schedule(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Event '{name}' has been rescheduled to {date_string} at {time_string}."))
@@ -1572,8 +1552,8 @@ class Automation(commands.Cog):
         self.events.update(event)
 
         if self.event_scheduler.is_scheduled(event):
-            await self.unload_event(event)
-            await self.load_event(event)
+            self.event_scheduler.schedule(event)
+            self.event_scheduler.unschedule(event)
 
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -1594,20 +1574,6 @@ class Automation(commands.Cog):
             colour=constants.EmbedStatus.YES.value,
             description=f"Event '{event.name}' has been manually triggered."))
         return
-
-    async def load_event(self, event):
-        if event.repeat_interval == Repeat.No:
-            self.event_task.cancel()
-            self.event_task = self.bot.loop.create_task(self.event_loop())
-            return
-        self.event_scheduler.schedule(event)
-
-    async def unload_event(self, event):
-        if event.repeat_interval == Repeat.No:
-            self.event_task.cancel()
-            self.event_task = self.bot.loop.create_task(self.event_loop())
-            return
-        self.event_scheduler.unschedule(event)
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
         try:
