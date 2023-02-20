@@ -989,7 +989,7 @@ class Automation(commands.Cog):
         self.event_actions = EventActionRepository(self.database)
         self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_service = self.init_event_service()
-        self.event_scheduler = EventScheduler(self.event_service)
+        self.event_scheduler = EventScheduler(self.event_service, 90000)
 
     async def cog_load(self):
         self.load_upcoming_events.start()
