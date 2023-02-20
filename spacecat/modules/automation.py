@@ -839,6 +839,10 @@ class EventScheduler:
         Args:
             event: The event to schedule
         """
+        # Only add non repeating event if it is at most 5 minutes past execution time
+        if event.repeat_interval == Repeat.No and event.dispatch_time > datetime.datetime.now().timestamp() + 300:
+            return
+
         self.scheduled_events[event] = asyncio.create_task(self._task_loop(event))
 
     def unschedule(self, event: Event):
@@ -846,9 +850,6 @@ class EventScheduler:
 
         Args:
             event: The event to unschedule
-
-        Returns:
-
         """
         self.scheduled_events[event].cancel()
         self.scheduled_events.pop(event)
@@ -877,11 +878,16 @@ class EventScheduler:
         event.last_run_time = dispatch_time
         self.event_service.dispatch_event(event)
         self.unschedule(event)
-        self.schedule(event)
+
+        if event.repeat_interval is not Repeat.No:
+            self.schedule(event)
 
     @staticmethod
     def calculate_next_run(event) -> float:
         """Calculates the time for when the event should run next
+
+        A repeating event should return the next time it should run. A non repeating event should just return the
+        set dispatch time.
 
         Args:
             event: The event to get calculate the interval of
@@ -889,11 +895,23 @@ class EventScheduler:
         Returns:
             float: The timestamp for when the event should next dispatch
         """
+        # Non repeating events just use the user specified dispatch time
+        if event.repeat_interval == Repeat.No:
+            return event.dispatch_time
+
+        # Repeating events should set the dispatch time in the past if the previous dispatch was missed due to bot
+        # downtime. Otherwise, set dispatch time in the future at the correct interval.
         interval = event.repeat_interval.value * event.repeat_multiplier
-        elapsed_seconds = (datetime.datetime.now().timestamp() - event.dispatch_time)
-        next_dispatch_delta = math.ceil(elapsed_seconds / interval) * interval
-        next_dispatch_time = event.dispatch_time + datetime.timedelta(seconds=next_dispatch_delta)
-        return next_dispatch_time
+        now = datetime.datetime.now().timestamp()
+        elapsed_seconds = now - event.dispatch_time
+        previous_dispatch_delta = math.ceil(elapsed_seconds / interval - 1) * interval
+        if now < previous_dispatch_delta + 300 and now - event.last_run_time > 300:
+            dispatch_time = event.dispatch_time + datetime.timedelta(seconds=previous_dispatch_delta)
+        else:
+            next_dispatch_delta = math.ceil(elapsed_seconds / interval) * interval
+            dispatch_time = event.dispatch_time + datetime.timedelta(seconds=next_dispatch_delta)
+
+        return dispatch_time
 
 
 class Automation(commands.Cog):
