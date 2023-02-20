@@ -1012,14 +1012,6 @@ class Automation(commands.Cog):
         self.reminders.remove(reminder.id)
         self.bot.dispatch("reminder", reminder)
 
-    async def dispatch_event(self, event: Event):
-        actions = self.event_service.get_actions(event)
-        for action in actions:
-            self.bot.dispatch(f"{action.get_name()}_action", action)
-        event.last_run_time = event.dispatch_time
-        event.dispatch_time = None
-        self.events.update(event)
-
     @tasks.loop(hours=24)
     async def load_upcoming_events(self):
         events = self.events.get_before_timestamp(time.time() + 90000)
