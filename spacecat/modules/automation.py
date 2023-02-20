@@ -813,11 +813,15 @@ class EventScheduler:
 
     Attributes:
         event_service: The service to dispatch events to
+        cache_release_time: The time in seconds for how close to the expected dispatch time the event must be to be
+        loaded in memory. A lower value reduces the amount of memory used at any given time, but also requires more
+        frequent database lookups for new events.
         scheduled_events: A dictionary of events currently being scheduled for dispatch
     """
 
-    def __init__(self, event_service: EventService):
+    def __init__(self, event_service: EventService, cache_release_time: int = -1):
         self.event_service = event_service
+        self.cache_release_time = cache_release_time
         self.scheduled_events: dict[Event, asyncio.Task] = {}
 
     def is_scheduled(self, event: Event) -> bool:
@@ -834,6 +838,9 @@ class EventScheduler:
     def schedule(self, event: Event):
         """Schedules an event to run at its next dispatch time
 
+        If a cache release time has been specified as a class attribute, the event will be unloaded if the next dispatch
+        time is greater than the threshold is exceeded. This is a memory saving measure.
+
         Args:
             event: The event to schedule
         """
@@ -843,6 +850,18 @@ class EventScheduler:
 
         self.scheduled_events[event] = asyncio.create_task(self._task_loop(event))
 
+    def schedule_saved(self):
+        """Loads all events that are due to be scheduled sooner than the cache release time
+
+        If a cache release time is specified, we highly recommend setting up a recurring task that triggers this event
+        at the same interval. All events are loaded in from event repository if cache_release_time set to -1.
+        """
+        events = self.event_service.events.get_all() \
+            if self.cache_release_time < 0 else self.event_service.events.get_before_timestamp(self.cache_release_time)
+        for event in events:
+            if not self.is_scheduled(event):
+                self.schedule(event)
+
     def unschedule(self, event: Event):
         """Stops the event from running at its next dispatch time
 
@@ -851,6 +870,12 @@ class EventScheduler:
         """
         self.scheduled_events[event].cancel()
         self.scheduled_events.pop(event)
+
+    def unschedule_all(self):
+        """Stops all events from dispatching from their next dispatch time"""
+        for event in self.scheduled_events.values():
+            event.cancel()
+        self.scheduled_events.clear()
 
     async def _task_loop(self, event):
         """An indefinite loop to dispatch events. Should only be run through the task
@@ -877,6 +902,11 @@ class EventScheduler:
         self.event_service.dispatch_event(event)
         self.unschedule(event)
 
+        # Don't renew if next interval is greater than cache release time
+        if 0 < self.cache_release_time < event.repeat_interval.value * event.repeat_multiplier:
+            return
+
+        # Reschedule if set to repeat
         if event.repeat_interval is not Repeat.No:
             self.schedule(event)
 
@@ -1014,10 +1044,7 @@ class Automation(commands.Cog):
 
     @tasks.loop(hours=24)
     async def load_upcoming_events(self):
-        events = self.events.get_before_timestamp(time.time() + 90000)
-        for event in events:
-            if not self.event_scheduler.is_scheduled(event):
-                self.event_scheduler.schedule(event)
+        self.event_scheduler.schedule_saved()
 
     @commands.Cog.listener()
     async def on_reminder(self, reminder):
