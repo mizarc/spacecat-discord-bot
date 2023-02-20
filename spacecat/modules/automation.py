@@ -1,4 +1,5 @@
 import asyncio
+import math
 import sqlite3
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -1025,7 +1026,7 @@ class Automation(commands.Cog):
     async def load_upcoming_events(self):
         events = self.events.get_repeating_before_timestamp(time.time() + 90000)
         for event in events:
-            if event not in self.event_scheduler:
+            if not self.event_scheduler.is_scheduled(event):
                 self.event_scheduler.schedule(event)
 
     @commands.Cog.listener()
