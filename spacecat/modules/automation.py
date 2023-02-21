@@ -848,6 +848,10 @@ class EventScheduler:
         if event.repeat_interval == Repeat.No and event.dispatch_time > datetime.datetime.now().timestamp() + 300:
             return
 
+        # Only add repeating events if next dispatch is within cache release time
+        if self.calculate_next_run(event) - datetime.datetime.now().timestamp() > self.cache_release_time:
+            return
+
         self.scheduled_events[event] = asyncio.create_task(self._task_loop(event))
 
     def schedule_saved(self):
