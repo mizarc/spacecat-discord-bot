@@ -946,6 +946,95 @@ class EventScheduler:
         return dispatch_time
 
 
+class ReminderScheduler():
+    """A scheduler that handles the automated dispatching of reminders
+
+        Its usage is as simple as passing a reminder through the schedule function. The reminder should have data
+        pertaining to the execution time, which should then process the action through the reminder service.
+
+        Attributes:
+            event_service: The service to dispatch events to
+            cache_release_time: The time in seconds for how close to the expected dispatch time the event must be to be
+            loaded in memory. A lower value reduces the amount of memory used at any given time, but also requires more
+            frequent database lookups for new events.
+            scheduled_reminders: A dictionary of reminders currently being scheduled for dispatch
+        """
+
+    def __init__(self, reminders: ReminderRepository, cache_release_time: int = -1):
+        self.reminders = reminders
+        self.cache_release_time = cache_release_time
+        self.scheduled_reminders: dict[Reminder, asyncio.Task] = {}
+
+    def is_scheduled(self, reminder: Reminder) -> bool:
+        """Returns true if the specified reminder is currently scheduled
+
+        Args:
+            reminder: The reminder to query
+
+        Returns:
+            bool: True if event is scheduled
+        """
+        return reminder in self.scheduled_reminders
+
+    def schedule(self, reminder: Reminder):
+        """Schedules a reminder to run at its dispatch time
+
+        If a cache release time has been specified as a class attribute, the reminder will not be added if the set
+        dispatch time is greater than the cache release time. This is a memory saving measure.
+
+        Args:
+            reminder: The reminder to schedule
+        """
+        self.scheduled_reminders[reminder] = asyncio.create_task(self._task_loop(reminder))
+
+    def schedule_saved(self):
+        """Loads all reminders that are due to be scheduled sooner than the cache release time
+
+        If a cache release time is specified, we highly recommend setting up a recurring task that triggers this method
+        at the same interval. All reminders are loaded in from reminder repository if cache_release_time set to -1.
+        """
+        events = self.reminders.get_all() \
+            if self.cache_release_time < 0 else self.reminders.get_before_timestamp(self.cache_release_time)
+        for event in events:
+            if not self.is_scheduled(event):
+                self.schedule(event)
+
+    def unschedule(self, reminder: Reminder):
+        """Stops the reminder from running at its next dispatch time
+
+        Args:
+            reminder: The reminder to unschedule
+        """
+        self.scheduled_reminders[reminder].cancel()
+        self.scheduled_reminders.pop(reminder)
+
+    def unschedule_all(self):
+        """Stops all reminders from dispatching from their next dispatch time"""
+        for event in self.scheduled_reminders.values():
+            event.cancel()
+        self.scheduled_reminders.clear()
+
+    async def _task_loop(self, reminder):
+        """An indefinite loop to dispatch reminders. Should only be run through the task
+
+        Args:
+            reminder: The event to run
+        """
+        while True:
+            if reminder.dispatch_time >= time.time():
+                await asyncio.sleep(reminder.dispatch_time - time.time())
+            await self._dispatch_reminder(reminder, reminder.dispatch_time)
+
+    async def _dispatch_reminder(self, reminder):
+        """Triggers the dispatching of the reminder
+
+        Args:
+            reminder: The event to dispatch
+            dispatch_time: The time at which the event was dispatched
+        """
+        self.event_service.dispatch_event(event)
+        self.unschedule(reminder)
+
 class Automation(commands.Cog):
     """Schedule events to run at a later date"""
     MAX_EVENTS_EMBED = discord.Embed(
