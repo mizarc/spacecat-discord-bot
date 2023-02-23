@@ -946,22 +946,39 @@ class EventScheduler:
         return dispatch_time
 
 
-class ReminderScheduler():
+class ReminderService:
+    def __init__(self, bot: discord.ext.commands.Bot, reminders: ReminderRepository):
+        self.bot = bot
+        self.reminders = reminders
+
+    def dispatch(self, reminder: Reminder):
+        """Sends a reminder dispatch alert alongside object data for the bot to handle
+
+        Reminder dispatching is expected to output a message targeted towards the user who initially set the reminder.
+
+        Args:
+            reminder: The reminder to dispatch
+        """
+        self.bot.dispatch("reminder", reminder)
+        self.reminders.remove(reminder.id)
+
+
+class ReminderScheduler:
     """A scheduler that handles the automated dispatching of reminders
 
         Its usage is as simple as passing a reminder through the schedule function. The reminder should have data
         pertaining to the execution time, which should then process the action through the reminder service.
 
         Attributes:
-            event_service: The service to dispatch events to
+            reminder_service: The service to dispatch events to
             cache_release_time: The time in seconds for how close to the expected dispatch time the event must be to be
             loaded in memory. A lower value reduces the amount of memory used at any given time, but also requires more
             frequent database lookups for new events.
             scheduled_reminders: A dictionary of reminders currently being scheduled for dispatch
         """
 
-    def __init__(self, reminders: ReminderRepository, cache_release_time: int = -1):
-        self.reminders = reminders
+    def __init__(self, reminder_service: ReminderService, cache_release_time: int = -1):
+        self.reminder_service = reminder_service
         self.cache_release_time = cache_release_time
         self.scheduled_reminders: dict[Reminder, asyncio.Task] = {}
 
@@ -993,8 +1010,9 @@ class ReminderScheduler():
         If a cache release time is specified, we highly recommend setting up a recurring task that triggers this method
         at the same interval. All reminders are loaded in from reminder repository if cache_release_time set to -1.
         """
-        events = self.reminders.get_all() \
-            if self.cache_release_time < 0 else self.reminders.get_before_timestamp(self.cache_release_time)
+        events = self.reminder_service.reminders.get_all() \
+            if self.cache_release_time < 0 \
+            else self.reminder_service.reminders.get_before_timestamp(self.cache_release_time)
         for event in events:
             if not self.is_scheduled(event):
                 self.schedule(event)
@@ -1023,16 +1041,15 @@ class ReminderScheduler():
         while True:
             if reminder.dispatch_time >= time.time():
                 await asyncio.sleep(reminder.dispatch_time - time.time())
-            await self._dispatch_reminder(reminder, reminder.dispatch_time)
+            await self._dispatch(reminder)
 
-    async def _dispatch_reminder(self, reminder):
+    async def _dispatch(self, reminder):
         """Triggers the dispatching of the reminder
 
         Args:
             reminder: The event to dispatch
-            dispatch_time: The time at which the event was dispatched
         """
-        self.event_service.dispatch_event(event)
+        self.reminder_service.dispatch(reminder)
         self.unschedule(reminder)
 
 class Automation(commands.Cog):
