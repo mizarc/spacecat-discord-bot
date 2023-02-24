@@ -1052,6 +1052,7 @@ class ReminderScheduler:
         self.reminder_service.dispatch(reminder)
         self.unschedule(reminder)
 
+
 class Automation(commands.Cog):
     """Schedule events to run at a later date"""
     MAX_EVENTS_EMBED = discord.Embed(
@@ -1095,9 +1096,10 @@ class Automation(commands.Cog):
         self.bot: SpaceCat = bot
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
         self.reminders = ReminderRepository(self.database)
+        self.reminder_service = ReminderService(self.bot, self.reminders)
+        self.reminder_scheduler = ReminderScheduler(self.reminder_service, 90000)
         self.events = EventRepository(self.database)
         self.event_actions = EventActionRepository(self.database)
-        self.reminder_task = bot.loop.create_task(self.reminder_loop())
         self.event_service = self.init_event_service()
         self.event_scheduler = EventScheduler(self.event_service, 90000)
 
@@ -1132,25 +1134,9 @@ class Automation(commands.Cog):
             event_service.add_action_repository(action_repository)
         return event_service
 
-    # Execute reminders. Only one is ever loaded at once.
-    async def reminder_loop(self):
-        try:
-            while not self.bot.is_closed():
-                reminder = self.reminders.get_first_before_timestamp(time.time() + 90000)  # Get timers within 25 hours
-                if reminder.dispatch_time >= time.time():
-                    sleep_duration = (reminder.dispatch_time - time.time())
-                    await asyncio.sleep(sleep_duration)
-
-                await self.dispatch_reminder(reminder)
-        except asyncio.CancelledError:
-            raise
-        except (OSError, discord.ConnectionClosed):
-            self.reminder_task.cancel()
-            self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
-
-    async def dispatch_reminder(self, reminder: Reminder):
-        self.reminders.remove(reminder.id)
-        self.bot.dispatch("reminder", reminder)
+    @tasks.loop(hours=24)
+    async def load_upcoming_reminders(self):
+        self.reminder_scheduler.schedule_saved()
 
     @tasks.loop(hours=24)
     async def load_upcoming_events(self):
@@ -1227,8 +1213,7 @@ class Automation(commands.Cog):
         reminder = Reminder.create_new(interaction.user, interaction.guild, interaction.channel,
                                        await interaction.original_response(), time.time(), dispatch_time, message)
         self.reminders.add(reminder)
-        self.reminder_task.cancel()
-        self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+        self.reminder_scheduler.schedule(reminder)
 
     reminder_group = app_commands.Group(
         name="reminder", description="Configure existing reminders.")
@@ -1267,18 +1252,16 @@ class Automation(commands.Cog):
                 description="You have no set reminders."))
             return
 
-        if len(reminders) < index:
+        try:
+            reminder = reminders[index - 1]
+        except IndexError:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="A reminder by that index doesn't exist."))
             return
 
-        self.reminders.remove(reminders[index - 1].id)
-
-        # If reminder isn't first in list, then it's probably not currently queued up. No need to refresh task loop.
-        if index > 1:
-            self.reminder_task.cancel()
-            self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+        self.reminder_scheduler.unschedule(reminder)
+        self.reminders.remove(reminder.id)
 
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
