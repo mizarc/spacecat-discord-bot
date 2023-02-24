@@ -100,9 +100,9 @@ class ReminderRepository:
             reminders.append(self._result_to_reminder(result))
         return reminders
 
-    def get_first_before_timestamp(self, timestamp):
+    def get_before_timestamp(self, timestamp):
         result = self.db.cursor().execute(
-            'SELECT * FROM reminders WHERE dispatch_time < ? ORDER BY dispatch_time', (timestamp,)).fetchone()
+            'SELECT * FROM reminders WHERE dispatch_time < ? ORDER BY dispatch_time', (timestamp,)).fetchall()
         return self._result_to_reminder(result)
 
     def add(self, reminder):
