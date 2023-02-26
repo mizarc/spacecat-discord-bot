@@ -861,7 +861,9 @@ class EventScheduler:
         at the same interval. All events are loaded in from event repository if cache_release_time set to -1.
         """
         events = self.event_service.events.get_all() \
-            if self.cache_release_time < 0 else self.event_service.events.get_before_timestamp(self.cache_release_time)
+            if self.cache_release_time < 0 \
+            else self.event_service.events.get_before_timestamp(
+            datetime.datetime.now().timestamp() + self.cache_release_time)
         for event in events:
             if not self.is_scheduled(event):
                 self.schedule(event)
@@ -1012,7 +1014,8 @@ class ReminderScheduler:
         """
         events = self.reminder_service.reminders.get_all() \
             if self.cache_release_time < 0 \
-            else self.reminder_service.reminders.get_before_timestamp(self.cache_release_time)
+            else self.reminder_service.reminders.get_before_timestamp(
+            datetime.datetime.now().timestamp() + self.cache_release_time)
         for event in events:
             if not self.is_scheduled(event):
                 self.schedule(event)
