@@ -1049,8 +1049,8 @@ class ReminderScheduler:
         Args:
             reminder: The event to dispatch
         """
-        self.reminder_service.dispatch(reminder)
         self.unschedule(reminder)
+        self.reminder_service.dispatch(reminder)
 
 
 class Automation(commands.Cog):
