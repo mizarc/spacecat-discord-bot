@@ -902,9 +902,9 @@ class EventScheduler:
             event: The event to dispatch
             dispatch_time: The time at which the event was dispatched
         """
+        self.unschedule(event)
         event.last_run_time = dispatch_time
         self.event_service.dispatch_event(event)
-        self.unschedule(event)
 
         # Don't renew if next interval is greater than cache release time
         if 0 < self.cache_release_time < event.repeat_interval.value * event.repeat_multiplier:
