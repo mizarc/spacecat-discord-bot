@@ -822,7 +822,7 @@ class EventScheduler:
     def __init__(self, event_service: EventService, cache_release_time: int = -1):
         self.event_service = event_service
         self.cache_release_time = cache_release_time
-        self.scheduled_events: dict[Event, asyncio.Task] = {}
+        self.scheduled_events: dict[uuid.UUID, asyncio.Task] = {}
 
     def is_scheduled(self, event: Event) -> bool:
         """Returns true if the specified event is currently scheduled
@@ -852,7 +852,7 @@ class EventScheduler:
         if self.calculate_next_run(event) - datetime.datetime.now().timestamp() > self.cache_release_time:
             return
 
-        self.scheduled_events[event] = asyncio.create_task(self._task_loop(event))
+        self.scheduled_events[event.id] = asyncio.create_task(self._task_loop(event))
 
     def schedule_saved(self):
         """Loads all events that are due to be scheduled sooner than the cache release time
@@ -874,8 +874,8 @@ class EventScheduler:
         Args:
             event: The event to unschedule
         """
-        self.scheduled_events[event].cancel()
-        self.scheduled_events.pop(event)
+        self.scheduled_events[event.id].cancel()
+        self.scheduled_events.pop(event.id)
 
     def unschedule_all(self):
         """Stops all events from dispatching from their next dispatch time"""
@@ -940,10 +940,10 @@ class EventScheduler:
         elapsed_seconds = now - event.dispatch_time
         previous_dispatch_delta = math.ceil(elapsed_seconds / interval - 1) * interval
         if now < previous_dispatch_delta + 300 and now - event.last_run_time > 300:
-            dispatch_time = event.dispatch_time + datetime.timedelta(seconds=previous_dispatch_delta)
+            dispatch_time = event.dispatch_time + previous_dispatch_delta
         else:
             next_dispatch_delta = math.ceil(elapsed_seconds / interval) * interval
-            dispatch_time = event.dispatch_time + datetime.timedelta(seconds=next_dispatch_delta)
+            dispatch_time = event.dispatch_time + next_dispatch_delta
 
         return dispatch_time
 
@@ -982,7 +982,7 @@ class ReminderScheduler:
     def __init__(self, reminder_service: ReminderService, cache_release_time: int = -1):
         self.reminder_service = reminder_service
         self.cache_release_time = cache_release_time
-        self.scheduled_reminders: dict[Reminder, asyncio.Task] = {}
+        self.scheduled_reminders: dict[uuid.UUID, asyncio.Task] = {}
 
     def is_scheduled(self, reminder: Reminder) -> bool:
         """Returns true if the specified reminder is currently scheduled
@@ -1004,7 +1004,7 @@ class ReminderScheduler:
         Args:
             reminder: The reminder to schedule
         """
-        self.scheduled_reminders[reminder] = asyncio.create_task(self._task_loop(reminder))
+        self.scheduled_reminders[reminder.id] = asyncio.create_task(self._task_loop(reminder))
 
     def schedule_saved(self):
         """Loads all reminders that are due to be scheduled sooner than the cache release time
@@ -1026,8 +1026,8 @@ class ReminderScheduler:
         Args:
             reminder: The reminder to unschedule
         """
-        self.scheduled_reminders[reminder].cancel()
-        self.scheduled_reminders.pop(reminder)
+        self.scheduled_reminders[reminder.id].cancel()
+        self.scheduled_reminders.pop(reminder.id)
 
     def unschedule_all(self):
         """Stops all reminders from dispatching from their next dispatch time"""
