@@ -857,7 +857,7 @@ class EventScheduler:
     def schedule_saved(self):
         """Loads all events that are due to be scheduled sooner than the cache release time
 
-        If a cache release time is specified, we highly recommend setting up a recurring task that triggers this event
+        If a cache release time is specified, it is highly recommend to set up a recurring task that triggers this event
         at the same interval. All events are loaded in from event repository if cache_release_time set to -1.
         """
         events = self.event_service.events.get_all() \
@@ -878,22 +878,29 @@ class EventScheduler:
         self.scheduled_events.pop(event.id)
 
     def unschedule_all(self):
-        """Stops all events from dispatching from their next dispatch time"""
+        """Stops all events from dispatching at their next dispatch time"""
         for event in self.scheduled_events.values():
             event.cancel()
         self.scheduled_events.clear()
 
     async def _task_loop(self, event):
-        """An indefinite loop to dispatch events. Should only be run through the task
+        """An indefinite loop to dispatch events. Should only be run through the schedule function
 
         Args:
             event: The event to run
         """
         dispatch_time = self.calculate_next_run(event)
-        while True:
-            if dispatch_time >= time.time():
-                await asyncio.sleep(dispatch_time - time.time())
-            await self._dispatch_event(event, dispatch_time)
+        try:
+            while True:
+                if dispatch_time >= time.time():
+                    await asyncio.sleep(dispatch_time - time.time())
+                    continue
+                await self._dispatch_event(event, dispatch_time)
+        except asyncio.CancelledError:
+            raise
+        except (OSError, discord.ConnectionClosed):
+            self.unschedule(event)
+            self.schedule(event)
 
     async def _dispatch_event(self, event, dispatch_time):
         """Triggers all the actions linked to this event
@@ -904,9 +911,9 @@ class EventScheduler:
             event: The event to dispatch
             dispatch_time: The time at which the event was dispatched
         """
-        self.unschedule(event)
         event.last_run_time = dispatch_time
         self.event_service.dispatch_event(event)
+        self.unschedule(event)
 
         # Don't renew if next interval is greater than cache release time
         if 0 < self.cache_release_time < event.repeat_interval.value * event.repeat_multiplier:
@@ -915,6 +922,7 @@ class EventScheduler:
         # Reschedule if set to repeat
         if event.repeat_interval is not Repeat.No:
             self.schedule(event)
+        await asyncio.sleep(0)  # This isn't useless. It forces an async task switch so that it actually cancels.
 
     @staticmethod
     def calculate_next_run(event) -> float:
