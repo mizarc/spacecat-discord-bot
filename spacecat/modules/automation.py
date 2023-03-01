@@ -903,23 +903,22 @@ class EventScheduler:
                 if dispatch_time >= time.time():
                     await asyncio.sleep(dispatch_time - time.time())
                     continue
-                await self._dispatch_event(event, dispatch_time)
+                await self._dispatch_event(event)
         except asyncio.CancelledError:
             raise
         except (OSError, discord.ConnectionClosed):
             self.unschedule(event)
             self.schedule(event)
 
-    async def _dispatch_event(self, event, dispatch_time):
+    async def _dispatch_event(self, event):
         """Triggers all the actions linked to this event
 
         Each action is triggered sequentially in the order that was specified by the user.
 
         Args:
             event: The event to dispatch
-            dispatch_time: The time at which the event was dispatched
         """
-        event.last_run_time = dispatch_time
+        event.last_run_time = datetime.datetime.now().timestamp()
         self.event_service.dispatch_event(event)
         self.unschedule(event)
 
