@@ -1296,7 +1296,9 @@ class Automation(commands.Cog):
             listing = f"{event.name}"
             if not event.dispatch_time:
                 listing += f" | `Expired`"
-            if event.repeat_interval != Repeat.No:
+            elif event.repeat_interval != Repeat.No and event.is_paused:
+                listing += f" | `Repeating {event.repeat_interval.name} (Paused)`"
+            elif event.repeat_interval != Repeat.No:
                 listing += f" | `Repeating {event.repeat_interval.name}`"
             event_listings.append(listing)
 
