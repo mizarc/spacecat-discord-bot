@@ -1385,7 +1385,7 @@ class Automation(commands.Cog):
             time_fields.append(f"**{label}:** {dispatch_time}")
 
         repeating = await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)
-        time_fields.append(f"**Repeating:** {repeating} ({' (Paused)' if event.is_paused else ''})")
+        time_fields.append(f"**Repeating:** {repeating}{' (Paused)' if event.is_paused else ''}")
 
         if event.last_run_time:
             time_fields.append(
