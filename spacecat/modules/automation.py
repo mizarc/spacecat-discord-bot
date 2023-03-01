@@ -941,13 +941,13 @@ class EventScheduler:
         if event.repeat_interval == Repeat.No:
             return event.dispatch_time
 
-        # Repeating events should set the dispatch time in the past if the previous dispatch was missed due to bot
-        # downtime. Otherwise, set dispatch time in the future at the correct interval.
+        # Repeating events should set the dispatch time in the past if the previous dispatch was missed by 5 minutes due
+        # to bot downtime. Otherwise, set dispatch time in the future at the correct interval.
         interval = event.repeat_interval.value * event.repeat_multiplier
         now = datetime.datetime.now().timestamp()
         elapsed_seconds = now - event.dispatch_time
         previous_dispatch_delta = math.ceil(elapsed_seconds / interval - 1) * interval
-        if now < previous_dispatch_delta + 300 and now - event.last_run_time > 300:
+        if now < event.dispatch_time + previous_dispatch_delta + 300 and now - event.last_run_time > 300:
             dispatch_time = event.dispatch_time + previous_dispatch_delta
         else:
             next_dispatch_delta = math.ceil(elapsed_seconds / interval) * interval
