@@ -852,6 +852,10 @@ class EventScheduler:
         if self.calculate_next_run(event) - datetime.datetime.now().timestamp() > self.cache_release_time:
             return
 
+        # Don't add if paused
+        if event.is_paused:
+            return
+
         self.scheduled_events[event.id] = asyncio.create_task(self._task_loop(event))
 
     def schedule_saved(self):
@@ -865,7 +869,7 @@ class EventScheduler:
             else self.event_service.events.get_before_timestamp(
             datetime.datetime.now().timestamp() + self.cache_release_time)
         for event in events:
-            if not self.is_scheduled(event):
+            if not self.is_scheduled(event) and not event.is_paused:
                 self.schedule(event)
 
     def unschedule(self, event: Event):
@@ -874,6 +878,10 @@ class EventScheduler:
         Args:
             event: The event to unschedule
         """
+
+        if event.id not in self.scheduled_events.keys():
+            return
+
         self.scheduled_events[event.id].cancel()
         self.scheduled_events.pop(event.id)
 
