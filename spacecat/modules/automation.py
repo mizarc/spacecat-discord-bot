@@ -1062,6 +1062,7 @@ class ReminderScheduler:
         """
         self.unschedule(reminder)
         self.reminder_service.dispatch(reminder)
+        await asyncio.sleep(0)
 
 
 class Automation(commands.Cog):
