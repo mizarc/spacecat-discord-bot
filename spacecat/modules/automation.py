@@ -1395,7 +1395,7 @@ class Automation(commands.Cog):
         if event.repeat_interval is not Repeat.No:
             next_run_time = datetime.datetime.fromtimestamp(EventScheduler.calculate_next_run(event))\
                 .astimezone(timezone)
-            time_fields.append(f"**Next Run:** {next_run_time.strftime('%X %x')}")
+            time_fields.append(f"**Next Run:** {'N/A' if event.is_paused else next_run_time.strftime('%X %x')}")
 
         embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
 
