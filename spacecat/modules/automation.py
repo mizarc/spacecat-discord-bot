@@ -1571,7 +1571,7 @@ class Automation(commands.Cog):
         self.events.update(event)
         self.event_scheduler.unschedule(event)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Event '{name}' has been paused and will not run on its next scheduled run time."))
         return
 
@@ -1594,7 +1594,7 @@ class Automation(commands.Cog):
         self.events.update(event)
         self.event_scheduler.schedule(event)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Event {name} has now been resumed and will run at the scheduled time."))
         return
 
