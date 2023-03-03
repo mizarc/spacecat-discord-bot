@@ -964,6 +964,12 @@ class EventScheduler:
 
 
 class ReminderService:
+    """A layer that handles the dispatching of reminders
+
+    Attributes:
+        bot: The bot instance
+        reminders The reminder repository
+    """
     def __init__(self, bot: discord.ext.commands.Bot, reminders: ReminderRepository):
         self.bot = bot
         self.reminders = reminders
