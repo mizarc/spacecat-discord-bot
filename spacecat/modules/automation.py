@@ -665,13 +665,13 @@ class EventService:
         self.events.remove(event.id)
 
     def get_actions(self, event: Event) -> list[Action]:
-        """Returns all EventActions associated with an event
+        """Returns all Actions associated with an event
 
         Args:
             event: The selected event to query
 
         Returns:
-            list of EventAction: The EventActions associated with the event
+            list of Action: The Actions associated with the event
         """
         event_action_links = {}
         event_actions = self.event_actions.get_by_event(event.id)
@@ -714,7 +714,7 @@ class EventService:
         actions = self.actions_collection.get(action.get_name())
         actions.add(action)
 
-        event_actions = self.get_actions(event)
+        event_actions = self._get_event_actions(event)
         if event_actions:
             previous_id = event_actions[-1].id
         else:
@@ -803,6 +803,29 @@ class EventService:
         for action in self.get_actions(event):
             self.bot.dispatch(f"{action.get_name()}_action", action)
         self.events.update(event)
+
+    def _get_event_actions(self, event: Event) -> list[EventAction]:
+        """Returns all EventActions associated with an event
+
+        Args:
+            event: The selected event to query
+
+        Returns:
+            list of EventAction: The EventActions associated with the event
+        """
+        event_action_links = {}
+        event_actions = self.event_actions.get_by_event(event.id)
+        for event_action in event_actions:
+            event_action_links[event_action.previous_id] = event_action
+
+        # Sort actions using linked previous_id
+        sorted_actions: list[EventAction] = []
+        next_event_action = event_action_links.get(uuid.UUID(int=0))
+        while next_event_action is not None:
+            sorted_actions.append(next_event_action)
+            next_event_action = event_action_links.get(next_event_action.id)
+
+        return sorted_actions
 
 
 class EventScheduler:
