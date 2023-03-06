@@ -1172,6 +1172,7 @@ class Automation(commands.Cog):
 
         action_repositories = [
             MessageActionRepository(self.database),
+            BroadcastActionRepository(self.database),
             VoiceKickActionRepository(self.database),
             VoiceMoveActionRepository(self.database),
             ChannelPrivateActionRepository(self.database),
