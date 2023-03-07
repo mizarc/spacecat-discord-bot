@@ -800,6 +800,7 @@ class EventService:
         Args:
             event: The event to run
         """
+        event.last_run_time = datetime.datetime.now().timestamp()
         for action in self.get_actions(event):
             self.bot.dispatch(f"{action.get_name()}_action", action)
         self.events.update(event)
@@ -941,7 +942,6 @@ class EventScheduler:
         Args:
             event: The event to dispatch
         """
-        event.last_run_time = datetime.datetime.now().timestamp()
         self.event_service.dispatch_event(event)
         self.unschedule(event)
 
