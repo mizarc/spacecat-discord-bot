@@ -345,7 +345,7 @@ class BroadcastAction(Action):
 
     @classmethod
     def get_name(cls):
-        return "message"
+        return "broadcast"
 
     def get_formatted_output(self):
         return f"Sends a broadcast titled '{self.title}' to channel <#{self.text_channel_id}>."
