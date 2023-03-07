@@ -1417,9 +1417,11 @@ class Automation(commands.Cog):
         # Embed category for time and interval
         time_fields = []
         timezone = await self.get_guild_timezone(interaction.guild_id)
+        dt_format = '%-H:%M:%S %-d/%-m/%Y'
 
         if event.dispatch_time:
-            dispatch_time = datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone).strftime('%X %x')
+            dispatch_time = datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone)\
+                .strftime(dt_format)
             label = "Initial Time" if event.repeat_interval is not Repeat.No else "Dispatch Time"
             time_fields.append(f"**{label}:** {dispatch_time}")
 
@@ -1429,12 +1431,12 @@ class Automation(commands.Cog):
         if event.last_run_time:
             time_fields.append(
                 f"**Last Run:** "
-                f"{datetime.datetime.fromtimestamp(event.last_run_time).astimezone(timezone).strftime('%X %x')}")
+                f"{datetime.datetime.fromtimestamp(event.last_run_time).astimezone(timezone).strftime(dt_format)}")
 
         if event.repeat_interval is not Repeat.No:
             next_run_time = datetime.datetime.fromtimestamp(EventScheduler.calculate_next_run(event))\
                 .astimezone(timezone)
-            time_fields.append(f"**Next Run:** {'N/A' if event.is_paused else next_run_time.strftime('%X %x')}")
+            time_fields.append(f"**Next Run:** {'N/A' if event.is_paused else next_run_time.strftime(dt_format)}")
 
         embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
 
