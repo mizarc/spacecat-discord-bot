@@ -868,16 +868,20 @@ class EventScheduler:
         Args:
             event: The event to schedule
         """
-        # Only add non repeating event if it is at most 5 minutes past execution time
-        if event.repeat_interval == Repeat.No and event.dispatch_time > datetime.datetime.now().timestamp() + 300:
+        # Don't add if already scheduled
+        if event.id in self.scheduled_events:
+            return
+
+        # Don't add if paused
+        if event.is_paused:
             return
 
         # Only add repeating events if next dispatch is within cache release time
         if self.calculate_next_run(event) - datetime.datetime.now().timestamp() > self.cache_release_time:
             return
 
-        # Don't add if paused
-        if event.is_paused:
+        # Only add non repeating event if it is at most 5 minutes past execution time
+        if event.repeat_interval == Repeat.No and event.dispatch_time > datetime.datetime.now().timestamp() + 300:
             return
 
         self.scheduled_events[event.id] = asyncio.create_task(self._task_loop(event))
@@ -908,6 +912,7 @@ class EventScheduler:
 
         self.scheduled_events[event.id].cancel()
         self.scheduled_events.pop(event.id)
+        print("Canceled")
 
     def unschedule_all(self):
         """Stops all events from dispatching at their next dispatch time"""
@@ -952,7 +957,9 @@ class EventScheduler:
         # Reschedule if set to repeat
         if event.repeat_interval is not Repeat.No:
             self.schedule(event)
+        print("Pre")
         await asyncio.sleep(0)  # This isn't useless. It forces an async task switch so that it actually cancels.
+        print("Post")
 
     @staticmethod
     def calculate_next_run(event) -> float:
