@@ -912,7 +912,6 @@ class EventScheduler:
 
         self.scheduled_events[event.id].cancel()
         self.scheduled_events.pop(event.id)
-        print("Canceled")
 
     def unschedule_all(self):
         """Stops all events from dispatching at their next dispatch time"""
@@ -950,16 +949,12 @@ class EventScheduler:
         self.event_service.dispatch_event(event)
         self.unschedule(event)
 
-        # Don't renew if next interval is greater than cache release time
-        if 0 < self.cache_release_time < event.repeat_interval.value * event.repeat_multiplier:
-            return
-
-        # Reschedule if set to repeat
-        if event.repeat_interval is not Repeat.No:
+        # Only renew if it is a repeating event that is within the bounds of the cache release time
+        total_interval = event.repeat_interval.value * event.repeat_multiplier
+        if event.repeat_interval != Repeat.No and 0 < total_interval < self.cache_release_time:
             self.schedule(event)
-        print("Pre")
-        await asyncio.sleep(0)  # This isn't useless. It forces an async task switch so that it actually cancels.
-        print("Post")
+
+        await asyncio.sleep(0)  # This isn't useless. It forces an async task switch so that it actually cancels
 
     @staticmethod
     def calculate_next_run(event) -> float:
