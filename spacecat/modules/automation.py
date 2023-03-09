@@ -931,12 +931,14 @@ class EventScheduler:
                 if dispatch_time >= time.time():
                     await asyncio.sleep(dispatch_time - time.time())
                     continue
-                await self._dispatch_event(event)
+                break
         except asyncio.CancelledError:
             raise
         except (OSError, discord.ConnectionClosed):
             self.unschedule(event)
             self.schedule(event)
+
+        await self._dispatch_event(event)
 
     async def _dispatch_event(self, event):
         """Triggers all the actions linked to this event
@@ -953,8 +955,6 @@ class EventScheduler:
         total_interval = event.repeat_interval.value * event.repeat_multiplier
         if event.repeat_interval != Repeat.No and 0 < total_interval < self.cache_release_time:
             self.schedule(event)
-
-        await asyncio.sleep(0)  # This isn't useless. It forces an async task switch so that it actually cancels
 
     @staticmethod
     def calculate_next_run(event) -> float:
