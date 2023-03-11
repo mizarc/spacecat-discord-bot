@@ -143,8 +143,7 @@ class Core(commands.Cog):
         """A simple ping to check the bot response time"""
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            description=f"{self.bot.user.name} is operational at \
-            {int(self.bot.latency * 1000)}ms")
+            description=f"{self.bot.user.name} is operational at {int(self.bot.latency * 1000)}ms")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
