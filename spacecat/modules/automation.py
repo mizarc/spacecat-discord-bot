@@ -1,10 +1,12 @@
 import asyncio
+import math
 import sqlite3
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Generic, TypeVar, get_args
 
 import discord
+import discord.ext.commands
 import toml
 from discord import app_commands
 from discord.ext import commands, tasks
@@ -98,9 +100,9 @@ class ReminderRepository:
             reminders.append(self._result_to_reminder(result))
         return reminders
 
-    def get_first_before_timestamp(self, timestamp):
+    def get_before_timestamp(self, timestamp):
         result = self.db.cursor().execute(
-            'SELECT * FROM reminders WHERE dispatch_time < ? ORDER BY dispatch_time', (timestamp,)).fetchone()
+            'SELECT * FROM reminders WHERE dispatch_time < ? ORDER BY dispatch_time', (timestamp,)).fetchall()
         return self._result_to_reminder(result)
 
     def add(self, reminder):
@@ -207,11 +209,9 @@ class EventRepository:
             reminders.append(self._result_to_event(result))
         return reminders
 
-    def get_repeating_before_timestamp(self, timestamp):
+    def get_before_timestamp(self, timestamp):
         cursor = self.db.cursor()
-        results = cursor.execute('SELECT * FROM events '
-                                 'WHERE dispatch_time < ? AND NOT repeat_interval="No" '
-                                 'ORDER BY dispatch_time',
+        results = cursor.execute('SELECT * FROM events WHERE dispatch_time < ? ORDER BY dispatch_time',
                                  (timestamp,)).fetchall()
 
         reminders = []
@@ -345,7 +345,7 @@ class BroadcastAction(Action):
 
     @classmethod
     def get_name(cls):
-        return "message"
+        return "broadcast"
 
     def get_formatted_output(self):
         return f"Sends a broadcast titled '{self.title}' to channel <#{self.text_channel_id}>."
@@ -632,6 +632,16 @@ class EventActionRepository:
 
 
 class EventService:
+    """
+    A layer for creating, destroying, and dispatching events and their associated actions
+
+    Attributes:
+        bot: The bot instance, required to know where to dispatch objects to
+        events: A collection of events
+        actions_collection: A dictionary linking a keyword to a certain type of action collection
+        event_actions: A collection of event actions
+    """
+
     def __init__(self, bot: discord.ext.commands.Bot, event_actions, events):
         self.bot = bot
         self.events: EventRepository = events
@@ -639,39 +649,72 @@ class EventService:
         self.event_actions: EventActionRepository = event_actions
 
     def add_action_repository(self, action_repository: ActionRepository):
+        """Adds a specific type of action repository to be able to query from"""
         self.actions_collection[get_args(type(action_repository).__orig_bases__[0])[0].get_name()] = action_repository
 
     def remove_event(self, event: Event):
+        """Removes an event and all associated actions from storage.
+
+        Args:
+            event (Event): The selected event to remove from the collection
+        """
         found_event_actions = self.event_actions.get_by_event(event.id)
         for event_action in found_event_actions:
             self.actions_collection.get(event_action.action_type).remove(event_action.action_id)
             self.event_actions.remove(event_action.id)
         self.events.remove(event.id)
 
-    def get_event_actions(self, event: Event) -> list[EventAction]:
+    def get_actions(self, event: Event) -> list[Action]:
+        """Returns all Actions associated with an event
+
+        Args:
+            event: The selected event to query
+
+        Returns:
+            list of Action: The Actions associated with the event
+        """
         event_action_links = {}
         event_actions = self.event_actions.get_by_event(event.id)
         for event_action in event_actions:
             event_action_links[event_action.previous_id] = event_action
 
         # Sort actions using linked previous_id
-        sorted_actions: list[EventAction] = []
-        next_action = event_action_links.get(uuid.UUID(int=0))
-        while next_action is not None:
-            sorted_actions.append(next_action)
-            next_action = event_action_links.get(next_action.id)
+        sorted_actions: list[Action] = []
+        next_event_action = event_action_links.get(uuid.UUID(int=0))
+        while next_event_action is not None:
+            actions = self.actions_collection.get(next_event_action.action_type)
+            sorted_actions.append(actions.get_by_id(next_event_action.action_id))
+            next_event_action = event_action_links.get(next_event_action.id)
 
         return sorted_actions
 
-    def get_action(self, event_action: EventAction) -> Action:
-        actions = self.actions_collection.get(event_action.action_type)
-        return actions.get_by_id(event_action.action_id)
+    def get_action_at_position(self, event: Event, index: int) -> Action:
+        """Returns the action of an event at a specified index
+
+        Args:
+            event: The event to get the action from
+            index: The position of the action
+
+        Returns:
+            Action: The action at the position in the event
+        """
+        actions = self.get_actions(event)
+        return actions[index]
 
     def add_action(self, event: Event, action: Action):
+        """Links a new action to a specified event
+
+        The action is added to the Actions collection, with a new EventActions object being created for the purposes of
+        associating the action with an Event.
+
+        Args:
+            event: The event to link the action to
+            action: The action to be linked
+        """
         actions = self.actions_collection.get(action.get_name())
         actions.add(action)
 
-        event_actions = self.get_event_actions(event)
+        event_actions = self._get_event_actions(event)
         if event_actions:
             previous_id = event_actions[-1].id
         else:
@@ -680,65 +723,384 @@ class EventService:
         self.event_actions.add(event_action)
 
     def remove_action(self, event: Event, action: Action):
+        """Removes and unlinks an action from an event
+
+        The specified action is removed from the Actions collection, while also removing the linked EventAction from the
+        EventAction collection.
+
+        Args:
+            event: The event to remove the action from
+            action: The action to remove
+        """
         actions = self.actions_collection.get(action.get_name())
         actions.remove(action.id)
 
         event_action = self.event_actions.get_by_action_in_event(action.id, event.id)
         next_action = self.event_actions.get_by_previous(event_action.id)
 
-        # Ensure next song in list is relinked
+        # Ensure that the action after the one that was removed is relinked
         if next_action:
             if event_action.previous_id:
                 next_action.previous_id = event_action.previous_id
             else:
                 next_action.previous_id = None
             self.event_actions.update(next_action)
-
         self.event_actions.remove(event_action.id)
 
+    def reorder_action(self, event: Event, action_index: int, new_index: int):
+        """Changes the position of an action in the event's execution order
+
+        Args:
+            event: The event to reorder the action's of
+            action_index: The index of the target action
+            new_index: The new position of the action
+        """
+        event_actions = self.event_actions.get_by_event(event.id)
+
+        # Automatically put new position within bounds
+        if new_index > len(event_actions):
+            new_index = len(event_actions)
+        elif new_index < 1:
+            new_index = 1
+
+        action_to_move = event_actions[action_index - 1]
+        action_to_replace = event_actions[new_index - 1]
+
+        # If moving up, song after new position should be re-referenced to moved song
+        if new_index > action_index:
+            action_to_move.previous_id = action_to_replace.id
+            try:
+                action_after_new = event_actions[new_index]
+                action_after_new.previous_id = action_to_move.id
+                self.event_actions.update(action_after_new)
+            except IndexError:
+                pass
+
+        # If moving down, song at new position should be re-referenced to moved song
+        else:
+            action_to_move.previous_id = action_to_replace.previous_id
+            action_to_replace.previous_id = action_to_move.id
+            self.event_actions.update(action_to_replace)
+
+        # Fill in the gap at the original song position
+        try:
+            action_after_selected = event_actions[action_index]
+            action_before_selected = event_actions[action_index - 2]
+            action_after_selected.previous_id = action_before_selected.id
+            self.event_actions.update(action_after_selected)
+        except IndexError:
+            pass
+        self.event_actions.update(action_to_move)
+
     def dispatch_event(self, event: Event):
-        event_actions = self.get_event_actions(event)
-        for event_action in event_actions:
-            action = self.get_action(event_action)
-            self.bot.dispatch(f"{event_action.action_type}_action", action)
+        """Triggers all the actions linked to an event
+
+        Each action is triggered sequentially in the order that was specified by the user.
+
+        Args:
+            event: The event to run
+        """
+        event.last_run_time = datetime.datetime.now().timestamp()
+        for action in self.get_actions(event):
+            self.bot.dispatch(f"{action.get_name()}_action", action)
         self.events.update(event)
 
+    def _get_event_actions(self, event: Event) -> list[EventAction]:
+        """Returns all EventActions associated with an event
 
-class RepeatJob:
-    def __init__(self, event_service: EventService, event: Event, timezone: pytz.tzinfo):
+        Args:
+            event: The selected event to query
+
+        Returns:
+            list of EventAction: The EventActions associated with the event
+        """
+        event_action_links = {}
+        event_actions = self.event_actions.get_by_event(event.id)
+        for event_action in event_actions:
+            event_action_links[event_action.previous_id] = event_action
+
+        # Sort actions using linked previous_id
+        sorted_actions: list[EventAction] = []
+        next_event_action = event_action_links.get(uuid.UUID(int=0))
+        while next_event_action is not None:
+            sorted_actions.append(next_event_action)
+            next_event_action = event_action_links.get(next_event_action.id)
+
+        return sorted_actions
+
+
+class EventScheduler:
+    """A scheduler that handles the automated dispatching of events
+
+    Its usage is as simple as passing an event through the schedule function. The event should have data pertaining
+    to the execution time, which should then process the action through the event service.
+
+    Attributes:
+        event_service: The service to dispatch events to
+        cache_release_time: The time in seconds for how close to the expected dispatch time the event must be to be
+        loaded in memory. A lower value reduces the amount of memory used at any given time, but also requires more
+        frequent database lookups for new events.
+        scheduled_events: A dictionary of events currently being scheduled for dispatch
+    """
+
+    def __init__(self, event_service: EventService, cache_release_time: int = -1):
         self.event_service = event_service
-        self.event = event
-        self.timezone = timezone
-        self.interval = self.calculate_interval()
-        self.next_run_time: float = self.calculate_next_run()
-        self.job_task = None
+        self.cache_release_time = cache_release_time
+        self.scheduled_events: dict[uuid.UUID, asyncio.Task] = {}
 
-    def run_task(self):
-        self.job_task = asyncio.create_task(self.job_loop())
+    def is_scheduled(self, event: Event) -> bool:
+        """Returns true if the specified event is currently scheduled
 
-    def calculate_next_run(self) -> float:
-        next_run_time = self.event.dispatch_time
-        if self.event.last_run_time is not None and self.event.last_run_time > self.event.dispatch_time:
-            next_run_time = self.event.last_run_time
-        while next_run_time <= datetime.datetime.now(tz=self.timezone).timestamp() + 1:
-            next_run_time += self.interval
-        return next_run_time
+        Args:
+            event: The event to query
 
-    def calculate_interval(self):
-        return self.event.repeat_interval.value * self.event.repeat_multiplier
+        Returns:
+            bool: True if event is scheduled
+        """
+        return event in self.scheduled_events
 
-    async def job_loop(self):
+    def schedule(self, event: Event):
+        """Schedules an event to run at its next dispatch time
+
+        If a cache release time has been specified as a class attribute, the event will be unloaded if the next dispatch
+        time is greater than the threshold is exceeded. This is a memory saving measure.
+
+        Args:
+            event: The event to schedule
+        """
+        # Don't add if already scheduled
+        if event.id in self.scheduled_events:
+            return
+
+        # Don't add if paused
+        if event.is_paused:
+            return
+
+        # Only add repeating events if next dispatch is within cache release time
+        if self.calculate_next_run(event) - datetime.datetime.now().timestamp() > self.cache_release_time:
+            return
+
+        # Only add non repeating event if it is at most 5 minutes past execution time
+        if event.repeat_interval == Repeat.No and event.dispatch_time > datetime.datetime.now().timestamp() + 300:
+            return
+
+        self.scheduled_events[event.id] = asyncio.create_task(self._task_loop(event))
+
+    def schedule_saved(self):
+        """Loads all events that are due to be scheduled sooner than the cache release time
+
+        If a cache release time is specified, it is highly recommend to set up a recurring task that triggers this event
+        at the same interval. All events are loaded in from event repository if cache_release_time set to -1.
+        """
+        events = self.event_service.events.get_all() \
+            if self.cache_release_time < 0 \
+            else self.event_service.events.get_before_timestamp(
+            datetime.datetime.now().timestamp() + self.cache_release_time)
+        for event in events:
+            if not self.is_scheduled(event) and not event.is_paused:
+                self.schedule(event)
+
+    def unschedule(self, event: Event):
+        """Stops the event from running at its next dispatch time
+
+        Args:
+            event: The event to unschedule
+        """
+
+        if event.id not in self.scheduled_events.keys():
+            return
+
+        self.scheduled_events[event.id].cancel()
+        self.scheduled_events.pop(event.id)
+
+    def unschedule_all(self):
+        """Stops all events from dispatching at their next dispatch time"""
+        for event in self.scheduled_events.values():
+            event.cancel()
+        self.scheduled_events.clear()
+
+    async def _task_loop(self, event):
+        """An indefinite loop to dispatch events. Should only be run through the schedule function
+
+        Args:
+            event: The event to run
+        """
+        dispatch_time = self.calculate_next_run(event)
+        try:
+            while True:
+                if dispatch_time >= time.time():
+                    await asyncio.sleep(dispatch_time - time.time())
+                    continue
+                break
+        except asyncio.CancelledError:
+            raise
+        except (OSError, discord.ConnectionClosed):
+            self.unschedule(event)
+            self.schedule(event)
+
+        await self._dispatch_event(event)
+
+    async def _dispatch_event(self, event):
+        """Triggers all the actions linked to this event
+
+        Each action is triggered sequentially in the order that was specified by the user.
+
+        Args:
+            event: The event to dispatch
+        """
+        self.event_service.dispatch_event(event)
+        self.unschedule(event)
+
+        # Only renew if it is a repeating event that is within the bounds of the cache release time
+        total_interval = event.repeat_interval.value * event.repeat_multiplier
+        if event.repeat_interval != Repeat.No and 0 < total_interval < self.cache_release_time:
+            self.schedule(event)
+
+    @staticmethod
+    def calculate_next_run(event) -> float:
+        """Calculates the time for when the event should run next
+
+        A repeating event should return the next time it should run. A non repeating event should just return the
+        set dispatch time.
+
+        Args:
+            event: The event to get calculate the interval of
+
+        Returns:
+            float: The timestamp for when the event should next dispatch
+        """
+        # Non repeating events just use the user specified dispatch time
+        if event.repeat_interval == Repeat.No:
+            return event.dispatch_time
+
+        # Repeating events should set the dispatch time in the past if the previous dispatch was missed by 5 minutes due
+        # to bot downtime. Otherwise, set dispatch time in the future at the correct interval.
+        interval = event.repeat_interval.value * event.repeat_multiplier
+        now = datetime.datetime.now().timestamp()
+        elapsed_seconds = now - event.dispatch_time
+        previous_dispatch_delta = math.ceil(elapsed_seconds / interval - 1) * interval
+        if now < event.dispatch_time + previous_dispatch_delta + 300 and now - event.last_run_time > 300:
+            dispatch_time = event.dispatch_time + previous_dispatch_delta
+        else:
+            next_dispatch_delta = math.ceil(elapsed_seconds / interval) * interval
+            dispatch_time = event.dispatch_time + next_dispatch_delta
+
+        return dispatch_time
+
+
+class ReminderService:
+    """A layer that handles the dispatching of reminders
+
+    Attributes:
+        bot: The bot instance
+        reminders The reminder repository
+    """
+    def __init__(self, bot: discord.ext.commands.Bot, reminders: ReminderRepository):
+        self.bot = bot
+        self.reminders = reminders
+
+    def dispatch(self, reminder: Reminder):
+        """Sends a reminder dispatch alert alongside object data for the bot to handle
+
+        Reminder dispatching is expected to output a message targeted towards the user who initially set the reminder.
+
+        Args:
+            reminder: The reminder to dispatch
+        """
+        self.bot.dispatch("reminder", reminder)
+        self.reminders.remove(reminder.id)
+
+
+class ReminderScheduler:
+    """A scheduler that handles the automated dispatching of reminders
+
+        Its usage is as simple as passing a reminder through the schedule function. The reminder should have data
+        pertaining to the execution time, which should then process the action through the reminder service.
+
+        Attributes:
+            reminder_service: The service to dispatch events to
+            cache_release_time: The time in seconds for how close to the expected dispatch time the event must be to be
+            loaded in memory. A lower value reduces the amount of memory used at any given time, but also requires more
+            frequent database lookups for new events.
+            scheduled_reminders: A dictionary of reminders currently being scheduled for dispatch
+        """
+
+    def __init__(self, reminder_service: ReminderService, cache_release_time: int = -1):
+        self.reminder_service = reminder_service
+        self.cache_release_time = cache_release_time
+        self.scheduled_reminders: dict[uuid.UUID, asyncio.Task] = {}
+
+    def is_scheduled(self, reminder: Reminder) -> bool:
+        """Returns true if the specified reminder is currently scheduled
+
+        Args:
+            reminder: The reminder to query
+
+        Returns:
+            bool: True if event is scheduled
+        """
+        return reminder in self.scheduled_reminders
+
+    def schedule(self, reminder: Reminder):
+        """Schedules a reminder to run at its dispatch time
+
+        If a cache release time has been specified as a class attribute, the reminder will not be added if the set
+        dispatch time is greater than the cache release time. This is a memory saving measure.
+
+        Args:
+            reminder: The reminder to schedule
+        """
+        self.scheduled_reminders[reminder.id] = asyncio.create_task(self._task_loop(reminder))
+
+    def schedule_saved(self):
+        """Loads all reminders that are due to be scheduled sooner than the cache release time
+
+        If a cache release time is specified, we highly recommend setting up a recurring task that triggers this method
+        at the same interval. All reminders are loaded in from reminder repository if cache_release_time set to -1.
+        """
+        events = self.reminder_service.reminders.get_all() \
+            if self.cache_release_time < 0 \
+            else self.reminder_service.reminders.get_before_timestamp(
+            datetime.datetime.now().timestamp() + self.cache_release_time)
+        for event in events:
+            if not self.is_scheduled(event):
+                self.schedule(event)
+
+    def unschedule(self, reminder: Reminder):
+        """Stops the reminder from running at its next dispatch time
+
+        Args:
+            reminder: The reminder to unschedule
+        """
+        self.scheduled_reminders[reminder.id].cancel()
+        self.scheduled_reminders.pop(reminder.id)
+
+    def unschedule_all(self):
+        """Stops all reminders from dispatching from their next dispatch time"""
+        for event in self.scheduled_reminders.values():
+            event.cancel()
+        self.scheduled_reminders.clear()
+
+    async def _task_loop(self, reminder):
+        """An indefinite loop to dispatch reminders. Should only be run through the task
+
+        Args:
+            reminder: The event to run
+        """
         while True:
-            if self.next_run_time >= time.time():
-                await asyncio.sleep(self.next_run_time - time.time())
-            await self.dispatch_event()
+            if reminder.dispatch_time >= time.time():
+                await asyncio.sleep(reminder.dispatch_time - time.time())
+            await self._dispatch(reminder)
 
-    async def dispatch_event(self):
-        self.event.last_run_time = self.next_run_time
-        self.next_run_time = self.calculate_next_run()
-        self.event_service.dispatch_event(self.event)
-        self.job_task.cancel()
-        self.job_task = asyncio.create_task(self.job_loop())
+    async def _dispatch(self, reminder):
+        """Triggers the dispatching of the reminder
+
+        Args:
+            reminder: The event to dispatch
+        """
+        self.unschedule(reminder)
+        self.reminder_service.dispatch(reminder)
+        await asyncio.sleep(0)
 
 
 class Automation(commands.Cog):
@@ -784,12 +1146,12 @@ class Automation(commands.Cog):
         self.bot: SpaceCat = bot
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
         self.reminders = ReminderRepository(self.database)
+        self.reminder_service = ReminderService(self.bot, self.reminders)
+        self.reminder_scheduler = ReminderScheduler(self.reminder_service, 90000)
         self.events = EventRepository(self.database)
         self.event_actions = EventActionRepository(self.database)
-        self.reminder_task = bot.loop.create_task(self.reminder_loop())
-        self.event_task = bot.loop.create_task(self.event_loop())
-        self.repeating_events: dict[uuid.UUID, RepeatJob] = {}
         self.event_service = self.init_event_service()
+        self.event_scheduler = EventScheduler(self.event_service, 90000)
 
     async def cog_load(self):
         self.load_upcoming_events.start()
@@ -812,6 +1174,7 @@ class Automation(commands.Cog):
 
         action_repositories = [
             MessageActionRepository(self.database),
+            BroadcastActionRepository(self.database),
             VoiceKickActionRepository(self.database),
             VoiceMoveActionRepository(self.database),
             ChannelPrivateActionRepository(self.database),
@@ -822,59 +1185,13 @@ class Automation(commands.Cog):
             event_service.add_action_repository(action_repository)
         return event_service
 
-    async def reminder_loop(self):
-        try:
-            while not self.bot.is_closed():
-                reminder = self.reminders.get_first_before_timestamp(time.time() + 90000)  # Get timers within 25 hours
-                if reminder.dispatch_time >= time.time():
-                    sleep_duration = (reminder.dispatch_time - time.time())
-                    await asyncio.sleep(sleep_duration)
-
-                await self.dispatch_reminder(reminder)
-        except asyncio.CancelledError:
-            raise
-        except (OSError, discord.ConnectionClosed):
-            self.reminder_task.cancel()
-            self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
-
-    async def dispatch_reminder(self, reminder: Reminder):
-        self.reminders.remove(reminder.id)
-        self.bot.dispatch("reminder", reminder)
-
-    async def event_loop(self):
-        try:
-            while not self.bot.is_closed():
-                # Get timers within 24 hours
-                event = self.events.get_first_non_repeating_before_timestamp(time.time() + 86400)
-                if event.dispatch_time >= time.time():
-                    sleep_duration = (event.dispatch_time - time.time())
-                    await asyncio.sleep(sleep_duration)
-
-                await self.dispatch_event(event)
-        except asyncio.CancelledError:
-            raise
-        except (OSError, discord.ConnectionClosed):
-            self.event_task.cancel()
-            self.event_task = self.bot.loop.create_task(self.event_loop())
-
-    async def dispatch_event(self, event: Event):
-        event_actions = self.event_service.get_event_actions(event)
-        for event_action in event_actions:
-            action = self.event_service.get_action(event_action)
-            self.bot.dispatch(f"{action.get_name()}_action", action)
-        event.last_run_time = event.dispatch_time
-        event.dispatch_time = None
-        self.events.update(event)
+    @tasks.loop(hours=24)
+    async def load_upcoming_reminders(self):
+        self.reminder_scheduler.schedule_saved()
 
     @tasks.loop(hours=24)
     async def load_upcoming_events(self):
-        events = self.events.get_repeating_before_timestamp(time.time() + 90000)
-        for event in events:
-            if event.id in self.repeating_events:
-                continue
-            repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(event.guild_id))
-            repeat_job.run_task()
-            self.repeating_events[event.id] = repeat_job
+        self.event_scheduler.schedule_saved()
 
     @commands.Cog.listener()
     async def on_reminder(self, reminder):
@@ -947,8 +1264,7 @@ class Automation(commands.Cog):
         reminder = Reminder.create_new(interaction.user, interaction.guild, interaction.channel,
                                        await interaction.original_response(), time.time(), dispatch_time, message)
         self.reminders.add(reminder)
-        self.reminder_task.cancel()
-        self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+        self.reminder_scheduler.schedule(reminder)
 
     reminder_group = app_commands.Group(
         name="reminder", description="Configure existing reminders.")
@@ -987,18 +1303,16 @@ class Automation(commands.Cog):
                 description="You have no set reminders."))
             return
 
-        if len(reminders) < index:
+        try:
+            reminder = reminders[index - 1]
+        except IndexError:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="A reminder by that index doesn't exist."))
             return
 
-        self.reminders.remove(reminders[index - 1].id)
-
-        # If reminder isn't first in list, then it's probably not currently queued up. No need to refresh task loop.
-        if index > 1:
-            self.reminder_task.cancel()
-            self.reminder_task = self.bot.loop.create_task(self.reminder_loop())
+        self.reminder_scheduler.unschedule(reminder)
+        self.reminders.remove(reminder.id)
 
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
@@ -1021,7 +1335,9 @@ class Automation(commands.Cog):
             listing = f"{event.name}"
             if not event.dispatch_time:
                 listing += f" | `Expired`"
-            if event.repeat_interval != Repeat.No:
+            elif event.repeat_interval != Repeat.No and event.is_paused:
+                listing += f" | `Repeating {event.repeat_interval.name} (Paused)`"
+            elif event.repeat_interval != Repeat.No:
                 listing += f" | `Repeating {event.repeat_interval.name}`"
             event_listings.append(listing)
 
@@ -1059,7 +1375,7 @@ class Automation(commands.Cog):
 
         event = Event.create_new(interaction.guild_id, selected_datetime.timestamp(), repeat, repeat_multiplier, name)
         self.events.add(event)
-        await self.load_event(event)
+        self.event_scheduler.schedule(event)
 
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -1103,38 +1419,39 @@ class Automation(commands.Cog):
         # Embed category for time and interval
         time_fields = []
         timezone = await self.get_guild_timezone(interaction.guild_id)
+        dt_format = '%-H:%M:%S %-d/%-m/%Y'
 
         if event.dispatch_time:
-            dispatch_time = datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone).strftime('%X %x')
+            dispatch_time = datetime.datetime.fromtimestamp(event.dispatch_time).astimezone(timezone)\
+                .strftime(dt_format)
             label = "Initial Time" if event.repeat_interval is not Repeat.No else "Dispatch Time"
             time_fields.append(f"**{label}:** {dispatch_time}")
 
         repeating = await self.format_repeat_message_alt(event.repeat_interval, event.repeat_multiplier)
-        time_fields.append(f"**Repeating:** {repeating} ({' (Paused)' if event.is_paused else ''})")
+        time_fields.append(f"**Repeating:** {repeating}{' (Paused)' if event.is_paused else ''}")
 
         if event.last_run_time:
             time_fields.append(
                 f"**Last Run:** "
-                f"{datetime.datetime.fromtimestamp(event.last_run_time).astimezone(timezone).strftime('%X %x')}")
+                f"{datetime.datetime.fromtimestamp(event.last_run_time).astimezone(timezone).strftime(dt_format)}")
 
         if event.repeat_interval is not Repeat.No:
-            repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(interaction.guild.id))
-            next_run_time = datetime.datetime.fromtimestamp(repeat_job.calculate_next_run()).astimezone(timezone)
-            time_fields.append(f"**Next Run:** {next_run_time.strftime('%X %x')}")
+            next_run_time = datetime.datetime.fromtimestamp(EventScheduler.calculate_next_run(event))\
+                .astimezone(timezone)
+            time_fields.append(f"**Next Run:** {'N/A' if event.is_paused else next_run_time.strftime(dt_format)}")
 
         embed.add_field(name="Trigger", value='\n'.join(time_fields), inline=False)
 
         # Embed category for actions
-        event_actions = self.event_service.get_event_actions(event)
         action_fields = []
-        for event_action in self.event_service.get_event_actions(event):
-            action_fields.append(f"{self.event_service.get_action(event_action).get_formatted_output()}")
+        actions = self.event_service.get_actions(event)
+        for action in actions:
+            action_fields.append(f"{action.get_formatted_output()}")
 
-        if event_actions:
+        if actions:
             paginated_view = PaginatedView(embed, "Actions", action_fields, 5, page)
         else:
-            paginated_view = EmptyPaginatedView(
-                embed, f"Actions", "No actions have been set.")
+            paginated_view = EmptyPaginatedView(embed, f"Actions", "No actions have been set.")
         await paginated_view.send(interaction)
 
     @event_add_group.command(name="message")
@@ -1249,13 +1566,11 @@ class Automation(commands.Cog):
             await interaction.response.send_message(embed=self.EVENT_DOES_NOT_EXIST_EMBED)
             return
 
-        event_actions = self.event_service.get_event_actions(event)
-        action = self.event_service.get_action(event_actions[index - 1])
+        action = self.event_service.get_action_at_position(event, index - 1)
         self.event_service.remove_action(event, action)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Action '{event_actions[index - 1].action_type}' at index {index} has been removed from "
-                        f"event {event.name}."))
+            description=f"Action '{action.get_name()}' at index {index} has been removed from event {event.name}."))
 
     @event_group.command(name="reorder")
     async def event_reorder(self, interaction, name: str, original_position: int, new_position: int):
@@ -1266,46 +1581,11 @@ class Automation(commands.Cog):
                 description=f"An event going by the name '{name}' does not exist."))
             return
 
-        event_actions = self.event_service.get_event_actions(event)
-
-        # Automatically put new position within bounds
-        if new_position > len(event_actions):
-            new_position = len(event_actions)
-        elif new_position < 1:
-            new_position = 1
-
-        action_to_move = event_actions[original_position - 1]
-        action_to_replace = event_actions[new_position - 1]
-
-        # If moving up, song after new position should be re-referenced to moved song
-        if new_position > original_position:
-            action_to_move.previous_id = action_to_replace.id
-            try:
-                action_after_new = event_actions[new_position]
-                action_after_new.previous_id = action_to_move.id
-                self.event_actions.update(action_after_new)
-            except IndexError:
-                pass
-
-        # If moving down, song at new position should be re-referenced to moved song
-        else:
-            action_to_move.previous_id = action_to_replace.previous_id
-            action_to_replace.previous_id = action_to_move.id
-            self.event_actions.update(action_to_replace)
-
-        # Fill in the gap at the original song position
-        try:
-            action_after_selected = event_actions[original_position]
-            action_before_selected = event_actions[original_position - 2]
-            action_after_selected.previous_id = action_before_selected.id
-            self.event_actions.update(action_after_selected)
-        except IndexError:
-            pass
-
-        self.event_actions.update(action_to_move)
+        action = self.event_service.get_action_at_position(event, original_position)
+        self.event_service.reorder_action(event, original_position, new_position)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
-            description=f"Action of type '{action_to_move.action_type}' in event '{name}' has been moved from position "
+            description=f"Action of type '{action.get_name()}' in event '{name}' has been moved from position "
                         f"`{original_position}` to `{new_position}`"))
         return
 
@@ -1332,9 +1612,9 @@ class Automation(commands.Cog):
 
         event.is_paused = True
         self.events.update(event)
-        await self.unload_event(event)
+        self.event_scheduler.unschedule(event)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Event '{name}' has been paused and will not run on its next scheduled run time."))
         return
 
@@ -1355,9 +1635,9 @@ class Automation(commands.Cog):
 
         event.is_paused = False
         self.events.update(event)
-        await self.load_event(event)
+        self.event_scheduler.schedule(event)
         await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.FAIL.value,
+            colour=constants.EmbedStatus.YES.value,
             description=f"Event {name} has now been resumed and will run at the scheduled time."))
         return
 
@@ -1418,8 +1698,8 @@ class Automation(commands.Cog):
 
         event.dispatch_time = selected_datetime.timestamp()
         self.events.update(event)
-        await self.unload_event(event)
-        await self.load_event(event)
+        self.event_scheduler.unschedule(event)
+        self.event_scheduler.schedule(event)
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Event '{name}' has been rescheduled to {date_string} at {time_string}."))
@@ -1438,33 +1718,29 @@ class Automation(commands.Cog):
         event.repeat_multiplier = multiplier
         self.events.update(event)
 
-        if self.repeating_events.get(event.id):
-            await self.unload_event(event)
-            await self.load_event(event)
+        if self.event_scheduler.is_scheduled(event):
+            self.event_scheduler.schedule(event)
+            self.event_scheduler.unschedule(event)
+
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Interval has been changed for event {name}."))
         return
 
-    async def load_event(self, event):
-        if event.repeat_interval == Repeat.No:
-            self.event_task.cancel()
-            self.event_task = self.bot.loop.create_task(self.event_loop())
-            return
-        repeat_job = RepeatJob(self.event_service, event, await self.get_guild_timezone(event.guild_id))
-        repeat_job.run_task()
-        self.repeating_events[event.id] = repeat_job
-
-    async def unload_event(self, event):
-        if event.repeat_interval == Repeat.No:
-            self.event_task.cancel()
-            self.event_task = self.bot.loop.create_task(self.event_loop())
+    @event_group.command(name="trigger")
+    async def event_trigger(self, interaction, name: str):
+        event = self.events.get_by_name(name)
+        if not event:
+            await interaction.response.send_message(embed=discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description=f"An event going by the name '{name}' does not exist."))
             return
 
-        repeat_job = self.repeating_events[event.id]
-        if repeat_job:
-            repeat_job.job_task.cancel()
-            self.repeating_events.pop(event.id)
+        self.event_service.dispatch_event(event)
+        await interaction.response.send_message(embed=discord.Embed(
+            colour=constants.EmbedStatus.YES.value,
+            description=f"Event '{event.name}' has been manually triggered."))
+        return
 
     async def fetch_future_datetime(self, guild: discord.Guild, time_string: str, date_string: str = None):
         try:
@@ -1506,7 +1782,7 @@ class Automation(commands.Cog):
 
     async def is_over_action_limit(self, event):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        return len(self.event_service.get_event_actions(event)) > config['automation']['max_actions_per_event']
+        return len(self.event_service.get_actions(event)) > config['automation']['max_actions_per_event']
 
     @staticmethod
     async def parse_time(time_string):

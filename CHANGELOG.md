@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Latest]
+### Added
+- `event trigger` command in order to manually trigger events outside of their set dispatch time.
+
+### Changed
+- `event list` and `event view` now display the paused state.
+- Events now trigger if the bot reconnects and detects that events haven't triggered yet in a 5 minute window of reconnection.
+
+### Fixed
+- Broadcast action using message action instead of its own action function.
+- `event pause` and `event resume` not persisting throughout restarts.
+- Last event dispatch time is now the proper dispatch time rather than the time it was supposed to dispatch when the event actually gets dispatched. This desync may have occured if the bot reestablishes the API connection after the event was supposed to trigger, but still triggers.
+
+### Optimised
+- All one time events and reminders for the next 24 are stored in memory, which should save on database queries.
+
 ## [0.5.0] - 18-12-2022
 ### Added
 - Support for slash commands, as per the new discord command system guidelines.
