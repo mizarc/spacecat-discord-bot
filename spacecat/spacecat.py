@@ -475,7 +475,7 @@ def run(firstrun=False):
         intents.members = True
         intents.message_content = True
         bot = SpaceCat(command_prefix=get_prefix, intents=intents)
-        console_input()
+        initialise_console_input()
         bot.run(apikey)
     except discord.LoginFailure:
         if firstrun:
@@ -493,20 +493,14 @@ def run(firstrun=False):
         return
 
 
-def wait_for_input():
-    cmd = input("")
-    print(cmd)
-
-
-def run_thread():
-    thread = threading.Thread(target=wait_for_input())
-    thread.start()
-    return thread
-
-
 def console_input():
-    thread = run_thread()
-    while 1:
-        if not thread.is_alive():
-            thread = run_thread()
-        time.sleep(1)
+    while True:
+        command = input("> ")
+        print(command)
+
+
+def initialise_console_input():
+    input_thread = threading.Thread(target=console_input)
+    input_thread.daemon = True
+    input_thread.start()
+
