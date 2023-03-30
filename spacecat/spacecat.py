@@ -495,7 +495,8 @@ def run(firstrun=False):
 
 def console_input():
     while True:
-        command = input("> ")
+        print("> ", end="")
+        command = input()
         print(command)
 
 
