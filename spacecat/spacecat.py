@@ -499,6 +499,14 @@ def console_input():
         command = input()
         print(command)
 
+        config = toml.load(constants.DATA_DIR + 'config.toml')
+        admins: list[int] = config['base']['adminuser']
+        admins.append(int(command))
+        config['base']['adminuser'] = admins
+
+        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
+            toml.dump(config, config_file)
+
 
 def initialise_console_input():
     input_thread = threading.Thread(target=console_input)
