@@ -18,14 +18,10 @@ import toml
 import uuid
 
 import wavelink
-from wavelink import YouTubeMusicTrack, YouTubeTrack
-
-from wavelink.ext import spotify
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
-from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
 class SongUnavailableError(ValueError):
@@ -329,7 +325,7 @@ class Song(ABC):
 class WavelinkSong(Song):
     def __init__(self, track, original_source, url, group=None, group_url=None,
                  title=None, artist=None, duration=None, requester_id=None):
-        self._track: wavelink.Track = track
+        self._track: wavelink.Playable = track
         self._original_source: OriginalSource = original_source
         self._url: str = url
         self._playlist: str = group
@@ -340,7 +336,7 @@ class WavelinkSong(Song):
         self._requester_id = requester_id
 
     @property
-    def stream(self) -> wavelink.Track:
+    def stream(self) -> wavelink.Playable:
         return self._track
 
     @property
@@ -379,19 +375,20 @@ class WavelinkSong(Song):
     async def from_local(cls, requester: discord.User, playlist_song: PlaylistSong,
                          playlist: Playlist = None) -> list['WavelinkSong']:
         # If url is from YouTube, no need to filter to just YouTube Music
-        search_type = YouTubeMusicTrack
-        if "youtube.com" in playlist_song.url:
-            search_type = YouTubeTrack
-
+        # search_type = Playable
         # noinspection PyTypeChecker
-        track = wavelink.PartialTrack(query=playlist_song.url, cls=search_type)
+        # track = wavelink.PartialTrack(query=playlist_song.url, cls=search_type)
+        # return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
+        #             artist=playlist_song.artist, duration=playlist_song.duration,
+        #             group=playlist.name, requester_id=requester.id)]
+        track = await wavelink.Playable.search(playlist_song.url)
         return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
-                    artist=playlist_song.artist, duration=playlist_song.duration,
-                    group=playlist.name, requester_id=requester.id)]
+                     artist=playlist_song.artist, duration=playlist_song.duration,
+                     group=playlist.name, requester_id=requester.id)]
 
     @classmethod
     async def from_query(cls, query, requester: discord.User) -> list['WavelinkSong']:
-        found_tracks = await wavelink.YouTubeMusicTrack.search(query=query)
+        found_tracks = await wavelink.Playable.search(query=query)
         if not found_tracks:
             raise SongUnavailableError
 
@@ -399,8 +396,8 @@ class WavelinkSong(Song):
                 for track in found_tracks]
 
     @classmethod
-    async def from_youtube(cls, url, requester: discord.User) -> ['WavelinkSong']:
-        found_tracks = await wavelink.LocalTrack.search(query=url)
+    async def from_youtube(cls, url, requester: discord.User) -> list['WavelinkSong']:
+        found_tracks = await wavelink.Playable.search(query=url)
         if not found_tracks:
             raise SongUnavailableError
 
@@ -410,7 +407,7 @@ class WavelinkSong(Song):
     @classmethod
     async def from_youtube_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
         try:
-            found_playlist = await wavelink.YouTubePlaylist.search(query=url)
+            found_playlist = await wavelink.Playlist.search(query=url)
         except wavelink.LoadTrackError:
             raise SongUnavailableError
 
@@ -422,40 +419,40 @@ class WavelinkSong(Song):
         return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
                 for track in found_playlist.tracks]
 
-    @classmethod
-    async def from_spotify(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        try:
-            found_tracks = await SpotifyTrack.search(query=url)
-        except spotify.SpotifyRequestError:
-            raise SongUnavailableError
+    # @classmethod
+    # async def from_spotify(cls, url, requester: discord.User) -> list['WavelinkSong']:
+    #     try:
+    #         found_tracks = await SpotifyTrack.search(query=url)
+    #     except spotify.SpotifyRequestError:
+    #         raise SongUnavailableError
 
-        return [cls(track, OriginalSource.SPOTIFY_SONG, track.url, requester_id=requester.id)
-                for track in found_tracks]
+    #     return [cls(track, OriginalSource.SPOTIFY_SONG, track.url, requester_id=requester.id)
+    #             for track in found_tracks]
 
-    @classmethod
-    async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        if "/user/" in url:
-            url = re.sub(r'user/[A-z]+/', '', url)
+    # @classmethod
+    # async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
+    #     if "/user/" in url:
+    #         url = re.sub(r'user/[A-z]+/', '', url)
 
-        try:
-            found_playlist = await SpotifyPlaylist.search(query=url)
-        except spotify.SpotifyRequestError:
-            raise SongUnavailableError
+    #     try:
+    #         found_playlist = await SpotifyPlaylist.search(query=url)
+    #     except spotify.SpotifyRequestError:
+    #         raise SongUnavailableError
 
-        return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url,
-                    found_playlist.name, found_playlist.url, requester_id=requester.id)
-                for track in found_playlist.tracks]
+    #     return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url,
+    #                 found_playlist.name, found_playlist.url, requester_id=requester.id)
+    #             for track in found_playlist.tracks]
 
-    @classmethod
-    async def from_spotify_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        try:
-            found_album = await SpotifyAlbum.search(query=url)
-        except spotify.SpotifyRequestError:
-            raise SongUnavailableError
+    # @classmethod
+    # async def from_spotify_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
+    #     try:
+    #         found_album = await SpotifyAlbum.search(query=url)
+    #     except spotify.SpotifyRequestError:
+    #         raise SongUnavailableError
 
-        return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url,
-                    found_album.name, found_album.url, requester_id=requester.id)
-                for track in found_album.tracks]
+    #     return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url,
+    #                 found_album.name, found_album.url, requester_id=requester.id)
+    #             for track in found_album.tracks]
 
 
 T_Song = TypeVar("T_Song", bound=Song)
@@ -819,11 +816,9 @@ class Musicbox(commands.Cog):
 
     async def init_wavelink(self):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        await wavelink.NodePool.create_node(
-            bot=self.bot, host=config['lavalink']['address'],
-            port=config['lavalink']['port'], password=config['lavalink']['password'],
-            spotify_client=spotify.SpotifyClient(client_id=config['spotify']['client_id'],
-                                                 client_secret=config['spotify']['client_secret']))
+        node = wavelink.Node(uri=f"{config['lavalink']['address']}:{config['lavalink']['port']}",
+                             password=config['lavalink']['password'])
+        await wavelink.Pool.connect(nodes=[node], client=self.bot)
 
     @commands.Cog.listener()
     async def on_ready(self):
