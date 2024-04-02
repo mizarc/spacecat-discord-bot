@@ -936,7 +936,7 @@ class Musicbox(commands.Cog):
     @app_commands.command()
     @perms.check()
     async def play(self, interaction: discord.Interaction, url: str, position: int = -1):
-        """Plays from a url (almost anything youtube_dl supports)"""
+        """Plays from a url or search query"""
         # Join channel and create music player instance if it doesn't exist
         try:
             music_player = await self._get_music_player(interaction.user.voice.channel)
