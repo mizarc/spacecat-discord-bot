@@ -349,7 +349,7 @@ class WavelinkSong(Song):
 
     @property
     def duration(self) -> int:
-        return self._duration if self._duration else int(self._track.duration)
+        return self._duration if self._duration else int(self._track.length)
 
     @property
     def url(self) -> str:
@@ -388,7 +388,7 @@ class WavelinkSong(Song):
 
     @classmethod
     async def from_query(cls, query, requester: discord.User) -> list['WavelinkSong']:
-        found_tracks = await wavelink.Playable.search(query=query)
+        found_tracks = await wavelink.Playable.search(query)
         if not found_tracks:
             raise SongUnavailableError
 
@@ -397,7 +397,7 @@ class WavelinkSong(Song):
 
     @classmethod
     async def from_youtube(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        found_tracks = await wavelink.Playable.search(query=url)
+        found_tracks = await wavelink.Playable.search(url)
         if not found_tracks:
             raise SongUnavailableError
 
@@ -407,7 +407,7 @@ class WavelinkSong(Song):
     @classmethod
     async def from_youtube_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
         try:
-            found_playlist = await wavelink.Playlist.search(query=url)
+            found_playlist = await wavelink.Playlist.search(url)
         except wavelink.LoadTrackError:
             raise SongUnavailableError
 
@@ -863,9 +863,8 @@ class Musicbox(commands.Cog):
             await voice_client.disconnect()
 
     @commands.Cog.listener()
-    async def on_wavelink_track_end(self, player: wavelink.Player, track, reason):
-        _ = track, reason  # Disable warning for unused arguments
-        music_player = await self._get_music_player(player.channel)
+    async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
+        music_player = await self._get_music_player(payload.player.channel)
         await music_player.process_song_end()
 
     queue_group = app_commands.Group(name="queue", description="Handles songs that will be played next.")
@@ -2001,7 +2000,10 @@ class Musicbox(commands.Cog):
 
     # Format duration based on what values there are
     @staticmethod
-    async def _format_duration(seconds):
+    async def _format_duration(milliseconds):
+        # Convert milliseconds to seconds
+        seconds = milliseconds // 1000
+
         hours, remainder = divmod(seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
 
@@ -2030,7 +2032,9 @@ class Musicbox(commands.Cog):
                 formatted += f"{seconds}"
         else:
             formatted += "00"
+
         return formatted
+
 
     @staticmethod
     async def _order_playlist_songs(playlist_songs):
