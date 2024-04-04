@@ -611,8 +611,6 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         return list(self._previous_queue)
 
     async def connect(self, channel: discord.VoiceChannel):
-        # noinspection PyTypeChecker
-        # Incorrectly warns this line
         self._player = await channel.connect(cls=wavelink.Player, self_deaf=True)
 
     async def disconnect(self):
@@ -698,7 +696,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._player.stop()
 
     async def next(self):
-        if not self._player.is_playing():
+        if not self._player.playing:
             return False
         self._queue_reverse = False
         self._is_skipping = True
@@ -754,7 +752,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
 
     @tasks.loop(seconds=30)
     async def _disconnect_job(self):
-        if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.is_playing():
+        if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.playing():
             await self.disconnect()
 
     def _refresh_disconnect_timer(self):
