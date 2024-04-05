@@ -673,10 +673,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._player.seek(position)
 
     async def pause(self):
-        await self._player.pause()
+        await self._player.pause(True)
 
     async def resume(self):
-        await self._player.resume()
+        await self._player.pause(False)
 
     async def loop(self):
         self._is_looping = True
@@ -1068,7 +1068,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if music isn't paused
-        if not interaction.guild.voice_client.is_paused():
+        if not music_player._player.paused:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music isn't paused")
@@ -1093,7 +1093,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Check if music is paused
-        if interaction.guild.voice_client.is_paused():
+        if music_player._player.paused:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music is already paused")
