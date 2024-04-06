@@ -461,6 +461,11 @@ T_Song = TypeVar("T_Song", bound=Song)
 class MusicPlayer(ABC, Generic[T_Song]):
     @property
     @abstractmethod
+    def is_paused(self) -> bool:
+        pass
+
+    @property
+    @abstractmethod
     def is_looping(self) -> bool:
         pass
 
@@ -585,6 +590,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._queue_reverse = False
         self._disconnect_time = time() + self._get_disconnect_time_limit()
         self._disconnect_job.start()
+
+    @property
+    def is_paused(self) -> bool:
+        return self._player.paused
 
     @property
     def is_looping(self) -> bool:
@@ -862,6 +871,9 @@ class Musicbox(commands.Cog):
 
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
+        if payload.player is None:
+            return
+
         music_player = await self._get_music_player(payload.player.channel)
         await music_player.process_song_end()
 
@@ -1068,7 +1080,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if music isn't paused
-        if not music_player._player.paused:
+        if not music_player.is_paused:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music isn't paused")
@@ -1093,7 +1105,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Check if music is paused
-        if music_player._player.paused:
+        if music_player.is_paused:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music is already paused")
