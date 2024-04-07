@@ -419,15 +419,14 @@ class WavelinkSong(Song):
         return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
                 for track in found_playlist.tracks]
 
-    # @classmethod
-    # async def from_spotify(cls, url, requester: discord.User) -> list['WavelinkSong']:
-    #     try:
-    #         found_tracks = await SpotifyTrack.search(query=url)
-    #     except spotify.SpotifyRequestError:
-    #         raise SongUnavailableError
+    @classmethod
+    async def from_spotify(cls, url, requester: discord.User) -> list['WavelinkSong']:
+        found_tracks = await wavelink.Playable.search(url)
+        if not found_tracks:
+            raise SongUnavailableError
 
-    #     return [cls(track, OriginalSource.SPOTIFY_SONG, track.url, requester_id=requester.id)
-    #             for track in found_tracks]
+        return [cls(track, OriginalSource.SPOTIFY_SONG, track.uri, requester_id=requester.id)
+                for track in found_tracks]
 
     # @classmethod
     # async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
@@ -812,12 +811,6 @@ class Musicbox(commands.Cog):
         if 'password' not in config['lavalink']:
             config['lavalink']['password'] = "password1"
 
-        if 'spotify' not in config:
-            config['spotify'] = {}
-        if 'client_id' not in config['spotify']:
-            config['spotify']['client_id'] = ""
-        if 'client_secret' not in config['spotify']:
-            config['spotify']['client_secret'] = ""
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
