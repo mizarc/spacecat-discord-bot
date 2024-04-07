@@ -10,7 +10,7 @@ setup: ${VENV}/bin/activate ## Sets up the virtual environment with dependencies
 	${PYTHON} -m pip install -e .
 
 ${VENV}/bin/activate: setup.py ## Create virtual environment if it doesn't exist
-	python3 -m venv .venv
+	python3 -m venv ${VENV}
 	
 clean: ## Cleans up all build and environment files
 	rm --force --recursive dist/
