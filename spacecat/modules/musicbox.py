@@ -805,7 +805,7 @@ class Musicbox(commands.Cog):
         if 'lavalink' not in config:
             config['lavalink'] = {}
         if 'address' not in config['lavalink']:
-            config['lavalink']['address'] = "0.0.0.0"
+            config['lavalink']['address'] = "http://localhost"
         if 'port' not in config['lavalink']:
             config['lavalink']['port'] = "2333"
         if 'password' not in config['lavalink']:
