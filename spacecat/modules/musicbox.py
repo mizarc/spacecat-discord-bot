@@ -758,7 +758,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
 
     @tasks.loop(seconds=30)
     async def _disconnect_job(self):
-        if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.playing():
+        if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.playing:
             await self.disconnect()
 
     def _refresh_disconnect_timer(self):
