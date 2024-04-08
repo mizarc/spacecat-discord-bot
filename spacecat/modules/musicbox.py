@@ -428,31 +428,29 @@ class WavelinkSong(Song):
         return [cls(track, OriginalSource.SPOTIFY_SONG, track.uri, requester_id=requester.id)
                 for track in found_tracks]
 
-    # @classmethod
-    # async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
-    #     if "/user/" in url:
-    #         url = re.sub(r'user/[A-z]+/', '', url)
+    @classmethod
+    async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
+        try:
+            found_playlist = await wavelink.Playable.search(url)
+        except wavelink.LoadTrackError:
+            raise SongUnavailableError
 
-    #     try:
-    #         found_playlist = await SpotifyPlaylist.search(query=url)
-    #     except spotify.SpotifyRequestError:
-    #         raise SongUnavailableError
+        original_source = OriginalSource.SPOTIFY_PLAYLIST
+        name = found_playlist.name
+        return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
+                for track in found_playlist.tracks]
 
-    #     return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url,
-    #                 found_playlist.name, found_playlist.url, requester_id=requester.id)
-    #             for track in found_playlist.tracks]
+    @classmethod
+    async def from_spotify_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
+        try:
+            found_album = await wavelink.Playable.search(url)
+        except wavelink.LoadTrackError:
+            raise SongUnavailableError
 
-    # @classmethod
-    # async def from_spotify_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
-    #     try:
-    #         found_album = await SpotifyAlbum.search(query=url)
-    #     except spotify.SpotifyRequestError:
-    #         raise SongUnavailableError
-
-    #     return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url,
-    #                 found_album.name, found_album.url, requester_id=requester.id)
-    #             for track in found_album.tracks]
-
+        original_source = OriginalSource.SPOTIFY_ALBUM
+        name = found_album.name
+        return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
+                for track in found_album.tracks]
 
 T_Song = TypeVar("T_Song", bound=Song)
 
