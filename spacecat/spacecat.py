@@ -316,7 +316,7 @@ class Core(commands.Cog):
         except FileNotFoundError:
             pass
 
-        await self.bot.logout()
+        await self.bot.close()
 
     async def _set_admin(self):
         config = toml.load(constants.DATA_DIR + 'config.toml')
