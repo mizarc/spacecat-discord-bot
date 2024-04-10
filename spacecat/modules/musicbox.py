@@ -42,6 +42,7 @@ class OriginalSource(Enum):
     SPOTIFY_SONG = "Spotify"
     SPOTIFY_PLAYLIST = "Spotify Playlist"
     SPOTIFY_ALBUM = "Spotify Album"
+    UNKNOWN = "Unknown"
 
 
 class Playlist:
@@ -374,13 +375,6 @@ class WavelinkSong(Song):
     @classmethod
     async def from_local(cls, requester: discord.User, playlist_song: PlaylistSong,
                          playlist: Playlist = None) -> list['WavelinkSong']:
-        # If url is from YouTube, no need to filter to just YouTube Music
-        # search_type = Playable
-        # noinspection PyTypeChecker
-        # track = wavelink.PartialTrack(query=playlist_song.url, cls=search_type)
-        # return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
-        #             artist=playlist_song.artist, duration=playlist_song.duration,
-        #             group=playlist.name, requester_id=requester.id)]
         track = await wavelink.Playable.search(playlist_song.url)
         return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
                      artist=playlist_song.artist, duration=playlist_song.duration,
@@ -396,7 +390,7 @@ class WavelinkSong(Song):
                 for track in found_tracks]
 
     @classmethod
-    async def from_youtube(cls, url, requester: discord.User) -> list['WavelinkSong']:
+    async def from_single(cls, url, requester: discord.User) -> list['WavelinkSong']:
         found_tracks = await wavelink.Playable.search(url)
         if not found_tracks:
             raise SongUnavailableError
@@ -405,52 +399,38 @@ class WavelinkSong(Song):
                 for track in found_tracks]
 
     @classmethod
-    async def from_youtube_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
+    async def from_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
         try:
             found_playlist = await wavelink.Playlist.search(url)
         except wavelink.LoadTrackError:
             raise SongUnavailableError
+        
+        if 'open.spotify.com' in url or 'spotify.com' in url:
+            original_source = OriginalSource.SPOTIFY_PLAYLIST
+        elif 'youtube.com' in url or 'youtu.be' in url:
+            original_source = OriginalSource.YOUTUBE_PLAYLIST
+        else:
+            original_source = OriginalSource.UNKNOWN
 
-        original_source = OriginalSource.YOUTUBE_PLAYLIST
         name = found_playlist.name
-        if "Album -" in found_playlist.name:
-            original_source = OriginalSource.YOUTUBE_ALBUM
-            name = name[8:]
         return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
                 for track in found_playlist.tracks]
 
     @classmethod
-    async def from_spotify(cls, url, requester: discord.User) -> list['WavelinkSong']:
+    async def from_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
         found_tracks = await wavelink.Playable.search(url)
         if not found_tracks:
             raise SongUnavailableError
+        
+        if 'open.spotify.com' in url or 'spotify.com' in url:
+            original_source = OriginalSource.SPOTIFY_ALBUM
+        elif 'youtube.com' in url or 'youtu.be' in url:
+            original_source = OriginalSource.YOUTUBE_ALBUM
+        else:
+            original_source = OriginalSource.UNKNOWN
 
-        return [cls(track, OriginalSource.SPOTIFY_SONG, track.uri, requester_id=requester.id)
+        return [cls(track, original_source, track.uri, requester_id=requester.id)
                 for track in found_tracks]
-
-    @classmethod
-    async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        try:
-            found_playlist = await wavelink.Playable.search(url)
-        except wavelink.LoadTrackError:
-            raise SongUnavailableError
-
-        original_source = OriginalSource.SPOTIFY_PLAYLIST
-        name = found_playlist.name
-        return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
-                for track in found_playlist.tracks]
-
-    @classmethod
-    async def from_spotify_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        try:
-            found_album = await wavelink.Playable.search(url)
-        except wavelink.LoadTrackError:
-            raise SongUnavailableError
-
-        original_source = OriginalSource.SPOTIFY_ALBUM
-        name = found_album.name
-        return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
-                for track in found_album.tracks]
 
 T_Song = TypeVar("T_Song", bound=Song)
 
@@ -1983,16 +1963,12 @@ class Musicbox(commands.Cog):
 
     @staticmethod
     async def _get_songs(query: str, requester: discord.User):
-        if "youtube.com" in query and "list" in query:
-            return await WavelinkSong.from_youtube_playlist(query, requester)
+        if "playlist" in query or "list" in query:
+            return await WavelinkSong.from_playlist(query, requester)
+        elif "album" in query:
+            return await WavelinkSong.from_album(query, requester)
         elif "youtube.com" in query or "youtu.be" in query:
-            return await WavelinkSong.from_youtube(query, requester)
-        elif "spotify.com" in query and "playlist" in query:
-            return await WavelinkSong.from_spotify_playlist(query, requester)
-        elif "spotify.com" in query and "album" in query:
-            return await WavelinkSong.from_spotify_album(query, requester)
-        elif "spotify.com" in query:
-            return await WavelinkSong.from_spotify(query, requester)
+            return await WavelinkSong.from_single(query, requester)
         return await WavelinkSong.from_query(query, requester)
 
     @staticmethod
