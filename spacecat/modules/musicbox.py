@@ -385,52 +385,74 @@ class WavelinkSong(Song):
         found_tracks = await wavelink.Playable.search(query)
         if not found_tracks:
             raise SongUnavailableError
-
-        return [cls(track, OriginalSource.YOUTUBE_SONG, track.uri, requester_id=requester.id)
-                for track in found_tracks]
-
-    @classmethod
-    async def from_single(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        found_tracks = await wavelink.Playable.search(url)
-        if not found_tracks:
-            raise SongUnavailableError
-
-        return [cls(track, OriginalSource.YOUTUBE_VIDEO, track.uri, requester_id=requester.id)
-                for track in found_tracks]
-
-    @classmethod
-    async def from_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        try:
-            found_playlist = await wavelink.Playlist.search(url)
-        except wavelink.LoadTrackError:
-            raise SongUnavailableError
         
-        if 'open.spotify.com' in url or 'spotify.com' in url:
-            original_source = OriginalSource.SPOTIFY_PLAYLIST
-        elif 'youtube.com' in url or 'youtu.be' in url:
-            original_source = OriginalSource.YOUTUBE_PLAYLIST
-        else:
-            original_source = OriginalSource.UNKNOWN
+        source = OriginalSource.YOUTUBE_SONG
 
-        name = found_playlist.name
-        return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
-                for track in found_playlist.tracks]
+        if "youtube.com" in query or "youtu.be" in query:
+            match query.lower():
+                case _ if "watch" in query:
+                    source = OriginalSource.YOUTUBE_VIDEO
+                case _ if "album" in query:
+                    source = OriginalSource.YOUTUBE_ALBUM
+                case _ if "playlist" in query:
+                    source = OriginalSource.YOUTUBE_PLAYLIST
+                case _ if "music" in query:
+                    source = OriginalSource.YOUTUBE_SONG
+        elif "open.spotify.com" in query:
+            match query.lower():
+                case _ if "playlist" in query:
+                    source = OriginalSource.SPOTIFY_PLAYLIST
+                case _ if "album" in query:
+                    source = OriginalSource.SPOTIFY_ALBUM
+                case _:
+                    source = OriginalSource.SPOTIFY_SONG
 
-    @classmethod
-    async def from_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        found_tracks = await wavelink.Playable.search(url)
-        if not found_tracks:
-            raise SongUnavailableError
+
+        return [cls(track, source, track.uri, track.playlist.name, track.playlist.url, track.title, track.author, track.length, requester.id)
+                for track in found_tracks.tracks]
+
+    # @classmethod
+    # async def from_single(cls, url, requester: discord.User) -> list['WavelinkSong']:
+    #     found_tracks = await wavelink.Playable.search(url)
+    #     if not found_tracks:
+    #         raise SongUnavailableError
+
+    #     return [cls(track, OriginalSource.YOUTUBE_VIDEO, track.uri, requester_id=requester.id)
+    #             for track in found_tracks]
+
+    # @classmethod
+    # async def from_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
+    #     try:
+    #         found_playlist = await wavelink.Playable.search(url)
+    #     except wavelink.LoadTrackError:
+    #         raise SongUnavailableError
         
-        if 'open.spotify.com' in url or 'spotify.com' in url:
-            original_source = OriginalSource.SPOTIFY_ALBUM
-        elif 'youtube.com' in url or 'youtu.be' in url:
-            original_source = OriginalSource.YOUTUBE_ALBUM
-        else:
-            original_source = OriginalSource.UNKNOWN
+    #     if 'open.spotify.com' in url or 'spotify.com' in url:
+    #         original_source = OriginalSource.SPOTIFY_PLAYLIST
+    #     elif 'youtube.com' in url or 'youtu.be' in url:
+    #         original_source = OriginalSource.YOUTUBE_PLAYLIST
+    #     else:
+    #         original_source = OriginalSource.UNKNOWN
 
-        return [cls(track, original_source, track.uri, requester_id=requester.id)
-                for track in found_tracks]
+    #     name = found_playlist.name
+    #     return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
+    #             for track in found_playlist.tracks]
+
+    # @classmethod
+    # async def from_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
+    #     found_tracks = await wavelink.Playable.search(url)
+    #     if not found_tracks:
+    #         raise SongUnavailableError
+        
+    #     if 'open.spotify.com' in url or 'spotify.com' in url:
+    #         original_source = OriginalSource.SPOTIFY_ALBUM
+    #     elif 'youtube.com' in url or 'youtu.be' in url:
+    #         original_source = OriginalSource.YOUTUBE_ALBUM
+    #     else:
+    #         original_source = OriginalSource.UNKNOWN
+
+    #     return [cls(track, original_source, track.uri, requester_id=requester.id)
+    #             for track in found_tracks]
 
 T_Song = TypeVar("T_Song", bound=Song)
 
@@ -1963,12 +1985,13 @@ class Musicbox(commands.Cog):
 
     @staticmethod
     async def _get_songs(query: str, requester: discord.User):
-        if "playlist" in query or "list" in query:
-            return await WavelinkSong.from_playlist(query, requester)
-        elif "album" in query:
-            return await WavelinkSong.from_album(query, requester)
-        elif "youtube.com" in query or "youtu.be" in query:
-            return await WavelinkSong.from_single(query, requester)
+        # if "playlist" in query or "list" in query:
+        #     return await WavelinkSong.from_playlist(query, requester)
+        # elif "album" in query:
+        #     return await WavelinkSong.from_album(query, requester)
+        # elif "youtube.com" in query or "youtu.be" in query:
+        #     return await WavelinkSong.from_single(query, requester)
+        # return await WavelinkSong.from_query(query, requester)
         return await WavelinkSong.from_query(query, requester)
 
     @staticmethod
