@@ -387,28 +387,36 @@ class WavelinkSong(Song):
             raise SongUnavailableError
         
         source = OriginalSource.YOUTUBE_SONG
-
+        url = query
+        playlist_name = ""
+        
         if "youtube.com" in query or "youtu.be" in query:
-            match query.lower():
-                case _ if "watch" in query:
-                    source = OriginalSource.YOUTUBE_VIDEO
-                case _ if "album" in query:
-                    source = OriginalSource.YOUTUBE_ALBUM
-                case _ if "playlist" in query:
-                    source = OriginalSource.YOUTUBE_PLAYLIST
-                case _ if "music" in query:
-                    source = OriginalSource.YOUTUBE_SONG
+            if "Album - " in found_tracks[0].playlist.name:
+                source = OriginalSource.YOUTUBE_ALBUM
+                playlist_name = found_tracks[0].playlist.name[8:]
+            elif "playlist" in query:
+                source = OriginalSource.YOUTUBE_PLAYLIST
+                playlist_name = found_tracks[0].playlist.name
+            elif "music" in query:
+                source = OriginalSource.YOUTUBE_SONG
+            elif "watch" in query:
+                source = OriginalSource.YOUTUBE_VIDEO
         elif "open.spotify.com" in query:
-            match query.lower():
-                case _ if "playlist" in query:
-                    source = OriginalSource.SPOTIFY_PLAYLIST
-                case _ if "album" in query:
-                    source = OriginalSource.SPOTIFY_ALBUM
-                case _:
-                    source = OriginalSource.SPOTIFY_SONG
+            if "playlist" in query:
+                source = OriginalSource.SPOTIFY_PLAYLIST
+                url = found_tracks[0].playlist.url
+                playlist_name = found_tracks[0].playlist.name
+            elif "album" in query:
+                source = OriginalSource.SPOTIFY_ALBUM
+                url = found_tracks[0].playlist.url
+                playlist_name = found_tracks[0].playlist.name
+            else:
+                source = OriginalSource.SPOTIFY_SONG
+        else:
+            source = OriginalSource.UNKNOWN
 
 
-        return [cls(track, source, track.uri, track.playlist.name, track.playlist.url, track.title, track.author, track.length, requester.id)
+        return [cls(track, source, track.uri, playlist_name, url, track.title, track.author, track.length, requester.id)
                 for track in found_tracks.tracks]
 
     # @classmethod
@@ -1985,13 +1993,6 @@ class Musicbox(commands.Cog):
 
     @staticmethod
     async def _get_songs(query: str, requester: discord.User):
-        # if "playlist" in query or "list" in query:
-        #     return await WavelinkSong.from_playlist(query, requester)
-        # elif "album" in query:
-        #     return await WavelinkSong.from_album(query, requester)
-        # elif "youtube.com" in query or "youtu.be" in query:
-        #     return await WavelinkSong.from_single(query, requester)
-        # return await WavelinkSong.from_query(query, requester)
         return await WavelinkSong.from_query(query, requester)
 
     @staticmethod
