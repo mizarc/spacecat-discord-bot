@@ -382,6 +382,16 @@ class WavelinkSong(Song):
 
     @classmethod
     async def from_query(cls, query: str, requester: discord.User) -> list['WavelinkSong']:
+        """
+        Process a query to obtain a track and create a list of WavelinkSong objects based on the query and the requester.
+
+        Parameters:
+            query (str): The query used to search for the track.
+            requester (discord.User): The user requesting the track.
+
+        Returns:
+            list['WavelinkSong']: A list containing WavelinkSong objects created from the query.
+        """
         track = await wavelink.Playable.search(query)
         if not track:
             raise SongUnavailableError
@@ -393,6 +403,17 @@ class WavelinkSong(Song):
 
     @classmethod
     async def _process_single(cls, query: str, track: wavelink.Playable, requester: discord.User):
+        """
+        Process a single track to determine its source and create a WavelinkSong object.
+
+        Parameters:
+            query (str): The query that was used to obtain the track.
+            track (wavelink.Playable): The track to create the WavelinkSong from.
+            requester (discord.User): The user requesting the track.
+
+        Returns:
+            list['WavelinkSong']: A list containing a single WavelinkSong object created from the query.
+        """
         if "youtube.com" in source.url or "youtu.be" in query:
             if "music" in query:
                 source = OriginalSource.YOUTUBE_SONG
@@ -407,6 +428,17 @@ class WavelinkSong(Song):
 
     @classmethod
     async def _process_multiple(cls, query: str, tracks: wavelink.Playlist, requester: discord.User):
+        """
+        Process multiple tracks to determine their sources and create WavelinkSong objects.
+
+        Parameters:
+            query (str): The query used to obtain the tracks.
+            tracks (wavelink.Playlist): The playlist containing tracks to process.
+            requester (discord.User): The user requesting the tracks.
+
+        Returns:
+            list['WavelinkSong']: A list containing multiple WavelinkSong objects created from the tracks.
+        """
         source = OriginalSource.YOUTUBE_SONG
         url = query
         playlist_name = ""
