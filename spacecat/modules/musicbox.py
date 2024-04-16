@@ -375,6 +375,17 @@ class WavelinkSong(Song):
     @classmethod
     async def from_local(cls, requester: discord.User, playlist_song: PlaylistSong,
                          playlist: Playlist = None) -> list['WavelinkSong']:
+        """
+        Process a local playlist song to obtain a track and create a list of WavelinkSong objects based on the song details and the requester.
+
+        Parameters:
+            requester (discord.User): The user requesting the song.
+            playlist_song (PlaylistSong): The playlist song object containing the song details.
+            playlist (Playlist, optional): The playlist to which the song belongs. Defaults to None.
+
+        Returns:
+            list['WavelinkSong']: A list containing WavelinkSong objects created from the local playlist song.
+        """
         track = await wavelink.Playable.search(playlist_song.url)
         return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
                      artist=playlist_song.artist, duration=playlist_song.duration,
@@ -439,30 +450,22 @@ class WavelinkSong(Song):
         Returns:
             list['WavelinkSong']: A list containing multiple WavelinkSong objects created from the tracks.
         """
-        source = OriginalSource.YOUTUBE_SONG
+        source = OriginalSource.UNKNOWN
         url = query
         playlist_name = ""
         
-        if "youtube.com" in source.url or "youtu.be" in query:
+        if "youtube.com" in source[0].url or "youtu.be" in query:
             if "Album - " in source[0].playlist.name:
-                source = OriginalSource.YOUTUBE_ALBUM
-                playlist_name = source[0].playlist.name[8:]
+                source, playlist_name = OriginalSource.YOUTUBE_ALBUM, source[0].playlist.name[8:]
             elif "playlist" in query:
-                source = OriginalSource.YOUTUBE_PLAYLIST
-                playlist_name = source[0].playlist.name
+                source, playlist_name = OriginalSource.YOUTUBE_PLAYLIST, source[0].playlist.name
         elif "open.spotify.com" in query:
             if "playlist" in query:
-                source = OriginalSource.SPOTIFY_PLAYLIST
-                url = source[0].playlist.url
-                playlist_name = source[0].playlist.name
+                source, url, playlist_name = OriginalSource.SPOTIFY_PLAYLIST, source[0].playlist.url, source[0].playlist.name
             elif "album" in query:
-                source = OriginalSource.SPOTIFY_ALBUM
-                url = source[0].playlist.url
-                playlist_name = source[0].playlist.name
+                source, url, playlist_name = OriginalSource.SPOTIFY_ALBUM, source[0].playlist.url, source[0].playlist.name
             else:
                 source = OriginalSource.SPOTIFY_SONG
-        else:
-            source = OriginalSource.UNKNOWN
 
         return [cls(track, source, track.uri, playlist_name, url, track.title, track.author, track.length, requester.id)
                 for track in tracks.tracks]
