@@ -406,11 +406,11 @@ class WavelinkSong(Song):
         track = await wavelink.Playable.search(query)
         if not track:
             raise SongUnavailableError
-        
-        if isinstance(track, wavelink.Playable):
-            return [cls._process_single(track, requester)]
-        elif isinstance(track, wavelink.Playlist):
-            return [cls._process_multiple(track, requester)]
+
+        if track[0].playlist is None:
+            return [await cls._process_single(query, track[0], requester)]
+        else:
+            return [await cls._process_multiple(query, track, requester)]
 
     @classmethod
     async def _process_single(cls, query: str, track: wavelink.Playable, requester: discord.User):
@@ -970,6 +970,7 @@ class Musicbox(commands.Cog):
 
         try:
             songs = await self._get_songs(url, interaction.user)
+            print(songs)
         except SongUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
