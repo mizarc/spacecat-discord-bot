@@ -408,9 +408,9 @@ class WavelinkSong(Song):
             raise SongUnavailableError
 
         if track[0].playlist is None:
-            return [await cls._process_single(query, track[0], requester)]
+            return await cls._process_single(query, track[0], requester)
         else:
-            return [await cls._process_multiple(query, track, requester)]
+            return await cls._process_multiple(query, track, requester)
 
     @classmethod
     async def _process_single(cls, query: str, track: wavelink.Playable, requester: discord.User):
@@ -425,7 +425,7 @@ class WavelinkSong(Song):
         Returns:
             list['WavelinkSong']: A list containing a single WavelinkSong object created from the query.
         """
-        if "youtube.com" in source.url or "youtu.be" in query:
+        if "youtube.com" in query or "youtu.be" in query:
             if "music" in query:
                 source = OriginalSource.YOUTUBE_SONG
             elif "watch" in query:
@@ -435,7 +435,7 @@ class WavelinkSong(Song):
         else:
             source = OriginalSource.UNKNOWN
 
-        return [cls(source, "", source.uri, "", track.uri, track.title, track.author, track.length, requester.id)]
+        return [cls(track, source, track.uri, "", "", track.title, track.author, track.length, requester.id)]
 
     @classmethod
     async def _process_multiple(cls, query: str, tracks: wavelink.Playlist, requester: discord.User):
@@ -454,8 +454,8 @@ class WavelinkSong(Song):
         url = query
         playlist_name = ""
         
-        if "youtube.com" in source[0].url or "youtu.be" in query:
-            if "Album - " in source[0].playlist.name:
+        if "youtube.com" in tracks[0].url or "youtu.be" in query:
+            if "Album - " in tracks[0].playlist.name:
                 source, playlist_name = OriginalSource.YOUTUBE_ALBUM, source[0].playlist.name[8:]
             elif "playlist" in query:
                 source, playlist_name = OriginalSource.YOUTUBE_PLAYLIST, source[0].playlist.name
@@ -970,7 +970,6 @@ class Musicbox(commands.Cog):
 
         try:
             songs = await self._get_songs(url, interaction.user)
-            print(songs)
         except SongUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
