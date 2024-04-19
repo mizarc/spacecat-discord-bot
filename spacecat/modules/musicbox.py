@@ -454,16 +454,16 @@ class WavelinkSong(Song):
         url = query
         playlist_name = ""
         
-        if "youtube.com" in tracks[0].url or "youtu.be" in query:
+        if "youtube.com" in tracks[0].uri or "youtu.be" in query:
             if "Album - " in tracks[0].playlist.name:
-                source, playlist_name = OriginalSource.YOUTUBE_ALBUM, source[0].playlist.name[8:]
+                source, playlist_name = OriginalSource.YOUTUBE_ALBUM, tracks[0].playlist.name[8:]
             elif "playlist" in query:
-                source, playlist_name = OriginalSource.YOUTUBE_PLAYLIST, source[0].playlist.name
+                source, playlist_name = OriginalSource.YOUTUBE_PLAYLIST, tracks[0].playlist.name
         elif "open.spotify.com" in query:
             if "playlist" in query:
-                source, url, playlist_name = OriginalSource.SPOTIFY_PLAYLIST, source[0].playlist.url, source[0].playlist.name
+                source, url, playlist_name = OriginalSource.SPOTIFY_PLAYLIST, tracks[0].playlist.url, tracks[0].playlist.name
             elif "album" in query:
-                source, url, playlist_name = OriginalSource.SPOTIFY_ALBUM, source[0].playlist.url, source[0].playlist.name
+                source, url, playlist_name = OriginalSource.SPOTIFY_ALBUM, tracks[0].playlist.url, tracks[0].playlist.name
             else:
                 source = OriginalSource.SPOTIFY_SONG
 
