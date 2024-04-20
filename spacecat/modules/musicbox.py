@@ -18,14 +18,10 @@ import toml
 import uuid
 
 import wavelink
-from wavelink import YouTubeMusicTrack, YouTubeTrack
-
-from wavelink.ext import spotify
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
-from spacecat.helpers.spotify_extended_support import SpotifyPlaylist, SpotifyTrack, SpotifyAlbum
 
 
 class SongUnavailableError(ValueError):
@@ -46,6 +42,7 @@ class OriginalSource(Enum):
     SPOTIFY_SONG = "Spotify"
     SPOTIFY_PLAYLIST = "Spotify Playlist"
     SPOTIFY_ALBUM = "Spotify Album"
+    UNKNOWN = "Unknown"
 
 
 class Playlist:
@@ -329,7 +326,7 @@ class Song(ABC):
 class WavelinkSong(Song):
     def __init__(self, track, original_source, url, group=None, group_url=None,
                  title=None, artist=None, duration=None, requester_id=None):
-        self._track: wavelink.Track = track
+        self._track: wavelink.Playable = track
         self._original_source: OriginalSource = original_source
         self._url: str = url
         self._playlist: str = group
@@ -340,7 +337,7 @@ class WavelinkSong(Song):
         self._requester_id = requester_id
 
     @property
-    def stream(self) -> wavelink.Track:
+    def stream(self) -> wavelink.Playable:
         return self._track
 
     @property
@@ -353,7 +350,7 @@ class WavelinkSong(Song):
 
     @property
     def duration(self) -> int:
-        return self._duration if self._duration else int(self._track.duration)
+        return self._duration if self._duration else int(self._track.length)
 
     @property
     def url(self) -> str:
@@ -378,90 +375,110 @@ class WavelinkSong(Song):
     @classmethod
     async def from_local(cls, requester: discord.User, playlist_song: PlaylistSong,
                          playlist: Playlist = None) -> list['WavelinkSong']:
-        # If url is from YouTube, no need to filter to just YouTube Music
-        search_type = YouTubeMusicTrack
-        if "youtube.com" in playlist_song.url:
-            search_type = YouTubeTrack
+        """
+        Process a local playlist song to obtain a track and create a list of WavelinkSong objects based on the song details and the requester.
 
-        # noinspection PyTypeChecker
-        track = wavelink.PartialTrack(query=playlist_song.url, cls=search_type)
+        Parameters:
+            requester (discord.User): The user requesting the song.
+            playlist_song (PlaylistSong): The playlist song object containing the song details.
+            playlist (Playlist, optional): The playlist to which the song belongs. Defaults to None.
+
+        Returns:
+            list['WavelinkSong']: A list containing WavelinkSong objects created from the local playlist song.
+        """
+        track = await wavelink.Playable.search(playlist_song.url)
         return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
-                    artist=playlist_song.artist, duration=playlist_song.duration,
-                    group=playlist.name, requester_id=requester.id)]
+                     artist=playlist_song.artist, duration=playlist_song.duration,
+                     group=playlist.name, requester_id=requester.id)]
 
     @classmethod
-    async def from_query(cls, query, requester: discord.User) -> list['WavelinkSong']:
-        found_tracks = await wavelink.YouTubeMusicTrack.search(query=query)
-        if not found_tracks:
+    async def from_query(cls, query: str, requester: discord.User) -> list['WavelinkSong']:
+        """
+        Process a query to obtain a track and create a list of WavelinkSong objects based on the query and the requester.
+
+        Parameters:
+            query (str): The query used to search for the track.
+            requester (discord.User): The user requesting the track.
+
+        Returns:
+            list['WavelinkSong']: A list containing WavelinkSong objects created from the query.
+        """
+        track = await wavelink.Playable.search(query)
+        if not track:
             raise SongUnavailableError
 
-        return [cls(track, OriginalSource.YOUTUBE_SONG, track.uri, requester_id=requester.id)
-                for track in found_tracks]
+        if track[0].playlist is None:
+            return await cls._process_single(query, track[0], requester)
+        else:
+            return await cls._process_multiple(query, track, requester)
 
     @classmethod
-    async def from_youtube(cls, url, requester: discord.User) -> ['WavelinkSong']:
-        found_tracks = await wavelink.LocalTrack.search(query=url)
-        if not found_tracks:
-            raise SongUnavailableError
+    async def _process_single(cls, query: str, track: wavelink.Playable, requester: discord.User):
+        """
+        Process a single track to determine its source and create a WavelinkSong object.
 
-        return [cls(track, OriginalSource.YOUTUBE_VIDEO, track.uri, requester_id=requester.id)
-                for track in found_tracks]
+        Parameters:
+            query (str): The query that was used to obtain the track.
+            track (wavelink.Playable): The track to create the WavelinkSong from.
+            requester (discord.User): The user requesting the track.
 
-    @classmethod
-    async def from_youtube_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        try:
-            found_playlist = await wavelink.YouTubePlaylist.search(query=url)
-        except wavelink.LoadTrackError:
-            raise SongUnavailableError
+        Returns:
+            list['WavelinkSong']: A list containing a single WavelinkSong object created from the query.
+        """
+        if "youtube.com" in query or "youtu.be" in query:
+            if "music" in query:
+                source = OriginalSource.YOUTUBE_SONG
+            elif "watch" in query:
+                source = OriginalSource.YOUTUBE_VIDEO
+        elif "open.spotify.com" in query:
+            source = OriginalSource.SPOTIFY_SONG
+        else:
+            source = OriginalSource.UNKNOWN
 
-        original_source = OriginalSource.YOUTUBE_PLAYLIST
-        name = found_playlist.name
-        if "Album -" in found_playlist.name:
-            original_source = OriginalSource.YOUTUBE_ALBUM
-            name = name[8:]
-        return [cls(track, original_source, track.uri, name, url, requester_id=requester.id)
-                for track in found_playlist.tracks]
-
-    @classmethod
-    async def from_spotify(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        try:
-            found_tracks = await SpotifyTrack.search(query=url)
-        except spotify.SpotifyRequestError:
-            raise SongUnavailableError
-
-        return [cls(track, OriginalSource.SPOTIFY_SONG, track.url, requester_id=requester.id)
-                for track in found_tracks]
+        return [cls(track, source, track.uri, "", "", track.title, track.author, track.length, requester.id)]
 
     @classmethod
-    async def from_spotify_playlist(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        if "/user/" in url:
-            url = re.sub(r'user/[A-z]+/', '', url)
+    async def _process_multiple(cls, query: str, tracks: wavelink.Playlist, requester: discord.User):
+        """
+        Process multiple tracks to determine their sources and create WavelinkSong objects.
 
-        try:
-            found_playlist = await SpotifyPlaylist.search(query=url)
-        except spotify.SpotifyRequestError:
-            raise SongUnavailableError
+        Parameters:
+            query (str): The query used to obtain the tracks.
+            tracks (wavelink.Playlist): The playlist containing tracks to process.
+            requester (discord.User): The user requesting the tracks.
 
-        return [cls(track, OriginalSource.SPOTIFY_PLAYLIST, track.url,
-                    found_playlist.name, found_playlist.url, requester_id=requester.id)
-                for track in found_playlist.tracks]
+        Returns:
+            list['WavelinkSong']: A list containing multiple WavelinkSong objects created from the tracks.
+        """
+        source = OriginalSource.UNKNOWN
+        url = query
+        playlist_name = ""
+        
+        if "youtube.com" in tracks[0].uri or "youtu.be" in query:
+            if "Album - " in tracks[0].playlist.name:
+                source, playlist_name = OriginalSource.YOUTUBE_ALBUM, tracks[0].playlist.name[8:]
+            elif "playlist" in query:
+                source, playlist_name = OriginalSource.YOUTUBE_PLAYLIST, tracks[0].playlist.name
+        elif "open.spotify.com" in query:
+            if "playlist" in query:
+                source, url, playlist_name = OriginalSource.SPOTIFY_PLAYLIST, tracks[0].playlist.url, tracks[0].playlist.name
+            elif "album" in query:
+                source, url, playlist_name = OriginalSource.SPOTIFY_ALBUM, tracks[0].playlist.url, tracks[0].playlist.name
+            else:
+                source = OriginalSource.SPOTIFY_SONG
 
-    @classmethod
-    async def from_spotify_album(cls, url, requester: discord.User) -> list['WavelinkSong']:
-        try:
-            found_album = await SpotifyAlbum.search(query=url)
-        except spotify.SpotifyRequestError:
-            raise SongUnavailableError
-
-        return [cls(track, OriginalSource.SPOTIFY_ALBUM, track.url,
-                    found_album.name, found_album.url, requester_id=requester.id)
-                for track in found_album.tracks]
-
+        return [cls(track, source, track.uri, playlist_name, url, track.title, track.author, track.length, requester.id)
+                for track in tracks.tracks]
 
 T_Song = TypeVar("T_Song", bound=Song)
 
 
 class MusicPlayer(ABC, Generic[T_Song]):
+    @property
+    @abstractmethod
+    def is_paused(self) -> bool:
+        pass
+
     @property
     @abstractmethod
     def is_looping(self) -> bool:
@@ -590,6 +607,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._disconnect_job.start()
 
     @property
+    def is_paused(self) -> bool:
+        return self._player.paused
+
+    @property
     def is_looping(self) -> bool:
         return self._is_looping
 
@@ -614,8 +635,6 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         return list(self._previous_queue)
 
     async def connect(self, channel: discord.VoiceChannel):
-        # noinspection PyTypeChecker
-        # Incorrectly warns this line
         self._player = await channel.connect(cls=wavelink.Player, self_deaf=True)
 
     async def disconnect(self):
@@ -678,10 +697,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._player.seek(position)
 
     async def pause(self):
-        await self._player.pause()
+        await self._player.pause(True)
 
     async def resume(self):
-        await self._player.resume()
+        await self._player.pause(False)
 
     async def loop(self):
         self._is_looping = True
@@ -701,7 +720,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._player.stop()
 
     async def next(self):
-        if not self._player.is_playing():
+        if not self._player.playing:
             return False
         self._queue_reverse = False
         self._is_skipping = True
@@ -757,7 +776,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
 
     @tasks.loop(seconds=30)
     async def _disconnect_job(self):
-        if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.is_playing():
+        if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.playing:
             await self.disconnect()
 
     def _refresh_disconnect_timer(self):
@@ -802,28 +821,20 @@ class Musicbox(commands.Cog):
         if 'lavalink' not in config:
             config['lavalink'] = {}
         if 'address' not in config['lavalink']:
-            config['lavalink']['address'] = "0.0.0.0"
+            config['lavalink']['address'] = "http://localhost"
         if 'port' not in config['lavalink']:
             config['lavalink']['port'] = "2333"
         if 'password' not in config['lavalink']:
             config['lavalink']['password'] = "password1"
 
-        if 'spotify' not in config:
-            config['spotify'] = {}
-        if 'client_id' not in config['spotify']:
-            config['spotify']['client_id'] = ""
-        if 'client_secret' not in config['spotify']:
-            config['spotify']['client_secret'] = ""
         with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
             toml.dump(config, config_file)
 
     async def init_wavelink(self):
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        await wavelink.NodePool.create_node(
-            bot=self.bot, host=config['lavalink']['address'],
-            port=config['lavalink']['port'], password=config['lavalink']['password'],
-            spotify_client=spotify.SpotifyClient(client_id=config['spotify']['client_id'],
-                                                 client_secret=config['spotify']['client_secret']))
+        node = wavelink.Node(uri=f"{config['lavalink']['address']}:{config['lavalink']['port']}",
+                             password=config['lavalink']['password'])
+        await wavelink.Pool.connect(nodes=[node], client=self.bot)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -868,9 +879,11 @@ class Musicbox(commands.Cog):
             await voice_client.disconnect()
 
     @commands.Cog.listener()
-    async def on_wavelink_track_end(self, player: wavelink.Player, track, reason):
-        _ = track, reason  # Disable warning for unused arguments
-        music_player = await self._get_music_player(player.channel)
+    async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
+        if payload.player is None:
+            return
+
+        music_player = await self._get_music_player(payload.player.channel)
         await music_player.process_song_end()
 
     queue_group = app_commands.Group(name="queue", description="Handles songs that will be played next.")
@@ -941,7 +954,7 @@ class Musicbox(commands.Cog):
     @app_commands.command()
     @perms.check()
     async def play(self, interaction: discord.Interaction, url: str, position: int = -1):
-        """Plays from a url (almost anything youtube_dl supports)"""
+        """Plays from a url or search query"""
         # Join channel and create music player instance if it doesn't exist
         try:
             music_player = await self._get_music_player(interaction.user.voice.channel)
@@ -1076,7 +1089,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if music isn't paused
-        if not interaction.guild.voice_client.is_paused():
+        if not music_player.is_paused:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music isn't paused")
@@ -1101,7 +1114,7 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Check if music is paused
-        if interaction.guild.voice_client.is_paused():
+        if music_player.is_paused:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Music is already paused")
@@ -1988,16 +2001,6 @@ class Musicbox(commands.Cog):
 
     @staticmethod
     async def _get_songs(query: str, requester: discord.User):
-        if "youtube.com" in query and "list" in query:
-            return await WavelinkSong.from_youtube_playlist(query, requester)
-        elif "youtube.com" in query or "youtu.be" in query:
-            return await WavelinkSong.from_youtube(query, requester)
-        elif "spotify.com" in query and "playlist" in query:
-            return await WavelinkSong.from_spotify_playlist(query, requester)
-        elif "spotify.com" in query and "album" in query:
-            return await WavelinkSong.from_spotify_album(query, requester)
-        elif "spotify.com" in query:
-            return await WavelinkSong.from_spotify(query, requester)
         return await WavelinkSong.from_query(query, requester)
 
     @staticmethod
@@ -2006,7 +2009,10 @@ class Musicbox(commands.Cog):
 
     # Format duration based on what values there are
     @staticmethod
-    async def _format_duration(seconds):
+    async def _format_duration(milliseconds):
+        # Convert milliseconds to seconds
+        seconds = milliseconds // 1000
+
         hours, remainder = divmod(seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
 
@@ -2035,7 +2041,9 @@ class Musicbox(commands.Cog):
                 formatted += f"{seconds}"
         else:
             formatted += "00"
+
         return formatted
+
 
     @staticmethod
     async def _order_playlist_songs(playlist_songs):
