@@ -111,9 +111,6 @@ class Core(commands.Cog):
                 return
 
     async def process_info(self, message):
-        # Check for both nickname and non nickname mentions
-        prefix = await self.bot.get_prefix(message)
-
         # Info on how to use the bot
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
@@ -121,7 +118,7 @@ class Core(commands.Cog):
             description="I'm here to provide a useful set a features")
         embed.add_field(
             name="Need Help?",
-            value=f"Type `{prefix[2]}help` to get a list of commands",
+            value=f"Type `/help` to get a list of commands",
             inline=False)
         embed.add_field(
             name="Want more features added?",
@@ -436,32 +433,6 @@ def introduction(config):
         toml.dump(config, config_file)
     return True
 
-
-def get_prefix(bot, message):
-    # Access database if it exists and fetch server's custom prefix if set
-    try:
-        db = sqlite3.connect(
-            f'file:{constants.DATA_DIR}spacecat.db?mode=ro',
-            uri=True)
-        cursor = db.cursor()
-        query = (message.guild.id,)
-        cursor.execute(
-            'SELECT prefix FROM server_settings '
-            'WHERE server_id=?', query)
-        prefix = cursor.fetchone()[0]
-        db.close()
-
-        if prefix:
-            return commands.when_mentioned_or(prefix)(bot, message)
-    except sqlite3.OperationalError:
-        pass
-
-    # Use the prefix set in config if no custom server prefix is set
-    config = toml.load(constants.DATA_DIR + 'config.toml')
-    prefix = config['base']['prefix']
-    return commands.when_mentioned_or(prefix)(bot, message)
-
-
 def run(firstrun=False):
     config = toml.load(constants.DATA_DIR + 'config.toml')
     apikey = config['base']['apikey']
@@ -472,7 +443,7 @@ def run(firstrun=False):
         intents = discord.Intents.default()
         intents.members = True
         intents.message_content = True
-        bot = SpaceCat(command_prefix=get_prefix, intents=intents)
+        bot = SpaceCat(command_prefix="?!", intents=intents)
         bot.run(apikey)
     except discord.LoginFailure:
         if firstrun:
