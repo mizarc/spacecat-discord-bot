@@ -191,9 +191,6 @@ class WavelinkSong(Song):
         return [cls(track, source, track.uri, playlist_name, url, track.title, track.author, track.length, requester.id)
                 for track in tracks.tracks]
 
-
-
-
 class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
     def __init__(self):
         self._player: Optional[wavelink.Player] = None
@@ -412,11 +409,19 @@ class Musicbox(commands.Cog):
         self.playlist_songs = PlaylistSongRepository(self.database)
 
     async def cog_load(self):
+        """
+        Loads the cog by initializing configuration settings and Wavelink for music streaming.
+        """
         await self.init_config()
         await self.init_wavelink()
 
     @staticmethod
     async def init_config():
+        """
+        Initialises configuration settings for the music streaming feature.
+        Loads the config file, sets default values for lavalink address, port, and password if not present,
+        and writes the updated config back to the file.
+        """
         config = toml.load(constants.DATA_DIR + 'config.toml')
         if 'lavalink' not in config:
             config['lavalink'] = {}
@@ -431,6 +436,11 @@ class Musicbox(commands.Cog):
             toml.dump(config, config_file)
 
     async def init_wavelink(self):
+        """
+        Initializes the Wavelink client for music streaming.
+
+        This function loads the configuration settings from the 'config.toml' file located in the 'constants.DATA_DIR' directory. It creates a Wavelink node using the provided address, port, and password. Then, it connects the Wavelink client to the node using the provided Discord bot.
+        """
         config = toml.load(constants.DATA_DIR + 'config.toml')
         node = wavelink.Node(uri=f"{config['lavalink']['address']}:{config['lavalink']['port']}",
                              password=config['lavalink']['password'])
@@ -1590,7 +1600,16 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
         return
 
-    async def _get_music_player(self, channel: discord.VoiceChannel):
+    async def _get_music_player(self, channel: discord.VoiceChannel) -> WavelinkMusicPlayer:
+        """
+        Retrieves the music player associated with the given voice channel.
+
+        Args:
+            channel (discord.VoiceChannel): The voice channel for which to retrieve the music player.
+
+        Returns:
+            WavelinkMusicPlayer: The music player associated with the given voice channel.
+        """
         try:
             music_player = self.music_players[channel.guild.id]
         except KeyError:
@@ -1600,16 +1619,45 @@ class Musicbox(commands.Cog):
         return music_player
 
     @staticmethod
-    async def _get_songs(query: str, requester: discord.User):
+    async def _get_songs(query: str, requester: discord.User) -> list['WavelinkSong']:
+        """
+        Get songs based on a query and requester.
+
+        Args:
+            query (str): The query used to search for songs.
+            requester (discord.User): The user requesting the songs.
+
+        Returns:
+            list['WavelinkSong']: A list of WavelinkSong objects representing the songs.
+        """
         return await WavelinkSong.from_query(query, requester)
 
     @staticmethod
-    async def _get_song_from_saved(playlist_song: PlaylistSong, playlist: Playlist, requester: discord.User):
+    async def _get_song_from_saved(playlist_song: PlaylistSong, playlist: Playlist, requester: discord.User) -> list['WavelinkSong']:
+        """
+        Get a song from a saved playlist.
+
+        Args:
+            playlist_song (PlaylistSong): The playlist song object.
+            playlist (Playlist): The playlist object.
+            requester (discord.User): The user requesting the song.
+
+        Returns:
+            WavelinkSong: The song object obtained from the saved playlist.
+        """
         return await WavelinkSong.from_local(requester, playlist_song, playlist)
 
-    # Format duration based on what values there are
     @staticmethod
-    async def _format_duration(milliseconds):
+    async def _format_duration(milliseconds) -> str:
+        """
+        Format the duration in milliseconds into a human-readable format.
+
+        Args:
+            milliseconds (int): The duration in milliseconds.
+
+        Returns:
+            str: The formatted duration in the format HH:MM:SS.
+        """
         # Convert milliseconds to seconds
         seconds = milliseconds // 1000
 
@@ -1646,8 +1694,17 @@ class Musicbox(commands.Cog):
 
 
     @staticmethod
-    async def _order_playlist_songs(playlist_songs):
-        """Gets playlist songs from name"""
+    async def _order_playlist_songs(playlist_songs) -> list[PlaylistSong]:
+        """
+        Orders a list of playlist songs based on their song ID ordering.
+
+        Args:
+            playlist_songs (List[PlaylistSong]): A list of playlist songs.
+
+        Returns:
+            List[PlaylistSong]: A list of playlist songs ordered based on their previous song IDs.
+
+        """
         # Use dictionary to pair songs with the next song
         song_links = {}
         for song in playlist_songs:
@@ -1663,7 +1720,16 @@ class Musicbox(commands.Cog):
         return ordered_songs
 
     @staticmethod
-    def _parse_time(time_string):
+    def _parse_time(time_string) -> int:
+        """
+        Parses a time string and returns the equivalent time in milliseconds.
+
+        Args:
+            time_string (str): The time string to be parsed. The string should be in the format HH:MM:SS or MM:SS.
+
+        Returns:
+            int: The equivalent time in milliseconds.
+        """
         time_split = time_string.split(':')
         hours, minutes, seconds = 0, 0, 0
         if len(time_split) >= 3:
