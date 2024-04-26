@@ -1,22 +1,17 @@
 import datetime
 import sqlite3
+import uuid
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-
 from enum import Enum
-
 import toml
-
-import uuid
-
 import wavelink
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
-
 
 class SongUnavailableError(ValueError):
     pass
@@ -25,7 +20,6 @@ class SongUnavailableError(ValueError):
 class PlayerResult(Enum):
     PLAYING = 0
     QUEUEING = 1
-
 
 class OriginalSource(Enum):
     LOCAL = "Saved Playlist"
@@ -37,9 +31,6 @@ class OriginalSource(Enum):
     SPOTIFY_PLAYLIST = "Spotify Playlist"
     SPOTIFY_ALBUM = "Spotify Album"
     UNKNOWN = "Unknown"
-
-
-
 
 class Musicbox(commands.Cog):
     """Stream your favourite beats right to your local VC"""
