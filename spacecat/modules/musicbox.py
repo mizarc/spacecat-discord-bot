@@ -12,6 +12,9 @@ import wavelink
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
+from spacecat.modules.musicbox.music_player import MusicPlayer
+from spacecat.modules.musicbox.players.wavelink_player import *
+from spacecat.modules.musicbox.playlist import *
 
 class SongUnavailableError(ValueError):
     pass
@@ -1242,7 +1245,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
         return
 
-    async def _get_music_player(self, channel: discord.VoiceChannel) -> WavelinkMusicPlayer:
+    async def _get_music_player(self, channel: discord.VoiceChannel) -> MusicPlayer:
         """
         Retrieves the music player associated with the given voice channel.
 
@@ -1261,7 +1264,7 @@ class Musicbox(commands.Cog):
         return music_player
 
     @staticmethod
-    async def _get_songs(query: str, requester: discord.User) -> list['WavelinkSong']:
+    async def _get_songs(query: str, requester: discord.User) -> list[WavelinkSong]:
         """
         Get songs based on a query and requester.
 

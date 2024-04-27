@@ -1,6 +1,8 @@
 from typing import Optional, Any, Generic, TypeVar
 from abc import ABC, abstractmethod
 
+from spacecat.modules.musicbox import OriginalSource
+
 class Song(ABC):
     @property
     @abstractmethod
