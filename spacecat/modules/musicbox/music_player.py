@@ -1,7 +1,24 @@
+from enum import Enum
 from typing import Optional, Any, Generic, TypeVar
 from abc import ABC, abstractmethod
 
-from spacecat.modules.musicbox import OriginalSource
+class OriginalSource(Enum):
+    LOCAL = "Saved Playlist"
+    YOUTUBE_VIDEO = "YouTube"
+    YOUTUBE_SONG = "YouTube Music"
+    YOUTUBE_PLAYLIST = "YouTube Playlist"
+    YOUTUBE_ALBUM = "YouTube Album"
+    SPOTIFY_SONG = "Spotify"
+    SPOTIFY_PLAYLIST = "Spotify Playlist"
+    SPOTIFY_ALBUM = "Spotify Album"
+    UNKNOWN = "Unknown"
+
+class PlayerResult(Enum):
+    PLAYING = 0
+    QUEUEING = 1
+
+class SongUnavailableError(ValueError):
+    pass
 
 class Song(ABC):
     @property
@@ -218,7 +235,7 @@ class MusicPlayer(ABC, Generic[T_Song]):
         pass
 
     @abstractmethod
-    async def add(self, song: T_Song, index=0):
+    async def add(self, song: T_Song, index=0) -> PlayerResult:
         """
         Adds a song to the play queue.
 
@@ -232,7 +249,7 @@ class MusicPlayer(ABC, Generic[T_Song]):
         pass
 
     @abstractmethod
-    async def add_multiple(self, songs: list[T_Song], index=0):
+    async def add_multiple(self, songs: list[T_Song], index=0) -> PlayerResult:
         """
         Adds multiple songs to the play queue.
 

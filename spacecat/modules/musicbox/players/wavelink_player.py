@@ -9,9 +9,8 @@ import toml
 import wavelink
 
 from spacecat.helpers import constants
-from spacecat.modules.musicbox import OriginalSource, PlayerResult, SongUnavailableError
-from spacecat.modules.musicbox.music_player import MusicPlayer, Song
-from spacecat.modules.musicbox.playlist import Playlist, PlaylistSong
+from spacecat.modules.musicbox.music_player import *
+from spacecat.modules.musicbox.playlist import *
 
 class WavelinkSong(Song):
     def __init__(self, track, original_source, url, group=None, group_url=None,
@@ -230,7 +229,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
-    async def add_multiple(self, audio_sources: list[WavelinkSong], index=-1):
+    async def add_multiple(self, audio_sources: list[WavelinkSong], index=-1) -> PlayerResult:
         if not self._current:
             self._refresh_disconnect_timer()
             await self._player.play(audio_sources[0].stream)
