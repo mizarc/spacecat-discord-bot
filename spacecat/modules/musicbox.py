@@ -5,7 +5,6 @@ import uuid
 import discord
 from discord import app_commands
 from discord.ext import commands
-from enum import Enum
 import toml
 import wavelink
 
@@ -15,25 +14,6 @@ from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
 from spacecat.modules.musicbox.music_player import MusicPlayer
 from spacecat.modules.musicbox.players.wavelink_player import *
 from spacecat.modules.musicbox.playlist import *
-
-class SongUnavailableError(ValueError):
-    pass
-
-
-class PlayerResult(Enum):
-    PLAYING = 0
-    QUEUEING = 1
-
-class OriginalSource(Enum):
-    LOCAL = "Saved Playlist"
-    YOUTUBE_VIDEO = "YouTube"
-    YOUTUBE_SONG = "YouTube Music"
-    YOUTUBE_PLAYLIST = "YouTube Playlist"
-    YOUTUBE_ALBUM = "YouTube Album"
-    SPOTIFY_SONG = "Spotify"
-    SPOTIFY_PLAYLIST = "Spotify Playlist"
-    SPOTIFY_ALBUM = "Spotify Album"
-    UNKNOWN = "Unknown"
 
 class Musicbox(commands.Cog):
     """Stream your favourite beats right to your local VC"""
