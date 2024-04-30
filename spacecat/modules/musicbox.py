@@ -19,8 +19,8 @@ class Musicbox(commands.Cog):
     """Stream your favourite beats right to your local VC"""
     NOT_CONNECTED_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
-        description="I need to be in a voice channel to execute music "
-                    "commands. \nUse **/join** or **/play** to connect me to a channel.")
+        description="I need to be in a voice channel to execute music commands. \nUse **/join** "
+        "or **/play** to connect me to a channel.")
 
     NO_VOICE_CHANNEL_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
@@ -35,7 +35,8 @@ class Musicbox(commands.Cog):
 
     async def cog_load(self):
         """
-        Loads the cog by initializing configuration settings and Wavelink for music streaming.
+        Loads the cog by initializing configuration settings and 
+        Wavelink for music streaming.
         """
         await self.init_config()
         await self.init_wavelink()
@@ -43,9 +44,12 @@ class Musicbox(commands.Cog):
     @staticmethod
     async def init_config():
         """
-        Initialises configuration settings for the music streaming feature.
-        Loads the config file, sets default values for lavalink address, port, and password if not present,
-        and writes the updated config back to the file.
+        Initialises configuration settings for the music streaming 
+        feature.
+        
+        Loads the config file, sets default values for lavalink 
+        address, port, and password if not present, and writes the 
+        updated config back to the file.
         """
         config = toml.load(constants.DATA_DIR + 'config.toml')
         if 'lavalink' not in config:
@@ -64,11 +68,16 @@ class Musicbox(commands.Cog):
         """
         Initializes the Wavelink client for music streaming.
 
-        This function loads the configuration settings from the 'config.toml' file located in the 'constants.DATA_DIR' directory. It creates a Wavelink node using the provided address, port, and password. Then, it connects the Wavelink client to the node using the provided Discord bot.
+        This function loads the configuration settings from the 
+        'config.toml' file located in the 'constants.DATA_DIR' 
+        directory. It creates a Wavelink node using the provided 
+        address, port, and password. Then, it connects the Wavelink 
+        client to the node using the provided Discord bot.
         """
         config = toml.load(constants.DATA_DIR + 'config.toml')
-        node = wavelink.Node(uri=f"{config['lavalink']['address']}:{config['lavalink']['port']}",
-                             password=config['lavalink']['password'])
+        node = wavelink.Node(
+            uri=f"{config['lavalink']['address']}:{config['lavalink']['port']}",
+            password=config['lavalink']['password'])
         await wavelink.Pool.connect(nodes=[node], client=self.bot)
 
     @commands.Cog.listener()
@@ -121,9 +130,15 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(payload.player.channel)
         await music_player.process_song_end()
 
-    queue_group = app_commands.Group(name="queue", description="Handles songs that will be played next.")
-    playlist_group = app_commands.Group(name="playlist", description="Saved songs that can be played later.")
-    musicsettings_group = app_commands.Group(name="musicsettings", description="Modify music settings.")
+    queue_group = app_commands.Group(
+        name="queue", 
+        description="Handles songs that will be played next.")
+    playlist_group = app_commands.Group(
+        name="playlist", 
+        description="Saved songs that can be played later.")
+    musicsettings_group = app_commands.Group(
+        name="musicsettings", 
+        description="Modify music settings.")
 
     @app_commands.command()
     @perms.check()
@@ -286,7 +301,8 @@ class Musicbox(commands.Cog):
         # Format the data to be in a usable list
         results_format = []
         for i in range(0, 5):
-            results_format.append(f"{i+1}. [{songs[i].title}]({songs[i].url}) `{songs[i].duration}`")
+            results_format.append(f"{i+1}. [{songs[i].title}]({songs[i].url}) 
+                                  `{songs[i].duration}`")
 
         # Output results to chat
         embed = discord.Embed(
@@ -402,7 +418,8 @@ class Musicbox(commands.Cog):
         if not result:
             await interaction.response.send_message(embed=discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Please slow down, you can't skip while the next song hasn't even started yet."))
+                description="Please slow down, you can't skip while "
+                "the next song hasn't even started yet."))
             return
         await interaction.response.send_message(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -616,15 +633,18 @@ class Musicbox(commands.Cog):
             duration = await self._format_duration(song.duration)
             artist = f"{song.artist} - " if song.artist else ""
             queue_display_items.append(
-                f"[{artist}{song.title}]({song.url}) `{duration}` | <@{playing.requester_id}>")
+                f"[{artist}{song.title}]({song.url}) `{duration}` | 
+                <@{playing.requester_id}>")
 
         # Output results to chat
         if queue_display_items:
             duration = await self._format_duration(total_duration)
-            paginated_view = PaginatedView(embed, f"Queue  `{duration}`", queue_display_items, 5, page)
+            paginated_view = PaginatedView(embed, f"Queue  `{duration}`", 
+                                           queue_display_items, 5, page)
         else:
             paginated_view = EmptyPaginatedView(
-                embed, f"Queue `0:00`", "Nothing else is queued up. Add more songs and they will appear here.")
+                embed, f"Queue `0:00`", "Nothing else is queued up. "
+                "Add more songs and they will appear here.")
         await paginated_view.send(interaction)
 
     @queue_group.command(name="prevlist")
@@ -671,10 +691,12 @@ class Musicbox(commands.Cog):
         # Output results to chat
         if queue_display_items:
             duration = await self._format_duration(total_duration)
-            paginated_view = PaginatedView(embed, f"Queue  `{duration}`", queue_display_items, 5, page)
+            paginated_view = PaginatedView(embed, f"Queue  `{duration}`", 
+                                           queue_display_items, 5, page)
         else:
             paginated_view = EmptyPaginatedView(
-                embed, f"Queue `0:00`", "Nothing here yet. Songs that have previously played with appear here.")
+                embed, f"Queue `0:00`", 
+                "Nothing here yet. Songs that have previously played with appear here.")
         await paginated_view.send(interaction)
 
     @queue_group.command(name="reorder")
@@ -713,9 +735,8 @@ class Musicbox(commands.Cog):
         duration = await self._format_duration(song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"[{song.title}]({song.url}) "
-                        f"`{duration}` has been moved from position #{original_pos} "
-                        f"to position #{new_pos}")
+            description=f"[{song.title}]({song.url}) `{duration}` has been moved from "
+            f"position #{original_pos} to position #{new_pos}")
         await interaction.response.send_message(embed=embed)
 
     @queue_group.command(name="remove")
@@ -901,13 +922,15 @@ class Musicbox(commands.Cog):
             for song in songs:
                 song_duration += song.duration
             duration = await self._format_duration(song_duration)
-            playlist_info.append(f"{playlist.name} `{duration}` | Created by <@{playlist.creator_id}>")
+            playlist_info.append(f"{playlist.name} `{duration}` | "
+                                 f"Created by <@{playlist.creator_id}>")
 
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Music Playlists")
-        paginated_view = PaginatedView(embed, f"{len(playlists)} available", playlist_info, 5, page)
+        paginated_view = PaginatedView(embed, f"{len(playlists)} available", 
+                                       playlist_info, 5, page)
         await paginated_view.send(interaction)
 
     @playlist_group.command(name='add')
@@ -966,7 +989,8 @@ class Musicbox(commands.Cog):
                 or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
             for song in songs:
                 new_playlist_song = PlaylistSong.create_new(
-                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                    playlist.id, interaction.user.id, song.title, song.artist, 
+                    song.duration, song.url, previous_id)
                 self.playlist_songs.add(new_playlist_song)
                 previous_id = new_playlist_song.id
             embed = discord.Embed(
@@ -982,7 +1006,8 @@ class Musicbox(commands.Cog):
                 or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
             for song in songs:
                 new_playlist_song = PlaylistSong.create_new(
-                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                    playlist.id, interaction.user.id, song.title, song.artist, 
+                    song.duration, song.url, previous_id)
                 self.playlist_songs.add(new_playlist_song)
                 previous_id = new_playlist_song.id
             embed = discord.Embed(
@@ -995,7 +1020,8 @@ class Musicbox(commands.Cog):
 
         song = songs[0]
         new_playlist_song = PlaylistSong.create_new(
-            playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+            playlist.id, interaction.user.id, song.title, song.artist, 
+            song.duration, song.url, previous_id)
         self.playlist_songs.add(new_playlist_song)
         artist = ""
         if songs[0].artist:
@@ -1003,7 +1029,8 @@ class Musicbox(commands.Cog):
         await interaction.followup.send(embed=discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Added [{artist}{songs[0].title}]({songs[0].url}) "
-                        f"`{await self._format_duration(songs[0].duration)}` to position #{len(playlist_songs) + 1} "
+                        f"`{await self._format_duration(songs[0].duration)}` " 
+                        f"to position #{len(playlist_songs) + 1} "
                         f"in playlist '{playlist_name}'"))
 
     @playlist_group.command(name='remove')
@@ -1020,7 +1047,8 @@ class Musicbox(commands.Cog):
             return
 
         # Fetch selected song and the song after
-        songs: list[PlaylistSong] = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist.id))
+        songs: list[PlaylistSong] = await self._order_playlist_songs(
+            self.playlist_songs.get_by_playlist(playlist.id))
         selected_song = songs[int(index) - 1]
 
         # Edit next song's previous song id if it exists
@@ -1046,7 +1074,8 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name='reorder')
     @perms.check()
-    async def playlist_reorder(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
+    async def playlist_reorder(self, interaction, playlist_name: str, original_pos: 
+                               int, new_pos: int):
         """Moves a song to a specified position in a playlist"""
         # Get playlist from repo
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
@@ -1128,16 +1157,19 @@ class Musicbox(commands.Cog):
             song_name = song.title[:87] + "..." if len(song.title) > 90 else song.title
             duration = await self._format_duration(song.duration)
             artist = f"{song.artist} - " if song.artist else ""
-            formatted_songs.append(f"[{artist}{song_name}]({song.url}) `{duration}` | <@{song.requester_id}>")
+            formatted_songs.append(f"[{artist}{song_name}]({song.url}) `{duration}` "
+                                   f"| <@{song.requester_id}>")
 
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}'")
         embed.description = f"Created by: <@{playlist.creator_id}>\n"
-        embed.description += playlist.description + "\n\u200B" if playlist.description else "\u200B"
+        embed.description += playlist.description \
+            + "\n\u200B" if playlist.description else "\u200B"
         formatted_duration = await self._format_duration(total_duration)
-        paginated_view = PaginatedView(embed, f"{len(songs)} Songs `{formatted_duration}`", formatted_songs, 5, page)
+        paginated_view = PaginatedView(embed, f"{len(songs)} Songs `{formatted_duration}`", 
+                                       formatted_songs, 5, page)
         await paginated_view.send(interaction)
 
     @playlist_group.command(name='play')
@@ -1189,7 +1221,9 @@ class Musicbox(commands.Cog):
     @musicsettings_group.command(name='autodisconnect')
     @perms.exclusive()
     async def musicsettings_autodisconnect(self, interaction):
-        """Toggles if the bot should auto disconnect from a voice channel."""
+        """
+        Toggles if the bot should auto disconnect from a voice channel.
+        """
         config = toml.load(constants.DATA_DIR + 'config.toml')
 
         # Toggle auto_disconnect config setting
@@ -1211,7 +1245,10 @@ class Musicbox(commands.Cog):
     @musicsettings_group.command(name='disconnecttime')
     @perms.exclusive()
     async def musicsettings_disconnecttime(self, interaction, seconds: int):
-        """Sets a time for when the bot should auto disconnect from voice if not playing"""
+        """
+        Sets a time for when the bot should auto disconnect from voice 
+        if not playing.
+        """
         config = toml.load(constants.DATA_DIR + 'config.toml')
 
         # Set disconnect_time config variable
@@ -1227,13 +1264,16 @@ class Musicbox(commands.Cog):
 
     async def _get_music_player(self, channel: discord.VoiceChannel) -> MusicPlayer:
         """
-        Retrieves the music player associated with the given voice channel.
+        Retrieves the music player associated with the given voice 
+        channel.
 
         Args:
-            channel (discord.VoiceChannel): The voice channel for which to retrieve the music player.
+            channel (discord.VoiceChannel): The voice channel for which 
+            to retrieve the music player.
 
         Returns:
-            WavelinkMusicPlayer: The music player associated with the given voice channel.
+            WavelinkMusicPlayer: The music player associated with the 
+            given voice channel.
         """
         try:
             music_player = self.music_players[channel.guild.id]
@@ -1253,12 +1293,14 @@ class Musicbox(commands.Cog):
             requester (discord.User): The user requesting the songs.
 
         Returns:
-            list['WavelinkSong']: A list of WavelinkSong objects representing the songs.
+            list['WavelinkSong']: A list of WavelinkSong objects 
+            representing the songs.
         """
         return await WavelinkSong.from_query(query, requester)
 
     @staticmethod
-    async def _get_song_from_saved(playlist_song: PlaylistSong, playlist: Playlist, requester: discord.User) -> list['WavelinkSong']:
+    async def _get_song_from_saved(playlist_song: PlaylistSong, playlist: Playlist, 
+                                   requester: discord.User) -> list['WavelinkSong']:
         """
         Get a song from a saved playlist.
 
@@ -1268,14 +1310,16 @@ class Musicbox(commands.Cog):
             requester (discord.User): The user requesting the song.
 
         Returns:
-            WavelinkSong: The song object obtained from the saved playlist.
+            WavelinkSong: The song object obtained from the 
+            saved playlist.
         """
         return await WavelinkSong.from_local(requester, playlist_song, playlist)
 
     @staticmethod
     async def _format_duration(milliseconds) -> str:
         """
-        Format the duration in milliseconds into a human-readable format.
+        Format the duration in milliseconds into a 
+        human-readable format.
 
         Args:
             milliseconds (int): The duration in milliseconds.
@@ -1324,10 +1368,12 @@ class Musicbox(commands.Cog):
         Orders a list of playlist songs based on their song ID ordering.
 
         Args:
-            playlist_songs (List[PlaylistSong]): A list of playlist songs.
+            playlist_songs (List[PlaylistSong]): A list of playlist 
+            songs.
 
         Returns:
-            List[PlaylistSong]: A list of playlist songs ordered based on their previous song IDs.
+            List[PlaylistSong]: A list of playlist songs ordered based 
+            on their previous song IDs.
 
         """
         # Use dictionary to pair songs with the next song
@@ -1347,10 +1393,12 @@ class Musicbox(commands.Cog):
     @staticmethod
     def _parse_time(time_string) -> int:
         """
-        Parses a time string and returns the equivalent time in milliseconds.
+        Parses a time string and returns the equivalent time 
+        in milliseconds.
 
         Args:
-            time_string (str): The time string to be parsed. The string should be in the format HH:MM:SS or MM:SS.
+            time_string (str): The time string to be parsed. 
+            The string should be in the format HH:MM:SS or MM:SS.
 
         Returns:
             int: The equivalent time in milliseconds.
