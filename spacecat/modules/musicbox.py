@@ -301,8 +301,8 @@ class Musicbox(commands.Cog):
         # Format the data to be in a usable list
         results_format = []
         for i in range(0, 5):
-            results_format.append(f"{i+1}. [{songs[i].title}]({songs[i].url}) 
-                                  `{songs[i].duration}`")
+            results_format.append(f"{i+1}. [{songs[i].title}]({songs[i].url}) "
+                                  f"`{songs[i].duration}`")
 
         # Output results to chat
         embed = discord.Embed(
@@ -633,8 +633,8 @@ class Musicbox(commands.Cog):
             duration = await self._format_duration(song.duration)
             artist = f"{song.artist} - " if song.artist else ""
             queue_display_items.append(
-                f"[{artist}{song.title}]({song.url}) `{duration}` | 
-                <@{playing.requester_id}>")
+                f"[{artist}{song.title}]({song.url}) `{duration}` | " 
+                f"<@{playing.requester_id}>")
 
         # Output results to chat
         if queue_display_items:
