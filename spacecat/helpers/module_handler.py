@@ -1,4 +1,5 @@
 import glob
+import os
 
 import toml
 
@@ -12,6 +13,14 @@ def get():
         if module[17:] == "__init__.py":
             continue
         modulelist.append(module[17:-3])
+
+    # Get all directories that have a file.py with the same name
+    for directory in glob.glob(f'{constants.MAIN_DIR}/modules/*/'):
+        directory = directory.replace('\\', '/')
+        module = directory.split('/')[-2]
+        if module != '__pycache__' and module != '__init__.py' and module + '.py' in [file for file in os.listdir(directory)]:
+            modulelist.append(module + "." + module)
+
     return modulelist
 
 
