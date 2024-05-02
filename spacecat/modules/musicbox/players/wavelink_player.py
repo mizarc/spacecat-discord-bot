@@ -1,10 +1,10 @@
-from asyncio import tasks
 from collections import deque
 import random
 import time
 from typing import Optional
 
 import discord
+from discord.ext import tasks
 import toml
 import wavelink
 
