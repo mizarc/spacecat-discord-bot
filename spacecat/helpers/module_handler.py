@@ -7,7 +7,7 @@ from spacecat.helpers import constants
 
 
 def get():
-    # Get all modules that are present in the folder
+    # Get all valid modules that are present in the folder
     modulelist = []
     for module in glob.glob(f'{constants.MAIN_DIR}/modules/*.py'):
         if module[17:] == "__init__.py":
@@ -19,7 +19,7 @@ def get():
         directory = directory.replace('\\', '/')
         module = directory.split('/')[-2]
         if module != '__pycache__' and module != '__init__.py' and module + '.py' in [file for file in os.listdir(directory)]:
-            modulelist.append(module + "." + module)
+            modulelist.append(module)
 
     return modulelist
 
