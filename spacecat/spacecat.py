@@ -58,19 +58,13 @@ class Core(commands.Cog):
         print(self.bot.user.name + " has successfully launched")
         print(f"Bot ID: {self.bot.user.id}")
         if module_handler.get_enabled():
-            enabled_modules = [
-                module.split('.')[-1] if '.' in module else module
-                for module in module_handler.get_enabled()]
             print(
                 "Enabled Module(s): "
-                f"{', '.join(enabled_modules)}")
+                f"{', '.join(module_handler.enabled_modules)}")
         if module_handler.get_disabled():
-            disabled_modules = [
-                module.split('.')[-1] if '.' in module else module
-                for module in module_handler.get_disabled()]
             print(
                 "Disabled Module(s): "
-                f"{', '.join(disabled_modules)}")
+                f"{', '.join(module_handler.disabled_modules)}")
         print("--------------------")
 
         # Change status if specified in config
