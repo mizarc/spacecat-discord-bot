@@ -23,13 +23,17 @@ class SpaceCat(commands.Bot):
         await self.add_cog(Core(self))
         modules = module_handler.get_enabled()
         for module in modules:
-            module = f'{constants.MAIN_DIR}.modules.' + module
+            module_path = f'{constants.MAIN_DIR}.modules.' + module
             try:
-                await self.load_extension(module)
+                await self.load_extension(module_path)
             except Exception as exception:
-                print(
-                    f"Failed to load extension {module}\n"
-                    f"{type(exception).__name__}: {exception}\n")
+                try:
+                    module_path = f'{constants.MAIN_DIR}.modules.{module}.{module}'
+                    await self.load_extension(module_path)
+                except Exception in Exception:
+                    print(
+                        f"Failed to load extension {module}\n"
+                        f"{type(exception).__name__}: {exception}\n")
 
 
 class Core(commands.Cog):
@@ -60,11 +64,11 @@ class Core(commands.Cog):
         if module_handler.get_enabled():
             print(
                 "Enabled Module(s): "
-                f"{', '.join(module_handler.enabled_modules)}")
+                f"{', '.join(module_handler.get_enabled())}")
         if module_handler.get_disabled():
             print(
                 "Disabled Module(s): "
-                f"{', '.join(module_handler.disabled_modules)}")
+                f"{', '.join(module_handler.get_disabled())}")
         print("--------------------")
 
         # Change status if specified in config
@@ -205,7 +209,11 @@ class Core(commands.Cog):
                 module = 'modules.' + module
                 self.bot.reload_extension(module)
             except commands.ExtensionNotLoaded:
-                failed_modules.append(module[8:])
+                try:
+                    module = f"modules.{module}.{module}"
+                    self.bot.reload_extension(module)
+                except commands.ExtensionNotLoaded:
+                    failed_modules.append(module[8:])
 
         # Ouput error messages depending on if only one or multiple modules
         if failed_modules and len(modules_to_load) == 1:

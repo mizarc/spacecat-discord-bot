@@ -24,11 +24,11 @@ def get():
     return modulelist
 
 
-def get_enabled():
+def get_enabled() -> list[str]:
     # Fetch all modules and disabled modules
     modules = get()
     disabled_modules = get_disabled()
-    enabled_modules = []
+    enabled_modules: list[str] = []
 
     # Compare with disabled modules list to determine which ones are enabled
     try:
@@ -41,7 +41,7 @@ def get_enabled():
     return enabled_modules
 
 
-def get_disabled():
+def get_disabled() -> list[str]:
     # Fetch disabled modules from config file
     try:
         config = toml.load(f'{constants.DATA_DIR}/config.toml')
