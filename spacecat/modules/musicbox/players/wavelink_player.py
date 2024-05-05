@@ -1,6 +1,6 @@
 from collections import deque
 import random
-import time
+from time import time
 from typing import Optional
 
 import discord
