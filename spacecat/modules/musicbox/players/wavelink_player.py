@@ -347,12 +347,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
     def _refresh_disconnect_timer(self):
         self._disconnect_time = time() + self._get_disconnect_time_limit()
 
-    @staticmethod
-    def _get_disconnect_time_limit():
+    def _get_disconnect_time_limit(self):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         return config['music']['disconnect_time']
 
-    @staticmethod
-    def _is_auto_disconnect():
+    def _is_auto_disconnect(self):
         config = toml.load(constants.DATA_DIR + 'config.toml')
         return config['music']['auto_disconnect']
