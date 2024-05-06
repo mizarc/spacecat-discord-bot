@@ -1,0 +1,11 @@
+[tool.ruff]
+line-length = 99
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203", # Disable one line before class. Using no lines before class instead.
+    "D212", # Disable multi line summary first line. Using second line instead.
+    "COM812", # Disable due to conflict with formatter.
+    "ISC001" # Disable due to conflict with formatter.
+]
