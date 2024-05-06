@@ -1,4 +1,5 @@
 import glob
+import os
 
 import toml
 
@@ -6,20 +7,28 @@ from spacecat.helpers import constants
 
 
 def get():
-    # Get all modules that are present in the folder
+    # Get all valid modules that are present in the folder
     modulelist = []
     for module in glob.glob(f'{constants.MAIN_DIR}/modules/*.py'):
         if module[17:] == "__init__.py":
             continue
         modulelist.append(module[17:-3])
+
+    # Get all directories that have a file.py with the same name
+    for directory in glob.glob(f'{constants.MAIN_DIR}/modules/*/'):
+        directory = directory.replace('\\', '/')
+        module = directory.split('/')[-2]
+        if module != '__pycache__' and module != '__init__.py' and module + '.py' in [file for file in os.listdir(directory)]:
+            modulelist.append(module)
+
     return modulelist
 
 
-def get_enabled():
+def get_enabled() -> list[str]:
     # Fetch all modules and disabled modules
     modules = get()
     disabled_modules = get_disabled()
-    enabled_modules = []
+    enabled_modules: list[str] = []
 
     # Compare with disabled modules list to determine which ones are enabled
     try:
@@ -32,7 +41,7 @@ def get_enabled():
     return enabled_modules
 
 
-def get_disabled():
+def get_disabled() -> list[str]:
     # Fetch disabled modules from config file
     try:
         config = toml.load(f'{constants.DATA_DIR}/config.toml')

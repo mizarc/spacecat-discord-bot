@@ -1,808 +1,34 @@
 import datetime
-import re
-from abc import ABC, abstractmethod
-import random
 import sqlite3
-from collections import deque
-from time import time
-from typing import Optional, Any, Generic, TypeVar
+import uuid
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
-
-from enum import Enum
-
+from discord.ext import commands
 import toml
-
-import uuid
-
 import wavelink
 
 from spacecat.helpers import constants
 from spacecat.helpers import perms
 from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
-
-
-class SongUnavailableError(ValueError):
-    pass
-
-
-class PlayerResult(Enum):
-    PLAYING = 0
-    QUEUEING = 1
-
-
-class OriginalSource(Enum):
-    LOCAL = "Saved Playlist"
-    YOUTUBE_VIDEO = "YouTube"
-    YOUTUBE_SONG = "YouTube Music"
-    YOUTUBE_PLAYLIST = "YouTube Playlist"
-    YOUTUBE_ALBUM = "YouTube Album"
-    SPOTIFY_SONG = "Spotify"
-    SPOTIFY_PLAYLIST = "Spotify Playlist"
-    SPOTIFY_ALBUM = "Spotify Album"
-    UNKNOWN = "Unknown"
-
-
-class Playlist:
-    def __init__(self, id_, name, guild_id, creator_id, creation_date, modified_date, description):
-        self._id: uuid.UUID = id_
-        self._name = name
-        self._guild_id = guild_id
-        self._creator_id = creator_id
-        self._creation_date: datetime.datetime = creation_date
-        self._modified_date: datetime.datetime = modified_date
-        self._description = description
-
-    @classmethod
-    def create_new(cls, name, guild, creator: discord.User):
-        return cls(uuid.uuid4(), name, guild.id, creator.id, datetime.datetime.now(tz=datetime.timezone.utc),
-                   datetime.datetime.now(tz=datetime.timezone.utc), "")
-
-    @property
-    def id(self) -> uuid.UUID:
-        return self._id
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        self._name = value
-
-    @property
-    def guild_id(self) -> int:
-        return self._guild_id
-
-    @property
-    def creator_id(self) -> int:
-        return self._creator_id
-
-    @property
-    def creation_date(self) -> datetime.datetime:
-        return self._creation_date
-
-    @property
-    def modified_date(self) -> datetime.datetime:
-        return self._creation_date
-
-    @modified_date.setter
-    def modified_date(self, value: datetime.datetime):
-        self._creation_date = value
-
-    @property
-    def description(self) -> str:
-        return self._description
-
-    @description.setter
-    def description(self, value):
-        self._description = value
-
-
-class PlaylistRepository:
-    def __init__(self, database):
-        self.db = database
-        cursor = self.db.cursor()
-        cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS playlist '
-                       '(id TEXT PRIMARY KEY, name TEXT, guild_id INTEGER, creator_id INTEGER, creation_date INTEGER,'
-                       ' modified_date INTEGER, description TEXT)')
-        self.db.commit()
-
-    def get_all(self):
-        """Get list of all playlists"""
-        results = self.db.cursor().execute('SELECT * FROM playlist').fetchall()
-        playlists = []
-        for result in results:
-            playlists.append(self._result_to_playlist(result))
-        return playlists
-
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM playlist WHERE id=?', (id_,)).fetchone()
-        return self._result_to_playlist(result)
-
-    def get_by_guild(self, guild):
-        # Get list of all playlists in a guild
-        cursor = self.db.cursor()
-        values = (guild.id,)
-        cursor.execute('SELECT * FROM playlist WHERE guild_id=?', values)
-        results = cursor.fetchall()
-
-        playlists = []
-        for result in results:
-            playlists.append(self._result_to_playlist(result))
-        return playlists
-
-    def get_by_name_in_guild(self, name, guild):
-        # Get playlist by guild and playlist name
-        cursor = self.db.cursor()
-        values = (guild.id, name)
-        result = cursor.execute('SELECT * FROM playlist WHERE guild_id=? AND name=?', values).fetchone()
-        return self._result_to_playlist(result)
-
-    def add(self, playlist):
-        cursor = self.db.cursor()
-        values = (str(playlist.id), playlist.name, playlist.guild_id, playlist.creator_id,
-                  int(playlist.creation_date.timestamp()), int(playlist.modified_date.timestamp()),
-                  playlist.description)
-        cursor.execute('INSERT INTO playlist VALUES (?, ?, ?, ?, ?, ?, ?)', values)
-        self.db.commit()
-
-    def update(self, playlist):
-        cursor = self.db.cursor()
-        values = (playlist.name, playlist.guild_id, playlist.creator_id, int(playlist.creation_date.timestamp()),
-                  int(playlist.modified_date.timestamp()), playlist.description, playlist.id)
-        cursor.execute('UPDATE playlist SET name=?, guild_id=?, creator_id=?, creation_date=?, modified_date=?, '
-                       'description=? WHERE id=?', values)
-        self.db.commit()
-
-    def remove(self, id_: uuid.UUID):
-        cursor = self.db.cursor()
-        cursor.execute('DELETE FROM playlist WHERE id=?', (str(id_),))
-        self.db.commit()
-
-    @staticmethod
-    def _result_to_playlist(result):
-        return Playlist(result[0], result[1], result[2], result[3],
-                        datetime.datetime.fromtimestamp(result[4], tz=datetime.timezone.utc),
-                        datetime.datetime.fromtimestamp(result[5], tz=datetime.timezone.utc),
-                        result[6]) if result else None
-
-
-class PlaylistSong:
-    def __init__(self, id_, playlist_id, requester_id, title, artist, duration, url, previous_id):
-        self._id: uuid.UUID = id_
-        self._playlist_id = playlist_id
-        self._requester_id = requester_id
-        self._title = title
-        self._artist = artist
-        self._url = url
-        self._duration = duration
-        self._previous_id = previous_id
-
-    @classmethod
-    def create_new(cls, playlist_id, requester_id, title, artist, duration, url, previous_id):
-        return cls(uuid.uuid4(), playlist_id, requester_id, title, artist, duration, url, previous_id)
-
-    @property
-    def id(self) -> uuid.UUID:
-        return self._id
-
-    @property
-    def playlist_id(self) -> uuid.UUID:
-        return self._playlist_id
-
-    @property
-    def requester_id(self) -> int:
-        return self._requester_id
-
-    @property
-    def title(self) -> str:
-        return self._title
-
-    @property
-    def artist(self) -> Optional[str]:
-        return self._artist
-
-    @property
-    def duration(self) -> int:
-        return self._duration
-
-    @property
-    def url(self) -> str:
-        return self._url
-
-    @property
-    def previous_id(self) -> uuid.UUID:
-        return self._previous_id
-
-    @previous_id.setter
-    def previous_id(self, value: uuid.UUID):
-        self._previous_id = value
-
-
-class PlaylistSongRepository:
-    def __init__(self, database):
-        self.db = database
-        cursor = self.db.cursor()
-        cursor.execute('PRAGMA foreign_keys = ON')
-        cursor.execute('CREATE TABLE IF NOT EXISTS playlist_songs (id TEXT PRIMARY KEY, playlist_id TEXT, '
-                       'requester_id INTEGER, title TEXT, artist TEXT, duration INTEGER, url TEXT, '
-                       'previous_id INTEGER, FOREIGN KEY(playlist_id) REFERENCES playlist(id))')
-        self.db.commit()
-
-    def get_by_id(self, id_):
-        result = self.db.cursor().execute('SELECT * FROM playlist_songs WHERE id=?', (id_,)).fetchone()
-        return self._result_to_playlist_song(result)
-
-    def get_by_playlist(self, playlist_id: uuid.UUID):
-        # Get list of all songs in playlist
-        cursor = self.db.cursor()
-        cursor.execute('SELECT * FROM playlist_songs WHERE playlist_id=?', (str(playlist_id),))
-        results = cursor.fetchall()
-
-        songs = []
-        for result in results:
-            songs.append(self._result_to_playlist_song(result))
-        return songs
-
-    def add(self, playlist_song: PlaylistSong):
-        cursor = self.db.cursor()
-        values = (str(playlist_song.id), str(playlist_song.playlist_id), playlist_song.requester_id,
-                  playlist_song.title, playlist_song.artist, playlist_song.duration, playlist_song.url,
-                  str(playlist_song.previous_id))
-        cursor.execute('INSERT INTO playlist_songs VALUES (?, ?, ?, ?, ?, ?, ?, ?)', values)
-        self.db.commit()
-
-    def update(self, playlist_song: PlaylistSong):
-        cursor = self.db.cursor()
-        values = (str(playlist_song.playlist_id), playlist_song.requester_id, playlist_song.title,
-                  playlist_song.artist, playlist_song.duration, playlist_song.url, str(playlist_song.previous_id),
-                  str(playlist_song.id))
-        cursor.execute('UPDATE playlist_songs SET playlist_id=?, requester_id=?, title=?, '
-                       'artist=?, duration=?, url=?, previous_id=? WHERE id=?', values)
-        self.db.commit()
-
-    def remove(self, id_):
-        cursor = self.db.cursor()
-        cursor.execute('DELETE FROM playlist_songs WHERE id=?', (str(id_),))
-        self.db.commit()
-
-    @staticmethod
-    def _result_to_playlist_song(result):
-        return PlaylistSong(uuid.UUID(result[0]), uuid.UUID(result[1]), result[2], result[3],
-                            result[4], result[5], result[6], uuid.UUID(result[7])) if result else None
-
-
-class Song(ABC):
-    @property
-    @abstractmethod
-    def stream(self) -> Any:
-        pass
-
-    @property
-    @abstractmethod
-    def title(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def artist(self) -> Optional[str]:
-        pass
-
-    @property
-    @abstractmethod
-    def duration(self) -> int:
-        pass
-
-    @property
-    @abstractmethod
-    def url(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def group(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def group_url(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def original_source(self) -> OriginalSource:
-        pass
-
-    @property
-    @abstractmethod
-    def requester_id(self) -> int:
-        pass
-
-
-class WavelinkSong(Song):
-    def __init__(self, track, original_source, url, group=None, group_url=None,
-                 title=None, artist=None, duration=None, requester_id=None):
-        self._track: wavelink.Playable = track
-        self._original_source: OriginalSource = original_source
-        self._url: str = url
-        self._playlist: str = group
-        self._playlist_url: str = group_url
-        self._title = title
-        self._artist = artist
-        self._duration = duration
-        self._requester_id = requester_id
-
-    @property
-    def stream(self) -> wavelink.Playable:
-        return self._track
-
-    @property
-    def title(self) -> str:
-        return self._title if self._title else self._track.title
-
-    @property
-    def artist(self) -> Optional[str]:
-        return self._artist if self._artist else self._track.author
-
-    @property
-    def duration(self) -> int:
-        return self._duration if self._duration else int(self._track.length)
-
-    @property
-    def url(self) -> str:
-        return self._url
-
-    @property
-    def group(self) -> Optional[str]:
-        return self._playlist
-
-    @property
-    def group_url(self):
-        return self._playlist_url
-
-    @property
-    def original_source(self) -> OriginalSource:
-        return self._original_source
-
-    @property
-    def requester_id(self) -> int:
-        return self._requester_id
-
-    @classmethod
-    async def from_local(cls, requester: discord.User, playlist_song: PlaylistSong,
-                         playlist: Playlist = None) -> list['WavelinkSong']:
-        """
-        Process a local playlist song to obtain a track and create a list of WavelinkSong objects based on the song details and the requester.
-
-        Parameters:
-            requester (discord.User): The user requesting the song.
-            playlist_song (PlaylistSong): The playlist song object containing the song details.
-            playlist (Playlist, optional): The playlist to which the song belongs. Defaults to None.
-
-        Returns:
-            list['WavelinkSong']: A list containing WavelinkSong objects created from the local playlist song.
-        """
-        track = await wavelink.Playable.search(playlist_song.url)
-        return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
-                     artist=playlist_song.artist, duration=playlist_song.duration,
-                     group=playlist.name, requester_id=requester.id)]
-
-    @classmethod
-    async def from_query(cls, query: str, requester: discord.User) -> list['WavelinkSong']:
-        """
-        Process a query to obtain a track and create a list of WavelinkSong objects based on the query and the requester.
-
-        Parameters:
-            query (str): The query used to search for the track.
-            requester (discord.User): The user requesting the track.
-
-        Returns:
-            list['WavelinkSong']: A list containing WavelinkSong objects created from the query.
-        """
-        track = await wavelink.Playable.search(query)
-        if not track:
-            raise SongUnavailableError
-
-        if track[0].playlist is None:
-            return await cls._process_single(query, track[0], requester)
-        else:
-            return await cls._process_multiple(query, track, requester)
-
-    @classmethod
-    async def _process_single(cls, query: str, track: wavelink.Playable, requester: discord.User):
-        """
-        Process a single track to determine its source and create a WavelinkSong object.
-
-        Parameters:
-            query (str): The query that was used to obtain the track.
-            track (wavelink.Playable): The track to create the WavelinkSong from.
-            requester (discord.User): The user requesting the track.
-
-        Returns:
-            list['WavelinkSong']: A list containing a single WavelinkSong object created from the query.
-        """
-        if "youtube.com" in query or "youtu.be" in query:
-            if "music" in query:
-                source = OriginalSource.YOUTUBE_SONG
-            elif "watch" in query:
-                source = OriginalSource.YOUTUBE_VIDEO
-        elif "open.spotify.com" in query:
-            source = OriginalSource.SPOTIFY_SONG
-        else:
-            source = OriginalSource.UNKNOWN
-
-        return [cls(track, source, track.uri, "", "", track.title, track.author, track.length, requester.id)]
-
-    @classmethod
-    async def _process_multiple(cls, query: str, tracks: wavelink.Playlist, requester: discord.User):
-        """
-        Process multiple tracks to determine their sources and create WavelinkSong objects.
-
-        Parameters:
-            query (str): The query used to obtain the tracks.
-            tracks (wavelink.Playlist): The playlist containing tracks to process.
-            requester (discord.User): The user requesting the tracks.
-
-        Returns:
-            list['WavelinkSong']: A list containing multiple WavelinkSong objects created from the tracks.
-        """
-        source = OriginalSource.UNKNOWN
-        url = query
-        playlist_name = ""
-        
-        if "youtube.com" in tracks[0].uri or "youtu.be" in query:
-            if "Album - " in tracks[0].playlist.name:
-                source, playlist_name = OriginalSource.YOUTUBE_ALBUM, tracks[0].playlist.name[8:]
-            elif "playlist" in query:
-                source, playlist_name = OriginalSource.YOUTUBE_PLAYLIST, tracks[0].playlist.name
-        elif "open.spotify.com" in query:
-            if "playlist" in query:
-                source, url, playlist_name = OriginalSource.SPOTIFY_PLAYLIST, tracks[0].playlist.url, tracks[0].playlist.name
-            elif "album" in query:
-                source, url, playlist_name = OriginalSource.SPOTIFY_ALBUM, tracks[0].playlist.url, tracks[0].playlist.name
-            else:
-                source = OriginalSource.SPOTIFY_SONG
-
-        return [cls(track, source, track.uri, playlist_name, url, track.title, track.author, track.length, requester.id)
-                for track in tracks.tracks]
-
-T_Song = TypeVar("T_Song", bound=Song)
-
-
-class MusicPlayer(ABC, Generic[T_Song]):
-    @property
-    @abstractmethod
-    def is_paused(self) -> bool:
-        pass
-
-    @property
-    @abstractmethod
-    def is_looping(self) -> bool:
-        pass
-
-    @is_looping.setter
-    @abstractmethod
-    def is_looping(self, value):
-        pass
-
-    @property
-    @abstractmethod
-    def playing(self) -> T_Song:
-        pass
-
-    @property
-    @abstractmethod
-    def seek_position(self) -> int:
-        pass
-
-    @property
-    @abstractmethod
-    def next_queue(self) -> list[T_Song]:
-        pass
-
-    @property
-    @abstractmethod
-    def previous_queue(self) -> list[T_Song]:
-        pass
-
-    @abstractmethod
-    async def connect(self, channel):
-        pass
-
-    @abstractmethod
-    async def disconnect(self):
-        pass
-
-    @abstractmethod
-    async def play(self, song: T_Song):
-        pass
-
-    @abstractmethod
-    async def play_multiple(self, songs: list[T_Song]):
-        pass
-
-    @abstractmethod
-    async def add(self, song: T_Song, index=0):
-        pass
-
-    @abstractmethod
-    async def add_multiple(self, songs: list[T_Song], index=0):
-        pass
-
-    @abstractmethod
-    async def remove(self, index=0):
-        pass
-
-    @abstractmethod
-    async def clear(self):
-        pass
-
-    @abstractmethod
-    async def seek(self, position):
-        pass
-
-    @abstractmethod
-    async def next(self):
-        pass
-
-    @abstractmethod
-    async def previous(self):
-        pass
-
-    @abstractmethod
-    async def pause(self):
-        pass
-
-    @abstractmethod
-    async def resume(self):
-        pass
-
-    @abstractmethod
-    async def loop(self):
-        pass
-
-    @abstractmethod
-    async def unloop(self):
-        pass
-
-    @abstractmethod
-    async def move(self, first_index, second_index):
-        pass
-
-    @abstractmethod
-    async def shuffle(self):
-        pass
-
-    @abstractmethod
-    async def stop(self):
-        pass
-
-    @abstractmethod
-    async def process_song_end(self):
-        pass
-
-    @abstractmethod
-    async def enable_auto_disconnect(self):
-        pass
-
-    @abstractmethod
-    async def disable_auto_disconnect(self):
-        pass
-
-
-class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
-    def __init__(self):
-        self._player: Optional[wavelink.Player] = None
-        self._current: Optional[WavelinkSong] = None
-        self._next_queue: deque[WavelinkSong] = deque()
-        self._previous_queue: deque[WavelinkSong] = deque()
-        self._is_looping = False
-        self._is_skipping = False
-        self._queue_reverse = False
-        self._disconnect_time = time() + self._get_disconnect_time_limit()
-        self._disconnect_job.start()
-
-    @property
-    def is_paused(self) -> bool:
-        return self._player.paused
-
-    @property
-    def is_looping(self) -> bool:
-        return self._is_looping
-
-    @is_looping.setter
-    def is_looping(self, value):
-        self._is_looping = value
-
-    @property
-    def playing(self) -> WavelinkSong:
-        return self._current
-
-    @property
-    def seek_position(self) -> int:
-        return int(self._player.position)
-
-    @property
-    def next_queue(self) -> list[WavelinkSong]:
-        return list(self._next_queue)
-
-    @property
-    def previous_queue(self) -> list[WavelinkSong]:
-        return list(self._previous_queue)
-
-    async def connect(self, channel: discord.VoiceChannel):
-        self._player = await channel.connect(cls=wavelink.Player, self_deaf=True)
-
-    async def disconnect(self):
-        await self._player.disconnect()
-
-    async def play(self, audio_source: WavelinkSong) -> None:
-        self._refresh_disconnect_timer()
-        await self._player.play(audio_source.stream)
-
-    async def play_multiple(self, songs: list[WavelinkSong]):
-        self._refresh_disconnect_timer()
-        await self._player.play(songs[0].stream)
-        for song in songs[1:]:
-            self._next_queue.appendleft(song)
-
-    async def add(self, audio_source: WavelinkSong, index=-1) -> PlayerResult:
-        if not self._current:
-            self._refresh_disconnect_timer()
-            await self._player.play(audio_source.stream)
-            self._current = audio_source
-            return PlayerResult.PLAYING
-
-        if index >= 0:
-            self._next_queue.insert(index, audio_source)
-            return PlayerResult.QUEUEING
-
-        self._next_queue.append(audio_source)
-        return PlayerResult.QUEUEING
-
-    async def add_multiple(self, audio_sources: list[WavelinkSong], index=-1):
-        if not self._current:
-            self._refresh_disconnect_timer()
-            await self._player.play(audio_sources[0].stream)
-            self._current = audio_sources[0]
-            for audio_source in audio_sources[1:]:
-                self._next_queue.append(audio_source)
-            return PlayerResult.PLAYING
-
-        if index >= 0:
-            insert_index = index
-            for audio_source in audio_sources:
-                self._next_queue.insert(insert_index, audio_source)
-                insert_index += 1
-
-        for audio_source in audio_sources:
-            self._next_queue.append(audio_source)
-        return PlayerResult.QUEUEING
-
-    async def remove(self, index=-1):
-        if index >= 0:
-            del self._next_queue[index]
-            return
-        self._next_queue.pop()
-
-    async def clear(self):
-        self._next_queue.clear()
-        self._previous_queue.clear()
-
-    async def seek(self, position):
-        await self._player.seek(position)
-
-    async def pause(self):
-        await self._player.pause(True)
-
-    async def resume(self):
-        await self._player.pause(False)
-
-    async def loop(self):
-        self._is_looping = True
-
-    async def unloop(self):
-        self._is_looping = False
-
-    async def move(self, first_index, second_index):
-        song = self._next_queue[first_index]
-        await self.remove(first_index)
-        await self.add(song, second_index)
-
-    async def shuffle(self):
-        random.shuffle(self._next_queue)
-
-    async def stop(self):
-        await self._player.stop()
-
-    async def next(self):
-        if not self._player.playing:
-            return False
-        self._queue_reverse = False
-        self._is_skipping = True
-        await self._player.stop()
-        return True
-
-    async def previous(self):
-        self._queue_reverse = True
-        self._is_skipping = True
-        await self._player.stop()
-
-    async def process_song_end(self):
-        self._refresh_disconnect_timer()
-
-        # Play current song again if set to loop.
-        if self._is_looping and not self._is_skipping:
-            await self.play(self._current)
-            return
-        self._is_skipping = False
-
-        # Play next or previous based on direction toggle
-        if self._queue_reverse:
-            await self._play_previous_song()
-            return
-        await self._play_next_song()
-        self._queue_reverse = False
-
-    async def _play_next_song(self):
-        next_song = None
-        try:
-            next_song = self._next_queue.popleft()
-            await self._player.play(next_song.stream)
-        except IndexError:
-            pass
-        self._previous_queue.appendleft(self._current)
-        self._current = next_song
-
-    async def _play_previous_song(self):
-        previous_song = None
-        try:
-            previous_song = self._previous_queue.popleft()
-            await self._player.play(previous_song.stream)
-        except IndexError:
-            pass
-        self._next_queue.appendleft(self._current)
-        self._current = previous_song
-
-    async def enable_auto_disconnect(self):
-        self._disconnect_job.start()
-
-    async def disable_auto_disconnect(self):
-        self._disconnect_job.cancel()
-
-    @tasks.loop(seconds=30)
-    async def _disconnect_job(self):
-        if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.playing:
-            await self.disconnect()
-
-    def _refresh_disconnect_timer(self):
-        self._disconnect_time = time() + self._get_disconnect_time_limit()
-
-    @staticmethod
-    def _get_disconnect_time_limit():
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        return config['music']['disconnect_time']
-
-    @staticmethod
-    def _is_auto_disconnect():
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        return config['music']['auto_disconnect']
+from spacecat.modules.musicbox.music_player import MusicPlayer
+from spacecat.modules.musicbox.players.wavelink_player import *
+from spacecat.modules.musicbox.playlist import *
 
 
 class Musicbox(commands.Cog):
     """Stream your favourite beats right to your local VC"""
+
     NOT_CONNECTED_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
-        description="I need to be in a voice channel to execute music "
-                    "commands. \nUse **/join** or **/play** to connect me to a channel.")
+        description="I need to be in a voice channel to execute music commands. \nUse **/join** "
+        "or **/play** to connect me to a channel.",
+    )
 
     NO_VOICE_CHANNEL_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
-        description="You need to be in a voice channel to start playing songs.")
+        description="You need to be in a voice channel to start playing songs.",
+    )
 
     def __init__(self, bot):
         self.bot = bot
@@ -812,41 +38,64 @@ class Musicbox(commands.Cog):
         self.playlist_songs = PlaylistSongRepository(self.database)
 
     async def cog_load(self):
+        """
+        Loads the cog by initializing configuration settings and
+        Wavelink for music streaming.
+        """
         await self.init_config()
         await self.init_wavelink()
 
     @staticmethod
     async def init_config():
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        if 'lavalink' not in config:
-            config['lavalink'] = {}
-        if 'address' not in config['lavalink']:
-            config['lavalink']['address'] = "http://localhost"
-        if 'port' not in config['lavalink']:
-            config['lavalink']['port'] = "2333"
-        if 'password' not in config['lavalink']:
-            config['lavalink']['password'] = "password1"
+        """
+        Initialises configuration settings for the music streaming
+        feature.
 
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
+        Loads the config file, sets default values for lavalink
+        address, port, and password if not present, and writes the
+        updated config back to the file.
+        """
+        config = toml.load(constants.DATA_DIR + "config.toml")
+        if "lavalink" not in config:
+            config["lavalink"] = {}
+        if "address" not in config["lavalink"]:
+            config["lavalink"]["address"] = "http://localhost"
+        if "port" not in config["lavalink"]:
+            config["lavalink"]["port"] = "2333"
+        if "password" not in config["lavalink"]:
+            config["lavalink"]["password"] = "password1"
+
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     async def init_wavelink(self):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        node = wavelink.Node(uri=f"{config['lavalink']['address']}:{config['lavalink']['port']}",
-                             password=config['lavalink']['password'])
+        """
+        Initializes the Wavelink client for music streaming.
+
+        This function loads the configuration settings from the
+        'config.toml' file located in the 'constants.DATA_DIR'
+        directory. It creates a Wavelink node using the provided
+        address, port, and password. Then, it connects the Wavelink
+        client to the node using the provided Discord bot.
+        """
+        config = toml.load(constants.DATA_DIR + "config.toml")
+        node = wavelink.Node(
+            uri=f"{config['lavalink']['address']}:{config['lavalink']['port']}",
+            password=config["lavalink"]["password"],
+        )
         await wavelink.Pool.connect(nodes=[node], client=self.bot)
 
     @commands.Cog.listener()
     async def on_ready(self):
         # Add config keys
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        if 'music' not in config:
-            config['music'] = {}
-        if 'auto_disconnect' not in config['music']:
-            config['music']['auto_disconnect'] = True
-        if 'disconnect_time' not in config['music']:
-            config['music']['disconnect_time'] = 300
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
+        config = toml.load(constants.DATA_DIR + "config.toml")
+        if "music" not in config:
+            config["music"] = {}
+        if "auto_disconnect" not in config["music"]:
+            config["music"]["auto_disconnect"] = True
+        if "disconnect_time" not in config["music"]:
+            config["music"]["disconnect_time"] = 300
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @commands.Cog.listener()
@@ -866,8 +115,8 @@ class Musicbox(commands.Cog):
             return
 
         # Check if auto channel disconnect is disabled
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        if not config['music']['auto_disconnect']:
+        config = toml.load(constants.DATA_DIR + "config.toml")
+        if not config["music"]["auto_disconnect"]:
             return
 
         # Check if user isn't in same channel or not a disconnect/move event
@@ -886,9 +135,15 @@ class Musicbox(commands.Cog):
         music_player = await self._get_music_player(payload.player.channel)
         await music_player.process_song_end()
 
-    queue_group = app_commands.Group(name="queue", description="Handles songs that will be played next.")
-    playlist_group = app_commands.Group(name="playlist", description="Saved songs that can be played later.")
-    musicsettings_group = app_commands.Group(name="musicsettings", description="Modify music settings.")
+    queue_group = app_commands.Group(
+        name="queue", description="Handles songs that will be played next."
+    )
+    playlist_group = app_commands.Group(
+        name="playlist", description="Saved songs that can be played later."
+    )
+    musicsettings_group = app_commands.Group(
+        name="musicsettings", description="Modify music settings."
+    )
 
     @app_commands.command()
     @perms.check()
@@ -898,7 +153,8 @@ class Musicbox(commands.Cog):
         if channel is None and not interaction.user.voice:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="You must be in or specify a voice channel.")
+                description="You must be in or specify a voice channel.",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -906,7 +162,8 @@ class Musicbox(commands.Cog):
         if interaction.guild.voice_client and channel == interaction.guild.voice_client.channel:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="I'm already in that voice channel")
+                description="I'm already in that voice channel",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -918,7 +175,8 @@ class Musicbox(commands.Cog):
             await self._get_music_player(channel)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Joined voice channel `{channel.name}`")
+                description=f"Joined voice channel `{channel.name}`",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -927,8 +185,11 @@ class Musicbox(commands.Cog):
         await interaction.guild.voice_client.move_to(channel)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Moved from voice channel `{previous_channel_name}` to "
-                        f"voice channel `{channel.name}`")
+            description=(
+                f"Moved from voice channel `{previous_channel_name}` "
+                f"to voice channel `{channel.name}`"
+            ),
+        )
         await interaction.response.send_message(embed=embed)
         return
 
@@ -947,7 +208,8 @@ class Musicbox(commands.Cog):
         await music_player.disconnect()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Disconnected from voice channel `{voice_channel_name}`")
+            description=f"Disconnected from voice channel `{voice_channel_name}`",
+        )
         await interaction.response.send_message(embed=embed)
         return
 
@@ -973,51 +235,60 @@ class Musicbox(commands.Cog):
         except SongUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="That song is unavailable. Maybe the link is invalid?")
+                description="That song is unavailable. Maybe the link is invalid?",
+            )
             await interaction.followup.send(embed=embed)
             return
 
         # Add playlist
-        if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST \
-                or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
-            result = await music_player.add_multiple(songs, position-1)
+        if (
+            songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST
+            or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST
+        ):
+            result = await music_player.add_multiple(songs, position - 1)
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist [{songs[0].group}]({songs[0].group_url})")
+                    description=f"Now playing playlist [{songs[0].group}]({songs[0].group_url})",
+                )
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist "
-                                f"[{songs[0].group}]({songs[0].group_url}) to "
-                                f"#{position} in queue")
+                    f"[{songs[0].group}]({songs[0].group_url}) to "
+                    f"#{position} in queue",
+                )
                 await interaction.followup.send(embed=embed)
                 return
 
         # Add album
-        if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM \
-                or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
-            result = await music_player.add_multiple(songs, position-1)
+        if (
+            songs[0].original_source == OriginalSource.YOUTUBE_ALBUM
+            or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM
+        ):
+            result = await music_player.add_multiple(songs, position - 1)
             if result == PlayerResult.PLAYING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing album [{songs[0].group}]({songs[0].group_url})")
+                    description=f"Now playing album [{songs[0].group}]({songs[0].group_url})",
+                )
                 await interaction.followup.send(embed=embed)
                 return
             elif result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from album "
-                                f"[{songs[0].group}]({songs[0].group_url}) to "
-                                f"#{position} in queue")
+                    f"[{songs[0].group}]({songs[0].group_url}) to "
+                    f"#{position} in queue",
+                )
                 await interaction.followup.send(embed=embed)
                 return
 
         # Add song
         song = songs[0]
-        result = await music_player.add(song, position-1)
+        result = await music_player.add(song, position - 1)
         duration = await self._format_duration(song.duration)
         artist = ""
         if song.artist:
@@ -1026,13 +297,15 @@ class Musicbox(commands.Cog):
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Now playing {song_name}")
+                description=f"Now playing {song_name}",
+            )
             await interaction.followup.send(embed=embed)
             return
         elif result == PlayerResult.QUEUEING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Song {song_name} added to #{position} in queue")
+                description=f"Song {song_name} added to #{position} in queue",
+            )
             await interaction.followup.send(embed=embed)
             return
 
@@ -1044,23 +317,25 @@ class Musicbox(commands.Cog):
         if not songs:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Search query returned no results")
+                description="Search query returned no results",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
         # Format the data to be in a usable list
         results_format = []
         for i in range(0, 5):
-            results_format.append(f"{i+1}. [{songs[i].title}]({songs[i].url}) `{songs[i].duration}`")
+            results_format.append(
+                f"{i+1}. [{songs[i].title}]({songs[i].url}) " f"`{songs[i].duration}`"
+            )
 
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.MUSIC} Search Query")
-        results_output = '\n'.join(results_format)
-        embed.add_field(
-            name=f"Results for '{search}'",
-            value=results_output, inline=False)
+            title=f"{constants.EmbedIcon.MUSIC} Search Query",
+        )
+        results_output = "\n".join(results_format)
+        embed.add_field(name=f"Results for '{search}'", value=results_output, inline=False)
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
@@ -1076,7 +351,8 @@ class Musicbox(commands.Cog):
         await music_player.stop()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description="Music has been stopped & queue has been cleared")
+            description="Music has been stopped & queue has been cleared",
+        )
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
@@ -1092,15 +368,16 @@ class Musicbox(commands.Cog):
         if not music_player.is_paused:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Music isn't paused")
+                description="Music isn't paused",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
         # Resumes music playback
         await music_player.resume()
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description="Music has been resumed")
+            colour=constants.EmbedStatus.YES.value, description="Music has been resumed"
+        )
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
@@ -1117,15 +394,16 @@ class Musicbox(commands.Cog):
         if music_player.is_paused:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Music is already paused")
+                description="Music is already paused",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
         # Pauses music playback
         await music_player.pause()
         embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description="Music has been paused")
+            colour=constants.EmbedStatus.YES.value, description="Music has been paused"
+        )
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
@@ -1142,7 +420,8 @@ class Musicbox(commands.Cog):
         await music_player.seek(seconds)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Song timeline moved to position `{timestamp}`")
+            description=f"Song timeline moved to position `{timestamp}`",
+        )
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
@@ -1157,21 +436,31 @@ class Musicbox(commands.Cog):
 
         # Check if there's queue is empty
         if len(music_player.next_queue) < 1:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the queue after this."))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description="There's nothing in the queue after this.",
+                )
+            )
             return
 
         # Stop current song and flag that it has been skipped
         result = await music_player.next()
         if not result:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="Please slow down, you can't skip while the next song hasn't even started yet."))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description="Please slow down, you can't skip while "
+                    "the next song hasn't even started yet.",
+                )
+            )
             return
-        await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description="Song has been skipped."))
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description="Song has been skipped.",
+            )
+        )
 
     @app_commands.command()
     @perms.check()
@@ -1185,16 +474,22 @@ class Musicbox(commands.Cog):
 
         # Check if there's queue is empty
         if len(music_player.previous_queue) < 1:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="There are no previously played songs."))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description="There are no previously played songs.",
+                )
+            )
             return
 
         # Stop current song and flag that it has been skipped
         await music_player.previous()
-        await interaction.response.send_message(embed=discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description="Playing previous song."))
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description="Playing previous song.",
+            )
+        )
 
     @app_commands.command()
     @perms.check()
@@ -1210,7 +505,8 @@ class Musicbox(commands.Cog):
         if len(music_player.next_queue) < 2:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the queue to shuffle")
+                description="There's nothing in the queue to shuffle",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1218,7 +514,8 @@ class Musicbox(commands.Cog):
         await music_player.shuffle()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description="Queue has been shuffled")
+            description="Queue has been shuffled",
+        )
         await interaction.response.send_message(embed=embed)
         return
 
@@ -1236,15 +533,14 @@ class Musicbox(commands.Cog):
         if music_player.is_looping:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Song is already looping.")
+                description="Song is already looping.",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
         # Enable loop if disabled
         music_player.is_looping = True
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description="Loop enabled.")
+        embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description="Loop enabled.")
         await interaction.response.send_message(embed=embed)
         return
 
@@ -1262,15 +558,14 @@ class Musicbox(commands.Cog):
         if not music_player.is_looping:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Song is not currently looping.")
+                description="Song is not currently looping.",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
         # Enable loop if disabled
         music_player.is_looping = False
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description="Loop disabled.")
+        embed = discord.Embed(colour=constants.EmbedStatus.YES.value, description="Loop disabled.")
         await interaction.response.send_message(embed=embed)
         return
 
@@ -1286,9 +581,12 @@ class Musicbox(commands.Cog):
         # Alert if nothing is playing
         song = music_player.playing
         if not song:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing currently playing."))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description="There's nothing currently playing.",
+                )
+            )
             return
 
         # Output playing song
@@ -1301,42 +599,45 @@ class Musicbox(commands.Cog):
             colour=constants.EmbedStatus.INFO.value,
             title=f"{constants.EmbedIcon.MUSIC} Currently Playing",
             description=f"[{artist}{song.title}]({song.url}) "
-                  f"`{current_time}/{duration}`\n\u200B")
+            f"`{current_time}/{duration}`\n\u200b",
+        )
 
-        if song.original_source == OriginalSource.YOUTUBE_ALBUM \
-                or song.original_source == OriginalSource.SPOTIFY_ALBUM \
-                or song.original_source == OriginalSource.YOUTUBE_PLAYLIST \
-                or song.original_source == OriginalSource.SPOTIFY_PLAYLIST \
-                or song.original_source == OriginalSource.LOCAL:
+        if (
+            song.original_source == OriginalSource.YOUTUBE_ALBUM
+            or song.original_source == OriginalSource.SPOTIFY_ALBUM
+            or song.original_source == OriginalSource.YOUTUBE_PLAYLIST
+            or song.original_source == OriginalSource.SPOTIFY_PLAYLIST
+            or song.original_source == OriginalSource.LOCAL
+        ):
             embed.add_field(
                 name=f"Fetched from {song.original_source.value}",
                 value=f"[{song.group}]({song.group_url})",
-                inline=False)
+                inline=False,
+            )
         elif song.original_source == OriginalSource.YOUTUBE_VIDEO:
             embed.add_field(
                 name=f"Fetched from Site",
                 value=f"[{song.original_source.value}](https://youtube.com)",
-                inline=False)
+                inline=False,
+            )
         elif song.original_source == OriginalSource.YOUTUBE_SONG:
             embed.add_field(
                 name=f"Fetched from Site",
                 value=f"[{song.original_source.value}](https://music.youtube.com)",
-                inline=False)
+                inline=False,
+            )
         elif song.original_source == OriginalSource.SPOTIFY_SONG:
             embed.add_field(
                 name=f"Fetched from Site",
                 value=f"[{song.original_source.value}](https://open.spotify.com)",
-                inline=False)
+                inline=False,
+            )
 
         if song.artist:
-            embed.add_field(
-                name="Artist",
-                value=f"{song.artist}")
+            embed.add_field(name="Artist", value=f"{song.artist}")
 
         if song.requester_id:
-            embed.add_field(
-                name="Requested By",
-                value=f"<@{song.requester_id}>")
+            embed.add_field(name="Requested By", value=f"<@{song.requester_id}>")
 
         await interaction.response.send_message(embed=embed)
 
@@ -1355,23 +656,26 @@ class Musicbox(commands.Cog):
         if not playing and not queue:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the queue right now.")
+                description="There's nothing in the queue right now.",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
         # Output currently playing song
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.MUSIC} Music Queue")
+            title=f"{constants.EmbedIcon.MUSIC} Music Queue",
+        )
         header = "Currently Playing (Looping)" if music_player.is_looping else "Currently Playing"
         artist = f"{playing.artist} - " if playing.artist else ""
         current_time = await self._format_duration(music_player.seek_position)
         duration = await self._format_duration(playing.duration)
-        spacer = "\u200B" if len(queue) >= 1 else ""
+        spacer = "\u200b" if len(queue) >= 1 else ""
         embed.add_field(
             name=header,
             value=f"[{artist}{playing.title}]({playing.url}) "
-                  f"`{current_time}/{duration}` \n{spacer}")
+            f"`{current_time}/{duration}` \n{spacer}",
+        )
 
         # List songs in queue and calculate the total duration
         queue_display_items = []
@@ -1381,15 +685,21 @@ class Musicbox(commands.Cog):
             duration = await self._format_duration(song.duration)
             artist = f"{song.artist} - " if song.artist else ""
             queue_display_items.append(
-                f"[{artist}{song.title}]({song.url}) `{duration}` | <@{playing.requester_id}>")
+                f"[{artist}{song.title}]({song.url}) `{duration}` | " f"<@{playing.requester_id}>"
+            )
 
         # Output results to chat
         if queue_display_items:
             duration = await self._format_duration(total_duration)
-            paginated_view = PaginatedView(embed, f"Queue  `{duration}`", queue_display_items, 5, page)
+            paginated_view = PaginatedView(
+                embed, f"Queue  `{duration}`", queue_display_items, 5, page
+            )
         else:
             paginated_view = EmptyPaginatedView(
-                embed, f"Queue `0:00`", "Nothing else is queued up. Add more songs and they will appear here.")
+                embed,
+                f"Queue `0:00`",
+                "Nothing else is queued up. " "Add more songs and they will appear here.",
+            )
         await paginated_view.send(interaction)
 
     @queue_group.command(name="prevlist")
@@ -1406,23 +716,26 @@ class Musicbox(commands.Cog):
         if not playing and not queue:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the previous played song list.")
+                description="There's nothing in the previous played song list.",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
         # Output currently playing song
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.MUSIC} Music Queue")
+            title=f"{constants.EmbedIcon.MUSIC} Music Queue",
+        )
         header = "Currently Playing (Looping)" if music_player.is_looping else "Currently Playing"
         artist = f"{playing.artist} - " if playing.artist else ""
         current_time = await self._format_duration(music_player.seek_position)
         duration = await self._format_duration(playing.duration)
-        spacer = "\u200B" if len(queue) >= 1 else ""
+        spacer = "\u200b" if len(queue) >= 1 else ""
         embed.add_field(
             name=header,
             value=f"[{artist}{playing.title}]({playing.url}) "
-                  f"`{current_time}/{duration}` \n{spacer}")
+            f"`{current_time}/{duration}` \n{spacer}",
+        )
 
         # List remaining songs in queue plus total duration
         queue_display_items = []
@@ -1436,10 +749,15 @@ class Musicbox(commands.Cog):
         # Output results to chat
         if queue_display_items:
             duration = await self._format_duration(total_duration)
-            paginated_view = PaginatedView(embed, f"Queue  `{duration}`", queue_display_items, 5, page)
+            paginated_view = PaginatedView(
+                embed, f"Queue  `{duration}`", queue_display_items, 5, page
+            )
         else:
             paginated_view = EmptyPaginatedView(
-                embed, f"Queue `0:00`", "Nothing here yet. Songs that have previously played with appear here.")
+                embed,
+                f"Queue `0:00`",
+                "Nothing here yet. Songs that have previously played with appear here.",
+            )
         await paginated_view.send(interaction)
 
     @queue_group.command(name="reorder")
@@ -1456,12 +774,13 @@ class Musicbox(commands.Cog):
         queue = music_player.next_queue
         try:
             if original_pos < 1:
-                raise IndexError("Position can\'t be be less than 1")
-            song = queue[original_pos-1]
+                raise IndexError("Position can't be be less than 1")
+            song = queue[original_pos - 1]
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's no song at that position")
+                description="There's no song at that position",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1469,18 +788,19 @@ class Musicbox(commands.Cog):
         if not 1 <= new_pos <= len(queue):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="You can't move the song into that position")
+                description="You can't move the song into that position",
+            )
             await interaction.response.send_message(embed=embed)
             return
-        await music_player.move(original_pos-1, new_pos-1)
+        await music_player.move(original_pos - 1, new_pos - 1)
 
         # Output result to chat
         duration = await self._format_duration(song.duration)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"[{song.title}]({song.url}) "
-                        f"`{duration}` has been moved from position #{original_pos} "
-                        f"to position #{new_pos}")
+            description=f"[{song.title}]({song.url}) `{duration}` has been moved from "
+            f"position #{original_pos} to position #{new_pos}",
+        )
         await interaction.response.send_message(embed=embed)
 
     @queue_group.command(name="remove")
@@ -1497,13 +817,14 @@ class Musicbox(commands.Cog):
         queue = music_player.next_queue
         try:
             if position < 1:
-                raise IndexError('Position can\'t be less than 1')
-            song = queue[position-1]
-            await music_player.remove(position-1)
+                raise IndexError("Position can't be less than 1")
+            song = queue[position - 1]
+            await music_player.remove(position - 1)
         except IndexError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="That's an invalid queue position.")
+                description="That's an invalid queue position.",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1512,7 +833,8 @@ class Musicbox(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"[{song.title}]({song.url}) `{duration}` "
-                        f"has been removed from position #{position} of the queue")
+            f"has been removed from position #{position} of the queue",
+        )
         await interaction.response.send_message(embed=embed)
 
     @queue_group.command(name="clear")
@@ -1528,17 +850,19 @@ class Musicbox(commands.Cog):
         if len(music_player.next_queue) < 1:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There's nothing in the queue to clear")
+                description="There's nothing in the queue to clear",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
         await music_player.clear()
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
-            description="All songs have been removed from the queue")
+            description="All songs have been removed from the queue",
+        )
         await interaction.response.send_message(embed=embed)
 
-    @playlist_group.command(name='create')
+    @playlist_group.command(name="create")
     @perms.check()
     async def playlist_create(self, interaction: discord.Interaction, playlist_name: str):
         """Create a new playlist"""
@@ -1546,7 +870,8 @@ class Musicbox(commands.Cog):
         if len(playlist_name) > 30:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Playlist name is too long")
+                description="Playlist name is too long",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1554,7 +879,8 @@ class Musicbox(commands.Cog):
         if self.playlists.get_by_name_in_guild(playlist_name, interaction.guild):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` already exists")
+                description=f"Playlist `{playlist_name}` already exists",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1562,19 +888,23 @@ class Musicbox(commands.Cog):
         self.playlists.add(Playlist.create_new(playlist_name, interaction.guild, interaction.user))
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Playlist `{playlist_name}` has been created")
+            description=f"Playlist `{playlist_name}` has been created",
+        )
         await interaction.response.send_message(embed=embed)
 
-    @playlist_group.command(name='destroy')
+    @playlist_group.command(name="destroy")
     @perms.check()
     async def playlist_destroy(self, interaction, playlist_name: str):
         """Deletes an existing playlist"""
         # Alert if playlist doesn't exist in db
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
-            await interaction.response.send_message(embed=discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` doesn't exist"))
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    colour=constants.EmbedStatus.FAIL.value,
+                    description=f"Playlist `{playlist_name}` doesn't exist",
+                )
+            )
             return
 
         # Remove playlist from database and all songs linked to it
@@ -1584,10 +914,11 @@ class Musicbox(commands.Cog):
         self.playlists.remove(playlist.id)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Playlist `{playlist_name}` has been destroyed")
+            description=f"Playlist `{playlist_name}` has been destroyed",
+        )
         await interaction.response.send_message(embed=embed)
 
-    @playlist_group.command(name='description')
+    @playlist_group.command(name="description")
     @perms.check()
     async def playlist_description(self, interaction, playlist_name: str, description: str):
         """Sets the description for the playlist"""
@@ -1596,7 +927,8 @@ class Musicbox(commands.Cog):
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist '{playlist_name}' doesn't exist")
+                description=f"Playlist '{playlist_name}' doesn't exist",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1604,7 +936,8 @@ class Musicbox(commands.Cog):
         if len(description) > 300:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="Description is too long")
+                description="Description is too long",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1617,10 +950,11 @@ class Musicbox(commands.Cog):
         self.playlists.update(playlist)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Description set for playlist '{playlist_name}'")
+            description=f"Description set for playlist '{playlist_name}'",
+        )
         await interaction.response.send_message(embed=embed)
 
-    @playlist_group.command(name='rename')
+    @playlist_group.command(name="rename")
     @perms.check()
     async def playlist_rename(self, interaction, playlist_name: str, new_name: str):
         """Rename an existing playlist"""
@@ -1629,7 +963,8 @@ class Musicbox(commands.Cog):
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist '{playlist_name}' doesn't exist")
+                description=f"Playlist '{playlist_name}' doesn't exist",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1642,10 +977,11 @@ class Musicbox(commands.Cog):
         self.playlists.update(playlist)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Playlist '{playlist_name}' has been renamed to '{new_name}'")
+            description=f"Playlist '{playlist_name}' has been renamed to '{new_name}'",
+        )
         await interaction.response.send_message(embed=embed)
 
-    @playlist_group.command(name='list')
+    @playlist_group.command(name="list")
     @perms.check()
     async def playlist_list(self, interaction: discord.Interaction, page: int = 1):
         """List all available playlists"""
@@ -1654,7 +990,8 @@ class Musicbox(commands.Cog):
         if not playlists:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There are no playlists available")
+                description="There are no playlists available",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1666,16 +1003,21 @@ class Musicbox(commands.Cog):
             for song in songs:
                 song_duration += song.duration
             duration = await self._format_duration(song_duration)
-            playlist_info.append(f"{playlist.name} `{duration}` | Created by <@{playlist.creator_id}>")
+            playlist_info.append(
+                f"{playlist.name} `{duration}` | " f"Created by <@{playlist.creator_id}>"
+            )
 
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.MUSIC} Music Playlists")
-        paginated_view = PaginatedView(embed, f"{len(playlists)} available", playlist_info, 5, page)
+            title=f"{constants.EmbedIcon.MUSIC} Music Playlists",
+        )
+        paginated_view = PaginatedView(
+            embed, f"{len(playlists)} available", playlist_info, 5, page
+        )
         await paginated_view.send(interaction)
 
-    @playlist_group.command(name='add')
+    @playlist_group.command(name="add")
     @perms.check()
     async def playlist_add(self, interaction, playlist_name: str, url: str):
         """Adds a song to a playlist"""
@@ -1684,7 +1026,8 @@ class Musicbox(commands.Cog):
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There are no playlists available")
+                description="There are no playlists available",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1694,7 +1037,8 @@ class Musicbox(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's too many songs in the playlist. Remove"
-                            "some songs to be able to add more")
+                "some songs to be able to add more",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1707,7 +1051,8 @@ class Musicbox(commands.Cog):
         except SongUnavailableError:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="That song is unavailable. Maybe the link is invalid?")
+                description="That song is unavailable. Maybe the link is invalid?",
+            )
             await interaction.followup.send(embed=embed)
             return
 
@@ -1727,51 +1072,82 @@ class Musicbox(commands.Cog):
             previous_id = list(set(song_ids) - set(previous_ids))[0]
 
         # Add playlist
-        if songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST \
-                or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST:
+        if (
+            songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST
+            or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST
+        ):
             for song in songs:
                 new_playlist_song = PlaylistSong.create_new(
-                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                    playlist.id,
+                    interaction.user.id,
+                    song.title,
+                    song.artist,
+                    song.duration,
+                    song.url,
+                    previous_id,
+                )
                 self.playlist_songs.add(new_playlist_song)
                 previous_id = new_playlist_song.id
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from playlist "
-                            f"[{songs[0].group}]({songs[0].group_url}) to "
-                            f"#{len(playlist_songs) + 1} in playlist '{playlist_name}'")
+                f"[{songs[0].group}]({songs[0].group_url}) to "
+                f"#{len(playlist_songs) + 1} in playlist '{playlist_name}'",
+            )
             await interaction.followup.send(embed=embed)
             return
 
         # Add album
-        if songs[0].original_source == OriginalSource.YOUTUBE_ALBUM \
-                or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM:
+        if (
+            songs[0].original_source == OriginalSource.YOUTUBE_ALBUM
+            or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM
+        ):
             for song in songs:
                 new_playlist_song = PlaylistSong.create_new(
-                    playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+                    playlist.id,
+                    interaction.user.id,
+                    song.title,
+                    song.artist,
+                    song.duration,
+                    song.url,
+                    previous_id,
+                )
                 self.playlist_songs.add(new_playlist_song)
                 previous_id = new_playlist_song.id
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from album "
-                            f"[{songs[0].group}]({songs[0].group_url}) to "
-                            f"#{len(playlist_songs) + 1} in playlist '{playlist_name}'")
+                f"[{songs[0].group}]({songs[0].group_url}) to "
+                f"#{len(playlist_songs) + 1} in playlist '{playlist_name}'",
+            )
             await interaction.followup.send(embed=embed)
             return
 
         song = songs[0]
         new_playlist_song = PlaylistSong.create_new(
-            playlist.id, interaction.user.id, song.title, song.artist, song.duration, song.url, previous_id)
+            playlist.id,
+            interaction.user.id,
+            song.title,
+            song.artist,
+            song.duration,
+            song.url,
+            previous_id,
+        )
         self.playlist_songs.add(new_playlist_song)
         artist = ""
         if songs[0].artist:
             artist = f"{songs[0].artist} - "
-        await interaction.followup.send(embed=discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=f"Added [{artist}{songs[0].title}]({songs[0].url}) "
-                        f"`{await self._format_duration(songs[0].duration)}` to position #{len(playlist_songs) + 1} "
-                        f"in playlist '{playlist_name}'"))
+        await interaction.followup.send(
+            embed=discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description=f"Added [{artist}{songs[0].title}]({songs[0].url}) "
+                f"`{await self._format_duration(songs[0].duration)}` "
+                f"to position #{len(playlist_songs) + 1} "
+                f"in playlist '{playlist_name}'",
+            )
+        )
 
-    @playlist_group.command(name='remove')
+    @playlist_group.command(name="remove")
     @perms.check()
     async def playlist_remove(self, interaction, playlist_name: str, index: int):
         """Removes a song from a playlist"""
@@ -1780,12 +1156,15 @@ class Musicbox(commands.Cog):
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` doesn't exist")
+                description=f"Playlist `{playlist_name}` doesn't exist",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
         # Fetch selected song and the song after
-        songs: list[PlaylistSong] = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist.id))
+        songs: list[PlaylistSong] = await self._order_playlist_songs(
+            self.playlist_songs.get_by_playlist(playlist.id)
+        )
         selected_song = songs[int(index) - 1]
 
         # Edit next song's previous song id if it exists
@@ -1806,19 +1185,23 @@ class Musicbox(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.FAIL.value,
             description=f"[{selected_song.title}]({selected_song.url}) "
-                        f"`{duration}` has been removed from `{playlist_name}`")
+            f"`{duration}` has been removed from `{playlist_name}`",
+        )
         await interaction.response.send_message(embed=embed)
 
-    @playlist_group.command(name='reorder')
+    @playlist_group.command(name="reorder")
     @perms.check()
-    async def playlist_reorder(self, interaction, playlist_name: str, original_pos: int, new_pos: int):
+    async def playlist_reorder(
+        self, interaction, playlist_name: str, original_pos: int, new_pos: int
+    ):
         """Moves a song to a specified position in a playlist"""
         # Get playlist from repo
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` doesn't exist")
+                description=f"Playlist `{playlist_name}` doesn't exist",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1867,11 +1250,12 @@ class Musicbox(commands.Cog):
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"[{selected_song.title}]({selected_song.url}) "
-                        f"`{duration}` has been moved to position #{new_pos} "
-                        f"in playlist '{playlist_name}'")
+            f"`{duration}` has been moved to position #{new_pos} "
+            f"in playlist '{playlist_name}'",
+        )
         await interaction.response.send_message(embed=embed)
 
-    @playlist_group.command(name='view')
+    @playlist_group.command(name="view")
     @perms.check()
     async def playlist_view(self, interaction, playlist_name: str, page: int = 1):
         """List all songs in a playlist"""
@@ -1880,7 +1264,8 @@ class Musicbox(commands.Cog):
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` does not exist")
+                description=f"Playlist `{playlist_name}` does not exist",
+            )
             await interaction.response.send_message(embed=embed)
             return
         songs = await self._order_playlist_songs(self.playlist_songs.get_by_playlist(playlist.id))
@@ -1893,19 +1278,30 @@ class Musicbox(commands.Cog):
             song_name = song.title[:87] + "..." if len(song.title) > 90 else song.title
             duration = await self._format_duration(song.duration)
             artist = f"{song.artist} - " if song.artist else ""
-            formatted_songs.append(f"[{artist}{song_name}]({song.url}) `{duration}` | <@{song.requester_id}>")
+            formatted_songs.append(
+                f"[{artist}{song_name}]({song.url}) `{duration}` " f"| <@{song.requester_id}>"
+            )
 
         # Output results to chat
         embed = discord.Embed(
             colour=constants.EmbedStatus.INFO.value,
-            title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}'")
+            title=f"{constants.EmbedIcon.MUSIC} Playlist '{playlist_name}'",
+        )
         embed.description = f"Created by: <@{playlist.creator_id}>\n"
-        embed.description += playlist.description + "\n\u200B" if playlist.description else "\u200B"
+        embed.description += (
+            playlist.description + "\n\u200b" if playlist.description else "\u200b"
+        )
         formatted_duration = await self._format_duration(total_duration)
-        paginated_view = PaginatedView(embed, f"{len(songs)} Songs `{formatted_duration}`", formatted_songs, 5, page)
+        paginated_view = PaginatedView(
+            embed,
+            f"{len(songs)} Songs `{formatted_duration}`",
+            formatted_songs,
+            5,
+            page,
+        )
         await paginated_view.send(interaction)
 
-    @playlist_group.command(name='play')
+    @playlist_group.command(name="play")
     @perms.check()
     async def playlist_play(self, interaction: discord.Interaction, playlist_name: str):
         """Play from a locally saved playlist"""
@@ -1921,7 +1317,8 @@ class Musicbox(commands.Cog):
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist_name}` does not exist")
+                description=f"Playlist `{playlist_name}` does not exist",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1929,7 +1326,8 @@ class Musicbox(commands.Cog):
         if not songs:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description=f"Playlist `{playlist.name}` does not contain any songs")
+                description=f"Playlist `{playlist.name}` does not contain any songs",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -1938,12 +1336,14 @@ class Musicbox(commands.Cog):
         if result == PlayerResult.PLAYING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Now playing saved playlist '{playlist.name}'")
+                description=f"Now playing saved playlist '{playlist.name}'",
+            )
             await interaction.response.send_message(embed=embed)
         else:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Adding saved playlist '{playlist.name}' to queue")
+                description=f"Adding saved playlist '{playlist.name}' to queue",
+            )
             await interaction.response.send_message(embed=embed)
 
         # Add remaining songs to queue
@@ -1951,46 +1351,65 @@ class Musicbox(commands.Cog):
             stream = await self._get_song_from_saved(songs[i], playlist, interaction.user)
             await music_player.add(stream[0])
 
-    @musicsettings_group.command(name='autodisconnect')
+    @musicsettings_group.command(name="autodisconnect")
     @perms.exclusive()
     async def musicsettings_autodisconnect(self, interaction):
-        """Toggles if the bot should auto disconnect from a voice channel."""
-        config = toml.load(constants.DATA_DIR + 'config.toml')
+        """
+        Toggles if the bot should auto disconnect from a voice channel.
+        """
+        config = toml.load(constants.DATA_DIR + "config.toml")
 
         # Toggle auto_disconnect config setting
-        if config['music']['auto_disconnect']:
-            config['music']['auto_disconnect'] = False
+        if config["music"]["auto_disconnect"]:
+            config["music"]["auto_disconnect"] = False
             result_text = "disabled"
         else:
-            config['music']['auto_disconnect'] = True
+            config["music"]["auto_disconnect"] = True
             result_text = "enabled"
 
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Music player auto disconnect {result_text}")
+            description=f"Music player auto disconnect {result_text}",
+        )
         await interaction.response.send_message(embed=embed)
 
-    @musicsettings_group.command(name='disconnecttime')
+    @musicsettings_group.command(name="disconnecttime")
     @perms.exclusive()
     async def musicsettings_disconnecttime(self, interaction, seconds: int):
-        """Sets a time for when the bot should auto disconnect from voice if not playing"""
-        config = toml.load(constants.DATA_DIR + 'config.toml')
+        """
+        Sets a time for when the bot should auto disconnect from voice
+        if not playing.
+        """
+        config = toml.load(constants.DATA_DIR + "config.toml")
 
         # Set disconnect_time config variable
-        config['music']['disconnect_time'] = seconds
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
+        config["music"]["disconnect_time"] = seconds
+        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Music player auto disconnect timer set to {seconds} seconds")
+            description=f"Music player auto disconnect timer set to {seconds} seconds",
+        )
         await interaction.response.send_message(embed=embed)
         return
 
-    async def _get_music_player(self, channel: discord.VoiceChannel):
+    async def _get_music_player(self, channel: discord.VoiceChannel) -> MusicPlayer:
+        """
+        Retrieves the music player associated with the given voice
+        channel.
+
+        Args:
+            channel (discord.VoiceChannel): The voice channel for which
+            to retrieve the music player.
+
+        Returns:
+            WavelinkMusicPlayer: The music player associated with the
+            given voice channel.
+        """
         try:
             music_player = self.music_players[channel.guild.id]
         except KeyError:
@@ -2000,16 +1419,50 @@ class Musicbox(commands.Cog):
         return music_player
 
     @staticmethod
-    async def _get_songs(query: str, requester: discord.User):
+    async def _get_songs(query: str, requester: discord.User) -> list[WavelinkSong]:
+        """
+        Get songs based on a query and requester.
+
+        Args:
+            query (str): The query used to search for songs.
+            requester (discord.User): The user requesting the songs.
+
+        Returns:
+            list['WavelinkSong']: A list of WavelinkSong objects
+            representing the songs.
+        """
         return await WavelinkSong.from_query(query, requester)
 
     @staticmethod
-    async def _get_song_from_saved(playlist_song: PlaylistSong, playlist: Playlist, requester: discord.User):
+    async def _get_song_from_saved(
+        playlist_song: PlaylistSong, playlist: Playlist, requester: discord.User
+    ) -> list["WavelinkSong"]:
+        """
+        Get a song from a saved playlist.
+
+        Args:
+            playlist_song (PlaylistSong): The playlist song object.
+            playlist (Playlist): The playlist object.
+            requester (discord.User): The user requesting the song.
+
+        Returns:
+            WavelinkSong: The song object obtained from the
+            saved playlist.
+        """
         return await WavelinkSong.from_local(requester, playlist_song, playlist)
 
-    # Format duration based on what values there are
     @staticmethod
-    async def _format_duration(milliseconds):
+    async def _format_duration(milliseconds) -> str:
+        """
+        Format the duration in milliseconds into a
+        human-readable format.
+
+        Args:
+            milliseconds (int): The duration in milliseconds.
+
+        Returns:
+            str: The formatted duration in the format HH:MM:SS.
+        """
         # Convert milliseconds to seconds
         seconds = milliseconds // 1000
 
@@ -2044,10 +1497,20 @@ class Musicbox(commands.Cog):
 
         return formatted
 
-
     @staticmethod
-    async def _order_playlist_songs(playlist_songs):
-        """Gets playlist songs from name"""
+    async def _order_playlist_songs(playlist_songs) -> list[PlaylistSong]:
+        """
+        Orders a list of playlist songs based on their song ID ordering.
+
+        Args:
+            playlist_songs (List[PlaylistSong]): A list of playlist
+            songs.
+
+        Returns:
+            List[PlaylistSong]: A list of playlist songs ordered based
+            on their previous song IDs.
+
+        """
         # Use dictionary to pair songs with the next song
         song_links = {}
         for song in playlist_songs:
@@ -2063,8 +1526,19 @@ class Musicbox(commands.Cog):
         return ordered_songs
 
     @staticmethod
-    def _parse_time(time_string):
-        time_split = time_string.split(':')
+    def _parse_time(time_string) -> int:
+        """
+        Parses a time string and returns the equivalent time
+        in milliseconds.
+
+        Args:
+            time_string (str): The time string to be parsed.
+            The string should be in the format HH:MM:SS or MM:SS.
+
+        Returns:
+            int: The equivalent time in milliseconds.
+        """
+        time_split = time_string.split(":")
         hours, minutes, seconds = 0, 0, 0
         if len(time_split) >= 3:
             hours = time_split[-3]
