@@ -56,7 +56,7 @@ class Song(ABC, Generic[StreamType]):
     @abstractmethod
     def stream(self: Self) -> StreamType:
         """
-        Gets the stream object of the song that will be utilised for playback.
+        Gets stream object of the song to be used for playback.
 
         Returns:
             StreamType: The stream object.
