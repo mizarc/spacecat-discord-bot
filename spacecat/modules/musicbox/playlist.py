@@ -22,7 +22,7 @@ class Playlist:
     """Represents a playlist of music."""
 
     def __init__(
-        self: Self,
+        self: Playlist,
         id_: uuid.UUID,
         name: str,
         guild_id: int,
@@ -186,7 +186,7 @@ class Playlist:
 class PlaylistRepository:
     """Repository for storing and retrieving playlists."""
 
-    def __init__(self: Self, database: Connection) -> None:
+    def __init__(self: PlaylistRepository, database: Connection) -> None:
         """
         Initialise a new instance of the PlaylistRepository class.
 
@@ -347,7 +347,7 @@ class PlaylistSong:
     """A song in a playlist."""
 
     def __init__(
-        self: Self,
+        self: PlaylistSong,
         id_: uuid.UUID,
         playlist_id: uuid.UUID,
         requester_id: int,
@@ -514,7 +514,7 @@ class PlaylistSong:
 class PlaylistSongRepository:
     """Repository for managing playlist songs in the database."""
 
-    def __init__(self: Self, database: Connection) -> None:
+    def __init__(self: PlaylistSongRepository, database: Connection) -> None:
         """
         Initialise a new instance of the PlaylistSongRepository class.
 
