@@ -149,7 +149,7 @@ class Song(ABC, Generic[StreamType]):
 T_Song = TypeVar("T_Song", bound=Song)
 
 
-class MusicPlayer(ABC, Generic[T_Song]):
+class MusicPlayer(Generic[T_Song]):
     """
     Abstract base class for music players.
 
@@ -157,6 +157,19 @@ class MusicPlayer(ABC, Generic[T_Song]):
     implement. It defines the basic functionality and properties that a
     music player should have.
     """
+
+    @classmethod
+    @abstractmethod
+    async def connect(cls: type[MusicPlayer], channel: discord.VoiceChannel) -> MusicPlayer:
+        """
+        Initialises and connects the player to a voice channel.
+
+        Args:
+            channel (Channel): The channel to connect to.
+
+        Returns:
+            The connected MusicPlayer instance.
+        """
 
     @property
     @abstractmethod
@@ -228,15 +241,6 @@ class MusicPlayer(ABC, Generic[T_Song]):
         Returns:
             list[T_Song]: The queue of songs that were played before the
                 current song.
-        """
-
-    @abstractmethod
-    async def connect(self: Self, channel: discord.VoiceChannel) -> None:
-        """
-        Connects the music player to the specified channel.
-
-        Args:
-            channel (Channel): The channel to connect to.
         """
 
     @abstractmethod
