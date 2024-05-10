@@ -22,7 +22,6 @@ setuptools.setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Intended Audience :: System Administrators",
-        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
@@ -30,6 +29,6 @@ setuptools.setup(
         "Environment :: Console",
         "Topic :: Communications :: Chat",
     ],
-    python_requires=">=3.11",
+    python_requires=">=3.12",
     install_requires=install_requires,
 )
