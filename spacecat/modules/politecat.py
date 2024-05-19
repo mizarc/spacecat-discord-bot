@@ -1,3 +1,12 @@
+"""
+Module for providing image based conversions and reactions.
+
+Features within this module should pertain to the saving, loading, and
+conversion of images. Notably, use cases currently include reaction
+images as well as the automatic conversion of webp to gif since Discord
+does not support animated webps.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -37,7 +46,8 @@ class PoliteCat(commands.Cog):
 
         Args:
         self (Self): The instance of the PoliteCat class.
-        message (discord.Message): The message object representing the incoming message.
+        message (discord.Message): The message object representing the
+            incoming message.
 
         Returns:
         None
@@ -50,8 +60,8 @@ class PoliteCat(commands.Cog):
             return
 
         # Fetch image from attachment
-        gif = f"{constants.CACHE_DIR}{message.id!s}.gif"
-        webp = f"{constants.CACHE_DIR}{message.id!s}.webp"
+        gif = Path(f"{constants.CACHE_DIR}{message.id!s}.gif")
+        webp = Path(f"{constants.CACHE_DIR}{message.id!s}.webp")
         await message.attachments[0].save(webp)
         image = Image.open(webp)
 
@@ -92,7 +102,7 @@ class PoliteCat(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def togglewebp(self: Self, ctx: commands.Context) -> None:
+    async def togglewebp(self: Self, interaction: discord.Interaction) -> None:
         """Toggle automatic WebP conversion."""
         if self.webp_convert:
             self.webp_convert = False
@@ -100,7 +110,7 @@ class PoliteCat(commands.Cog):
                 colour=constants.EmbedStatus.NO.value,
                 description="Automatic WebP conversion has been disabled",
             )
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
 
         elif not self.webp_convert:
             self.webp_convert = True
@@ -108,7 +118,7 @@ class PoliteCat(commands.Cog):
                 colour=constants.EmbedStatus.YES.value,
                 description="Automatic WebP conversion has been enabled",
             )
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
 
     @commands.group(invoke_without_command=True)
     @perms.check()
@@ -151,9 +161,9 @@ class PoliteCat(commands.Cog):
         # Check if file extension is valid and convert to webp when possible
         ext = image.filename.split(".")[-1]
         if ext in {"webp", "png"}:
-            await image.save(f"{constants.DATA_DIR}reactions/{name}.{ext}")
+            await image.save(Path(f"{constants.DATA_DIR}reactions/{name}.{ext}"))
         elif ext in {"jpg", "jpeg", "bmp", "png"}:
-            await image.save(f"{constants.DATA_DIR}reactions/{name}.webp")
+            await image.save(Path(f"{constants.DATA_DIR}reactions/{name}.webp"))
         else:
             await ctx.send("Image must be formatted in webp, png, jpg, bmp or gif")
             return
@@ -192,7 +202,7 @@ class PoliteCat(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def reactlist(self: Self, ctx: commands.Context) -> None:
+    async def reactlist(self: Self, interaction: discord.Interaction) -> None:
         """List all reaction images."""
         reactions = self._get_reactions()
 
@@ -201,16 +211,18 @@ class PoliteCat(commands.Cog):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value, description="No reactions are available"
             )
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
     @app_commands.command()
     @perms.check()
-    async def react(self: Self, ctx: commands.Context, name: str) -> None:
+    async def react(self: Self, interaction: discord.Interaction, name: str) -> None:
         """Use an image/gif as a reaction."""
         # Try sending WebP
         try:
-            await ctx.send(file=discord.File(f"{constants.DATA_DIR}reactions/{name}.webp"))
+            await interaction.response.send_message(
+                file=discord.File(f"{constants.DATA_DIR}reactions/{name}.webp")
+            )
         except FileNotFoundError:
             pass
         else:
@@ -218,7 +230,9 @@ class PoliteCat(commands.Cog):
 
         # Try sending Gif
         try:
-            await ctx.send(file=discord.File(f"{constants.DATA_DIR}reactions/{name}.gif"))
+            await interaction.response.send_message(
+                file=discord.File(f"{constants.DATA_DIR}reactions/{name}.gif")
+            )
         except FileNotFoundError:
             pass
         else:
@@ -229,7 +243,7 @@ class PoliteCat(commands.Cog):
             colour=constants.EmbedStatus.FAIL.value,
             description=f"Reaction `{name}` does not exist",
         )
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     async def _get_reactions(self: Self) -> list:
         # Get all images from directory and add to list
