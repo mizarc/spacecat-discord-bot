@@ -7,9 +7,9 @@ include changing the bot's status and activity.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Self
 
+import aiofiles
 import discord
 import toml
 from discord import app_commands
@@ -44,7 +44,7 @@ class Configuration(commands.Cog):
         except KeyError:
             config["permissions"]["default"] = []
 
-        with Path(constants.DATA_DIR + "config.toml", "w").open() as config_file:
+        async with aiofiles.open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @app_commands.command()
@@ -80,7 +80,7 @@ class Configuration(commands.Cog):
             await self.bot.change_presence(status=status)
 
         config["base"]["status"] = status.name
-        with Path(constants.DATA_DIR + "config.toml", "w").open() as config_file:
+        async with aiofiles.open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
     @app_commands.command()
@@ -125,7 +125,7 @@ class Configuration(commands.Cog):
 
         config["base"]["activity_type"] = activity_type.name
         config["base"]["activity_name"] = name
-        with Path(constants.DATA_DIR + "config.toml", "w").open() as config_file:
+        async with aiofiles.open(constants.DATA_DIR + "config.toml", "w") as config_file:
             toml.dump(config, config_file)
 
 
