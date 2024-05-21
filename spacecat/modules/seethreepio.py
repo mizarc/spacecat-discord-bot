@@ -321,7 +321,6 @@ class Seethreepio(commands.Cog):
         )
 
         rps_game = RPSGame(interaction.user, target)
-        await self.bot.is_owner(interaction.user)
 
         # Add buttons
         view = DefaultView(embed=embed)
