@@ -41,7 +41,9 @@ class RPSGame:
     determines the winner based on the game rules.
     """
 
-    def __init__(self: RPSGame, challenger: discord.User, target: discord.User) -> None:
+    def __init__(
+        self: RPSGame, challenger: discord.User | discord.Member, target: discord.User
+    ) -> None:
         """
         Represents a game of Rock Paper Scissors.
 
@@ -54,9 +56,9 @@ class RPSGame:
             target_action (RPSAction or None): The action chosen by the
                 target.
         """
-        self.challenger: discord.User = challenger
+        self.challenger: discord.User | discord.Member = challenger
         self.target: discord.User = target
-        self.challenger_actionL: RPSAction | None = None
+        self.challenger_action: RPSAction | None = None
         self.target_action: RPSAction | None = None
 
     def has_both_chosen(self: Self) -> bool:
@@ -71,7 +73,7 @@ class RPSGame:
             return True
         return False
 
-    def play_action(self: Self, user: discord.User, action: RPSAction) -> bool:
+    def play_action(self: Self, user: discord.abc.User, action: RPSAction) -> bool:
         """
         Updates the game state with the given action chosen by the user.
 
@@ -91,7 +93,7 @@ class RPSGame:
             return True
         return False
 
-    def get_winner(self: Self) -> discord.User | None:
+    def get_winner(self: Self) -> discord.abc.User | None:
         """
         Determines the winner of a game based on player actions.
 
@@ -172,29 +174,27 @@ class RPSButton(Button):
             )
 
         # Declare winner
-        if self.rps_game.has_both_chosen():
-            self.rps_game.get_winner()
-            win_text = (
-                f"<@{self.rps_game.get_winner().id}> has won!"
-                if self.rps_game.get_winner()
-                else "It's a draw!"
-            )
+        challenger_action = self.rps_game.challenger_action
+        target_action = self.rps_game.target_action
+        if challenger_action and target_action:
+            winner = self.rps_game.get_winner()
+            win_text = f"<@{winner.id}> has won!" if winner else "It's a draw!"
             embed = discord.Embed(
                 colour=constants.EmbedStatus.GAME.value,
                 title="Rock Paper Scissors",
                 description=f"<@{self.rps_game.challenger.id}> "
-                f"{self.rps_game.challenger_action.value} vs"
-                f" {self.rps_game.target_action.value} <@{self.rps_game.target.id}>"
-                f"\n\n{win_text}",
+                f"{challenger_action} vs {target_action} "
+                f"<@{self.rps_game.target.id}>\n\n{win_text}",
             )
             await interaction.followup.send(embed=embed)
 
             # Disable buttons after game has completed
-            buttons = self.view.children
-            for button in buttons:
-                button.disabled = True
-            self.disabled = True
-            await interaction.edit_original_response(view=self.view)
+            if self.view is not None:
+                buttons = self.view.children
+                for button in buttons:
+                    button.disabled = True
+                self.disabled = True
+                await interaction.edit_original_response(view=self.view)
 
     async def on_timeout(self: Self) -> None:
         """Disables the button on timeout."""
@@ -204,7 +204,7 @@ class RPSButton(Button):
 class Throwing:
     """Represents a throwing action."""
 
-    def __init__(self: Throwing, thrower: discord.Member, target: discord.Member) -> None:
+    def __init__(self: Throwing, thrower: discord.abc.User, target: discord.abc.User) -> None:
         """
         Initialises a throwing instance.
 
@@ -321,6 +321,7 @@ class Seethreepio(commands.Cog):
         )
 
         rps_game = RPSGame(interaction.user, target)
+        await self.bot.is_owner(interaction.user)
 
         # Add buttons
         view = DefaultView(embed=embed)
@@ -350,7 +351,7 @@ class Seethreepio(commands.Cog):
         view.add_item(scissors_button)
 
         # If playing against the bot, set target action randomly
-        if target.id == self.bot.user.id:
+        if target and self.bot.user and target.id == self.bot.user.id:
             rps_game.target_action = random.choice(list(RPSAction))  # noqa: S311
 
         await view.send(interaction)
@@ -378,7 +379,7 @@ class Seethreepio(commands.Cog):
         allowed_mentions.users = False
 
         # Have the bot throw the item at the user if the bot is targeted
-        if member.id == self.bot.user.id:
+        if self.bot.user and member.id == self.bot.user.id:
             await interaction.response.send_message(
                 f"No u. {interaction.user.mention} ∩(óᗝò)∩"
                 f"                                 ({item})==-- ⸦(òᗝó∩) ",
@@ -481,7 +482,8 @@ class Seethreepio(commands.Cog):
             interaction (discord.Interaction): The interaction object.
             user (discord.User): The user whose avatar URL is to be retrieved.
         """
-        await interaction.response.send_message(user.avatar_url)
+        if user.avatar is not None:
+            await interaction.response.send_message(user.avatar.url)
 
 
 async def setup(bot: commands.Bot) -> None:
