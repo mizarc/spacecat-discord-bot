@@ -1,41 +1,48 @@
+"""
+This module provides functions for managing bot instances.
+
+Bot instances are isolated configurations that can be utilised to
+separate the data from one bot to another. This may be used to separate
+dev and prod instances, as well as be used for hosting multiple bots on
+the same host.
+"""
+
+from __future__ import annotations
+
 import os
 import shutil
+from pathlib import Path
 
 from spacecat.helpers import constants
 
 
-def get_all():
-    """Checks for a config file in each subfolder to detect an instance"""
-    folders = os.listdir(constants.GLOBAL_DATA_DIR)
-    instances = []
-    for folder in folders:
-        instances.append(folder)
+def get_all() -> list[str]:
+    """
+    Fetches all available bot instances.
 
-    return instances
+    Instances exist as folders within the data directory and requires a
+    valid config file.
+    """
+    return os.listdir(constants.GLOBAL_DATA_DIR)
 
 
-def get_by_index(index):
-    """Get a specific instance by the index obtained by get_all()"""
-    instances = get_all()
+def get_by_index(index: int) -> str | None:
+    """Get a specific instance by the index obtained by get_all()."""
+    return get_all()[index]
+
+
+def create(name: str) -> bool:
+    """Creates a new instance folder."""
     try:
-        instance = instances[index]
-    except (IndexError, TypeError):
-        return False
-
-    return instance
-
-
-def create(name):
-    """Creates a new instance folder"""
-    try:
-        os.mkdir(f'{constants.GLOBAL_DATA_DIR}{name}')
+        Path(f"{constants.GLOBAL_DATA_DIR}{name}").mkdir()
     except FileExistsError:
         return False
 
     return True
 
 
-def rename(index, name):
+def rename(index: int, name: str) -> bool:
+    """Renames an instance folder by the index."""
     instance = get_by_index(index)
     if not instance:
         raise IndexError
@@ -44,17 +51,15 @@ def rename(index, name):
     if name in instances:
         return False
 
-    shutil.move(
-        f'{constants.GLOBAL_DATA_DIR}{instance}',
-        f'{constants.GLOBAL_DATA_DIR}{name}')
+    shutil.move(f"{constants.GLOBAL_DATA_DIR}{instance}", f"{constants.GLOBAL_DATA_DIR}{name}")
     return True
 
 
-def destroy(index):
-    """Deletes an instance folder by the index"""
+def destroy(index: int) -> bool:
+    """Deletes an instance folder by the index."""
     instance = get_by_index(index)
     if not instance:
         raise IndexError
 
-    shutil.rmtree(f'{constants.GLOBAL_DATA_DIR}{instance}')
+    shutil.rmtree(f"{constants.GLOBAL_DATA_DIR}{instance}")
     return True
