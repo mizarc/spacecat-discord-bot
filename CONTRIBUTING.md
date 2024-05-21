@@ -71,7 +71,11 @@ Somewhere along the line I decided this was a good way to organise a Python proj
 - Limit the message body to 72 characters per line.
 
 ### Python
-This project generally just follows the PEP8 layout. If your IDE uses the Flake8 linter as recommended, it should warn out about most issues, though you can read [The official PEP8 guidelines](https://www.python.org/dev/peps/pep-0008/) yourself. There are a few important notes specific to this project:
+This project generally just follows the PEP8 layout. If your IDE uses the 
+Flake8 linter as recommended, it should warn out about most issues, though you 
+can read [The PEP8 guidelines](https://www.python.org/dev/peps/pep-0008/) 
+yourself. There are a few important notes specific to this project:
 - We use spaces, not tabs.
-- A soft limit of 79 characters per line is in place, though if you've decided that you can't add a line break elegantly, you're free to go all the way up to 99 characters.
-- Use single quotes for key strings, use double quotes for message strings.
+- Keep code under a 99 character per line limit.
+- Keep docstrings under a 79 character per line limit.
+- Double quotes are utilised for all strings.
