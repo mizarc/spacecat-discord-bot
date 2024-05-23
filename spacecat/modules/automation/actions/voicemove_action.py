@@ -1,5 +1,5 @@
 """
-Action of "VoiceMove" type, used for moving uesrs to a voice channel.
+Action of "VoiceMove" type, used for moving users to a voice channel.
 
 This incorporates an override for a VoiceMove action as well as an
 sqlite repository to store the associated data.
