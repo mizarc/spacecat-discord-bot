@@ -77,7 +77,7 @@ class Reminder:
     @classmethod
     def create_new(
         cls: type[Reminder],
-        user: discord.User,
+        user: discord.abc.User,
         guild: discord.Guild,
         channel: discord.TextChannel,
         confirmation_message: discord.Message,
