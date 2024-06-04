@@ -404,7 +404,6 @@ class Action(ABC):
         self.id: uuid.UUID = id_
 
     @abstractmethod
-    @staticmethod
     def get_name() -> str:
         """
         Get the display name of the action.
@@ -939,7 +938,7 @@ class EventService:
         Args:
             event: The event to run
         """
-        event.last_run_time = int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())
+        event.last_run_time = int(datetime.datetime.now(tz=datetime.UTC).timestamp())
         for action in self.get_actions(event):
             self.bot.dispatch(f"{action.get_name()}_action", action)
         self.events.update(event)
@@ -1028,8 +1027,7 @@ class EventScheduler:
 
         # Only add repeating events if next dispatch is within cache release time
         if (
-            self.calculate_next_run(event)
-            - datetime.datetime.now(tz=datetime.timezone.utc).timestamp()
+            self.calculate_next_run(event) - datetime.datetime.now(tz=datetime.UTC).timestamp()
             > self.cache_release_time
         ):
             return
@@ -1037,8 +1035,7 @@ class EventScheduler:
         # Only add non repeating event if it is at most 5 minutes past execution time
         if (
             event.repeat_interval == Repeat.No
-            and event.dispatch_time
-            > datetime.datetime.now(tz=datetime.timezone.utc).timestamp() + 300
+            and event.dispatch_time > datetime.datetime.now(tz=datetime.UTC).timestamp() + 300
         ):
             return
 
@@ -1057,10 +1054,7 @@ class EventScheduler:
             self.event_service.events.get_all()
             if self.cache_release_time < 0
             else self.event_service.events.get_before_timestamp(
-                int(
-                    datetime.datetime.now(tz=datetime.timezone.utc).timestamp()
-                    + self.cache_release_time
-                )
+                int(datetime.datetime.now(tz=datetime.UTC).timestamp() + self.cache_release_time)
             )
         )
         for event in events:
@@ -1148,7 +1142,7 @@ class EventScheduler:
         # missed by 5 minutes due to bot downtime. Otherwise, set dispatch time in the future at
         # the correct interval.
         interval = event.repeat_interval.value * event.repeat_multiplier
-        now = datetime.datetime.now(tz=datetime.timezone.utc).timestamp()
+        now = datetime.datetime.now(tz=datetime.UTC).timestamp()
         elapsed_seconds = now - event.dispatch_time
         previous_dispatch_delta = math.ceil(elapsed_seconds / interval - 1) * interval
         if (
