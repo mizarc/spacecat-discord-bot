@@ -1,5 +1,5 @@
 """
-The main entry point of the program, used to start bots.
+The main entry point of the program, used to start the bot.
 
 This module is a command line interface and argument parser that allows
 for the creation and startup process for the bot.
@@ -203,10 +203,10 @@ def main() -> None:
         config["base"]["apikey"]
         first_run = False
     except KeyError:
-        spacecat.introduction(config)
+        spacecat.introduction(instance)
         first_run = True
 
-    spacecat.run(instance, firstrun=first_run)
+    spacecat.run(instance, first_run=first_run)
 
 
 def apply_config_arguments(instance: instance.Instance, args: argparse.Namespace) -> None:
