@@ -119,7 +119,7 @@ class Instance:
         """
         if self._name == "":
             raise InstanceNameNotSetError
-        return f"{constants.DATA_DIR}/{self._name}/"
+        return f"{constants.DATA_DIR}{self._name}/"
 
     def get_config(self: Self) -> dict[str, Any]:
         """
@@ -142,7 +142,12 @@ class Instance:
             toml.dump(config, config_file)
 
     def _init_config(self: Self) -> None:
-        config = {}
-        config["base"] = {}
-        with Path(constants.DATA_DIR + "config.toml").open("w") as config_file:
-            toml.dump(config, config_file)
+        try:
+            config = self.get_config()
+        except FileNotFoundError:
+            config = {}
+
+        if "base" not in config:
+            config["base"] = {}
+
+        self.save_config(config)
