@@ -12,7 +12,9 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
-from typing import Self
+from typing import Any, Self
+
+import toml
 
 from spacecat.helpers import constants
 
@@ -87,6 +89,7 @@ class Instance:
     def __init__(self: Instance, name: str) -> None:
         """Initialize the InstanceData class."""
         self._name: str = name
+        self._init_config()
 
     @property
     def instance_name(self: Self) -> str:
@@ -117,3 +120,29 @@ class Instance:
         if self._name == "":
             raise InstanceNameNotSetError
         return f"{constants.DATA_DIR}/{self._name}/"
+
+    def get_config(self: Self) -> dict[str, Any]:
+        """
+        Read and return the config values.
+
+        Returns:
+            dict: The config dictionary.
+        """
+        return toml.load(self.instance_location + "config.toml")
+
+    def save_config(self: Self, config: dict) -> None:
+        """
+        Write the config to the specified file.
+
+        Args:
+            path (str): The path to the config file.
+            config (dict): The config dictionary.
+        """
+        with Path(self.instance_location + "config.toml").open("w") as config_file:
+            toml.dump(config, config_file)
+
+    def _init_config(self: Self) -> None:
+        config = {}
+        config["base"] = {}
+        with Path(constants.DATA_DIR + "config.toml").open("w") as config_file:
+            toml.dump(config, config_file)

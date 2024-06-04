@@ -13,8 +13,6 @@ import sys
 from pathlib import Path
 from typing import Callable
 
-import toml
-
 from spacecat import instance, spacecat
 from spacecat.helpers import config, constants
 
@@ -43,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def select_instance() -> str:
+def select_instance() -> instance.Instance:
     """Prompt the user to select an instance."""
     options: dict[str, Callable] = {
         "n": create_instance_menu,
@@ -75,7 +73,7 @@ def select_instance() -> str:
         # Alert if no valid option has been selected
         print("Invalid selection. Please select a valid instance number or an " "option letter.\n")
 
-    return selected_instance
+    return instance.Instance(selected_instance)
 
 
 def display_instances(options: dict) -> None:
@@ -192,25 +190,20 @@ def main() -> None:
     args = parse_args()
 
     # Create data folder
-    if not Path(constants.GLOBAL_DATA_DIR).exists:
-        Path(constants.GLOBAL_DATA_DIR).mkdir()
+    if not Path(constants.DATA_DIR).exists:
+        Path(constants.DATA_DIR).mkdir()
 
-    # Select instance folder
+    # Select instance
     instance = select_instance() if not args.instance else args.instance
-    constants.instance_location(instance)
-
-    # Fetch the config file attached to the instance
-    try:
-        config_data = toml.load(constants.DATA_DIR + "config.toml")
-    except FileNotFoundError:
-        config_data = config.create()
 
     # Fetch the APIKey from the config
-    config.apply_arguments(config_data, args)
+    instance_config = instance.get_config()
+    config.apply_arguments(instance_config, args)
     try:
-        config_data["base"]["apikey"]
+        instance_config["base"]["apikey"]
         first_run = False
     except KeyError:
-        first_run = spacecat.introduction(config)
+        spacecat.introduction(instance_config)
+        first_run = True
 
-    spacecat.run(firstrun=first_run)
+    spacecat.run(instance, firstrun=first_run)
