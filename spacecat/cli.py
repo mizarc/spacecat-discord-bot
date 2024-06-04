@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Callable
 
 from spacecat import instance, spacecat
-from spacecat.helpers import config, constants
+from spacecat.helpers import constants
 
 
 def logger() -> None:
@@ -197,13 +197,35 @@ def main() -> None:
     instance = select_instance() if not args.instance else args.instance
 
     # Fetch the APIKey from the config
-    instance_config = instance.get_config()
-    config.apply_arguments(instance_config, args)
+    apply_config_arguments(instance, args)
+    config = instance.get_config()
     try:
-        instance_config["base"]["apikey"]
+        config["base"]["apikey"]
         first_run = False
     except KeyError:
-        spacecat.introduction(instance_config)
+        spacecat.introduction(config)
         first_run = True
 
     spacecat.run(instance, firstrun=first_run)
+
+
+def apply_config_arguments(instance: instance.Instance, args: argparse.Namespace) -> None:
+    """
+    Apply argsparse arguments to the config.
+
+    Arguments specified through argsparse can be forwarded to the config
+    file to manually change data before the bot runs.
+    """
+    config = instance.get_config()
+    if args.apikey:
+        config["base"]["apikey"] = args.apikey
+    if args.prefix:
+        config["base"]["prefix"] = args.prefix
+    if args.user:
+        try:
+            users = config["base"]["adminuser"]
+            if args.user not in users:
+                config["base"]["adminuser"].append(args.user)
+        except KeyError:
+            config["base"]["adminuser"] = [args.user]
+    instance.save_config(config)
