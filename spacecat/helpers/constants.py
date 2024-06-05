@@ -1,7 +1,8 @@
 """
-This used to just hold constants, but got a little out of hand.
+Holds constant values that can be used throughout the program.
 
-Needs to be reworked.
+This currently has uses for finding directories, as well as icon values
+and emoji name conversions.
 """
 
 from __future__ import annotations
