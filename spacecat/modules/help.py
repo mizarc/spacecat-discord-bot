@@ -14,9 +14,11 @@ the new command.
 
 from __future__ import annotations
 
-from typing import Self
+from typing import Self, cast
 
 import discord
+import discord.ext
+import discord.ext.commands
 from discord import app_commands
 from discord.ext import commands
 
@@ -31,35 +33,23 @@ class Help(commands.Cog):
         Initializes the Help class with the provided bot instance.
 
         Args:
-            self (Self): The Help class instance.
             bot (commands.Bot): The Discord bot instance.
         """
         self.bot = bot
         bot.remove_command("help")
 
-    @commands.Cog.listener()
-    async def on_message(self: Self, message: str) -> None:
-        """
-        Listens for messages and <x>.
-
-        Args:
-            self (Self): The Help class instance.
-            message (str): The message content.
-        """
-        for _ in self.bot.cogs.values():
-            return
-
-        if "wah" not in message.content:
-            return
-
-        ctx = await self.bot.get_context(message)
-        await ctx.send(",".join(str(command.name) for command in self.__cog_app_commands__))
-
     @app_commands.command()
     async def help(
         self: Self, interaction: discord.Interaction, *, command: str | None = None
     ) -> None:
-        """Information on how to use commands."""
+        """
+        Information on how to use commands.
+
+        Args:
+            interaction (discord.Interaction): The user interaction.
+            command (str | None, optional): The name of a module or
+                command. Defaults to None.
+        """
         # Generate main help menu
         if command is None:
             embed = discord.Embed(
@@ -80,7 +70,7 @@ class Help(commands.Cog):
         # Check if specified argument is actually a module
         module = self.bot.get_cog(command)
         if module:
-            embed = await self.command_list(module)
+            embed = await self.generate_command_list(module)
             await interaction.response.send_message(embed=embed)
             return
 
@@ -88,12 +78,14 @@ class Help(commands.Cog):
         cmds = command.split(" ")
         cmd = self.bot.tree.get_command(cmds[0])
         if cmd:
-            for subcmd in cmds[1:]:
-                check = cmd.get_command(subcmd)
-                if not check:
-                    break
-                cmd = check
-            embed = await self.command_info(cmd)
+            if isinstance(cmd, app_commands.Group):
+                cmd_group = cast(app_commands.Group, cmd)
+                for subcmd in cmds[1:]:
+                    check = cmd_group.get_command(subcmd)
+                    if not check:
+                        break
+                    cmd = check
+            embed = await self.generate_command_info(cmd)
             await interaction.response.send_message(embed=embed)
             return
 
@@ -104,8 +96,15 @@ class Help(commands.Cog):
         )
         await interaction.response.send_message(embed=embed)
 
-    async def command_list(self: Self, module: commands.Cog) -> discord.Embed:
-        """Get a list of commands from the selected module."""
+    async def generate_command_list(self: Self, module: commands.Cog) -> discord.Embed:
+        """Get a list of commands from the selected module.
+
+        Args:
+            module (commands.Cog): The module to get the commands from.
+
+        Returns:
+            discord.Embed: The embed containing the command list.
+        """
         command_output, command_group_output = await self.get_formatted_command_list(
             module.__cog_app_commands__
         )
@@ -125,10 +124,22 @@ class Help(commands.Cog):
 
         return embed
 
-    async def command_info(self: Self, command: commands.Command) -> discord.Embed:
-        """Gives you information on how to use a command."""
+    async def generate_command_info(
+        self: Self, command: app_commands.Command | app_commands.Group
+    ) -> discord.Embed:
+        """
+        Gives you information on how to use a command.
+
+        Args:
+            command (app_commands.Command | app_commands.Group): The
+                command to get info on.
+
+        Returns:
+            discord.Embed: The embed containing the command info.
+        """
         # Add arguments if any exists
         try:
+            command = cast(app_commands.Command, command)
             if len(command._params) > 0:  # noqa: SLF001
                 arguments = ""
                 for param in command._params.values():  # noqa: SLF001
@@ -151,6 +162,7 @@ class Help(commands.Cog):
                 embed.add_field(name="Description", value=command.description, inline=False)
         except AttributeError:
             # Add base command entry with command name and usage
+            command = cast(app_commands.Group, command)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.INFO.value,
                 title=f"{constants.EmbedIcon.HELP} {command.qualified_name.title()} Subcommands",
@@ -173,29 +185,48 @@ class Help(commands.Cog):
     async def filter_commands(
         self: Self, ctx: commands.Context, commands: list[commands.Command]
     ) -> list[commands.Command]:
-        """Filter out commands that users don't have permission for."""
+        """
+        Filter out commands that users don't have permission for.
+
+        Args:
+            ctx (commands.Context): The context of the command.
+            commands (list[commands.Command]): The list of commands to
+                filter.
+
+        Returns:
+            list[commands.Command]: The filtered list of commands.
+        """
         filtered_commands = []
         for command in commands:
             try:
                 check = await command.can_run(ctx)
                 if check:
                     filtered_commands.append(command)
-            except discord.ext.commands.CommandError:  # noqa: PERF203
+            except discord.ext.commands.CommandError:
                 pass
         return filtered_commands
 
     async def get_formatted_command_list(
-        self: Self, commands: list[commands.Command]
+        self: Self, commands: list[app_commands.Command | app_commands.Group]
     ) -> tuple[list[str], list[str]]:
-        """Format the command list to look pretty."""
+        """
+        Format the command list to look pretty.
+
+        Args:
+            commands (list[app_commands.Command | app_commands.Group]):
+                The list of commands.
+
+        Returns:
+            tuple[list[str], list[str]]: The formatted command list.
+        """
         command_group_output = []
         command_output = []
         for command in commands:
             # Add as command if it is not a group
-            if hasattr(command, "_params") and command._params:
+            if isinstance(command, app_commands.Command):
                 # Add arguments if any exists
                 arguments = ""
-                for param in command._params.values():
+                for param in command.parameters:
                     if param.required:
                         arguments += f" <{param.name}>"
                     else:
@@ -206,7 +237,7 @@ class Help(commands.Cog):
             command_output.append(f"`{command.name}{arguments}`: {command.description}")
 
             # Add as group
-            if not hasattr(command, "_params") or not command._params:
+            if isinstance(command, app_commands.Group):
                 command_group_output.append(f"`{command.name}`: {command.description}")
 
         return command_output, command_group_output
