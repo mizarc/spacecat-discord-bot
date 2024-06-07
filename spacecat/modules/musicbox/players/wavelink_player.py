@@ -13,11 +13,11 @@ from collections import deque
 from time import time
 from typing import TYPE_CHECKING, Self, override
 
-import toml
+import discord
 import wavelink
 from discord.ext import tasks
 
-from spacecat.helpers import constants
+from spacecat.instance import Instance
 from spacecat.modules.musicbox.music_player import (
     MusicPlayer,
     OriginalSource,
@@ -27,9 +27,9 @@ from spacecat.modules.musicbox.music_player import (
 )
 
 if TYPE_CHECKING:
-    import discord
-
     from spacecat.modules.musicbox.playlist import Playlist, PlaylistSong
+
+VocalGuildChannel = discord.VoiceChannel | discord.StageChannel
 
 
 class WavelinkSong(Song):
@@ -301,16 +301,16 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
     caching to speed up operations.
     """
 
-    def __init__(self: WavelinkMusicPlayer, player: wavelink.Player) -> None:
+    def __init__(self: WavelinkMusicPlayer, instance: Instance, player: wavelink.Player) -> None:
         """
         Initializes a new instance of the WavelinkMusicPlayer class.
 
         Args:
-            self (WavelinkMusicPlayer): The WavelinkMusicPlayer
-                instance.
+            instance (Instance): The instance of the bot.
             player (wavelink.Player): The Wavelink player object.
         """
         self._player: wavelink.Player = player
+        self._instance: Instance = instance
         self._current: WavelinkSong | None = None
         self._next_queue: deque[WavelinkSong] = deque()
         self._previous_queue: deque[WavelinkSong] = deque()
@@ -322,7 +322,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
 
     @classmethod
     async def connect(
-        cls: type[WavelinkMusicPlayer], channel: discord.VoiceChannel
+        cls: type[WavelinkMusicPlayer], instance: Instance, channel: VocalGuildChannel
     ) -> WavelinkMusicPlayer:
         """
         Initialises and connects the Wavelink player to a voice channel.
@@ -332,14 +332,17 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         specified channel.
 
         Args:
+            instance (Instance): The instance of the bot.
             channel (discord.VoiceChannel): The voice channel to connect
                 to.
 
         Returns:
             WavelinkMusicPlayer: The connected player instance.
         """
+        print("Z")
         player: wavelink.Player = await channel.connect(cls=wavelink.Player, self_deaf=True)
-        return cls(player)
+        print("X")
+        return cls(instance, player)
 
     @property
     @override
@@ -551,9 +554,9 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._disconnect_time = time() + self._get_disconnect_time_limit()
 
     def _get_disconnect_time_limit(self: Self) -> int:
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self._instance.get_config()
         return config["music"]["disconnect_time"]
 
     def _is_auto_disconnect(self: Self) -> bool:
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self._instance.get_config()
         return config["music"]["auto_disconnect"]
