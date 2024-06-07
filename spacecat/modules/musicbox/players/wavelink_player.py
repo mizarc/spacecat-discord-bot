@@ -17,7 +17,6 @@ import discord
 import wavelink
 from discord.ext import tasks
 
-from spacecat.instance import Instance
 from spacecat.modules.musicbox.music_player import (
     MusicPlayer,
     OriginalSource,
@@ -27,6 +26,7 @@ from spacecat.modules.musicbox.music_player import (
 )
 
 if TYPE_CHECKING:
+    from spacecat.instance import Instance
     from spacecat.modules.musicbox.playlist import Playlist, PlaylistSong
 
 VocalGuildChannel = discord.VoiceChannel | discord.StageChannel
@@ -339,9 +339,7 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         Returns:
             WavelinkMusicPlayer: The connected player instance.
         """
-        print("Z")
         player: wavelink.Player = await channel.connect(cls=wavelink.Player, self_deaf=True)
-        print("X")
         return cls(instance, player)
 
     @property
