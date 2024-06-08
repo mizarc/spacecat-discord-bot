@@ -390,7 +390,7 @@ class Automation(commands.Cog):
                 display. Defaults to 1.
         """
         # Send alert if interaction is not in a guild.
-        if interaction.guild is None or interaction.channel is not TextChannel:
+        if interaction.guild is None:
             await interaction.response.send_message(
                 embed=discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
@@ -436,7 +436,7 @@ class Automation(commands.Cog):
             index (int): The index of the reminder to be removed.
         """
         # Send alert if interaction is not in a guild.
-        if interaction.guild is None or interaction.channel is not TextChannel:
+        if interaction.guild is None:
             await interaction.response.send_message(
                 embed=discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
@@ -488,7 +488,7 @@ class Automation(commands.Cog):
                 display. Defaults to 1.
         """
         # Send alert if interaction is not in a guild.
-        if interaction.guild is None or interaction.channel is not TextChannel:
+        if interaction.guild is None:
             await interaction.response.send_message(
                 embed=discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
