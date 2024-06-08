@@ -9,19 +9,18 @@ from __future__ import annotations
 
 from typing import Self
 
-import aiofiles
 import discord
-import toml
 from discord import app_commands
 from discord.ext import commands
 
 from spacecat.helpers import constants, perms
+from spacecat.spacecat import SpaceCat
 
 
 class Configuration(commands.Cog):
     """Modify Discord wide bot settings."""
 
-    def __init__(self: Configuration, bot: commands.Bot) -> None:
+    def __init__(self: Configuration, bot: SpaceCat) -> None:
         """Initialize the Configuration cog.
 
         Args:
@@ -34,7 +33,7 @@ class Configuration(commands.Cog):
         """Listener that sets up the config values on launch."""
         # Auto generate the permissions config category with
         # default (@everyone) role
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         try:
             config["permissions"]
         except KeyError:
@@ -44,8 +43,7 @@ class Configuration(commands.Cog):
         except KeyError:
             config["permissions"]["default"] = []
 
-        async with aiofiles.open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
+        self.bot.instance.save_config(config)
 
     @app_commands.command()
     @perms.exclusive()
@@ -57,7 +55,7 @@ class Configuration(commands.Cog):
             interaction (discord.Interaction): The Discord interaction.
             status (discord.Status): The new status to set.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         activity_name = config["base"]["activity_type"]
         try:
             activity = discord.Activity(
@@ -80,8 +78,7 @@ class Configuration(commands.Cog):
             await self.bot.change_presence(status=status)
 
         config["base"]["status"] = status.name
-        async with aiofiles.open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
+        self.bot.instance.save_config(config)
 
     @app_commands.command()
     @perms.exclusive()
@@ -101,7 +98,7 @@ class Configuration(commands.Cog):
                 to set.
             name (str): The text of the activity.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         activity = discord.Activity(
             type=activity_type, name=name, url="https://www.twitch.tv/yeet"
         )
@@ -125,10 +122,9 @@ class Configuration(commands.Cog):
 
         config["base"]["activity_type"] = activity_type.name
         config["base"]["activity_name"] = name
-        async with aiofiles.open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
+        self.bot.instance.save_config(config)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: SpaceCat) -> None:
     """Load the Configuration cog."""
     await bot.add_cog(Configuration(bot))
