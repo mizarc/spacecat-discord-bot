@@ -13,11 +13,9 @@ import sqlite3
 import time
 from typing import TYPE_CHECKING, Self
 
-import aiofiles
 import discord
 import discord.ext.commands
 import pytz
-import toml
 from discord import TextChannel, app_commands
 from discord.ext import commands, tasks
 
@@ -29,7 +27,7 @@ from spacecat.modules.automation.event_scheduler import Event, EventScheduler, R
 from spacecat.modules.automation.reminder_scheduler import Reminder
 
 if TYPE_CHECKING:
-    from discord.ext.commands.bot import Bot
+    from spacecat.spacecat import SpaceCat
 
 
 class InvalidTimeError(Exception):
@@ -83,14 +81,14 @@ class Automation(commands.Cog):
         description="Selected date is invalid. Ensure date is in `date/month/year` format.",
     )
 
-    def __init__(self: Automation, bot: Bot) -> None:
+    def __init__(self: Automation, bot: SpaceCat) -> None:
         """
         Initializes a new instance of the Automation class.
 
         Args:
             bot (SpaceCat): The SpaceCat bot instance.
         """
-        self.bot: Bot = bot
+        self.bot: SpaceCat = bot
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
         self.reminders = reminder_scheduler.ReminderRepository(self.database)
         self.reminder_service = reminder_scheduler.ReminderService(self.bot, self.reminders)
@@ -107,7 +105,7 @@ class Automation(commands.Cog):
         self.load_upcoming_events.start()
 
         # Add config keys
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         if "automation" not in config:
             config["automation"] = {}
         if "max_reminders_per_player" not in config["automation"]:
@@ -116,8 +114,7 @@ class Automation(commands.Cog):
             config["automation"]["max_events_per_server"] = 10
         if "max_actions_per_event" not in config["automation"]:
             config["automation"]["max_actions_per_event"] = 15
-        async with aiofiles.open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
+        self.bot.instance.save_config(config)
 
     def init_event_service(self: Self) -> event_scheduler.EventService:
         """
@@ -1434,7 +1431,7 @@ class Automation(commands.Cog):
             bool: True if the number of reminders exceeds the maximum
                 limit, False otherwise.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         return (
             len(self.reminders.get_by_guild_and_user(guild_id, user_id))
             > config["automation"]["max_reminders_per_player"]
@@ -1451,7 +1448,7 @@ class Automation(commands.Cog):
             bool: True if the number of events exceeds the maximum
                 limit, False otherwise.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         return (
             len(self.events.get_by_guild(guild_id)) > config["automation"]["max_events_per_server"]
         )
@@ -1467,7 +1464,7 @@ class Automation(commands.Cog):
             bool: True if the number of actions exceeds the maximum
                 limit, False otherwise.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         return (
             len(self.event_service.get_actions(event))
             > config["automation"]["max_actions_per_event"]
@@ -1686,7 +1683,7 @@ class Automation(commands.Cog):
         return f"Every {multiplier} {interval_string}"
 
 
-async def setup(bot: Bot) -> None:
+async def setup(bot: SpaceCat) -> None:
     """
     Set up the bot by adding the Automation cog.
 
