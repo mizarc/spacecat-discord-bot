@@ -1,23 +1,61 @@
+"""
+This module provides a cog for music related functionality.
+
+Features within this module include the ability to stream music from
+YouTube and other sources, as well as the ability to save playlists of
+songs.
+
+The provided commands are expected to be used while the user is in a
+voice channel with the bot, and shouldn't be used in DMs.
+"""
+
+from __future__ import annotations
+
 import datetime
 import sqlite3
 import uuid
+from typing import TYPE_CHECKING, Self
 
 import discord
+import wavelink
 from discord import app_commands
 from discord.ext import commands
-import toml
-import wavelink
 
-from spacecat.helpers import constants
-from spacecat.helpers import perms
-from spacecat.helpers.views import PaginatedView, EmptyPaginatedView
-from spacecat.modules.musicbox.music_player import MusicPlayer
-from spacecat.modules.musicbox.players.wavelink_player import *
-from spacecat.modules.musicbox.playlist import *
+from spacecat.helpers import constants, perms
+from spacecat.helpers.views import EmptyPaginatedView, PaginatedView
+from spacecat.modules.musicbox.music_player import (
+    OriginalSource,
+    PlayerResult,
+    SongUnavailableError,
+)
+from spacecat.modules.musicbox.players.wavelink_player import WavelinkMusicPlayer, WavelinkSong
+from spacecat.modules.musicbox.playlist import (
+    Playlist,
+    PlaylistRepository,
+    PlaylistSong,
+    PlaylistSongRepository,
+)
+
+if TYPE_CHECKING:
+    from spacecat.modules.musicbox.music_player import MusicPlayer
+    from spacecat.spacecat import SpaceCat
+
+MINIMUM_QUEUE_SIZE = 2
+MAX_PLAYLIST_NAME_LENGTH = 30
+MAX_PLAYLIST_DESCRIPTION_LENGTH = 300
+MAX_DISPLAY_SONG_NAME_LENGTH = 90
+PLAYLIST_SONG_LIMIT = 100
+
+VocalGuildChannel = discord.VoiceChannel | discord.StageChannel
 
 
 class Musicbox(commands.Cog):
-    """Stream your favourite beats right to your local VC"""
+    """Stream your favourite beats right to your local VC."""
+
+    NOT_IN_SERVER_EMBED = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description="You can't run this command in DMs.",
+    )
 
     NOT_CONNECTED_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
@@ -25,37 +63,43 @@ class Musicbox(commands.Cog):
         "or **/play** to connect me to a channel.",
     )
 
-    NO_VOICE_CHANNEL_EMBED = discord.Embed(
+    NOT_USER_CONNECTED_EMBED = discord.Embed(
         colour=constants.EmbedStatus.FAIL.value,
-        description="You need to be in a voice channel to start playing songs.",
+        description="You need to be in a voice channel with the bot to perform this action.",
     )
 
-    def __init__(self, bot):
+    NOT_SUPPORTED_EMBED = discord.Embed(
+        colour=constants.EmbedStatus.FAIL.value,
+        description="I'm not in a supported voice channel.",
+    )
+
+    def __init__(self: Musicbox, bot: SpaceCat) -> None:
+        """
+        Initializes a new instance of the Musicbox class.
+
+        Args:
+            bot (commands.Bot): The Discord bot instance.
+        """
         self.bot = bot
         self.music_players: dict[int, MusicPlayer] = {}
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
         self.playlists = PlaylistRepository(self.database)
         self.playlist_songs = PlaylistSongRepository(self.database)
 
-    async def cog_load(self):
-        """
-        Loads the cog by initializing configuration settings and
-        Wavelink for music streaming.
-        """
+    async def cog_load(self: Self) -> None:
+        """Initialises configurations on cog load."""
         await self.init_config()
         await self.init_wavelink()
 
-    @staticmethod
-    async def init_config():
+    async def init_config(self: Self) -> None:
         """
-        Initialises configuration settings for the music streaming
-        feature.
+        Initialises configuration settings for the music streaming.
 
         Loads the config file, sets default values for lavalink
         address, port, and password if not present, and writes the
         updated config back to the file.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         if "lavalink" not in config:
             config["lavalink"] = {}
         if "address" not in config["lavalink"]:
@@ -63,22 +107,20 @@ class Musicbox(commands.Cog):
         if "port" not in config["lavalink"]:
             config["lavalink"]["port"] = "2333"
         if "password" not in config["lavalink"]:
-            config["lavalink"]["password"] = "password1"
+            config["lavalink"]["password"] = "password1"  # noqa: S105
 
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
+        self.bot.instance.save_config(config)
 
-    async def init_wavelink(self):
+    async def init_wavelink(self: Self) -> None:
         """
         Initializes the Wavelink client for music streaming.
 
         This function loads the configuration settings from the
-        'config.toml' file located in the 'constants.DATA_DIR'
-        directory. It creates a Wavelink node using the provided
+        instance's config. It creates a Wavelink node using the provided
         address, port, and password. Then, it connects the Wavelink
         client to the node using the provided Discord bot.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         node = wavelink.Node(
             uri=f"{config['lavalink']['address']}:{config['lavalink']['port']}",
             password=config["lavalink"]["password"],
@@ -86,23 +128,25 @@ class Musicbox(commands.Cog):
         await wavelink.Pool.connect(nodes=[node], client=self.bot)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self: Self) -> None:
+        """Initialises configurations on cog load."""
         # Add config keys
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         if "music" not in config:
             config["music"] = {}
         if "auto_disconnect" not in config["music"]:
             config["music"]["auto_disconnect"] = True
         if "disconnect_time" not in config["music"]:
             config["music"]["disconnect_time"] = 300
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
+        self.bot.instance.save_config(config)
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
-        """Disconnect the bot if the last user leaves the channel"""
+    async def on_voice_state_update(
+        self: Self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
+    ) -> None:
+        """Disconnect the bot if the last user leaves the channel."""
         # If bot disconnects from voice, remove music player
-        if member.id == self.bot.user.id and after.channel is None:
+        if self.bot.user and member.id == self.bot.user.id and after.channel is None:
             try:
                 music_player = self.music_players.pop(member.guild.id)
                 await music_player.disable_auto_disconnect()
@@ -111,11 +155,11 @@ class Musicbox(commands.Cog):
 
         # Check if bot voice client isn't active
         voice_client = member.guild.voice_client
-        if not voice_client:
+        if not voice_client or not isinstance(voice_client.channel, VocalGuildChannel):
             return
 
         # Check if auto channel disconnect is disabled
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         if not config["music"]["auto_disconnect"]:
             return
 
@@ -124,11 +168,19 @@ class Musicbox(commands.Cog):
             return
 
         # Disconnect if the bot is the only user left
-        if len(voice_client.channel.members) < 2:
-            await voice_client.disconnect()
+        min_users = 2
+        if len(voice_client.channel.members) < min_users:
+            await voice_client.disconnect(force=False)
 
     @commands.Cog.listener()
-    async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
+    async def on_wavelink_track_end(self: Self, payload: wavelink.TrackEndEventPayload) -> None:
+        """
+        Listener that processses actions when a track ends.
+
+        Args:
+            payload (wavelink.TrackEndEventPayload): The payload
+                containing information about the track that ended.
+        """
         if payload.player is None:
             return
 
@@ -147,10 +199,29 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def join(self, interaction, channel: discord.VoiceChannel = None):
-        """Joins a voice channel"""
+    async def join(
+        self: Self,
+        interaction: discord.Interaction,
+        channel: discord.VoiceChannel | discord.StageChannel | None = None,
+    ) -> None:
+        """Joins a voice channel."""
+        # Alert if user is not running command in server
+        if interaction.guild is None or not isinstance(interaction.user, discord.Member):
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="You can't run this command in DMs.",
+            )
+            await interaction.response.send_message(embed=embed)
+            return
+
+        # Set channel to join to specified, otherwise use user's current channel
+        if channel:
+            channel_to_join = channel
+        elif interaction.user.voice:
+            channel_to_join = interaction.user.voice.channel
+
         # Alert if user is not in a voice channel and no channel is specified
-        if channel is None and not interaction.user.voice:
+        if channel_to_join is None:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="You must be in or specify a voice channel.",
@@ -169,60 +240,73 @@ class Musicbox(commands.Cog):
 
         # Joins player's current voice channel
         if interaction.guild.voice_client is None:
-            if channel is None:
-                channel = interaction.user.voice.channel
-
-            await self._get_music_player(channel)
+            if interaction.user.voice is None:
+                return
+            await self._get_music_player(channel_to_join)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
-                description=f"Joined voice channel `{channel.name}`",
+                description=f"Joined voice channel `{channel_to_join.name}`",
             )
             await interaction.response.send_message(embed=embed)
             return
 
         # Move to specified channel if already connected
-        previous_channel_name = interaction.guild.voice_client.channel.name
-        await interaction.guild.voice_client.move_to(channel)
-        embed = discord.Embed(
-            colour=constants.EmbedStatus.YES.value,
-            description=(
-                f"Moved from voice channel `{previous_channel_name}` "
-                f"to voice channel `{channel.name}`"
-            ),
-        )
-        await interaction.response.send_message(embed=embed)
-        return
+        if isinstance(interaction.guild.voice_client, discord.VoiceClient | discord.StageChannel):
+            previous_channel_name = interaction.guild.voice_client.channel.name
+            await interaction.guild.voice_client.move_to(channel)
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.YES.value,
+                description=(
+                    f"Moved from voice channel `{previous_channel_name}` "
+                    f"to voice channel `{channel_to_join.name}`"
+                ),
+            )
+            await interaction.response.send_message(embed=embed)
+            return
 
     @app_commands.command()
     @perms.check()
-    async def leave(self, interaction):
-        """Stops and leaves the voice channel"""
-        # Alert of not in voice channel
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def leave(self: Self, interaction: discord.Interaction) -> None:
+        """Stops and leaves the voice channel."""
+        music_player, voice_channel = await self._find_music_player(interaction)
+        if music_player is None or voice_channel is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
-        # Stop and Disconnect from voice channel
-        voice_channel_name = interaction.guild.voice_client.channel.name
         await music_player.disconnect()
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
-            description=f"Disconnected from voice channel `{voice_channel_name}`",
+            description=f"Disconnected from voice channel `{voice_channel.name}`",
         )
         await interaction.response.send_message(embed=embed)
-        return
 
     @app_commands.command()
     @perms.check()
-    async def play(self, interaction: discord.Interaction, url: str, position: int = -1):
-        """Plays from a url or search query"""
-        # Join channel and create music player instance if it doesn't exist
-        try:
-            music_player = await self._get_music_player(interaction.user.voice.channel)
-        except AttributeError:
-            await interaction.response.send_message(embed=self.NO_VOICE_CHANNEL_EMBED)
+    async def play(
+        self: Self, interaction: discord.Interaction, url: str, position: int = -1
+    ) -> None:
+        """Plays from a url or search query."""
+        # Alert if user is not running command in server
+        if interaction.guild is None or not isinstance(interaction.user, discord.Member):
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="You can't run this command in DMs.",
+            )
+            await interaction.response.send_message(embed=embed)
             return
+
+        # Alert if user is not in a voice channel
+        if interaction.user.voice is None:
+            await interaction.response.send_message(embed=self.NOT_USER_CONNECTED_EMBED)
+            return
+
+        # Alert if bot not in supported voice channel
+        voice_channel = interaction.user.voice.channel
+        if not isinstance(voice_channel, VocalGuildChannel):
+            await interaction.response.send_message(embed=self.NOT_SUPPORTED_EMBED)
+            return
+
+        # Join channel and create music player instance if it doesn't exist
+        music_player = await self._get_music_player(voice_channel)
 
         if position > len(music_player.next_queue) or position < 1:
             position = len(music_player.next_queue) + 1
@@ -241,9 +325,9 @@ class Musicbox(commands.Cog):
             return
 
         # Add playlist
-        if (
-            songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST
-            or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST
+        if songs[0].original_source in (
+            OriginalSource.YOUTUBE_PLAYLIST,
+            OriginalSource.SPOTIFY_PLAYLIST,
         ):
             result = await music_player.add_multiple(songs, position - 1)
             if result == PlayerResult.PLAYING:
@@ -253,7 +337,7 @@ class Musicbox(commands.Cog):
                 )
                 await interaction.followup.send(embed=embed)
                 return
-            elif result == PlayerResult.QUEUEING:
+            if result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from playlist "
@@ -264,9 +348,9 @@ class Musicbox(commands.Cog):
                 return
 
         # Add album
-        if (
-            songs[0].original_source == OriginalSource.YOUTUBE_ALBUM
-            or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM
+        if songs[0].original_source in (
+            OriginalSource.YOUTUBE_ALBUM,
+            OriginalSource.SPOTIFY_ALBUM,
         ):
             result = await music_player.add_multiple(songs, position - 1)
             if result == PlayerResult.PLAYING:
@@ -276,7 +360,7 @@ class Musicbox(commands.Cog):
                 )
                 await interaction.followup.send(embed=embed)
                 return
-            elif result == PlayerResult.QUEUEING:
+            if result == PlayerResult.QUEUEING:
                 embed = discord.Embed(
                     colour=constants.EmbedStatus.YES.value,
                     description=f"Added `{len(songs)}` songs from album "
@@ -301,7 +385,7 @@ class Musicbox(commands.Cog):
             )
             await interaction.followup.send(embed=embed)
             return
-        elif result == PlayerResult.QUEUEING:
+        if result == PlayerResult.QUEUEING:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Song {song_name} added to #{position} in queue",
@@ -311,7 +395,8 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def playsearch(self, interaction: discord.Interaction, search: str):
+    async def playsearch(self: Self, interaction: discord.Interaction, search: str) -> None:
+        """Queries a list of songs to play."""
         # Alert user if search term returns no results
         songs = await self._get_songs(search, interaction.user)
         if not songs:
@@ -323,11 +408,10 @@ class Musicbox(commands.Cog):
             return
 
         # Format the data to be in a usable list
-        results_format = []
-        for i in range(0, 5):
-            results_format.append(
-                f"{i+1}. [{songs[i].title}]({songs[i].url}) " f"`{songs[i].duration}`"
-            )
+        results_format = [
+            f"{i+1}. [{song.title}]({song.url}) `{song.duration}`"
+            for i, song in enumerate(songs[:5])
+        ]
 
         # Output results to chat
         embed = discord.Embed(
@@ -340,12 +424,11 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def stop(self, interaction: discord.Interaction):
-        """Stops and clears the queue"""
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def stop(self: Self, interaction: discord.Interaction) -> None:
+        """Stops and clears the queue."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         await music_player.clear()
         await music_player.stop()
@@ -357,12 +440,11 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def resume(self, interaction):
-        """Resumes music if paused"""
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def resume(self: Self, interaction: discord.Interaction) -> None:
+        """Resumes music if paused."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if music isn't paused
         if not music_player.is_paused:
@@ -382,13 +464,11 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def pause(self, interaction):
-        """Pauses the music"""
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def pause(self: Self, interaction: discord.Interaction) -> None:
+        """Pauses the music."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Check if music is paused
         if music_player.is_paused:
@@ -408,14 +488,12 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def seek(self, interaction: discord.Interaction, timestamp: str):
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def seek(self: Self, interaction: discord.Interaction, timestamp: str) -> None:
+        """Seeks to a specific position in the song."""
+        music_player, voice_channel = await self._find_music_player(interaction)
+        if music_player is None or voice_channel is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
-        # Pauses music playback
         seconds = self._parse_time(timestamp)
         await music_player.seek(seconds)
         embed = discord.Embed(
@@ -426,13 +504,11 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def skip(self, interaction: discord.Interaction):
-        """Skip the current song and play the next song"""
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def skip(self: Self, interaction: discord.Interaction) -> None:
+        """Skip the current song and play the next song."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Check if there's queue is empty
         if len(music_player.next_queue) < 1:
@@ -464,13 +540,11 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def prev(self, interaction: discord.Interaction):
-        """Go back in the queue to an already played song"""
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def prev(self: Self, interaction: discord.Interaction) -> None:
+        """Go back in the queue to an already played song."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Check if there's queue is empty
         if len(music_player.previous_queue) < 1:
@@ -493,16 +567,14 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def shuffle(self, interaction):
-        """Randomly moves the contents of the queue around"""
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def shuffle(self: Self, interaction: discord.Interaction) -> None:
+        """Randomly moves the contents of the queue around."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if not enough songs in queue
-        if len(music_player.next_queue) < 2:
+        if len(music_player.next_queue) < MINIMUM_QUEUE_SIZE:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's nothing in the queue to shuffle",
@@ -521,13 +593,12 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def loop(self, interaction):
+    async def loop(self: Self, interaction: discord.Interaction) -> None:
         """Loop the currently playing song."""
         # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Disable loop if enabled
         if music_player.is_looping:
@@ -546,13 +617,11 @@ class Musicbox(commands.Cog):
 
     @app_commands.command()
     @perms.check()
-    async def unloop(self, interaction: discord.Interaction):
+    async def unloop(self: Self, interaction: discord.Interaction) -> None:
         """Unloops so that the queue resumes as usual."""
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Disable loop if enabled
         if not music_player.is_looping:
@@ -570,13 +639,11 @@ class Musicbox(commands.Cog):
         return
 
     @app_commands.command()
-    async def song(self, interaction: discord.Interaction):
+    async def song(self: Self, interaction: discord.Interaction) -> None:
         """List information about the currently playing song."""
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Alert if nothing is playing
         song = music_player.playing
@@ -602,12 +669,12 @@ class Musicbox(commands.Cog):
             f"`{current_time}/{duration}`\n\u200b",
         )
 
-        if (
-            song.original_source == OriginalSource.YOUTUBE_ALBUM
-            or song.original_source == OriginalSource.SPOTIFY_ALBUM
-            or song.original_source == OriginalSource.YOUTUBE_PLAYLIST
-            or song.original_source == OriginalSource.SPOTIFY_PLAYLIST
-            or song.original_source == OriginalSource.LOCAL
+        if song.original_source in (
+            OriginalSource.YOUTUBE_ALBUM,
+            OriginalSource.SPOTIFY_ALBUM,
+            OriginalSource.YOUTUBE_PLAYLIST,
+            OriginalSource.SPOTIFY_PLAYLIST,
+            OriginalSource.LOCAL,
         ):
             embed.add_field(
                 name=f"Fetched from {song.original_source.value}",
@@ -616,19 +683,19 @@ class Musicbox(commands.Cog):
             )
         elif song.original_source == OriginalSource.YOUTUBE_VIDEO:
             embed.add_field(
-                name=f"Fetched from Site",
+                name="Fetched from Site",
                 value=f"[{song.original_source.value}](https://youtube.com)",
                 inline=False,
             )
         elif song.original_source == OriginalSource.YOUTUBE_SONG:
             embed.add_field(
-                name=f"Fetched from Site",
+                name="Fetched from Site",
                 value=f"[{song.original_source.value}](https://music.youtube.com)",
                 inline=False,
             )
         elif song.original_source == OriginalSource.SPOTIFY_SONG:
             embed.add_field(
-                name=f"Fetched from Site",
+                name="Fetched from Site",
                 value=f"[{song.original_source.value}](https://open.spotify.com)",
                 inline=False,
             )
@@ -643,12 +710,11 @@ class Musicbox(commands.Cog):
 
     @queue_group.command(name="list")
     @perms.check()
-    async def queue_list(self, interaction: discord.Interaction, page: int = 1):
-        """List the current song queue"""
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def queue_list(self: Self, interaction: discord.Interaction, page: int = 1) -> None:
+        """List the current song queue."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Notify user if nothing is in the queue
         playing = music_player.playing
@@ -697,18 +763,17 @@ class Musicbox(commands.Cog):
         else:
             paginated_view = EmptyPaginatedView(
                 embed,
-                f"Queue `0:00`",
+                "Queue `0:00`",
                 "Nothing else is queued up. " "Add more songs and they will appear here.",
             )
         await paginated_view.send(interaction)
 
     @queue_group.command(name="prevlist")
-    async def queue_prevlist(self, interaction: discord.Interaction, page: int = 1):
-        """List the current song queue"""
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def queue_prevlist(self: Self, interaction: discord.Interaction, page: int = 1) -> None:
+        """List the current song queue."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Notify user if nothing is in the queue
         playing = music_player.playing
@@ -755,28 +820,24 @@ class Musicbox(commands.Cog):
         else:
             paginated_view = EmptyPaginatedView(
                 embed,
-                f"Queue `0:00`",
+                "Queue `0:00`",
                 "Nothing here yet. Songs that have previously played with appear here.",
             )
         await paginated_view.send(interaction)
 
     @queue_group.command(name="reorder")
     @perms.check()
-    async def queue_reorder(self, interaction, original_pos: int, new_pos: int):
-        """Move a song to a different position in the queue"""
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def queue_reorder(
+        self: Self, interaction: discord.Interaction, original_pos: int, new_pos: int
+    ) -> None:
+        """Move a song to a different position in the queue."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove song from queue using the specified index
         queue = music_player.next_queue
-        try:
-            if original_pos < 1:
-                raise IndexError("Position can't be be less than 1")
-            song = queue[original_pos - 1]
-        except IndexError:
+        if original_pos < 1:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's no song at that position",
@@ -785,6 +846,7 @@ class Musicbox(commands.Cog):
             return
 
         # Move song into new position in queue
+        song = queue[original_pos - 1]
         if not 1 <= new_pos <= len(queue):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
@@ -805,28 +867,22 @@ class Musicbox(commands.Cog):
 
     @queue_group.command(name="remove")
     @perms.check()
-    async def queue_remove(self, interaction, position: int):
-        """Remove a song from the queue"""
-        # Get music player
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def queue_remove(self: Self, interaction: discord.Interaction, position: int) -> None:
+        """Remove a song from the queue."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove song from queue using the specified index
-        queue = music_player.next_queue
-        try:
-            if position < 1:
-                raise IndexError("Position can't be less than 1")
-            song = queue[position - 1]
-            await music_player.remove(position - 1)
-        except IndexError:
+        if position < 1 or position > len(music_player.next_queue):
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="That's an invalid queue position.",
             )
             await interaction.response.send_message(embed=embed)
             return
+        song = music_player.next_queue[position - 1]
+        await music_player.remove(position - 1)
 
         # Output result to chat
         duration = await self._format_duration(song.duration)
@@ -839,12 +895,11 @@ class Musicbox(commands.Cog):
 
     @queue_group.command(name="clear")
     @perms.check()
-    async def queue_clear(self, interaction):
-        """Clears the entire queue"""
-        if not interaction.guild.voice_client:
-            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+    async def queue_clear(self: Self, interaction: discord.Interaction) -> None:
+        """Clears the entire queue."""
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
-        music_player = await self._get_music_player(interaction.user.voice.channel)
 
         # Try to remove all but the currently playing song from the queue
         if len(music_player.next_queue) < 1:
@@ -864,10 +919,16 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name="create")
     @perms.check()
-    async def playlist_create(self, interaction: discord.Interaction, playlist_name: str):
-        """Create a new playlist"""
+    async def playlist_create(
+        self: Self, interaction: discord.Interaction, playlist_name: str
+    ) -> None:
+        """Create a new playlist."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Limit playlist name to 30 chars
-        if len(playlist_name) > 30:
+        if len(playlist_name) > MAX_PLAYLIST_NAME_LENGTH:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Playlist name is too long",
@@ -894,8 +955,14 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name="destroy")
     @perms.check()
-    async def playlist_destroy(self, interaction, playlist_name: str):
-        """Deletes an existing playlist"""
+    async def playlist_destroy(
+        self: Self, interaction: discord.Interaction, playlist_name: str
+    ) -> None:
+        """Deletes an existing playlist."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Alert if playlist doesn't exist in db
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
@@ -907,10 +974,13 @@ class Musicbox(commands.Cog):
             )
             return
 
-        # Remove playlist from database and all songs linked to it
+        # Remove all playlist songs
         playlist_songs = self.playlist_songs.get_by_playlist(playlist.id)
-        for song in playlist_songs:
-            self.playlist_songs.remove(song.id)
+        if playlist_songs:
+            for song in playlist_songs:
+                self.playlist_songs.remove(song.id)
+
+        # Remove the playlist itself
         self.playlists.remove(playlist.id)
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -920,8 +990,14 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name="description")
     @perms.check()
-    async def playlist_description(self, interaction, playlist_name: str, description: str):
-        """Sets the description for the playlist"""
+    async def playlist_description(
+        self: Self, interaction: discord.Interaction, playlist_name: str, description: str
+    ) -> None:
+        """Sets the description for the playlist."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Alert if playlist doesn't exist
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
@@ -933,7 +1009,7 @@ class Musicbox(commands.Cog):
             return
 
         # Limit playlist description to 300 chars
-        if len(description) > 300:
+        if len(description) > MAX_PLAYLIST_DESCRIPTION_LENGTH:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="Description is too long",
@@ -942,7 +1018,7 @@ class Musicbox(commands.Cog):
             return
 
         # Update playlist last modified
-        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        playlist.modified_date = datetime.datetime.now(tz=datetime.UTC)
         self.playlists.update(playlist)
 
         # Update playlist description
@@ -956,8 +1032,14 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name="rename")
     @perms.check()
-    async def playlist_rename(self, interaction, playlist_name: str, new_name: str):
-        """Rename an existing playlist"""
+    async def playlist_rename(
+        self: Self, interaction: discord.Interaction, playlist_name: str, new_name: str
+    ) -> None:
+        """Rename an existing playlist."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Get the playlist
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
@@ -969,7 +1051,7 @@ class Musicbox(commands.Cog):
             return
 
         # Update playlist last modified
-        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        playlist.modified_date = datetime.datetime.now(tz=datetime.UTC)
         self.playlists.update(playlist)
 
         # Update playlist name
@@ -983,8 +1065,12 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name="list")
     @perms.check()
-    async def playlist_list(self, interaction: discord.Interaction, page: int = 1):
-        """List all available playlists"""
+    async def playlist_list(self: Self, interaction: discord.Interaction, page: int = 1) -> None:
+        """List all available playlists."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Get playlist from repo
         playlists = self.playlists.get_by_guild(interaction.guild)
         if not playlists:
@@ -1019,8 +1105,14 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name="add")
     @perms.check()
-    async def playlist_add(self, interaction, playlist_name: str, url: str):
-        """Adds a song to a playlist"""
+    async def playlist_add(
+        self: Self, interaction: discord.Interaction, playlist_name: str, url: str
+    ) -> None:
+        """Adds a song to a playlist."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Get playlist from repo
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
@@ -1033,7 +1125,7 @@ class Musicbox(commands.Cog):
 
         # Check if playlist limit has been reached
         playlist_songs = self.playlist_songs.get_by_playlist(playlist.id)
-        if len(playlist_songs) > 100:
+        if len(playlist_songs) > PLAYLIST_SONG_LIMIT:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
                 description="There's too many songs in the playlist. Remove"
@@ -1057,7 +1149,7 @@ class Musicbox(commands.Cog):
             return
 
         # Update playlist last modified
-        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        playlist.modified_date = datetime.datetime.now(tz=datetime.UTC)
         self.playlists.update(playlist)
 
         # Set previous song as the last song in the playlist
@@ -1069,12 +1161,12 @@ class Musicbox(commands.Cog):
             for playlist_song in playlist_songs:
                 song_ids.append(playlist_song.id)
                 previous_ids.append(playlist_song.previous_id)
-            previous_id = list(set(song_ids) - set(previous_ids))[0]
+            previous_id = next(iter(set(song_ids) - set(previous_ids)))
 
         # Add playlist
-        if (
-            songs[0].original_source == OriginalSource.YOUTUBE_PLAYLIST
-            or songs[0].original_source == OriginalSource.SPOTIFY_PLAYLIST
+        if songs[0].original_source in (
+            OriginalSource.YOUTUBE_PLAYLIST,
+            OriginalSource.SPOTIFY_PLAYLIST,
         ):
             for song in songs:
                 new_playlist_song = PlaylistSong.create_new(
@@ -1098,9 +1190,9 @@ class Musicbox(commands.Cog):
             return
 
         # Add album
-        if (
-            songs[0].original_source == OriginalSource.YOUTUBE_ALBUM
-            or songs[0].original_source == OriginalSource.SPOTIFY_ALBUM
+        if songs[0].original_source in (
+            OriginalSource.YOUTUBE_ALBUM,
+            OriginalSource.SPOTIFY_ALBUM,
         ):
             for song in songs:
                 new_playlist_song = PlaylistSong.create_new(
@@ -1149,8 +1241,14 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name="remove")
     @perms.check()
-    async def playlist_remove(self, interaction, playlist_name: str, index: int):
-        """Removes a song from a playlist"""
+    async def playlist_remove(
+        self: Self, interaction: discord.Interaction, playlist_name: str, index: int
+    ) -> None:
+        """Removes a song from a playlist."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Get playlist from repo
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
@@ -1176,7 +1274,7 @@ class Musicbox(commands.Cog):
             pass
 
         # Update playlist last modified
-        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        playlist.modified_date = datetime.datetime.now(tz=datetime.UTC)
         self.playlists.update(playlist)
 
         # Remove selected song from playlist
@@ -1192,9 +1290,17 @@ class Musicbox(commands.Cog):
     @playlist_group.command(name="reorder")
     @perms.check()
     async def playlist_reorder(
-        self, interaction, playlist_name: str, original_pos: int, new_pos: int
-    ):
-        """Moves a song to a specified position in a playlist"""
+        self: Self,
+        interaction: discord.Interaction,
+        playlist_name: str,
+        original_pos: int,
+        new_pos: int,
+    ) -> None:
+        """Moves a song to a specified position in a playlist."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Get playlist from repo
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
@@ -1241,7 +1347,7 @@ class Musicbox(commands.Cog):
             pass
 
         # Update playlist last modified
-        playlist.modified_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        playlist.modified_date = datetime.datetime.now(tz=datetime.UTC)
         self.playlists.update(playlist)
 
         # Output result to chat
@@ -1257,8 +1363,14 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name="view")
     @perms.check()
-    async def playlist_view(self, interaction, playlist_name: str, page: int = 1):
-        """List all songs in a playlist"""
+    async def playlist_view(
+        self: Self, interaction: discord.Interaction, playlist_name: str, page: int = 1
+    ) -> None:
+        """List all songs in a playlist."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Fetch songs from playlist if it exists
         playlist = self.playlists.get_by_name_in_guild(playlist_name, interaction.guild)
         if not playlist:
@@ -1275,7 +1387,11 @@ class Musicbox(commands.Cog):
         formatted_songs = []
         for song in songs:
             total_duration += song.duration
-            song_name = song.title[:87] + "..." if len(song.title) > 90 else song.title
+            song_name = (
+                song.title[:87] + "..."
+                if len(song.title) > MAX_DISPLAY_SONG_NAME_LENGTH
+                else song.title
+            )
             duration = await self._format_duration(song.duration)
             artist = f"{song.artist} - " if song.artist else ""
             formatted_songs.append(
@@ -1303,13 +1419,17 @@ class Musicbox(commands.Cog):
 
     @playlist_group.command(name="play")
     @perms.check()
-    async def playlist_play(self, interaction: discord.Interaction, playlist_name: str):
-        """Play from a locally saved playlist"""
+    async def playlist_play(
+        self: Self, interaction: discord.Interaction, playlist_name: str
+    ) -> None:
+        """Play from a locally saved playlist."""
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return
+
         # Get music player
-        try:
-            music_player = await self._get_music_player(interaction.user.voice.channel)
-        except AttributeError:
-            await interaction.response.send_message(embed=self.NO_VOICE_CHANNEL_EMBED)
+        music_player, _ = await self._find_music_player(interaction)
+        if music_player is None:
             return
 
         # Fetch songs from playlist if it exists
@@ -1353,11 +1473,14 @@ class Musicbox(commands.Cog):
 
     @musicsettings_group.command(name="autodisconnect")
     @perms.exclusive()
-    async def musicsettings_autodisconnect(self, interaction):
+    async def musicsettings_autodisconnect(self: Self, interaction: discord.Interaction) -> None:
         """
         Toggles if the bot should auto disconnect from a voice channel.
+
+        Args:
+            interaction (discord.Interaction): The user interaction.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
 
         # Toggle auto_disconnect config setting
         if config["music"]["auto_disconnect"]:
@@ -1367,8 +1490,7 @@ class Musicbox(commands.Cog):
             config["music"]["auto_disconnect"] = True
             result_text = "enabled"
 
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
+        self.bot.instance.save_config(config)
 
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
@@ -1378,29 +1500,30 @@ class Musicbox(commands.Cog):
 
     @musicsettings_group.command(name="disconnecttime")
     @perms.exclusive()
-    async def musicsettings_disconnecttime(self, interaction, seconds: int):
+    async def musicsettings_disconnecttime(
+        self: Self, interaction: discord.Interaction, seconds: int
+    ) -> None:
         """
-        Sets a time for when the bot should auto disconnect from voice
-        if not playing.
+        Sets a auto disconnect time after a bot has stopped playing.
+
+        This should start the moment the last song has finished playing,
+        and resets when another song is played.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
 
         # Set disconnect_time config variable
         config["music"]["disconnect_time"] = seconds
-        with open(constants.DATA_DIR + "config.toml", "w") as config_file:
-            toml.dump(config, config_file)
+        self.bot.instance.save_config(config)
 
         embed = discord.Embed(
             colour=constants.EmbedStatus.YES.value,
             description=f"Music player auto disconnect timer set to {seconds} seconds",
         )
         await interaction.response.send_message(embed=embed)
-        return
 
-    async def _get_music_player(self, channel: discord.VoiceChannel) -> MusicPlayer:
+    async def _get_music_player(self: Self, channel: VocalGuildChannel) -> MusicPlayer:
         """
-        Retrieves the music player associated with the given voice
-        channel.
+        Retrieves or creates a music player in a given voice channel.
 
         Args:
             channel (discord.VoiceChannel): The voice channel for which
@@ -1413,13 +1536,12 @@ class Musicbox(commands.Cog):
         try:
             music_player = self.music_players[channel.guild.id]
         except KeyError:
-            music_player = WavelinkMusicPlayer()
-            await music_player.connect(channel)
+            music_player = await WavelinkMusicPlayer.connect(self.bot.instance, channel)
             self.music_players[channel.guild.id] = music_player
         return music_player
 
     @staticmethod
-    async def _get_songs(query: str, requester: discord.User) -> list[WavelinkSong]:
+    async def _get_songs(query: str, requester: discord.abc.User) -> list[WavelinkSong]:
         """
         Get songs based on a query and requester.
 
@@ -1435,8 +1557,8 @@ class Musicbox(commands.Cog):
 
     @staticmethod
     async def _get_song_from_saved(
-        playlist_song: PlaylistSong, playlist: Playlist, requester: discord.User
-    ) -> list["WavelinkSong"]:
+        playlist_song: PlaylistSong, playlist: Playlist, requester: discord.abc.User
+    ) -> list[WavelinkSong]:
         """
         Get a song from a saved playlist.
 
@@ -1451,11 +1573,78 @@ class Musicbox(commands.Cog):
         """
         return await WavelinkSong.from_local(requester, playlist_song, playlist)
 
-    @staticmethod
-    async def _format_duration(milliseconds) -> str:
+    async def _find_music_player(
+        self: Self, interaction: discord.Interaction
+    ) -> tuple[MusicPlayer | None, VocalGuildChannel | None]:
         """
-        Format the duration in milliseconds into a
-        human-readable format.
+        Try to find a music player based on the user's state.
+
+        In order for a user to be able to interact with a music player,
+        they must exist in the same voice channel as the bot with a
+        currently active music player.
+
+        This method will send message alerts depending on what is
+        causing it to fail to find a music player.
+
+        Args:
+            interaction (discord.Interaction): The user interaction.
+
+        Returns:
+            MusicPlayer | None: The music player associated with the
+                bot, else None if it cannot be found.
+        """
+        # Alert if user is not running command in server
+        if interaction.guild is None or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message(embed=self.NOT_IN_SERVER_EMBED)
+            return None, None
+
+        # Alert if bot not in voice channel
+        if not interaction.guild.voice_client or not interaction.guild.voice_client.channel:
+            await interaction.response.send_message(embed=self.NOT_CONNECTED_EMBED)
+            return None, None
+
+        # Alert if user not in voice channel.
+        if (
+            not interaction.user.voice
+            or interaction.user.voice.channel != interaction.guild.voice_client.channel
+        ):
+            await interaction.response.send_message(embed=self.NOT_USER_CONNECTED_EMBED)
+            return None, None
+
+        # Alert if bot not in supported voice channel
+        voice_channel = interaction.guild.voice_client.channel
+        if not isinstance(voice_channel, VocalGuildChannel):
+            await interaction.response.send_message(embed=self.NOT_SUPPORTED_EMBED)
+            return None, None
+
+        return await self._get_music_player(voice_channel), voice_channel
+
+    async def _get_player_channel(
+        self: Self, interaction: discord.Interaction
+    ) -> VocalGuildChannel | None:
+        """
+        Get the voice channel the bot is connected to.
+
+        Returns:
+            VocalGuildChannel | None: The voice channel the bot is
+                connected to, else None if it cannot be found.
+        """
+        if (
+            not interaction.guild
+            or not interaction.guild.voice_client
+            or not interaction.guild.voice_client.channel
+        ):
+            return None
+
+        if not isinstance(interaction.guild.voice_client.channel, VocalGuildChannel):
+            return None
+
+        return interaction.guild.voice_client.channel
+
+    @staticmethod
+    async def _format_duration(milliseconds: int) -> str:
+        """
+        Format the duration in milliseconds to a human readable format.
 
         Args:
             milliseconds (int): The duration in milliseconds.
@@ -1470,25 +1659,25 @@ class Musicbox(commands.Cog):
         minutes, seconds = divmod(remainder, 60)
 
         formatted = ""
+        overflow_value = 10
         if hours:
-            if hours < 10:
-                formatted += f"0{str(hours)}:"
+            if hours < overflow_value:
+                formatted += f"0{hours!s}:"
             else:
-                formatted += f"{str(hours)}:"
+                formatted += f"{hours!s}:"
 
         if minutes:
-            if minutes < 10:
+            if minutes < overflow_value:
                 formatted += f"0{minutes}:"
             else:
                 formatted += f"{minutes}:"
+        elif hours:
+            formatted += "00:"
         else:
-            if hours:
-                formatted += "00:"
-            else:
-                formatted += "0:"
+            formatted += "0:"
 
         if seconds:
-            if seconds < 10:
+            if seconds < overflow_value:
                 formatted += f"0{seconds}"
             else:
                 formatted += f"{seconds}"
@@ -1498,7 +1687,9 @@ class Musicbox(commands.Cog):
         return formatted
 
     @staticmethod
-    async def _order_playlist_songs(playlist_songs) -> list[PlaylistSong]:
+    async def _order_playlist_songs(
+        playlist_songs: list[PlaylistSong],
+    ) -> list[PlaylistSong]:
         """
         Orders a list of playlist songs based on their song ID ordering.
 
@@ -1526,10 +1717,9 @@ class Musicbox(commands.Cog):
         return ordered_songs
 
     @staticmethod
-    def _parse_time(time_string) -> int:
+    def _parse_time(time_string: str) -> int:
         """
-        Parses a time string and returns the equivalent time
-        in milliseconds.
+        Parses a time string and returns it in milliseconds.
 
         Args:
             time_string (str): The time string to be parsed.
@@ -1539,15 +1729,11 @@ class Musicbox(commands.Cog):
             int: The equivalent time in milliseconds.
         """
         time_split = time_string.split(":")
-        hours, minutes, seconds = 0, 0, 0
-        if len(time_split) >= 3:
-            hours = time_split[-3]
-        if len(time_split) >= 2:
-            minutes = time_split[-2]
-        if len(time_split) >= 1:
-            seconds = time_split[-1]
-        return int(hours) * 3600000 + int(minutes) * 60000 + int(seconds) * 1000
+        time_split += ["0"] * (3 - len(time_split))
+        hours, minutes, seconds = map(int, time_split)
+        return hours * 3600000 + minutes * 60000 + seconds * 1000
 
 
-async def setup(bot):
+async def setup(bot: SpaceCat) -> None:
+    """Set up the musicbox cog."""
     await bot.add_cog(Musicbox(bot))
