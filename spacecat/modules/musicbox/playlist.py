@@ -222,7 +222,7 @@ class PlaylistRepository:
         result = self.db.cursor().execute("SELECT * FROM playlist WHERE id=?", (id_,)).fetchone()
         return self._result_to_playlist(result)
 
-    def get_by_guild(self: Self, guild: discord.Guild) -> list[Playlist | None]:
+    def get_by_guild(self: Self, guild: discord.Guild) -> list[Playlist]:
         """
         Get list of all playlists in a guild.
 
@@ -238,7 +238,11 @@ class PlaylistRepository:
         cursor.execute("SELECT * FROM playlist WHERE guild_id=?", values)
         results = cursor.fetchall()
 
-        return [self._result_to_playlist(result) for result in results]
+        return [
+            playlist
+            for playlist in [self._result_to_playlist(result) for result in results]
+            if playlist is not None
+        ]
 
     def get_by_name_in_guild(self: Self, name: str, guild: discord.Guild) -> Playlist | None:
         """
@@ -546,7 +550,7 @@ class PlaylistSongRepository:
         )
         return self._result_to_playlist_song(result)
 
-    def get_by_playlist(self: Self, playlist_id: uuid.UUID) -> list[PlaylistSong | None]:
+    def get_by_playlist(self: Self, playlist_id: uuid.UUID) -> list[PlaylistSong]:
         """
         Get a list of all songs in a playlist.
 
@@ -562,7 +566,11 @@ class PlaylistSongRepository:
         cursor = self.db.cursor()
         cursor.execute("SELECT * FROM playlist_songs WHERE playlist_id=?", (str(playlist_id),))
         results = cursor.fetchall()
-        return [self._result_to_playlist_song(result) for result in results]
+        return [
+            song
+            for song in [self._result_to_playlist_song(result) for result in results]
+            if song is not None
+        ]
 
     def add(self: Self, playlist_song: PlaylistSong) -> None:
         """
