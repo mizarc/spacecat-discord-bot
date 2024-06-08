@@ -74,13 +74,12 @@ class Song(ABC, Generic[StreamType]):
 
     @property
     @abstractmethod
-    def artist(self: Self) -> str | None:
+    def artist(self: Self) -> str:
         """
         Get the artist of the song.
 
         Returns:
-            Optional[str]: The artist of the song, or None if the artist
-                is not available.
+            str: The artist of the song
         """
 
     @property
