@@ -1576,52 +1576,24 @@ class Automation(commands.Cog):
             str: The formatted string representation of the time
                 duration.
         """
-        years = timedelta.days // 365
-        months = (timedelta.days - years * 365) // 30
-        weeks = (timedelta.days - years * 365 - months * 30) // 7
-        days = timedelta.days - years * 365 - months * 30 - weeks * 7
+        duration = timedelta.total_seconds()
+        years, seconds = divmod(duration, 31536000)
+        months, seconds = divmod(seconds, 2592000)
+        weeks, seconds = divmod(seconds, 604800)
+        days, seconds = divmod(seconds, 86400)
+        hours, seconds = divmod(seconds, 3600)
+        minutes, _ = divmod(seconds, 60)
 
-        hours = timedelta.seconds // 3600
-        minutes = (timedelta.seconds - hours * 3600) // 60
-        seconds = timedelta.seconds - hours * 3600 - minutes * 60
+        labels = [
+            ("year", years),
+            ("month", months),
+            ("week", weeks),
+            ("day", days),
+            ("hour", hours),
+            ("minute", minutes),
+        ]
 
-        output = ""
-        if years:
-            if years > 1:
-                output += f"{years} years, "
-            else:
-                output += f"{years} year, "
-        if months:
-            if months > 1:
-                output += f"{months} months, "
-            else:
-                output += f"{months} month, "
-        if weeks:
-            if weeks > 1:
-                output += f"{weeks} weeks, "
-            else:
-                output += f"{weeks} week, "
-        if days:
-            if days > 1:
-                output += f"{days} days, "
-            else:
-                output += f"{days} day, "
-        if hours:
-            if hours > 1:
-                output += f"{hours} hours, "
-            else:
-                output += f"{hours} hour, "
-        if minutes:
-            if minutes > 1:
-                output += f"{minutes} minutes, "
-            else:
-                output += f"{minutes} minute, "
-        if seconds:
-            if seconds > 1:
-                output += f"{seconds} seconds, "
-            else:
-                output += f"{seconds} second, "
-        return output[:-2]
+        return ", ".join(f"{count} {label}" for label, count in labels if count).strip(", ")
 
     @staticmethod
     async def format_repeat_message(interval: Repeat, multiplier: int) -> str:
