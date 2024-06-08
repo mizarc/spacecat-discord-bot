@@ -21,6 +21,7 @@ class DefaultView(View):
     def __init__(
         self: DefaultView,
         text: str | None = None,
+        embed: discord.Embed | None = None,
         timeout: int = 300,
     ) -> None:
         """
@@ -39,6 +40,7 @@ class DefaultView(View):
         """
         self.text = text
         self.message = None
+        self.embed = embed
         super().__init__(timeout=timeout)
 
     async def on_timeout(self: Self) -> None:
@@ -56,6 +58,10 @@ class DefaultView(View):
         Args:
             interaction (discord.Interaction): The interaction object.
         """
+        if self.embed is not None:
+            await interaction.response.send_message(self.text, view=self, embed=self.embed)
+        else:
+            await interaction.response.send_message(self.text, view=self)
         self.message = await interaction.original_response()
 
 

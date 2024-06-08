@@ -183,7 +183,7 @@ class RPSButton(Button):
                 colour=constants.EmbedStatus.GAME.value,
                 title="Rock Paper Scissors",
                 description=f"<@{self.rps_game.challenger.id}> "
-                f"{challenger_action} vs {target_action} "
+                f"{challenger_action.value} vs {target_action.value} "
                 f"<@{self.rps_game.target.id}>\n\n{win_text}",
             )
             await interaction.followup.send(embed=embed)
