@@ -57,7 +57,7 @@ class Playlist:
 
     @classmethod
     def create_new(
-        cls: type[Self], name: str, guild: discord.Guild, creator: discord.User
+        cls: type[Self], name: str, guild: discord.Guild, creator: discord.abc.User
     ) -> Self:
         """
         Instantiates a new Playlist with minimum required parameters.
@@ -76,8 +76,8 @@ class Playlist:
             name,
             guild.id,
             creator.id,
-            datetime.datetime.now(tz=datetime.timezone.utc),
-            datetime.datetime.now(tz=datetime.timezone.utc),
+            datetime.datetime.now(tz=datetime.UTC),
+            datetime.datetime.now(tz=datetime.UTC),
             "",
         )
 
@@ -334,8 +334,8 @@ class PlaylistRepository:
                 result[1],
                 result[2],
                 result[3],
-                datetime.datetime.fromtimestamp(result[4], tz=datetime.timezone.utc),
-                datetime.datetime.fromtimestamp(result[5], tz=datetime.timezone.utc),
+                datetime.datetime.fromtimestamp(result[4], tz=datetime.UTC),
+                datetime.datetime.fromtimestamp(result[5], tz=datetime.UTC),
                 result[6],
             )
             if result
