@@ -327,7 +327,7 @@ class Automation(commands.Cog):
             years (int, optional): The number of years.
         """
         # Send alert if interaction is not in a text channel within a guild.
-        if interaction.guild is None or interaction.channel is not TextChannel:
+        if interaction.guild is None or not isinstance(interaction.channel, TextChannel):
             await interaction.response.send_message(
                 embed=discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
@@ -1576,24 +1576,26 @@ class Automation(commands.Cog):
             str: The formatted string representation of the time
                 duration.
         """
-        duration = timedelta.total_seconds()
-        years, seconds = divmod(duration, 31536000)
-        months, seconds = divmod(seconds, 2592000)
-        weeks, seconds = divmod(seconds, 604800)
-        days, seconds = divmod(seconds, 86400)
+        days, seconds = timedelta.days, timedelta.seconds
+        years, days = divmod(days, 365)
+        months, days = divmod(days, 30)
+        weeks, days = divmod(days, 7)
         hours, seconds = divmod(seconds, 3600)
-        minutes, _ = divmod(seconds, 60)
+        minutes, seconds = divmod(seconds, 60)
 
-        labels = [
-            ("year", years),
-            ("month", months),
-            ("week", weeks),
-            ("day", days),
-            ("hour", hours),
-            ("minute", minutes),
+        components = [
+            (years, "year"),
+            (months, "month"),
+            (weeks, "week"),
+            (days, "day"),
+            (hours, "hour"),
+            (minutes, "minute"),
+            (seconds, "second"),
         ]
 
-        return ", ".join(f"{count} {label}" for label, count in labels if count).strip(", ")
+        return ", ".join(
+            f"{value} {name}{'s' if value > 1 else ''}" for value, name in components if value
+        )
 
     @staticmethod
     async def format_repeat_message(interval: Repeat, multiplier: int) -> str:
