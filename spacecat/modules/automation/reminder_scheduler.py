@@ -392,10 +392,7 @@ class ReminderScheduler:
             self.reminder_service.reminders.get_all()
             if self.cache_release_time < 0
             else self.reminder_service.reminders.get_before_timestamp(
-                int(
-                    datetime.datetime.now(tz=datetime.timezone.utc).timestamp()
-                    + self.cache_release_time
-                )
+                int(datetime.datetime.now(tz=datetime.UTC).timestamp() + self.cache_release_time)
             )
         )
         for event in events:
