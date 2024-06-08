@@ -84,7 +84,7 @@ class WavelinkSong(Song):
 
     @property
     @override
-    def artist(self: Self) -> str | None:
+    def artist(self: Self) -> str:
         return self._artist if self._artist else self._track.author
 
     @property
@@ -120,7 +120,7 @@ class WavelinkSong(Song):
     @classmethod
     async def from_local(
         cls: type[WavelinkSong],
-        requester: discord.User,
+        requester: discord.abc.User,
         playlist_song: PlaylistSong,
         playlist: Playlist,
     ) -> list[WavelinkSong]:
@@ -128,7 +128,7 @@ class WavelinkSong(Song):
         Creates a Wavelink song object from a local playlist song.
 
         Parameters:
-            requester (discord.User): The user requesting the song.
+            requester (discord.abc.User): The user requesting the song.
             playlist_song (PlaylistSong): The playlist song object
                 containing the song details.
             playlist (Playlist, optional): The playlist to which the
@@ -155,14 +155,14 @@ class WavelinkSong(Song):
 
     @classmethod
     async def from_query(
-        cls: type[WavelinkSong], query: str, requester: discord.User
+        cls: type[WavelinkSong], query: str, requester: discord.abc.User
     ) -> list[WavelinkSong]:
         """
         Creates a wavelink song object from a search query.
 
         Parameters:
             query (str): The query used to search for the track.
-            requester (discord.User): The user requesting the track.
+            requester (discord.abc.User): The user requesting the track.
 
         Returns:
             list['WavelinkSong']: A list containing WavelinkSong objects
@@ -178,7 +178,7 @@ class WavelinkSong(Song):
 
     @classmethod
     async def _process_single(
-        cls: type[WavelinkSong], query: str, track: wavelink.Playable, requester: discord.User
+        cls: type[WavelinkSong], query: str, track: wavelink.Playable, requester: discord.abc.User
     ) -> list[WavelinkSong]:
         """
         Process a single track to convert into a Wavelink song object.
@@ -190,7 +190,7 @@ class WavelinkSong(Song):
             query (str): The query that was used to obtain the track.
             track (wavelink.Playable): The track to create the
                 WavelinkSong from.
-            requester (discord.User): The user requesting the track.
+            requester (discord.abc.User): The user requesting the track.
 
         Returns:
             list['WavelinkSong']: A list containing a single
@@ -225,7 +225,7 @@ class WavelinkSong(Song):
         cls: type[WavelinkSong],
         query: str,
         tracks: wavelink.Search,
-        requester: discord.User,
+        requester: discord.abc.User,
     ) -> list[WavelinkSong]:
         """
         Process a track grouping to convert into Wavelink song objects.
