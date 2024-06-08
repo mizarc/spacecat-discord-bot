@@ -7,14 +7,16 @@ include changing the bot's status and activity.
 
 from __future__ import annotations
 
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from spacecat.helpers import constants, perms
-from spacecat.spacecat import SpaceCat
+
+if TYPE_CHECKING:
+    from spacecat.spacecat import SpaceCat
 
 
 class Configuration(commands.Cog):
