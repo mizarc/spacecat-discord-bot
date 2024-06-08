@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
 import discord
-import toml
 from discord import app_commands
 from discord.ext import commands
 
@@ -60,13 +59,12 @@ class SpaceCat(commands.Bot):
         await self.add_cog(Core(self))
         modules = module_handler.get_enabled()
         for module in modules:
-            print(constants.MAIN_DIR)
-            module_path = f"{constants.MAIN_DIR}.modules." + module
+            module_path = "spacecat.modules." + module
             try:
                 await self.load_extension(module_path)
             except Exception:  # noqa: BLE001 Anything could error here.
                 try:
-                    module_path = f"{constants.MAIN_DIR}.modules.{module}.{module}"
+                    module_path = f"spacecat.modules.{module}.{module}"
                     await self.load_extension(module_path)
                 except Exception as exception:  # noqa: BLE001 Once again.
                     print(
@@ -95,7 +93,7 @@ class Core(commands.Cog):
         This configures the cache, as well as setting status and
         activity. Useful info is displayed to the console.
         """
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
 
         if self.bot.user is None:
             return
@@ -365,7 +363,7 @@ class Core(commands.Cog):
 
         # Enable module and write to config
         await self.bot.load_extension(f"{constants.MAIN_DIR}.modules.{module}")
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         config["base"]["disabled_modules"].remove(module)
         self.bot.instance.save_config(config)
         embed = discord.Embed(
@@ -398,10 +396,10 @@ class Core(commands.Cog):
                 return
 
             # Add to list if list exists or create list if it doesn't
-            config = toml.load(constants.DATA_DIR + "config.toml")
+            config = self.bot.instance.get_config()
             config["base"]["disabled_modules"].append(module)
         except TypeError:
-            config = toml.load(constants.DATA_DIR + "config.toml")
+            config = self.bot.instance.get_config()
             config["base"]["disabled_modules"] = [module]
 
         # Disable module and write to config
@@ -510,7 +508,7 @@ class Core(commands.Cog):
         )
 
         # Set default values and save config
-        config = toml.load(constants.DATA_DIR + "config.toml")
+        config = self.bot.instance.get_config()
         config["base"]["status"] = "online"
         config["base"]["activity_type"] = None
         config["base"]["activity_name"] = None
