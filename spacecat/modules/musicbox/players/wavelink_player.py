@@ -155,7 +155,9 @@ class WavelinkSong(Song):
 
     @override
     @classmethod
-    async def from_query(cls: type[Self], query: str, requester: discord.abc.User) -> list[Self]:
+    async def from_query(
+        cls: type[Self], query: str, requester: discord.abc.User
+    ) -> tuple[Self, ...]:
         """
         Creates a wavelink song object from a search query.
 
@@ -178,7 +180,7 @@ class WavelinkSong(Song):
     @classmethod
     async def _process_single(
         cls: type[Self], query: str, track: wavelink.Playable, requester: discord.abc.User
-    ) -> list[Self]:
+    ) -> tuple[Self]:
         """
         Process a single track to convert into a Wavelink song object.
 
@@ -205,7 +207,7 @@ class WavelinkSong(Song):
         else:
             source = OriginalSource.UNKNOWN
 
-        return [
+        return (
             cls(
                 track,
                 source,
@@ -216,8 +218,8 @@ class WavelinkSong(Song):
                 track.author,
                 track.length,
                 requester.id,
-            )
-        ]
+            ),
+        )
 
     @classmethod
     async def _process_multiple(
@@ -225,7 +227,7 @@ class WavelinkSong(Song):
         query: str,
         tracks: wavelink.Search,
         requester: discord.abc.User,
-    ) -> list[Self]:
+    ) -> tuple[Self, ...]:
         """
         Process a track grouping to convert into Wavelink song objects.
 
@@ -274,7 +276,7 @@ class WavelinkSong(Song):
                         tracks[0].playlist.name,
                     )
 
-        return [
+        wavelink_tracks = [
             cls(
                 track,
                 source,
@@ -288,6 +290,8 @@ class WavelinkSong(Song):
             )
             for track in tracks
         ]
+
+        return tuple(wavelink_tracks)
 
 
 class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):

@@ -9,6 +9,7 @@ playlists that can store songs and be played.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING, Generic, Self, TypeVar
 
@@ -41,10 +42,7 @@ class SongUnavailableError(ValueError):
     """Exception raised when a song is unavailable."""
 
 
-StreamType = TypeVar("StreamType")
-
-
-class Song(ABC, Generic[StreamType]):
+class Song(ABC):
     """
     Abstract base class representing a song.
 
@@ -54,7 +52,9 @@ class Song(ABC, Generic[StreamType]):
 
     @classmethod
     @abstractmethod
-    async def from_query(cls: type[Self], query: str, requester: discord.abc.User) -> list[Self]:
+    async def from_query(
+        cls: type[Self], query: str, requester: discord.abc.User
+    ) -> tuple[Self, ...]:
         """
         Creates a song object from a search query.
 
@@ -68,12 +68,12 @@ class Song(ABC, Generic[StreamType]):
 
     @property
     @abstractmethod
-    def stream(self: Self) -> StreamType:
+    def stream(self: Self) -> object:
         """
         Gets stream object of the song to be used for playback.
 
         Returns:
-            StreamType: The stream object.
+            object: The stream object.
         """
 
     @property
@@ -293,7 +293,7 @@ class MusicPlayer(Generic[T_Song]):
         """
 
     @abstractmethod
-    async def add_multiple(self: Self, songs: list[T_Song], index: int = 0) -> PlayerResult:
+    async def add_multiple(self: Self, songs: Sequence[T_Song], index: int = 0) -> PlayerResult:
         """
         Adds multiple songs to the play queue.
 

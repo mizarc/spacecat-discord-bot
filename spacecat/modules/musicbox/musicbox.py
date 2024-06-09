@@ -38,6 +38,8 @@ from spacecat.modules.musicbox.playlist import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from spacecat.modules.musicbox.music_player import MusicPlayer
     from spacecat.spacecat import SpaceCat
 
@@ -86,6 +88,7 @@ class Musicbox(commands.Cog):
         self.database = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
         self.playlists = PlaylistRepository(self.database)
         self.playlist_songs = PlaylistSongRepository(self.database)
+        self.player_type = "wavelink"
 
     async def cog_load(self: Self) -> None:
         """Initialises configurations on cog load."""
@@ -286,28 +289,10 @@ class Musicbox(commands.Cog):
         self: Self, interaction: discord.Interaction, url: str, position: int = -1
     ) -> None:
         """Plays from a url or search query."""
-        # Alert if user is not running command in server
-        if interaction.guild is None or not isinstance(interaction.user, discord.Member):
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="You can't run this command in DMs.",
-            )
-            await interaction.response.send_message(embed=embed)
-            return
+        music_player, voice_channel = await self._find_or_create_music_player(interaction)
 
-        # Alert if user is not in a voice channel
-        if interaction.user.voice is None:
-            await interaction.response.send_message(embed=self.NOT_USER_CONNECTED_EMBED)
+        if music_player is None or voice_channel is None:
             return
-
-        # Alert if bot not in supported voice channel
-        voice_channel = interaction.user.voice.channel
-        if not isinstance(voice_channel, VocalGuildChannel):
-            await interaction.response.send_message(embed=self.NOT_SUPPORTED_EMBED)
-            return
-
-        # Join channel and create music player instance if it doesn't exist
-        music_player = await self._get_music_player(voice_channel)
 
         if position > len(music_player.next_queue) or position < 1:
             position = len(music_player.next_queue) + 1
@@ -325,74 +310,46 @@ class Musicbox(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
-        # Add playlist
-        if songs[0].original_source in (
+        if not songs:
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="No songs found. Please check the link and try again.",
+            )
+            await interaction.followup.send(embed=embed)
+            return
+
+        # Determine the source type and add songs accordingly
+        source_type = songs[0].original_source
+        if source_type in (
             OriginalSource.YOUTUBE_PLAYLIST,
             OriginalSource.SPOTIFY_PLAYLIST,
-        ):
-            result = await music_player.add_multiple(songs, position - 1)
-            if result == PlayerResult.PLAYING:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing playlist [{songs[0].group}]({songs[0].group_url})",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            if result == PlayerResult.QUEUEING:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
-                    description=f"Added `{len(songs)}` songs from playlist "
-                    f"[{songs[0].group}]({songs[0].group_url}) to "
-                    f"#{position} in queue",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-
-        # Add album
-        if songs[0].original_source in (
             OriginalSource.YOUTUBE_ALBUM,
             OriginalSource.SPOTIFY_ALBUM,
         ):
             result = await music_player.add_multiple(songs, position - 1)
-            if result == PlayerResult.PLAYING:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
-                    description=f"Now playing album [{songs[0].group}]({songs[0].group_url})",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            if result == PlayerResult.QUEUEING:
-                embed = discord.Embed(
-                    colour=constants.EmbedStatus.YES.value,
-                    description=f"Added `{len(songs)}` songs from album "
-                    f"[{songs[0].group}]({songs[0].group_url}) to "
-                    f"#{position} in queue",
-                )
-                await interaction.followup.send(embed=embed)
-                return
+            type_name = "playlist" if "PLAYLIST" in source_type.name else "album"
+            embed_description = (
+                f"Now playing {type_name} [{songs[0].group}]({songs[0].group_url})"
+                if result == PlayerResult.PLAYING
+                else f"Added `{len(songs)}` songs from {type_name} "
+                f"[{songs[0].group}]({songs[0].group_url}) to "
+                f"#{position} in queue"
+            )
+        else:
+            song = songs[0]
+            result = await music_player.add(song, position - 1)
+            duration = await self._format_duration(song.duration)
+            artist = f"{song.artist} - " if song.artist else ""
+            song_name = f"[{artist}{song.title}]({song.url}) `{duration}`"
+            embed_description = (
+                f"Now playing {song_name}"
+                if result == PlayerResult.PLAYING
+                else f"Song {song_name} added to #{position} in queue"
+            )
 
-        # Add song
-        song = songs[0]
-        result = await music_player.add(song, position - 1)
-        duration = await self._format_duration(song.duration)
-        artist = ""
-        if song.artist:
-            artist = f"{song.artist} - "
-        song_name = f"[{artist}{song.title}]({song.url}) `{duration}`"
-        if result == PlayerResult.PLAYING:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.YES.value,
-                description=f"Now playing {song_name}",
-            )
-            await interaction.followup.send(embed=embed)
-            return
-        if result == PlayerResult.QUEUEING:
-            embed = discord.Embed(
-                colour=constants.EmbedStatus.YES.value,
-                description=f"Song {song_name} added to #{position} in queue",
-            )
-            await interaction.followup.send(embed=embed)
-            return
+        embed_colour = constants.EmbedStatus.YES.value
+        embed = discord.Embed(colour=embed_colour, description=embed_description)
+        await interaction.followup.send(embed=embed)
 
     @app_commands.command()
     @perms.check()
@@ -1497,8 +1454,7 @@ class Musicbox(commands.Cog):
             self.music_players[channel.guild.id] = music_player
         return music_player
 
-    @staticmethod
-    async def _get_songs(query: str, requester: discord.abc.User) -> list[Song]:
+    async def _get_songs(self: Self, query: str, requester: discord.abc.User) -> tuple[Song, ...]:
         """
         Get songs based on a query and requester.
 
@@ -1510,6 +1466,8 @@ class Musicbox(commands.Cog):
             list['Song']: A list of Song objects
             representing the songs.
         """
+        if self.player_type == "wavelink":
+            return await WavelinkSong.from_query(query, requester)
         return await Song.from_query(query, requester)
 
     @staticmethod
@@ -1574,6 +1532,42 @@ class Musicbox(commands.Cog):
             await interaction.response.send_message(embed=self.NOT_SUPPORTED_EMBED)
             return None, None
 
+        return await self._get_music_player(voice_channel), voice_channel
+
+    async def _find_or_create_music_player(
+        self: Self, interaction: discord.Interaction
+    ) -> tuple[MusicPlayer | None, VocalGuildChannel | None]:
+        """
+        Find or create a music player.
+
+        Args:
+            interaction (discord.Interaction): The user interaction.
+
+        Returns:
+            MusicPlayer | None: The music player associated with the
+                bot, else None if it cannot be found.
+        """
+        # Alert if user is not running command in server
+        if interaction.guild is None or not isinstance(interaction.user, discord.Member):
+            embed = discord.Embed(
+                colour=constants.EmbedStatus.FAIL.value,
+                description="You can't run this command in DMs.",
+            )
+            await interaction.response.send_message(embed=embed)
+            return None, None
+
+        # Alert if user is not in a voice channel
+        if interaction.user.voice is None:
+            await interaction.response.send_message(embed=self.NOT_USER_CONNECTED_EMBED)
+            return None, None
+
+        # Alert if bot not in supported voice channel
+        voice_channel = interaction.user.voice.channel
+        if not isinstance(voice_channel, VocalGuildChannel):
+            await interaction.response.send_message(embed=self.NOT_SUPPORTED_EMBED)
+            return None, None
+
+        # Join channel and create music player instance if it doesn't exist
         return await self._get_music_player(voice_channel), voice_channel
 
     async def _get_player_channel(
@@ -1715,7 +1709,7 @@ class Musicbox(commands.Cog):
         self.playlist_songs.add(new_playlist_song)
 
     def _add_collection_to_playlist(
-        self: Self, user: discord.abc.User, playlist: Playlist, songs: list[Song]
+        self: Self, user: discord.abc.User, playlist: Playlist, songs: Sequence[Song]
     ) -> None:
         """
         Add a list of playlist songs to a playlist.
