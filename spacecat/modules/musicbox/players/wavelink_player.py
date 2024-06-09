@@ -153,10 +153,9 @@ class WavelinkSong(Song):
             )
         ]
 
+    @override
     @classmethod
-    async def from_query(
-        cls: type[WavelinkSong], query: str, requester: discord.abc.User
-    ) -> list[WavelinkSong]:
+    async def from_query(cls: type[Self], query: str, requester: discord.abc.User) -> list[Self]:
         """
         Creates a wavelink song object from a search query.
 
@@ -178,8 +177,8 @@ class WavelinkSong(Song):
 
     @classmethod
     async def _process_single(
-        cls: type[WavelinkSong], query: str, track: wavelink.Playable, requester: discord.abc.User
-    ) -> list[WavelinkSong]:
+        cls: type[Self], query: str, track: wavelink.Playable, requester: discord.abc.User
+    ) -> list[Self]:
         """
         Process a single track to convert into a Wavelink song object.
 
@@ -222,11 +221,11 @@ class WavelinkSong(Song):
 
     @classmethod
     async def _process_multiple(
-        cls: type[WavelinkSong],
+        cls: type[Self],
         query: str,
         tracks: wavelink.Search,
         requester: discord.abc.User,
-    ) -> list[WavelinkSong]:
+    ) -> list[Self]:
         """
         Process a track grouping to convert into Wavelink song objects.
 

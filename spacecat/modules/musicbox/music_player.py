@@ -52,6 +52,20 @@ class Song(ABC, Generic[StreamType]):
     necessary abstract methods that must be implemented by subclasses.
     """
 
+    @classmethod
+    @abstractmethod
+    async def from_query(cls: type[Self], query: str, requester: discord.abc.User) -> list[Self]:
+        """
+        Creates a song object from a search query.
+
+        Parameters:
+            query (str): The query used to search for the track.
+            requester (discord.abc.User): The user requesting the track.
+
+        Returns:
+            Self: A song object created from the query.
+        """
+
     @property
     @abstractmethod
     def stream(self: Self) -> StreamType:
