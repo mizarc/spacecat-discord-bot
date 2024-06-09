@@ -20,7 +20,7 @@ class DefaultView(View):
 
     def __init__(
         self: DefaultView,
-        text: str | None = None,
+        text: str = "",
         embed: discord.Embed | None = None,
         timeout: int = 300,
     ) -> None:
@@ -96,6 +96,7 @@ class PaginatedView(DefaultView):
         self.items = items
         self.items_per_page = items_per_page
         self.base_embed = base_embed
+        super().__init__(text="")
 
         # Current state
         self.current_page = min(starting_page, math.ceil(len(self.items) / self.items_per_page))
@@ -246,6 +247,7 @@ class EmptyPaginatedView(DefaultView):
         self.embed = base_embed
         self.items_header = items_header
         self.text_content = text_content
+        super().__init__(text="")
 
     @override
     async def send(self: Self, interaction: discord.Interaction) -> None:
