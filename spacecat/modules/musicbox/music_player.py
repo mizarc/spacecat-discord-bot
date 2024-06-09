@@ -9,11 +9,12 @@ playlists that can store songs and be played.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from enum import Enum
 from typing import TYPE_CHECKING, Generic, Self, TypeVar
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import discord
 
 
