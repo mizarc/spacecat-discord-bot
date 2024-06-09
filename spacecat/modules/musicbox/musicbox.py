@@ -26,6 +26,7 @@ from spacecat.helpers.views import EmptyPaginatedView, PaginatedView
 from spacecat.modules.musicbox.music_player import (
     OriginalSource,
     PlayerResult,
+    Song,
     SongUnavailableError,
 )
 from spacecat.modules.musicbox.players.wavelink_player import WavelinkMusicPlayer, WavelinkSong
@@ -1118,7 +1119,7 @@ class Musicbox(commands.Cog):
         if not playlist:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="There are no playlists available",
+                description="That playlist does not exist.",
             )
             await interaction.response.send_message(embed=embed)
             return
@@ -1152,34 +1153,12 @@ class Musicbox(commands.Cog):
         playlist.modified_date = datetime.datetime.now(tz=datetime.UTC)
         self.playlists.update(playlist)
 
-        # Set previous song as the last song in the playlist
-        if not playlist_songs:
-            previous_id = uuid.UUID(int=0)
-        else:
-            song_ids = []
-            previous_ids = []
-            for playlist_song in playlist_songs:
-                song_ids.append(playlist_song.id)
-                previous_ids.append(playlist_song.previous_id)
-            previous_id = next(iter(set(song_ids) - set(previous_ids)))
-
         # Add playlist
         if songs[0].original_source in (
             OriginalSource.YOUTUBE_PLAYLIST,
             OriginalSource.SPOTIFY_PLAYLIST,
         ):
-            for song in songs:
-                new_playlist_song = PlaylistSong.create_new(
-                    playlist.id,
-                    interaction.user.id,
-                    song.title,
-                    song.artist,
-                    song.duration,
-                    song.url,
-                    previous_id,
-                )
-                self.playlist_songs.add(new_playlist_song)
-                previous_id = new_playlist_song.id
+            self._add_collection_to_playlist(interaction.user, playlist, songs)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from playlist "
@@ -1187,25 +1166,13 @@ class Musicbox(commands.Cog):
                 f"#{len(playlist_songs) + 1} in playlist '{playlist_name}'",
             )
             await interaction.followup.send(embed=embed)
-            return
 
         # Add album
         if songs[0].original_source in (
             OriginalSource.YOUTUBE_ALBUM,
             OriginalSource.SPOTIFY_ALBUM,
         ):
-            for song in songs:
-                new_playlist_song = PlaylistSong.create_new(
-                    playlist.id,
-                    interaction.user.id,
-                    song.title,
-                    song.artist,
-                    song.duration,
-                    song.url,
-                    previous_id,
-                )
-                self.playlist_songs.add(new_playlist_song)
-                previous_id = new_playlist_song.id
+            self._add_collection_to_playlist(interaction.user, playlist, songs)
             embed = discord.Embed(
                 colour=constants.EmbedStatus.YES.value,
                 description=f"Added `{len(songs)}` songs from album "
@@ -1215,17 +1182,7 @@ class Musicbox(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
-        song = songs[0]
-        new_playlist_song = PlaylistSong.create_new(
-            playlist.id,
-            interaction.user.id,
-            song.title,
-            song.artist,
-            song.duration,
-            song.url,
-            previous_id,
-        )
-        self.playlist_songs.add(new_playlist_song)
+        self._add_song_to_playlist(interaction.user, playlist, songs[0])
         artist = ""
         if songs[0].artist:
             artist = f"{songs[0].artist} - "
@@ -1541,7 +1498,7 @@ class Musicbox(commands.Cog):
         return music_player
 
     @staticmethod
-    async def _get_songs(query: str, requester: discord.abc.User) -> list[WavelinkSong]:
+    async def _get_songs(query: str, requester: discord.abc.User) -> list[Song]:
         """
         Get songs based on a query and requester.
 
@@ -1550,10 +1507,10 @@ class Musicbox(commands.Cog):
             requester (discord.User): The user requesting the songs.
 
         Returns:
-            list['WavelinkSong']: A list of WavelinkSong objects
+            list['Song']: A list of Song objects
             representing the songs.
         """
-        return await WavelinkSong.from_query(query, requester)
+        return await Song.from_query(query, requester)
 
     @staticmethod
     async def _get_song_from_saved(
@@ -1732,6 +1689,79 @@ class Musicbox(commands.Cog):
         time_split += ["0"] * (3 - len(time_split))
         hours, minutes, seconds = map(int, time_split)
         return hours * 3600000 + minutes * 60000 + seconds * 1000
+
+    def _add_song_to_playlist(
+        self: Self, user: discord.abc.User, playlist: Playlist, song: Song
+    ) -> None:
+        """
+        Add a song to a playlist.
+
+        Args:
+            user (discord.abc.User): The user who added the song.
+            playlist (Playlist): The playlist to add the song to.
+            song (Song): The song to add to the playlist.
+        """
+        last_song = self._get_last_song_in_playlist(playlist)
+        previous_id = last_song.id if last_song else uuid.UUID(int=0)
+        new_playlist_song = PlaylistSong.create_new(
+            playlist.id,
+            user.id,
+            song.title,
+            song.artist,
+            song.duration,
+            song.url,
+            previous_id,
+        )
+        self.playlist_songs.add(new_playlist_song)
+
+    def _add_collection_to_playlist(
+        self: Self, user: discord.abc.User, playlist: Playlist, songs: list[Song]
+    ) -> None:
+        """
+        Add a list of playlist songs to a playlist.
+
+        Args:
+            user (discord.abc.User): The user who added the songs.
+            playlist (Playlist): The playlist to add the songs to.
+            songs (List[Song]): The songs to add to the playlist.
+        """
+        last_song = self._get_last_song_in_playlist(playlist)
+        previous_id = last_song.id if last_song else uuid.UUID(int=0)
+        for song in songs:
+            new_playlist_song = PlaylistSong.create_new(
+                playlist.id,
+                user.id,
+                song.title,
+                song.artist,
+                song.duration,
+                song.url,
+                previous_id,
+            )
+            self.playlist_songs.add(new_playlist_song)
+            previous_id = new_playlist_song.id
+
+    def _get_last_song_in_playlist(self: Self, playlist: Playlist) -> PlaylistSong | None:
+        """
+        Get the last song in a playlist.
+
+        Args:
+            playlist (Playlist): The playlist to get the last song from.
+
+        Returns:
+            PlaylistSong | None: The last song in the playlist, else None
+                if the playlist is empty.
+        """
+        playlist_songs = self.playlist_songs.get_by_playlist(playlist.id)
+        if not playlist_songs:
+            previous_id = uuid.UUID(int=0)
+        else:
+            song_ids = []
+            previous_ids = []
+            for playlist_song in playlist_songs:
+                song_ids.append(playlist_song.id)
+                previous_ids.append(playlist_song.previous_id)
+            previous_id = next(iter(set(song_ids) - set(previous_ids)))
+        return self.playlist_songs.get_by_id(previous_id)
 
 
 async def setup(bot: SpaceCat) -> None:
