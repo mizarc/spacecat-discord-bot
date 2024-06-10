@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import setuptools
 
-with open("README.md", "r") as fh:
+with open("README.md") as fh:
     long_description = fh.read()
 
-with open("requirements.txt", "r") as fh:
+with open("requirements.txt") as fh:
     install_requires = fh.read().splitlines()
 
 setuptools.setup(
@@ -22,15 +22,13 @@ setuptools.setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Intended Audience :: System Administrators",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.12",
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "Environment :: Console",
-        "Topic :: Communications :: Chat"
+        "Topic :: Communications :: Chat",
     ],
-    python_requires='>=3.7',
-    install_requires=install_requires
+    python_requires=">=3.12",
+    install_requires=install_requires,
 )

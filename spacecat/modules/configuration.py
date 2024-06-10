@@ -1,78 +1,76 @@
-import sqlite3
-from itertools import islice
+"""
+This module provides a cog for managing the configuration of the bot.
+
+Anything pertaining to bot wide changes should go here. Notable examples
+include changing the bot's status and activity.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Self
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-import toml
+from spacecat.helpers import constants, perms
 
-from spacecat.helpers import constants
-from spacecat.helpers import perms
+if TYPE_CHECKING:
+    from spacecat.spacecat import SpaceCat
 
 
 class Configuration(commands.Cog):
-    """Modify Discord wide bot settings"""
-    def __init__(self, bot):
+    """Modify Discord wide bot settings."""
+
+    def __init__(self: Configuration, bot: SpaceCat) -> None:
+        """Initialize the Configuration cog.
+
+        Args:
+            bot (commands.Bot): The Discord bot instance.
+        """
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self: Self) -> None:
+        """Listener that sets up the config values on launch."""
         # Auto generate the permissions config category with
         # default (@everyone) role
-        config = toml.load(constants.DATA_DIR + 'config.toml')
+        config = self.bot.instance.get_config()
         try:
-            config['permissions']
+            config["permissions"]
         except KeyError:
-            config['permissions'] = {}
+            config["permissions"] = {}
         try:
-            config['permissions']['default']
+            config["permissions"]["default"]
         except KeyError:
-            config['permissions']['default'] = []
+            config["permissions"]["default"] = []
 
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
-            toml.dump(config, config_file)
-
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        if isinstance(error, commands.CommandNotFound):
-            prefix = ctx.prefix
-            cmd = ctx.message
-            cmd_name = cmd.content.split()[0][len(prefix):]
-            cmd_args = cmd.content.split()[1:]
-
-            # Query if command exists as an alias in database
-            db = sqlite3.connect(constants.DATA_DIR + 'spacecat.db')
-            cursor = db.cursor()
-            query = (ctx.guild.id, cmd_name)
-            cursor.execute(
-                'SELECT command FROM command_alias '
-                'WHERE server_id=? AND alias=?', query)
-            result = cursor.fetchall()
-            db.close()
-
-            # Use command linked to alias to replace command process
-            if result:
-                cmd.content = f"{prefix}{result[0][0]} {' '.join(cmd_args)}"
-                await self.bot.process_commands(cmd)
+        self.bot.instance.save_config(config)
 
     @app_commands.command()
     @perms.exclusive()
-    async def status(self, interaction, status: discord.Status):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        activity_name = config['base']['activity_type']
+    async def status(self: Self, interaction: discord.Interaction, status: discord.Status) -> None:
+        """
+        Sets the online status of the bot.
+
+        Args:
+            interaction (discord.Interaction): The Discord interaction.
+            status (discord.Status): The new status to set.
+        """
+        config = self.bot.instance.get_config()
+        activity_name = config["base"]["activity_type"]
         try:
             activity = discord.Activity(
-                type=discord.ActivityType[activity_name],
-                name=config['base']['activity_name'])
+                type=discord.ActivityType[activity_name], name=config["base"]["activity_name"]
+            )
         except KeyError:
             activity = None
 
         # Check if valid status name was used
         if status is None:
             embed = discord.Embed(
-                colour=constants.EmbedStatus.FAIL.value,
-                description="That's not a valid status")
+                colour=constants.EmbedStatus.FAIL.value, description="That's not a valid status"
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -81,27 +79,41 @@ class Configuration(commands.Cog):
         else:
             await self.bot.change_presence(status=status)
 
-        config['base']['status'] = status.name
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
-            toml.dump(config, config_file)
+        config["base"]["status"] = status.name
+        self.bot.instance.save_config(config)
 
     @app_commands.command()
     @perms.exclusive()
-    async def activity(self, interaction, activity_type: discord.ActivityType, *, name: str):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
+    async def activity(
+        self: Self,
+        interaction: discord.Interaction,
+        activity_type: discord.ActivityType,
+        *,
+        name: str,
+    ) -> None:
+        """
+        Sets the activity type and text of the bot.
+
+        Args:
+            interaction (discord.Interaction): The Discord interaction.
+            activity_type (discord.ActivityType): The type of activity
+                to set.
+            name (str): The text of the activity.
+        """
+        config = self.bot.instance.get_config()
         activity = discord.Activity(
-            type=activity_type,
-            name=name,
-            url='https://www.twitch.tv/yeet')
+            type=activity_type, name=name, url="https://www.twitch.tv/yeet"
+        )
         try:
-            status = config['base']['status']
+            status = config["base"]["status"]
         except KeyError:
             status = None
 
         if activity_type is None:
             embed = discord.Embed(
                 colour=constants.EmbedStatus.FAIL.value,
-                description="That's not a valid activity type")
+                description="That's not a valid activity type",
+            )
             await interaction.response.send_message(embed=embed)
             return
 
@@ -110,11 +122,11 @@ class Configuration(commands.Cog):
         else:
             await self.bot.change_presence(activity=activity)
 
-        config['base']['activity_type'] = activity_type.name
-        config['base']['activity_name'] = name
-        with open(constants.DATA_DIR + 'config.toml', 'w') as config_file:
-            toml.dump(config, config_file)
+        config["base"]["activity_type"] = activity_type.name
+        config["base"]["activity_name"] = name
+        self.bot.instance.save_config(config)
 
 
-async def setup(bot):
+async def setup(bot: SpaceCat) -> None:
+    """Load the Configuration cog."""
     await bot.add_cog(Configuration(bot))

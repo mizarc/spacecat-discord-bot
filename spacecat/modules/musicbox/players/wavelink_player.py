@@ -1,118 +1,201 @@
-from collections import deque
+"""
+Module for playing music using the Wavelink library.
+
+This module provides a wrapper for the Wavelink library to make it easier
+to use. It provides a streamlined way of playing music and handling
+playlists.
+"""
+
+from __future__ import annotations
+
 import random
+from collections import deque
 from time import time
-from typing import Optional
+from typing import TYPE_CHECKING, Self, override
 
 import discord
-from discord.ext import tasks
-import toml
 import wavelink
+from discord.ext import tasks
 
-from spacecat.helpers import constants
-from spacecat.modules.musicbox.music_player import *
-from spacecat.modules.musicbox.playlist import *
+from spacecat.modules.musicbox.music_player import (
+    MusicPlayer,
+    OriginalSource,
+    PlayerResult,
+    Song,
+    SongUnavailableError,
+)
+
+if TYPE_CHECKING:
+    from spacecat.instance import Instance
+    from spacecat.modules.musicbox.playlist import Playlist, PlaylistSong
+
+VocalGuildChannel = discord.VoiceChannel | discord.StageChannel
+
 
 class WavelinkSong(Song):
-    def __init__(self, track, original_source, url, group=None, group_url=None,
-                 title=None, artist=None, duration=None, requester_id=None):
+    """Represents a song using data from wavelink."""
+
+    def __init__(
+        self: WavelinkSong,
+        track: wavelink.Playable,
+        original_source: OriginalSource,
+        url: str,
+        group: str | None,
+        group_url: str | None,
+        title: str,
+        artist: str | None,
+        duration: int | None,
+        requester_id: int,
+    ) -> None:
+        """
+        Initializes a WavelinkSong object.
+
+        Args:
+            track (wavelink.Playable): The playable track object.
+            original_source (OriginalSource): The original source of the
+                song.
+            url (str): The URL of the song.
+            group (str | None): The group the song belongs to.
+            group_url (str | None): The URL of the group.
+            title (str): The title of the song.
+            artist (str): The artist name of the song.
+            duration (int | None): The duration of the song in seconds.
+            requester_id (int): The user ID of the requester.
+        """
         self._track: wavelink.Playable = track
         self._original_source: OriginalSource = original_source
-        self._url: str = url
-        self._playlist: str = group
-        self._playlist_url: str = group_url
+        self._url = url
+        self._playlist = group
+        self._playlist_url = group_url
         self._title = title
         self._artist = artist
         self._duration = duration
         self._requester_id = requester_id
 
     @property
-    def stream(self) -> wavelink.Playable:
+    @override
+    def stream(self: Self) -> wavelink.Playable:
         return self._track
 
     @property
-    def title(self) -> str:
+    @override
+    def title(self: Self) -> str:
         return self._title if self._title else self._track.title
 
     @property
-    def artist(self) -> Optional[str]:
+    @override
+    def artist(self: Self) -> str:
         return self._artist if self._artist else self._track.author
 
     @property
-    def duration(self) -> int:
+    @override
+    def duration(self: Self) -> int:
         return self._duration if self._duration else int(self._track.length)
 
     @property
-    def url(self) -> str:
+    @override
+    def url(self: Self) -> str:
         return self._url
 
     @property
-    def group(self) -> Optional[str]:
+    @override
+    def group(self: Self) -> str | None:
         return self._playlist
 
     @property
-    def group_url(self):
+    @override
+    def group_url(self: Self) -> str | None:
         return self._playlist_url
 
     @property
-    def original_source(self) -> OriginalSource:
+    @override
+    def original_source(self: Self) -> OriginalSource:
         return self._original_source
 
     @property
-    def requester_id(self) -> int:
+    @override
+    def requester_id(self: Self) -> int:
         return self._requester_id
 
     @classmethod
-    async def from_local(cls, requester: discord.User, playlist_song: PlaylistSong,
-                         playlist: Playlist = None) -> list['WavelinkSong']:
+    async def from_local(
+        cls: type[WavelinkSong],
+        requester: discord.abc.User,
+        playlist_song: PlaylistSong,
+        playlist: Playlist,
+    ) -> list[WavelinkSong]:
         """
-        Process a local playlist song to obtain a track and create a list of WavelinkSong objects based on the song details and the requester.
+        Creates a Wavelink song object from a local playlist song.
 
         Parameters:
-            requester (discord.User): The user requesting the song.
-            playlist_song (PlaylistSong): The playlist song object containing the song details.
-            playlist (Playlist, optional): The playlist to which the song belongs. Defaults to None.
+            requester (discord.abc.User): The user requesting the song.
+            playlist_song (PlaylistSong): The playlist song object
+                containing the song details.
+            playlist (Playlist, optional): The playlist to which the
+                song belongs. Defaults to None.
 
         Returns:
-            list['WavelinkSong']: A list containing WavelinkSong objects created from the local playlist song.
+            list['WavelinkSong']: A list containing WavelinkSong objects
+                created from the local playlist song.
         """
         track = await wavelink.Playable.search(playlist_song.url)
-        return [cls(track, OriginalSource.LOCAL, playlist_song.url, title=playlist_song.title,
-                     artist=playlist_song.artist, duration=playlist_song.duration,
-                     group=playlist.name, requester_id=requester.id)]
+        return [
+            cls(
+                track[0],
+                OriginalSource.LOCAL,
+                playlist_song.url,
+                title=playlist_song.title,
+                artist=playlist_song.artist,
+                duration=playlist_song.duration,
+                group=playlist.name,
+                group_url=None,
+                requester_id=requester.id,
+            )
+        ]
 
+    @override
     @classmethod
-    async def from_query(cls, query: str, requester: discord.User) -> list['WavelinkSong']:
+    async def from_query(
+        cls: type[Self], query: str, requester: discord.abc.User
+    ) -> tuple[Self, ...]:
         """
-        Process a query to obtain a track and create a list of WavelinkSong objects based on the query and the requester.
+        Creates a wavelink song object from a search query.
 
         Parameters:
             query (str): The query used to search for the track.
-            requester (discord.User): The user requesting the track.
+            requester (discord.abc.User): The user requesting the track.
 
         Returns:
-            list['WavelinkSong']: A list containing WavelinkSong objects created from the query.
+            list['WavelinkSong']: A list containing WavelinkSong objects
+                created from the query.
         """
-        track = await wavelink.Playable.search(query)
-        if not track:
+        tracks = await wavelink.Playable.search(query)
+        if not tracks:
             raise SongUnavailableError
 
-        if track[0].playlist is None:
-            return await cls._process_single(query, track[0], requester)
-        else:
-            return await cls._process_multiple(query, track, requester)
+        if tracks[0].playlist is None:
+            return await cls._process_single(query, tracks[0], requester)
+        return await cls._process_multiple(query, tracks, requester)
 
     @classmethod
-    async def _process_single(cls, query: str, track: wavelink.Playable, requester: discord.User):
+    async def _process_single(
+        cls: type[Self], query: str, track: wavelink.Playable, requester: discord.abc.User
+    ) -> tuple[Self]:
         """
-        Process a single track to determine its source and create a WavelinkSong object.
+        Process a single track to convert into a Wavelink song object.
+
+        This takes the object that is returned from wavelink and
+        extracts useful data out of it.
 
         Parameters:
             query (str): The query that was used to obtain the track.
-            track (wavelink.Playable): The track to create the WavelinkSong from.
-            requester (discord.User): The user requesting the track.
+            track (wavelink.Playable): The track to create the
+                WavelinkSong from.
+            requester (discord.abc.User): The user requesting the track.
 
         Returns:
-            list['WavelinkSong']: A list containing a single WavelinkSong object created from the query.
+            list['WavelinkSong']: A list containing a single
+                WavelinkSong object created from the query.
         """
         if "youtube.com" in query or "youtu.be" in query:
             if "music" in query:
@@ -124,45 +207,114 @@ class WavelinkSong(Song):
         else:
             source = OriginalSource.UNKNOWN
 
-        return [cls(track, source, track.uri, "", "", track.title, track.author, track.length, requester.id)]
+        return (
+            cls(
+                track,
+                source,
+                track.uri if track.uri is not None else "",
+                "",
+                "",
+                track.title,
+                track.author,
+                track.length,
+                requester.id,
+            ),
+        )
 
     @classmethod
-    async def _process_multiple(cls, query: str, tracks: wavelink.Playlist, requester: discord.User):
+    async def _process_multiple(
+        cls: type[Self],
+        query: str,
+        tracks: wavelink.Search,
+        requester: discord.abc.User,
+    ) -> tuple[Self, ...]:
         """
-        Process multiple tracks to determine their sources and create WavelinkSong objects.
+        Process a track grouping to convert into Wavelink song objects.
+
+        This should be utilised to handle groups of songs such as
+        playlists and albums. As the group is expected to come from the
+        same source, the playlist source will only be taken from the
+        first track to simplify processing.
 
         Parameters:
             query (str): The query used to obtain the tracks.
-            tracks (wavelink.Playlist): The playlist containing tracks to process.
+            tracks (wavelink.Playlist): The playlist containing tracks
+                to process.
             requester (discord.User): The user requesting the tracks.
 
         Returns:
-            list['WavelinkSong']: A list containing multiple WavelinkSong objects created from the tracks.
+            list['WavelinkSong']: A list containing multiple
+                WavelinkSong objects created from the tracks.
         """
         source = OriginalSource.UNKNOWN
         url = query
         playlist_name = ""
-        
-        if "youtube.com" in tracks[0].uri or "youtu.be" in query:
-            if "Album - " in tracks[0].playlist.name:
-                source, playlist_name = OriginalSource.YOUTUBE_ALBUM, tracks[0].playlist.name[8:]
-            elif "playlist" in query:
-                source, playlist_name = OriginalSource.YOUTUBE_PLAYLIST, tracks[0].playlist.name
-        elif "open.spotify.com" in query:
-            if "playlist" in query:
-                source, url, playlist_name = OriginalSource.SPOTIFY_PLAYLIST, tracks[0].playlist.url, tracks[0].playlist.name
-            elif "album" in query:
-                source, url, playlist_name = OriginalSource.SPOTIFY_ALBUM, tracks[0].playlist.url, tracks[0].playlist.name
-            else:
-                source = OriginalSource.SPOTIFY_SONG
 
-        return [cls(track, source, track.uri, playlist_name, url, track.title, track.author, track.length, requester.id)
-                for track in tracks.tracks]
+        if tracks[0].playlist:
+            if "youtube.com" in query or "youtu.be" in query:
+                if tracks[0].playlist is not None and "Album - " in tracks[0].playlist.name:
+                    source, playlist_name = (
+                        OriginalSource.YOUTUBE_ALBUM,
+                        tracks[0].playlist.name[8:],
+                    )
+                elif tracks[0].playlist is not None and "playlist" in query:
+                    source, playlist_name = (
+                        OriginalSource.YOUTUBE_PLAYLIST,
+                        tracks[0].playlist.name,
+                    )
+            elif "open.spotify.com" in query:
+                if "playlist" in query:
+                    source, url, playlist_name = (
+                        OriginalSource.SPOTIFY_PLAYLIST,
+                        tracks[0].playlist.url,
+                        tracks[0].playlist.name,
+                    )
+                elif "album" in query:
+                    source, url, playlist_name = (
+                        OriginalSource.SPOTIFY_ALBUM,
+                        tracks[0].playlist.url,
+                        tracks[0].playlist.name,
+                    )
+
+        wavelink_tracks = [
+            cls(
+                track,
+                source,
+                track.uri if track.uri is not None else "",
+                playlist_name,
+                url,
+                track.title,
+                track.author,
+                track.length,
+                requester.id,
+            )
+            for track in tracks
+        ]
+
+        return tuple(wavelink_tracks)
+
 
 class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
-    def __init__(self):
-        self._player: Optional[wavelink.Player] = None
-        self._current: Optional[WavelinkSong] = None
+    """
+    A music player implementation using the Wavelink library.
+
+    Utilising this type of music player requires the use of a seperate
+    program called "Lavalink" in order to function. It provides a number
+    of advantages over a local implementation such as pooling and
+    caching to speed up operations.
+    """
+
+    def __init__(self: WavelinkMusicPlayer, instance: Instance, player: wavelink.Player) -> None:
+        """
+        Initializes a new instance of the WavelinkMusicPlayer class.
+
+        Args:
+            instance (Instance): The instance of the bot.
+            player (wavelink.Player): The Wavelink player object.
+        """
+        self._player: wavelink.Player = player
+        self._instance: Instance = instance
+        self._current: WavelinkSong | None = None
         self._next_queue: deque[WavelinkSong] = deque()
         self._previous_queue: deque[WavelinkSong] = deque()
         self._is_looping = False
@@ -171,51 +323,80 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._disconnect_time = time() + self._get_disconnect_time_limit()
         self._disconnect_job.start()
 
+    @classmethod
+    async def connect(
+        cls: type[WavelinkMusicPlayer], instance: Instance, channel: VocalGuildChannel
+    ) -> WavelinkMusicPlayer:
+        """
+        Initialises and connects the Wavelink player to a voice channel.
+
+        This is the recommended way to initialise the music player, as
+        it automatically creates the player object and connects to the
+        specified channel.
+
+        Args:
+            instance (Instance): The instance of the bot.
+            channel (discord.VoiceChannel): The voice channel to connect
+                to.
+
+        Returns:
+            WavelinkMusicPlayer: The connected player instance.
+        """
+        player: wavelink.Player = await channel.connect(cls=wavelink.Player, self_deaf=True)
+        return cls(instance, player)
+
     @property
-    def is_paused(self) -> bool:
+    @override
+    def is_paused(self: Self) -> bool:
         return self._player.paused
 
     @property
-    def is_looping(self) -> bool:
+    @override
+    def is_looping(self: Self) -> bool:
         return self._is_looping
 
     @is_looping.setter
-    def is_looping(self, value):
+    def is_looping(self: Self, value: bool) -> None:
         self._is_looping = value
 
     @property
-    def playing(self) -> WavelinkSong:
+    @override
+    def playing(self: Self) -> WavelinkSong | None:
         return self._current
 
     @property
-    def seek_position(self) -> int:
+    @override
+    def seek_position(self: Self) -> int:
         return int(self._player.position)
 
     @property
-    def next_queue(self) -> list[WavelinkSong]:
+    @override
+    def next_queue(self: Self) -> list[WavelinkSong]:
         return list(self._next_queue)
 
     @property
-    def previous_queue(self) -> list[WavelinkSong]:
+    @override
+    def previous_queue(self: Self) -> list[WavelinkSong]:
         return list(self._previous_queue)
 
-    async def connect(self, channel: discord.VoiceChannel):
-        self._player = await channel.connect(cls=wavelink.Player, self_deaf=True)
-
-    async def disconnect(self):
+    @override
+    async def disconnect(self: Self) -> None:
         await self._player.disconnect()
 
-    async def play(self, audio_source: WavelinkSong) -> None:
+    @override
+    async def play(self: Self, audio_source: WavelinkSong) -> None:
         self._refresh_disconnect_timer()
         await self._player.play(audio_source.stream)
 
-    async def play_multiple(self, songs: list[WavelinkSong]):
+    @override
+    async def play_multiple(self: Self, songs: list[WavelinkSong]) -> None:
         self._refresh_disconnect_timer()
         await self._player.play(songs[0].stream)
         for song in songs[1:]:
             self._next_queue.appendleft(song)
 
-    async def add(self, audio_source: WavelinkSong, index=-1) -> PlayerResult:
+    @override
+    async def add(self: Self, audio_source: WavelinkSong, index: int = -1) -> PlayerResult:
         if not self._current:
             self._refresh_disconnect_timer()
             await self._player.play(audio_source.stream)
@@ -229,7 +410,10 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         self._next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
-    async def add_multiple(self, audio_sources: list[WavelinkSong], index=-1) -> PlayerResult:
+    @override
+    async def add_multiple(
+        self: Self, audio_sources: list[WavelinkSong], index: int = -1
+    ) -> PlayerResult:
         if not self._current:
             self._refresh_disconnect_timer()
             await self._player.play(audio_sources[0].stream)
@@ -248,43 +432,54 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
             self._next_queue.append(audio_source)
         return PlayerResult.QUEUEING
 
-    async def remove(self, index=-1):
+    @override
+    async def remove(self: Self, index: int = -1) -> None:
         if index >= 0:
             del self._next_queue[index]
             return
         self._next_queue.pop()
 
-    async def clear(self):
+    @override
+    async def clear(self: Self) -> None:
         self._next_queue.clear()
         self._previous_queue.clear()
 
-    async def seek(self, position):
+    @override
+    async def seek(self: Self, position: int) -> None:
         await self._player.seek(position)
 
-    async def pause(self):
-        await self._player.pause(True)
+    @override
+    async def pause(self: Self) -> None:
+        await self._player.pause(True)  # noqa: FBT003
 
-    async def resume(self):
-        await self._player.pause(False)
+    @override
+    async def resume(self: Self) -> None:
+        await self._player.pause(False)  # noqa: FBT003
 
-    async def loop(self):
+    @override
+    async def loop(self: Self) -> None:
         self._is_looping = True
 
-    async def unloop(self):
+    @override
+    async def unloop(self: Self) -> None:
         self._is_looping = False
 
-    async def move(self, first_index, second_index):
+    @override
+    async def move(self: Self, first_index: int, second_index: int) -> None:
         song = self._next_queue[first_index]
         await self.remove(first_index)
         await self.add(song, second_index)
 
-    async def shuffle(self):
+    @override
+    async def shuffle(self: Self) -> None:
         random.shuffle(self._next_queue)
 
-    async def stop(self):
+    @override
+    async def stop(self: Self) -> None:
         await self._player.stop()
 
-    async def next(self):
+    @override
+    async def next(self: Self) -> bool:
         if not self._player.playing:
             return False
         self._queue_reverse = False
@@ -292,16 +487,18 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._player.stop()
         return True
 
-    async def previous(self):
+    @override
+    async def previous(self: Self) -> None:
         self._queue_reverse = True
         self._is_skipping = True
         await self._player.stop()
 
-    async def process_song_end(self):
+    @override
+    async def process_song_end(self: Self) -> None:
         self._refresh_disconnect_timer()
 
         # Play current song again if set to loop.
-        if self._is_looping and not self._is_skipping:
+        if self._is_looping and not self._is_skipping and self._current:
             await self.play(self._current)
             return
         self._is_skipping = False
@@ -313,44 +510,54 @@ class WavelinkMusicPlayer(MusicPlayer[WavelinkSong]):
         await self._play_next_song()
         self._queue_reverse = False
 
-    async def _play_next_song(self):
+    async def _play_next_song(self: Self) -> None:
         next_song = None
         try:
             next_song = self._next_queue.popleft()
             await self._player.play(next_song.stream)
         except IndexError:
             pass
-        self._previous_queue.appendleft(self._current)
-        self._current = next_song
 
-    async def _play_previous_song(self):
+        if self._current:
+            self._previous_queue.appendleft(self._current)
+            self._current = next_song
+
+    async def _play_previous_song(self: Self) -> None:
         previous_song = None
         try:
             previous_song = self._previous_queue.popleft()
             await self._player.play(previous_song.stream)
         except IndexError:
             pass
-        self._next_queue.appendleft(self._current)
-        self._current = previous_song
 
-    async def enable_auto_disconnect(self):
+        if self._current:
+            self._next_queue.appendleft(self._current)
+            self._current = previous_song
+
+    async def enable_auto_disconnect(self: Self) -> None:
+        """Enables auto disconnection after a set inactivity time."""
         self._disconnect_job.start()
 
-    async def disable_auto_disconnect(self):
+    async def disable_auto_disconnect(self: Self) -> None:
+        """Disables auto disconnection after aset inactivity time."""
         self._disconnect_job.cancel()
 
     @tasks.loop(seconds=30)
-    async def _disconnect_job(self):
-        if self._is_auto_disconnect() and time() > self._disconnect_time and not self._player.playing:
+    async def _disconnect_job(self: Self) -> None:
+        if (
+            self._is_auto_disconnect()
+            and time() > self._disconnect_time
+            and not self._player.playing
+        ):
             await self.disconnect()
 
-    def _refresh_disconnect_timer(self):
+    def _refresh_disconnect_timer(self: Self) -> None:
         self._disconnect_time = time() + self._get_disconnect_time_limit()
 
-    def _get_disconnect_time_limit(self):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        return config['music']['disconnect_time']
+    def _get_disconnect_time_limit(self: Self) -> int:
+        config = self._instance.get_config()
+        return config["music"]["disconnect_time"]
 
-    def _is_auto_disconnect(self):
-        config = toml.load(constants.DATA_DIR + 'config.toml')
-        return config['music']['auto_disconnect']
+    def _is_auto_disconnect(self: Self) -> bool:
+        config = self._instance.get_config()
+        return config["music"]["auto_disconnect"]
