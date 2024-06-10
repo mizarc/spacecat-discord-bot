@@ -549,7 +549,7 @@ class Automation(commands.Cog):
                 Defaults to 1.
         """
         # Send alert if interaction is not in a guild.
-        if interaction.guild is None or interaction.channel is not TextChannel:
+        if interaction.guild is None:
             await interaction.response.send_message(
                 embed=discord.Embed(
                     colour=constants.EmbedStatus.FAIL.value,
