@@ -51,6 +51,7 @@ class SpaceCat(commands.Bot):
         It loads all the modules that are required for the bot to
         function properly.
         """
+        perms.init_database()
         await self.load_modules()
 
     async def load_modules(self: Self) -> None:

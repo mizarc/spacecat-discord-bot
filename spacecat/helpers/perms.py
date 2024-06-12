@@ -87,10 +87,10 @@ def check() -> Callable:
 
         # Grab valid permissions from the command using its subcommand tree.
         command_values = interaction.command.qualified_name.split(" ")
-        permissions = {"*", "." + ".".join(command_values)}
+        permissions = ["*", ".".join(command_values)]
         for i in range(len(command_values) - 1):
             result = ".".join(command_values[: i + 1]) + ".*"
-            permissions.add(result)
+            permissions.append(result)
 
         regex_query = re.compile("Preset.[a-zA-Z0-9]+")
 
@@ -118,14 +118,6 @@ def check() -> Callable:
             group_results = cursor.fetchall()
             presets = presets + list(filter(regex_query.match, group_results))
             if set(group_results).intersection(permissions):
-                return True
-
-            # Execute recurring parent check
-            parent_query = (interaction.guild.id, query[1])
-            parent_check, presets = _parent_perms(
-                interaction, cursor, parent_query, permissions, presets
-            )
-            if parent_check:
                 return True
 
         # Query permission presets from config that the user or group may have
@@ -161,48 +153,3 @@ def exclusive() -> Callable:
         return False
 
     return commands.check(predicate)
-
-
-def _parent_perms(
-    interaction: discord.Interaction,
-    cursor: sqlite3.Cursor,
-    parent_query: tuple,
-    checks: set,
-    presets: list,
-) -> tuple:
-    """
-    Recursively checks all parent permissions.
-
-    These checks continue all the way up until either all dead ends have
-    been reached, or the appropriate permission has been found.
-    """
-    # Check if group has parents
-    cursor.execute(
-        "SELECT parent_id FROM group_parent WHERE server_id=? AND child_id=?", parent_query
-    )
-    parents = cursor.fetchall()
-
-    # Check parent groups for permission
-    for parent in parents:
-        if interaction.guild is None:
-            return False, presets
-
-        perm_query = (interaction.guild.id, parent)
-        cursor.execute(
-            "SELECT permission FROM group_permission WHERE server_id=? AND group_id=?",
-            perm_query,
-        )
-        results = cursor.fetchall()
-        regex_query = re.compile("Preset.[a-zA-Z0-9]+")
-        presets = presets + list(filter(regex_query.match, results))
-        if set(results).intersection(checks):
-            return True, presets
-
-        # Check next parent level
-        new_parent_query = (interaction.guild.id, parent)
-        parent_check, presets = _parent_perms(
-            interaction, cursor, new_parent_query, checks, presets
-        )
-        if parent_check:
-            return True, presets
-    return False, presets
