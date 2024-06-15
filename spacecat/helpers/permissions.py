@@ -70,69 +70,6 @@ class Permissions:
             config["PermsGroups"][str(guild.default_role.id)] = userperms
             config["PermsUsers"] = {}
 
-    def check(self: Self) -> Callable:
-        """
-        Check if user has permission to use the command.
-
-        Server administrators are automatically granted permission. Otherwise, users
-        are checked based on whether it is a globally granted permission, or
-        whether it is overwritten on an individual server basis.
-        """
-
-        def predicate(interaction: discord.Interaction) -> bool:
-            # You've put this decorator on the wrong function if this check triggers
-            if interaction.command is None:
-                return False
-
-            # Check if command is being run outside of a guild or command is invalid
-            if not isinstance(interaction.user, discord.Member) or interaction.guild is None:
-                return False
-
-            # Allow if user is a server administrator
-            if interaction.user.guild_permissions.administrator:
-                return True
-
-            # Grab valid permissions from the command using its subcommand tree.
-            command_values = interaction.command.qualified_name.split(" ")
-            permissions = ["*", ".".join(command_values)]
-            for i in range(len(command_values) - 1):
-                result = ".".join(command_values[: i + 1]) + ".*"
-                permissions.append(result)
-
-            # Query database to allow if user has the required permission
-            db = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
-            db.row_factory = lambda _, row: row[0]
-            cursor = db.cursor()
-
-            # Allow if permission is granted to the user or role that the user has
-            user_result = self._user_permission_check(
-                interaction.guild, interaction.user, permissions, cursor
-            )
-            role_result = self._role_permission_check(
-                interaction.guild, interaction.user, permissions, cursor
-            )
-            default_result = self._default_permission_check(interaction.guild, permissions, cursor)
-            if user_result or role_result or default_result:
-                return True
-
-            return False
-
-        return discord.app_commands.check(predicate)
-
-    def exclusive(self: Self) -> Callable:
-        """Checks if the user is a bot administrator."""
-
-        def predicate(ctx: commands.Context) -> bool:
-            # Open global config file
-            config = toml.load(constants.DATA_DIR + "config.toml")
-
-            # If user is the bot administrator
-            if ctx.author.id in config["base"]["adminuser"]:
-                return True
-            return False
-
-        return commands.check(predicate)
-
     def _user_permission_check(
         self: Self,
         guild: discord.Guild,
@@ -229,3 +166,68 @@ class Permissions:
             if comparison:
                 return True
         return False
+
+
+def check() -> Callable:
+    """
+    Check if user has permission to use the command.
+
+    Server administrators are automatically granted permission. Otherwise, users
+    are checked based on whether it is a globally granted permission, or
+    whether it is overwritten on an individual server basis.
+    """
+
+    def predicate(interaction: discord.Interaction) -> bool:
+        # You've put this decorator on the wrong function if this check triggers
+        if interaction.command is None:
+            return False
+
+        # Check if command is being run outside of a guild or command is invalid
+        if not isinstance(interaction.user, discord.Member) or interaction.guild is None:
+            return False
+
+        # Allow if user is a server administrator
+        if interaction.user.guild_permissions.administrator:
+            return True
+
+        # Grab valid permissions from the command using its subcommand tree.
+        command_values = interaction.command.qualified_name.split(" ")
+        permissions = ["*", ".".join(command_values)]
+        for i in range(len(command_values) - 1):
+            result = ".".join(command_values[: i + 1]) + ".*"
+            permissions.append(result)
+
+        # Query database to allow if user has the required permission
+        db = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
+        db.row_factory = lambda _, row: row[0]
+        cursor = db.cursor()
+
+        # Allow if permission is granted to the user or role that the user has
+        user_result = self._user_permission_check(
+            interaction.guild, interaction.user, permissions, cursor
+        )
+        role_result = self._role_permission_check(
+            interaction.guild, interaction.user, permissions, cursor
+        )
+        default_result = self._default_permission_check(interaction.guild, permissions, cursor)
+        if user_result or role_result or default_result:
+            return True
+
+        return False
+
+    return discord.app_commands.check(predicate)
+
+
+def exclusive() -> Callable:
+    """Checks if the user is a bot administrator."""
+
+    def predicate(ctx: commands.Context) -> bool:
+        # Open global config file
+        config = toml.load(constants.DATA_DIR + "config.toml")
+
+        # If user is the bot administrator
+        if ctx.author.id in config["base"]["adminuser"]:
+            return True
+        return False
+
+    return commands.check(predicate)
