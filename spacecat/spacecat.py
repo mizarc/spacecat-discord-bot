@@ -21,7 +21,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from spacecat.helpers import constants, module_handler, perms
+from spacecat.helpers import constants, module_handler, permissions
 
 if TYPE_CHECKING:
     from spacecat.instance import Instance
@@ -38,6 +38,7 @@ class SpaceCat(commands.Bot):
             instance (Instance): The instance data to use for the bot.
         """
         self.instance = instance
+        self.permissions = permissions.Permissions(self)
         intents = discord.Intents.default()
         intents.members = True
         intents.message_content = True
@@ -51,7 +52,7 @@ class SpaceCat(commands.Bot):
         It loads all the modules that are required for the bot to
         function properly.
         """
-        perms.init_database()
+        self.permissions.init_database()
         await self.load_modules()
 
     async def load_modules(self: Self) -> None:
@@ -151,7 +152,7 @@ class Core(commands.Cog):
         # Run automatic permission assignment based on presets
         # Not implemented yet, just here as a placeholder
         if Path("config.ini").exists():
-            perms.new(guild)
+            self.bot.permissions.new(guild)
 
     @commands.Cog.listener()
     async def on_message(self: Self, message: discord.Message) -> None:
@@ -221,7 +222,7 @@ class Core(commands.Cog):
 
     # Commands
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def ping(self: Self, interaction: discord.Interaction) -> None:
         """A simple ping to check the bot response time."""
         if self.bot.user is None:
@@ -234,7 +235,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def version(self: Self, interaction: discord.Interaction) -> None:
         """Check the current bot version and source page."""
         embed = discord.Embed(
@@ -246,7 +247,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def modules(self: Self, interaction: discord.Interaction) -> None:
         """Lists all currently available modules."""
         if self.bot.user is None:
@@ -269,7 +270,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def reload(
         self: Self, interaction: discord.Interaction, module: str | None = None
     ) -> None:
@@ -340,7 +341,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def enable(self: Self, interaction: discord.Interaction, module: str) -> None:
         """Enables a module."""
         # Check if module exists by taking the list of extensions from the bot
@@ -373,7 +374,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def disable(self: Self, interaction: discord.Interaction, module: str) -> None:
         """Disables a module."""
         # Check if module exists by taking the list of extensions from the bot
@@ -412,7 +413,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def exit(self: Self, _: discord.Interaction) -> None:
         """Shuts down the bot."""
         # Clear the cache folder if it exists
