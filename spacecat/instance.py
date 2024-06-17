@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sqlite3
 from pathlib import Path
 from typing import Any, Self
 
@@ -140,6 +141,15 @@ class Instance:
         """
         with Path(self.instance_location + "config.toml").open("w") as config_file:
             toml.dump(config, config_file)
+
+    def get_database(self: Self) -> sqlite3.Connection:
+        """
+        Get the database connection.
+
+        Returns:
+            sqlite3.Connection: The database connection.
+        """
+        return sqlite3.connect(self.instance_location + "database.db")
 
     def _init_config(self: Self) -> None:
         try:
