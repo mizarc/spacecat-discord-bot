@@ -11,6 +11,7 @@ from __future__ import annotations
 import datetime
 import sqlite3
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Self
 
 import discord
@@ -19,7 +20,7 @@ import pytz
 from discord import TextChannel, app_commands
 from discord.ext import commands, tasks
 
-from spacecat.helpers import constants
+from spacecat.helpers import constants, permissions
 from spacecat.helpers.views import EmptyPaginatedView, PaginatedView
 from spacecat.modules.administration import Administration, ServerSettingsRepository
 from spacecat.modules.automation import actions, event_scheduler, reminder_scheduler
@@ -380,6 +381,7 @@ class Automation(commands.Cog):
     )
 
     @reminder_group.command(name="list")
+    @permissions.check()
     async def reminder_list(self: Self, interaction: discord.Interaction, page: int = 1) -> None:
         """
         List all reminders in the current guild.
@@ -729,7 +731,14 @@ class Automation(commands.Cog):
             paginated_view = EmptyPaginatedView(embed, "Actions", "No actions have been set.")
         await paginated_view.send(interaction)
 
+    def my_custom_check(self: Self) -> Callable:
+        def predicate(interaction: discord.Interaction) -> bool:
+            return True
+
+        return app_commands.check(predicate)
+
     @event_add_group.command(name="message")
+    @permissions.check()
     async def event_add_message(
         self: Self,
         interaction: discord.Interaction,
@@ -746,7 +755,6 @@ class Automation(commands.Cog):
             channel: The text channel where the message will be sent.
             message: The content of the message to be sent.
         """
-        # Send alert if interaction is not in a guild.
         if interaction.guild is None:
             await interaction.response.send_message(
                 embed=discord.Embed(

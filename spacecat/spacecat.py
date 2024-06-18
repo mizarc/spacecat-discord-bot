@@ -38,7 +38,6 @@ class SpaceCat(commands.Bot):
             instance (Instance): The instance data to use for the bot.
         """
         self.instance = instance
-        self.permissions = permissions.Permissions(self)
         intents = discord.Intents.default()
         intents.members = True
         intents.message_content = True
@@ -52,7 +51,7 @@ class SpaceCat(commands.Bot):
         It loads all the modules that are required for the bot to
         function properly.
         """
-        self.permissions.init_database()
+        permissions.init_database(self.instance.get_database())
         await self.load_modules()
 
     async def load_modules(self: Self) -> None:
@@ -149,10 +148,6 @@ class Core(commands.Cog):
         Args:
             guild (discord.Guild): The guild that was joined.
         """
-        # Run automatic permission assignment based on presets
-        # Not implemented yet, just here as a placeholder
-        if Path("config.ini").exists():
-            self.bot.permissions.new(guild)
 
     @commands.Cog.listener()
     async def on_message(self: Self, message: discord.Message) -> None:
