@@ -17,7 +17,7 @@ from discord import app_commands
 from discord.ext import commands
 from PIL import Image
 
-from spacecat.helpers import constants, perms
+from spacecat.helpers import constants, permissions
 
 
 class PoliteCat(commands.Cog):
@@ -101,7 +101,7 @@ class PoliteCat(commands.Cog):
         return
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def togglewebp(self: Self, interaction: discord.Interaction) -> None:
         """Toggle automatic WebP conversion."""
         if self.webp_convert:
@@ -121,7 +121,7 @@ class PoliteCat(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
     @commands.group(invoke_without_command=True)
-    @perms.check()
+    @permissions.check()
     async def reactcfg(self: Self, ctx: commands.Context) -> None:
         """Configure available reaction images."""
         embed = discord.Embed(
@@ -131,7 +131,7 @@ class PoliteCat(commands.Cog):
         await ctx.send(embed=embed)
 
     @reactcfg.group()
-    @perms.check()
+    @permissions.check()
     async def add(self: Self, ctx: commands.Context, name: str) -> None:
         """Add a reaction image."""
         # Check if attachment exists in message
@@ -175,7 +175,7 @@ class PoliteCat(commands.Cog):
         return
 
     @reactcfg.group()
-    @perms.check()
+    @permissions.check()
     async def remove(self: Self, ctx: commands.Context, name: str) -> None:
         """Remove a reaction image."""
         # Cancel if image name exists
@@ -201,7 +201,7 @@ class PoliteCat(commands.Cog):
         return
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def reactlist(self: Self, interaction: discord.Interaction) -> None:
         """List all reaction images."""
         reactions = self._get_reactions()
@@ -215,7 +215,7 @@ class PoliteCat(commands.Cog):
             return
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def react(self: Self, interaction: discord.Interaction, name: str) -> None:
         """Use an image/gif as a reaction."""
         # Try sending WebP
