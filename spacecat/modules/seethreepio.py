@@ -20,7 +20,7 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button
 
-from spacecat.helpers import constants, perms
+from spacecat.helpers import constants, permissions
 from spacecat.helpers.views import DefaultView
 
 
@@ -267,7 +267,7 @@ class Seethreepio(commands.Cog):
         self.throwings: dict[int, Throwing] = {}
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def echo(self: Self, interaction: discord.Interaction, *, message: str) -> None:
         """Repeats a given message.
 
@@ -356,7 +356,7 @@ class Seethreepio(commands.Cog):
         await view.send(interaction)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def throw(
         self: Self,
         interaction: discord.Interaction,
@@ -470,7 +470,7 @@ class Seethreepio(commands.Cog):
         )
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def stealuserpic(
         self: Self, interaction: discord.Interaction, user: discord.User
     ) -> None:

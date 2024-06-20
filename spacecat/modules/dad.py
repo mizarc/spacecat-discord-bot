@@ -13,7 +13,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from spacecat.helpers import constants, perms
+from spacecat.helpers import constants, permissions
 
 
 class Dad(commands.Cog):
@@ -55,7 +55,7 @@ class Dad(commands.Cog):
                     return
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def toggledad(self: Self, interaction: discord.Interaction) -> None:
         """
         Toggles the Dad feature on and off.

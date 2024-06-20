@@ -11,7 +11,6 @@ from __future__ import annotations
 import datetime
 import sqlite3
 import time
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Self
 
 import discord
@@ -730,12 +729,6 @@ class Automation(commands.Cog):
         else:
             paginated_view = EmptyPaginatedView(embed, "Actions", "No actions have been set.")
         await paginated_view.send(interaction)
-
-    def my_custom_check(self: Self) -> Callable:
-        def predicate(interaction: discord.Interaction) -> bool:
-            return True
-
-        return app_commands.check(predicate)
 
     @event_add_group.command(name="message")
     @permissions.check()

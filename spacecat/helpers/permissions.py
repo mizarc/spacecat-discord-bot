@@ -193,6 +193,7 @@ def _default_permission_check(
     Args:
         guild (discord.Guild): The guild to check for default permissions.
         permissions (list[str]): The permissions to check.
+        config (dict): The server configuration.
         cursor (sqlite3.Cursor): The cursor to execute the SQL query.
 
     Returns:

@@ -21,7 +21,7 @@ import wavelink
 from discord import app_commands
 from discord.ext import commands
 
-from spacecat.helpers import constants, perms
+from spacecat.helpers import constants, permissions
 from spacecat.helpers.views import EmptyPaginatedView, PaginatedView
 from spacecat.modules.musicbox.music_player import (
     OriginalSource,
@@ -202,7 +202,7 @@ class Musicbox(commands.Cog):
     )
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def join(
         self: Self,
         interaction: discord.Interaction,
@@ -269,7 +269,7 @@ class Musicbox(commands.Cog):
             return
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def leave(self: Self, interaction: discord.Interaction) -> None:
         """Stops and leaves the voice channel."""
         music_player, voice_channel = await self._find_music_player(interaction)
@@ -284,7 +284,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def play(
         self: Self, interaction: discord.Interaction, url: str, position: int = -1
     ) -> None:
@@ -352,7 +352,7 @@ class Musicbox(commands.Cog):
         await interaction.followup.send(embed=embed)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def playsearch(self: Self, interaction: discord.Interaction, search: str) -> None:
         """Queries a list of songs to play."""
         # Alert user if search term returns no results
@@ -381,7 +381,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def stop(self: Self, interaction: discord.Interaction) -> None:
         """Stops and clears the queue."""
         music_player, _ = await self._find_music_player(interaction)
@@ -397,7 +397,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def resume(self: Self, interaction: discord.Interaction) -> None:
         """Resumes music if paused."""
         music_player, _ = await self._find_music_player(interaction)
@@ -421,7 +421,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def pause(self: Self, interaction: discord.Interaction) -> None:
         """Pauses the music."""
         music_player, _ = await self._find_music_player(interaction)
@@ -445,7 +445,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def seek(self: Self, interaction: discord.Interaction, timestamp: str) -> None:
         """Seeks to a specific position in the song."""
         music_player, voice_channel = await self._find_music_player(interaction)
@@ -461,7 +461,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def skip(self: Self, interaction: discord.Interaction) -> None:
         """Skip the current song and play the next song."""
         music_player, _ = await self._find_music_player(interaction)
@@ -497,7 +497,7 @@ class Musicbox(commands.Cog):
         )
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def prev(self: Self, interaction: discord.Interaction) -> None:
         """Go back in the queue to an already played song."""
         music_player, _ = await self._find_music_player(interaction)
@@ -524,7 +524,7 @@ class Musicbox(commands.Cog):
         )
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def shuffle(self: Self, interaction: discord.Interaction) -> None:
         """Randomly moves the contents of the queue around."""
         music_player, _ = await self._find_music_player(interaction)
@@ -550,7 +550,7 @@ class Musicbox(commands.Cog):
         return
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def loop(self: Self, interaction: discord.Interaction) -> None:
         """Loop the currently playing song."""
         # Get music player
@@ -574,7 +574,7 @@ class Musicbox(commands.Cog):
         return
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def unloop(self: Self, interaction: discord.Interaction) -> None:
         """Unloops so that the queue resumes as usual."""
         music_player, _ = await self._find_music_player(interaction)
@@ -667,7 +667,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @queue_group.command(name="list")
-    @perms.check()
+    @permissions.check()
     async def queue_list(self: Self, interaction: discord.Interaction, page: int = 1) -> None:
         """List the current song queue."""
         music_player, _ = await self._find_music_player(interaction)
@@ -784,7 +784,7 @@ class Musicbox(commands.Cog):
         await paginated_view.send(interaction)
 
     @queue_group.command(name="reorder")
-    @perms.check()
+    @permissions.check()
     async def queue_reorder(
         self: Self, interaction: discord.Interaction, original_pos: int, new_pos: int
     ) -> None:
@@ -824,7 +824,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @queue_group.command(name="remove")
-    @perms.check()
+    @permissions.check()
     async def queue_remove(self: Self, interaction: discord.Interaction, position: int) -> None:
         """Remove a song from the queue."""
         music_player, _ = await self._find_music_player(interaction)
@@ -852,7 +852,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @queue_group.command(name="clear")
-    @perms.check()
+    @permissions.check()
     async def queue_clear(self: Self, interaction: discord.Interaction) -> None:
         """Clears the entire queue."""
         music_player, _ = await self._find_music_player(interaction)
@@ -876,7 +876,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name="create")
-    @perms.check()
+    @permissions.check()
     async def playlist_create(
         self: Self, interaction: discord.Interaction, playlist_name: str
     ) -> None:
@@ -912,7 +912,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name="destroy")
-    @perms.check()
+    @permissions.check()
     async def playlist_destroy(
         self: Self, interaction: discord.Interaction, playlist_name: str
     ) -> None:
@@ -947,7 +947,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name="description")
-    @perms.check()
+    @permissions.check()
     async def playlist_description(
         self: Self, interaction: discord.Interaction, playlist_name: str, description: str
     ) -> None:
@@ -989,7 +989,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name="rename")
-    @perms.check()
+    @permissions.check()
     async def playlist_rename(
         self: Self, interaction: discord.Interaction, playlist_name: str, new_name: str
     ) -> None:
@@ -1022,7 +1022,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name="list")
-    @perms.check()
+    @permissions.check()
     async def playlist_list(self: Self, interaction: discord.Interaction, page: int = 1) -> None:
         """List all available playlists."""
         if not interaction.guild or not isinstance(interaction.user, discord.Member):
@@ -1062,7 +1062,7 @@ class Musicbox(commands.Cog):
         await paginated_view.send(interaction)
 
     @playlist_group.command(name="add")
-    @perms.check()
+    @permissions.check()
     async def playlist_add(
         self: Self, interaction: discord.Interaction, playlist_name: str, url: str
     ) -> None:
@@ -1154,7 +1154,7 @@ class Musicbox(commands.Cog):
         )
 
     @playlist_group.command(name="remove")
-    @perms.check()
+    @permissions.check()
     async def playlist_remove(
         self: Self, interaction: discord.Interaction, playlist_name: str, index: int
     ) -> None:
@@ -1202,7 +1202,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name="reorder")
-    @perms.check()
+    @permissions.check()
     async def playlist_reorder(
         self: Self,
         interaction: discord.Interaction,
@@ -1276,7 +1276,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @playlist_group.command(name="view")
-    @perms.check()
+    @permissions.check()
     async def playlist_view(
         self: Self, interaction: discord.Interaction, playlist_name: str, page: int = 1
     ) -> None:
@@ -1332,7 +1332,7 @@ class Musicbox(commands.Cog):
         await paginated_view.send(interaction)
 
     @playlist_group.command(name="play")
-    @perms.check()
+    @permissions.check()
     async def playlist_play(
         self: Self, interaction: discord.Interaction, playlist_name: str
     ) -> None:
@@ -1386,7 +1386,7 @@ class Musicbox(commands.Cog):
             await music_player.add(stream[0])
 
     @musicsettings_group.command(name="autodisconnect")
-    @perms.exclusive()
+    @permissions.exclusive()
     async def musicsettings_autodisconnect(self: Self, interaction: discord.Interaction) -> None:
         """
         Toggles if the bot should auto disconnect from a voice channel.
@@ -1413,7 +1413,7 @@ class Musicbox(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @musicsettings_group.command(name="disconnecttime")
-    @perms.exclusive()
+    @permissions.exclusive()
     async def musicsettings_disconnecttime(
         self: Self, interaction: discord.Interaction, seconds: int
     ) -> None:
