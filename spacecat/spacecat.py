@@ -52,6 +52,7 @@ class SpaceCat(commands.Bot):
         function properly.
         """
         permissions.init_database(self.instance.get_database())
+        await self.setup_server_data_tables()
         await self.load_modules()
 
     async def load_modules(self: Self) -> None:
@@ -72,6 +73,14 @@ class SpaceCat(commands.Bot):
                         f"Failed to load extension {module}\n"
                         f"{type(exception).__name__}: {exception}\n"
                     )
+
+    async def setup_server_data_tables(self: Self) -> None:
+        """Sets up the server data table."""
+        database = self.instance.get_database()
+        database.execute(
+            "CREATE TABLE IF NOT EXISTS server_settings (id INTEGER PRIMARY KEY, timezone TEXT, "
+            "disable_default_permissions)"
+        )
 
 
 class Core(commands.Cog):
