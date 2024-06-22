@@ -76,10 +76,8 @@ def check() -> Callable:
         for i in range(len(command_values) - 1):
             result = ".".join(command_values[: i + 1]) + ".*"
             permissions.append(result)
-
         # Query database to allow if user has the required permission
-        db = sqlite3.connect(constants.DATA_DIR + "spacecat.db")
-        db.row_factory = lambda _, row: row[0]
+        db = bot.instance.get_database()
         cursor = db.cursor()
 
         # Allow if permission is granted to the user or role that the user has
@@ -93,8 +91,9 @@ def check() -> Callable:
             interaction.guild, permissions, bot.instance.get_config(), cursor
         )
         if user_result or role_result or default_result:
+            print("x")
             return True
-
+        print("z")
         return False
 
     return discord.app_commands.check(predicate)
@@ -200,9 +199,7 @@ def _default_permission_check(
         bool: True if user has permission.
     """
     query = (guild.id,)
-    cursor.execute(
-        "SELECT disable_default_permissions FROM server_settings WHERE server_id=?", query
-    )
+    cursor.execute("SELECT disable_default_permissions FROM server_settings WHERE id=?", query)
     default_permissions = cursor.fetchone()
     if default_permissions == 0:
         comparison = set(config["base"]["default_permissions"]).intersection(permissions)
