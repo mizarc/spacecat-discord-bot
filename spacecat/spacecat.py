@@ -79,7 +79,7 @@ class SpaceCat(commands.Bot):
         database = self.instance.get_database()
         database.execute(
             "CREATE TABLE IF NOT EXISTS server_settings (id INTEGER PRIMARY KEY, timezone TEXT, "
-            "disable_default_permissions)"
+            "disable_default_permissions INTEGER)"
         )
 
 
