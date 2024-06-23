@@ -95,6 +95,10 @@ class Core(commands.Cog):
         """
         self.bot = bot
 
+    def cog_load(self: Core) -> None:
+        """Listener that sets up the server settings on load."""
+        self.bot.tree.on_error = self.on_command_error
+
     @commands.Cog.listener()
     async def on_ready(self: Core) -> None:
         """
@@ -185,6 +189,19 @@ class Core(commands.Cog):
             if len(words) > 0 and words[0] == mention and words[1] == "sync":
                 await self.process_sync(message.channel)
                 return
+
+    async def on_command_error(
+        self: Self, interaction: discord.Interaction, _: app_commands.AppCommandError
+    ) -> None:
+        """
+        Throws out users without permission to use the command.
+
+        Args:
+            interaction (discord.Interaction): The user interaction.
+        """
+        await interaction.response.send_message(
+            "You do not have permission to use this command.", ephemeral=True
+        )
 
     async def process_info(self: Self, channel: discord.abc.Messageable) -> None:
         """

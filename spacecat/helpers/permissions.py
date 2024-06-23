@@ -76,11 +76,10 @@ def check() -> Callable:
         for i in range(len(command_values) - 1):
             result = ".".join(command_values[: i + 1]) + ".*"
             permissions.append(result)
-        # Query database to allow if user has the required permission
-        db = bot.instance.get_database()
-        cursor = db.cursor()
 
         # Allow if permission is granted to the user or role that the user has
+        db = bot.instance.get_database()
+        cursor = db.cursor()
         user_result = _user_permission_check(
             interaction.guild, interaction.user, permissions, cursor
         )
@@ -91,9 +90,8 @@ def check() -> Callable:
             interaction.guild, permissions, bot.instance.get_config(), cursor
         )
         if user_result or role_result or default_result:
-            print("x")
             return True
-        print("z")
+
         return False
 
     return discord.app_commands.check(predicate)
