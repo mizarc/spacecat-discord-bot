@@ -243,7 +243,6 @@ class Core(commands.Cog):
 
     # Commands
     @app_commands.command()
-    @permissions.check()
     async def ping(self: Self, interaction: discord.Interaction) -> None:
         """A simple ping to check the bot response time."""
         if self.bot.user is None:
@@ -256,7 +255,6 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @permissions.check()
     async def version(self: Self, interaction: discord.Interaction) -> None:
         """Check the current bot version and source page."""
         embed = discord.Embed(
