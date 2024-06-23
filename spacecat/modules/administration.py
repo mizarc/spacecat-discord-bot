@@ -15,7 +15,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from spacecat.helpers import constants
+from spacecat.helpers import constants, permissions
 
 
 class ServerSettings:
@@ -176,6 +176,7 @@ class Administration(commands.Cog):
         await self._add_server_entry(guild.id)
 
     @app_commands.command()
+    @permissions.check()
     async def timezone(self: Self, interaction: discord.Interaction, region: str) -> None:
         """
         Sets the timezone for the server.

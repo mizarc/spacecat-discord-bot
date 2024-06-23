@@ -278,6 +278,7 @@ class Seethreepio(commands.Cog):
         await interaction.response.send_message(message)
 
     @app_commands.command()
+    @permissions.check()
     async def coinflip(self: Self, interaction: discord.Interaction) -> None:
         """
         Simulates a coin flip.
@@ -292,6 +293,7 @@ class Seethreepio(commands.Cog):
             await interaction.response.send_message("Tails")
 
     @app_commands.command()
+    @permissions.check()
     async def diceroll(self: Self, interaction: discord.Interaction, sides: int = 6) -> None:
         """
         Simulates a dice roll with a given number of sides.
@@ -305,6 +307,7 @@ class Seethreepio(commands.Cog):
         await interaction.response.send_message(f"You rolled a {result} on a {sides} sided dice")
 
     @app_commands.command()
+    @permissions.check()
     async def rps(self: Self, interaction: discord.Interaction, target: discord.User) -> None:
         """
         Starts a game of Rock Paper Scissors against a target user.
