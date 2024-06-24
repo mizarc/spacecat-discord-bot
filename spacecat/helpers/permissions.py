@@ -49,9 +49,10 @@ def check() -> Callable:
     """
     Check if user has permission to use the command.
 
-    Server administrators are automatically granted permission. Otherwise, users
-    are checked based on whether it is a globally granted permission, or
-    whether it is overwritten on an individual server basis.
+    Server administrators are automatically granted permission.
+    Otherwise, users are checked based on whether it is a globally
+    granted permission, or whether it is overwritten on an individual
+    server basis.
     """
 
     def predicate(interaction: discord.Interaction) -> bool:
@@ -98,7 +99,12 @@ def check() -> Callable:
 
 
 def exclusive() -> Callable:
-    """Checks if the user is a bot administrator."""
+    """
+    Checks if the user is a bot administrator.
+
+    Make sure you use this for commands that can affect the bot on a
+    global scale, otherwise destruction will ensure.
+    """
 
     def predicate(ctx: commands.Context) -> bool:
         # Open global config file
@@ -125,7 +131,8 @@ def _user_permission_check(
     the command.
 
     Args:
-        guild (discord.Guild): The guild to check for default permissions.
+        guild (discord.Guild): The guild to check for default
+            permissions.
         user (discord.Member): The user to check.
         permissions (list[str]): The permissions to check.
         cursor (sqlite3.Cursor): The cursor to execute the SQL query.
@@ -154,7 +161,8 @@ def _role_permission_check(
     of them have the required permission to use the command.
 
     Args:
-        guild (discord.Guild): The guild to check for default permissions.
+        guild (discord.Guild): The guild to check for default
+            permissions.
         user (discord.Member): The user to check.
         permissions (list[str]): The permissions to check.
         cursor (sqlite3.Cursor): The cursor to execute the SQL query.
@@ -188,7 +196,8 @@ def _default_permission_check(
     part of the default commands list.
 
     Args:
-        guild (discord.Guild): The guild to check for default permissions.
+        guild (discord.Guild): The guild to check for default
+            permissions.
         permissions (list[str]): The permissions to check.
         config (dict): The server configuration.
         cursor (sqlite3.Cursor): The cursor to execute the SQL query.
