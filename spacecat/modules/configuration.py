@@ -13,7 +13,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from spacecat.helpers import constants, perms
+from spacecat.helpers import constants, permissions
 
 if TYPE_CHECKING:
     from spacecat.spacecat import SpaceCat
@@ -48,7 +48,7 @@ class Configuration(commands.Cog):
         self.bot.instance.save_config(config)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def status(self: Self, interaction: discord.Interaction, status: discord.Status) -> None:
         """
         Sets the online status of the bot.
@@ -83,7 +83,7 @@ class Configuration(commands.Cog):
         self.bot.instance.save_config(config)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def activity(
         self: Self,
         interaction: discord.Interaction,

@@ -19,7 +19,7 @@ import pytz
 from discord import TextChannel, app_commands
 from discord.ext import commands, tasks
 
-from spacecat.helpers import constants
+from spacecat.helpers import constants, permissions
 from spacecat.helpers.views import EmptyPaginatedView, PaginatedView
 from spacecat.modules.administration import Administration, ServerSettingsRepository
 from spacecat.modules.automation import actions, event_scheduler, reminder_scheduler
@@ -300,6 +300,7 @@ class Automation(commands.Cog):
         await channel.set_permissions(channel.guild.default_role, connect=None, view_channel=None)
 
     @app_commands.command()
+    @permissions.check()
     async def remindme(
         self: Self,
         interaction: discord.Interaction,
@@ -380,6 +381,7 @@ class Automation(commands.Cog):
     )
 
     @reminder_group.command(name="list")
+    @permissions.check()
     async def reminder_list(self: Self, interaction: discord.Interaction, page: int = 1) -> None:
         """
         List all reminders in the current guild.
@@ -427,6 +429,7 @@ class Automation(commands.Cog):
         await paginated_view.send(interaction)
 
     @reminder_group.command(name="remove")
+    @permissions.check()
     async def reminder_remove(self: Self, interaction: discord.Interaction, index: int) -> None:
         """
         Removes a reminder based on the provided index.
@@ -478,6 +481,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="list")
+    @permissions.check()
     async def event_list(self: Self, interaction: discord.Interaction, page: int = 1) -> None:
         """
         Lists all scheduled events in the current guild.
@@ -526,6 +530,7 @@ class Automation(commands.Cog):
         await paginated_view.send(interaction)
 
     @event_group.command(name="create")
+    @permissions.check()
     async def event_create(  # noqa: PLR0911
         self: Self,
         interaction: discord.Interaction,
@@ -606,6 +611,7 @@ class Automation(commands.Cog):
         return None
 
     @event_group.command(name="destroy")
+    @permissions.check()
     async def event_destroy(self: Self, interaction: discord.Interaction, event_name: str) -> None:
         """
         Destroys an event by name.
@@ -645,6 +651,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="view")
+    @permissions.check()
     async def event_view(
         self: Self, interaction: discord.Interaction, name: str, page: int = 1
     ) -> None:
@@ -730,6 +737,7 @@ class Automation(commands.Cog):
         await paginated_view.send(interaction)
 
     @event_add_group.command(name="message")
+    @permissions.check()
     async def event_add_message(
         self: Self,
         interaction: discord.Interaction,
@@ -746,7 +754,6 @@ class Automation(commands.Cog):
             channel: The text channel where the message will be sent.
             message: The content of the message to be sent.
         """
-        # Send alert if interaction is not in a guild.
         if interaction.guild is None:
             await interaction.response.send_message(
                 embed=discord.Embed(
@@ -775,6 +782,7 @@ class Automation(commands.Cog):
         )
 
     @event_add_group.command(name="broadcast")
+    @permissions.check()
     async def event_add_broadcast(
         self: Self,
         interaction: discord.Interaction,
@@ -823,6 +831,7 @@ class Automation(commands.Cog):
         )
 
     @event_add_group.command(name="voicekick")
+    @permissions.check()
     async def event_add_voicekick(
         self: Self,
         interaction: discord.Interaction,
@@ -866,6 +875,7 @@ class Automation(commands.Cog):
         )
 
     @event_add_group.command(name="voicemove")
+    @permissions.check()
     async def event_add_voicemove(
         self: Self,
         interaction: discord.Interaction,
@@ -912,6 +922,7 @@ class Automation(commands.Cog):
         )
 
     @event_add_group.command(name="channelprivate")
+    @permissions.check()
     async def event_add_channelprivate(
         self: Self,
         interaction: discord.Interaction,
@@ -958,6 +969,7 @@ class Automation(commands.Cog):
         )
 
     @event_add_group.command(name="channelpublic")
+    @permissions.check()
     async def event_add_channelpublic(
         self: Self,
         interaction: discord.Interaction,
@@ -1002,6 +1014,7 @@ class Automation(commands.Cog):
         )
 
     @event_group.command(name="remove")
+    @permissions.check()
     async def event_remove(
         self: Self, interaction: discord.Interaction, name: str, index: int
     ) -> None:
@@ -1029,6 +1042,7 @@ class Automation(commands.Cog):
         )
 
     @event_group.command(name="reorder")
+    @permissions.check()
     async def event_reorder(
         self: Self,
         interaction: discord.Interaction,
@@ -1068,6 +1082,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="pause")
+    @permissions.check()
     async def event_pause(self: Self, interaction: discord.Interaction, name: str) -> None:
         """
         Pauses a given event to not run on dipatch.
@@ -1118,6 +1133,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="resume")
+    @permissions.check()
     async def event_resume(self: Self, interaction: discord.Interaction, name: str) -> None:
         """
         Resumes a paused event.
@@ -1158,6 +1174,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="rename")
+    @permissions.check()
     async def event_rename(
         self: Self, interaction: discord.Interaction, name: str, new_name: str
     ) -> None:
@@ -1203,6 +1220,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="description")
+    @permissions.check()
     async def event_description(
         self: Self, interaction: discord.Interaction, name: str, description: str
     ) -> None:
@@ -1235,6 +1253,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="reschedule")
+    @permissions.check()
     async def event_reschedule(
         self: Self, interaction: discord.Interaction, name: str, time_string: str, date_string: str
     ) -> None:
@@ -1294,6 +1313,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="interval")
+    @permissions.check()
     async def event_interval(
         self: Self,
         interaction: discord.Interaction,
@@ -1338,6 +1358,7 @@ class Automation(commands.Cog):
         return
 
     @event_group.command(name="trigger")
+    @permissions.check()
     async def event_trigger(self: Self, interaction: discord.Interaction, name: str) -> None:
         """
         Manually triggers a specified event.
