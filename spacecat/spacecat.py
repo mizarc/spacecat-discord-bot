@@ -21,7 +21,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from spacecat.helpers import constants, module_handler, perms
+from spacecat.helpers import constants, module_handler, permissions
 
 if TYPE_CHECKING:
     from spacecat.instance import Instance
@@ -51,6 +51,8 @@ class SpaceCat(commands.Bot):
         It loads all the modules that are required for the bot to
         function properly.
         """
+        permissions.init_database(self.instance.get_database())
+        await self.setup_server_data_tables()
         await self.load_modules()
 
     async def load_modules(self: Self) -> None:
@@ -72,6 +74,14 @@ class SpaceCat(commands.Bot):
                         f"{type(exception).__name__}: {exception}\n"
                     )
 
+    async def setup_server_data_tables(self: Self) -> None:
+        """Sets up the server data table."""
+        database = self.instance.get_database()
+        database.execute(
+            "CREATE TABLE IF NOT EXISTS server_settings (id INTEGER PRIMARY KEY, timezone TEXT, "
+            "disable_default_permissions INTEGER)"
+        )
+
 
 class Core(commands.Cog):
     """The bare minimum for bot functionality."""
@@ -84,6 +94,10 @@ class Core(commands.Cog):
             bot (SpaceCat): The SpaceCat bot instance.
         """
         self.bot = bot
+
+    def cog_load(self: Core) -> None:
+        """Listener that sets up the server settings on load."""
+        self.bot.tree.on_error = self.on_command_error
 
     @commands.Cog.listener()
     async def on_ready(self: Core) -> None:
@@ -147,10 +161,6 @@ class Core(commands.Cog):
         Args:
             guild (discord.Guild): The guild that was joined.
         """
-        # Run automatic permission assignment based on presets
-        # Not implemented yet, just here as a placeholder
-        if Path("config.ini").exists():
-            perms.new(guild)
 
     @commands.Cog.listener()
     async def on_message(self: Self, message: discord.Message) -> None:
@@ -179,6 +189,19 @@ class Core(commands.Cog):
             if len(words) > 0 and words[0] == mention and words[1] == "sync":
                 await self.process_sync(message.channel)
                 return
+
+    async def on_command_error(
+        self: Self, interaction: discord.Interaction, _: app_commands.AppCommandError
+    ) -> None:
+        """
+        Throws out users without permission to use the command.
+
+        Args:
+            interaction (discord.Interaction): The user interaction.
+        """
+        await interaction.response.send_message(
+            "You do not have permission to use this command.", ephemeral=True
+        )
 
     async def process_info(self: Self, channel: discord.abc.Messageable) -> None:
         """
@@ -220,7 +243,6 @@ class Core(commands.Cog):
 
     # Commands
     @app_commands.command()
-    @perms.check()
     async def ping(self: Self, interaction: discord.Interaction) -> None:
         """A simple ping to check the bot response time."""
         if self.bot.user is None:
@@ -233,7 +255,6 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.check()
     async def version(self: Self, interaction: discord.Interaction) -> None:
         """Check the current bot version and source page."""
         embed = discord.Embed(
@@ -245,7 +266,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def modules(self: Self, interaction: discord.Interaction) -> None:
         """Lists all currently available modules."""
         if self.bot.user is None:
@@ -268,7 +289,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def reload(
         self: Self, interaction: discord.Interaction, module: str | None = None
     ) -> None:
@@ -339,7 +360,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def enable(self: Self, interaction: discord.Interaction, module: str) -> None:
         """Enables a module."""
         # Check if module exists by taking the list of extensions from the bot
@@ -372,7 +393,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def disable(self: Self, interaction: discord.Interaction, module: str) -> None:
         """Disables a module."""
         # Check if module exists by taking the list of extensions from the bot
@@ -411,7 +432,7 @@ class Core(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command()
-    @perms.exclusive()
+    @permissions.exclusive()
     async def exit(self: Self, _: discord.Interaction) -> None:
         """Shuts down the bot."""
         # Clear the cache folder if it exists

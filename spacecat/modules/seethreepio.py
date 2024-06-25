@@ -20,7 +20,7 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button
 
-from spacecat.helpers import constants, perms
+from spacecat.helpers import constants, permissions
 from spacecat.helpers.views import DefaultView
 
 
@@ -267,7 +267,7 @@ class Seethreepio(commands.Cog):
         self.throwings: dict[int, Throwing] = {}
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def echo(self: Self, interaction: discord.Interaction, *, message: str) -> None:
         """Repeats a given message.
 
@@ -278,6 +278,7 @@ class Seethreepio(commands.Cog):
         await interaction.response.send_message(message)
 
     @app_commands.command()
+    @permissions.check()
     async def coinflip(self: Self, interaction: discord.Interaction) -> None:
         """
         Simulates a coin flip.
@@ -292,6 +293,7 @@ class Seethreepio(commands.Cog):
             await interaction.response.send_message("Tails")
 
     @app_commands.command()
+    @permissions.check()
     async def diceroll(self: Self, interaction: discord.Interaction, sides: int = 6) -> None:
         """
         Simulates a dice roll with a given number of sides.
@@ -305,6 +307,7 @@ class Seethreepio(commands.Cog):
         await interaction.response.send_message(f"You rolled a {result} on a {sides} sided dice")
 
     @app_commands.command()
+    @permissions.check()
     async def rps(self: Self, interaction: discord.Interaction, target: discord.User) -> None:
         """
         Starts a game of Rock Paper Scissors against a target user.
@@ -356,7 +359,7 @@ class Seethreepio(commands.Cog):
         await view.send(interaction)
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def throw(
         self: Self,
         interaction: discord.Interaction,
@@ -470,7 +473,7 @@ class Seethreepio(commands.Cog):
         )
 
     @app_commands.command()
-    @perms.check()
+    @permissions.check()
     async def stealuserpic(
         self: Self, interaction: discord.Interaction, user: discord.User
     ) -> None:
