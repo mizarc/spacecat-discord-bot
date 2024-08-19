@@ -42,7 +42,7 @@ def debug(message: str) -> None:
     Args:
         message (str): The error message to be printed.
     """
-    print(f"[LOG] {message}")  # noqa: T201
+    print(f"[DEBUG] {message}")  # noqa: T201
 
 
 def error(message: str) -> None:
