@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Latest]
 ### Added
 - `event trigger` command in order to manually trigger events outside of their set dispatch time.
+- Console message are now prefixed based on type (LOG, DEBUG, ERROR)
 
 ### Changed
 - `event list` and `event view` now display the paused state.
