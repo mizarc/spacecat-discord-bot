@@ -21,7 +21,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from spacecat.helpers import constants, module_handler, permissions
+from spacecat.helpers import console, constants, module_handler, permissions
 
 if TYPE_CHECKING:
     from spacecat.instance import Instance
@@ -69,7 +69,7 @@ class SpaceCat(commands.Bot):
                     module_path = f"spacecat.modules.{module}.{module}"
                     await self.load_extension(module_path)
                 except Exception as exception:  # noqa: BLE001 Once again.
-                    print(
+                    console.error(
                         f"Failed to load extension {module}\n"
                         f"{type(exception).__name__}: {exception}\n"
                     )
@@ -123,13 +123,13 @@ class Core(commands.Cog):
             await self._send_invite()
 
         # Output launch completion message
-        print(self.bot.user.name + " has successfully launched")
-        print(f"Bot ID: {self.bot.user.id}")
+        console.message(self.bot.user.name + " has successfully launched")
+        console.message(f"Bot ID: {self.bot.user.id}")
         if module_handler.get_enabled():
-            print("Enabled Module(s): " f"{', '.join(module_handler.get_enabled())}")
+            console.message("Enabled Module(s): " f"{', '.join(module_handler.get_enabled())}")
         if module_handler.get_disabled():
-            print("Disabled Module(s): " f"{', '.join(module_handler.get_disabled())}")
-        print("--------------------")
+            console.message("Disabled Module(s): " f"{', '.join(module_handler.get_disabled())}")
+        console.message("--------------------")
 
         # Change status if specified in config
         try:
@@ -457,7 +457,7 @@ class Core(commands.Cog):
 
         while confirm != "yes":
             # Set a bot administrator
-            print(
+            console.message(
                 "[Bot Administrator]\n"
                 f"Alright, {self.bot.user.name} is now operational.\n"
                 "Now I'll need to get your discord user ID.\n"
@@ -475,26 +475,26 @@ class Core(commands.Cog):
             # Check to see if the user ID is valid
             try:
                 idinput = int(input("Paste your ID right here: "))
-                print("--------------------\n")
+                console.message("--------------------\n")
                 user = await self.bot.fetch_user(idinput)
                 await user.send("Hello there!")
             except (ValueError, AttributeError):
-                print("It looks like that is not a valid ID.\n" "Lets try this again.\n")
+                console.message("It looks like that is not a valid ID.\n" "Lets try this again.\n")
                 input("Press Enter to continue...")
-                print("--------------------\n")
+                console.message("--------------------\n")
                 await asyncio.sleep(1)
                 continue
             await asyncio.sleep(1)
 
             # Ask for confirmation
             while True:
-                print(
+                console.message(
                     f"Verify that {user} is you.\n"
                     "If your user settings allow it, you should've also "
                     "recieved a private message from me.\n"
                 )
                 confirm = input("Type 'yes' to confirm, or 'no' to set a new ID: ")
-                print("--------------------\n")
+                console.message("--------------------\n")
 
                 if confirm == "yes":
                     config["base"]["adminuser"] = [idinput]
@@ -517,7 +517,7 @@ class Core(commands.Cog):
             return
 
         # Provide a link to join the server
-        print(
+        console.message(
             "[Invite]\n"
             "I need to join your Discord server if i'm not in it already.\n"
             "Click the link below or copy it into your web browser.\n"
@@ -543,18 +543,18 @@ def introduction(instance: Instance) -> None:
     Parameters:
         instance (Instance): The instance of the bot.
     """
-    print(
+    console.message(
         "Hey there,\n"
         "The bot will need some configuring to be able to run.\n"
         "Don't worry, I'll walk you through everything.\n"
     )
 
     input("Press Enter to continue...")
-    print("--------------------\n")
+    console.message("--------------------\n")
     time.sleep(1)
 
     # Ask users to provide an API key for the bot
-    print(
+    console.message(
         "[API Key]\n"
         "I'll need to get an API Key from your bot.\n"
         "https://discordapp.com/developers/applications/\n\n"
@@ -567,7 +567,7 @@ def introduction(instance: Instance) -> None:
     )
 
     keyinput = input("Paste your token right here: ")
-    print("--------------------\n")
+    console.message("--------------------\n")
 
     # Add API key to config file
     config = instance.get_config()
@@ -589,19 +589,19 @@ def run(instance: Instance, *, first_run: bool) -> None:
 
     # Attempt to use API key from config and output error if unable to run
     try:
-        print("Active API Key: " + apikey + "\n")
+        console.message("Active API Key: " + apikey + "\n")
         bot = SpaceCat(instance)
         bot.run(apikey)
     except discord.LoginFailure:
         if first_run:
-            print(
+            console.message(
                 "Looks like that API key didn't work.\n"
                 "Run the program again and use the correct key."
             )
             config["base"].pop("apikey")
             instance.save_config(config)
             return
-        print(
+        console.message(
             "[Error]\n"
             "The API key doesn't work.\n"
             "Set a new key by running the bot again"
