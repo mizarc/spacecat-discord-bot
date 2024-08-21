@@ -11,10 +11,13 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from spacecat import instance, spacecat
-from spacecat.helpers import constants
+from spacecat.helpers import console, constants
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def logger() -> None:
@@ -54,7 +57,7 @@ def select_instance() -> instance.Instance:
         display_instances(options)
         instances = instance.get_all()
         choice = input("Select an instance or option: ")
-        print("--------------------\n")
+        console.message("--------------------\n")
 
         # Attempt to get a valid instance by index
         try:
@@ -71,7 +74,9 @@ def select_instance() -> instance.Instance:
             pass
 
         # Alert if no valid option has been selected
-        print("Invalid selection. Please select a valid instance number or an " "option letter.\n")
+        console.message(
+            "Invalid selection. Please select a valid instance number or an " "option letter.\n"
+        )
 
     return instance.Instance(selected_instance)
 
@@ -81,18 +86,18 @@ def display_instances(options: dict) -> None:
     instances = instance.get_all()
 
     # Add list of instances, plus extra options
-    print("[Available Instances]")
+    console.message("[Available Instances]")
     formatted_instances = []
     for index, inst in enumerate(instances):
         formatted_instances.append(f"{index + 1}. {inst}")
-    print("\n".join(formatted_instances))
+    console.message("\n".join(formatted_instances))
 
     option_letters = list(options.keys())
-    print("\n[Other Options]")
-    print(f"{option_letters[0]}. NEW INSTANCE")
-    print(f"{option_letters[1]}. RENAME INSTANCE")
-    print(f"{option_letters[2]}. DELETE INSTANCE")
-    print(f"{option_letters[3]}. EXIT\n")
+    console.message("\n[Other Options]")
+    console.message(f"{option_letters[0]}. NEW INSTANCE")
+    console.message(f"{option_letters[1]}. RENAME INSTANCE")
+    console.message(f"{option_letters[2]}. DELETE INSTANCE")
+    console.message(f"{option_letters[3]}. EXIT\n")
 
 
 def create_instance_menu() -> str:
@@ -103,10 +108,10 @@ def create_instance_menu() -> str:
         str: The name of the new instance
     """
     name = input("Specify the new instance name: ")
-    print("--------------------\n")
+    console.message("--------------------\n")
 
     instance.create(name)
-    print(f"A new instance by the name of '{name}' has been created.\n")
+    console.message(f"A new instance by the name of '{name}' has been created.\n")
     return name
 
 
@@ -118,19 +123,19 @@ def rename_instance_menu() -> None:
         instance_name = instance.get_by_index(index - 1)
     except ValueError:
         instance_name = None
-    print("--------------------\n")
+    console.message("--------------------\n")
     if not instance_name:
-        print("Invalid instance number. Moved back to main menu.\n")
+        console.message("Invalid instance number. Moved back to main menu.\n")
         return
 
     # Prompt to set the new instance name
     new_name = input(f"State the new name for instance {instance_name}: ")
     check = instance.rename(index - 1, new_name)
-    print("--------------------\n")
+    console.message("--------------------\n")
 
     if not check:
-        print("An instance of that name already exists. " "Moved back to main menu.\n")
-    print(f"Instance '{instance_name}' has been renamed to '{new_name}'.\n")
+        console.message("An instance of that name already exists. " "Moved back to main menu.\n")
+    console.message(f"Instance '{instance_name}' has been renamed to '{new_name}'.\n")
 
 
 def destroy_instance_menu() -> None:
@@ -142,22 +147,22 @@ def destroy_instance_menu() -> None:
             instance_name = instance.get_by_index(index - 1)
         except ValueError:
             instance_name = None
-        print("--------------------\n")
+        console.message("--------------------\n")
         if not instance_name:
-            print("Invalid instance number. Moved back to main menu.\n")
+            console.message("Invalid instance number. Moved back to main menu.\n")
             return
 
         # Ask to confirm instance deletion
         confirm = input(f"Are you sure you want to delete instance " f"'{instance_name}' (y/n): ")
-        print("--------------------\n")
+        console.message("--------------------\n")
         if confirm == "y":
             instance.destroy(index - 1)
-            print(f"Instance '{instance_name}' has been deleted.\n")
+            console.message(f"Instance '{instance_name}' has been deleted.\n")
             return
         if confirm == "n":
-            print("Instance deletion has been cancelled.\n")
+            console.message("Instance deletion has been cancelled.\n")
             return
-        print("Invalid option.")
+        console.message("Invalid option.")
 
 
 def main() -> None:
@@ -176,7 +181,7 @@ def main() -> None:
     6. Fetches the configuration file attached to the instance.
     7. Runs the module (Runs introduction if it's the first time).
     """
-    print(
+    console.message(
         r" ___  ___   ___  _                   _   ___      _"
         "\n"
         r"/ __|/ __| |   \(_)___ __ ___ _ _ __| | | _ ) ___| |_"
