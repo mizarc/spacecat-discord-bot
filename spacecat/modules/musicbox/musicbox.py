@@ -597,6 +597,7 @@ class Musicbox(commands.Cog):
         return
 
     @app_commands.command()
+    @permissions.check()
     async def song(self: Self, interaction: discord.Interaction) -> None:
         """List information about the currently playing song."""
         music_player, _ = await self._find_music_player(interaction)
