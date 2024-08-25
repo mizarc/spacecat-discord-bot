@@ -403,6 +403,7 @@ class Action(ABC):
         """
         self.id: uuid.UUID = id_
 
+    @staticmethod
     @abstractmethod
     def get_name() -> str:
         """
@@ -842,14 +843,16 @@ class EventService:
             event: The event to link the action to
             action: The action to be linked
         """
-        actions = self.actions_collection.get(action.get_name())
+        actions = self.actions_collection.get(type(action).get_name())
         if actions is None:
             return
         actions.add(action)
 
         event_actions = self._get_event_actions(event)
         previous_id = event_actions[-1].id if event_actions else uuid.UUID(int=0)
-        event_action = EventAction.create_new(event.id, action.get_name(), action.id, previous_id)
+        event_action = EventAction.create_new(
+            event.id, type(action).get_name(), action.id, previous_id
+        )
         self.event_actions.add(event_action)
 
     def remove_action(self: Self, event: Event, action: Action) -> None:
@@ -863,7 +866,7 @@ class EventService:
             event (Event): The event to remove the action from
             action (Action): The action to remove
         """
-        actions = self.actions_collection.get(action.get_name())
+        actions = self.actions_collection.get(type(action).get_name())
         if actions is None:
             return
         actions.remove(action.id)
@@ -940,7 +943,7 @@ class EventService:
         """
         event.last_run_time = int(datetime.datetime.now(tz=datetime.UTC).timestamp())
         for action in self.get_actions(event):
-            self.bot.dispatch(f"{action.get_name()}_action", action)
+            self.bot.dispatch(f"{type(action).get_name()}_action", action)
         self.events.update(event)
 
     def _get_event_actions(self: Self, event: Event) -> list[EventAction]:
