@@ -191,7 +191,7 @@ class Core(commands.Cog):
                 return
 
     async def on_command_error(
-        self: Self, interaction: discord.Interaction, _: app_commands.AppCommandError
+        self: Self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
         """
         Throws out users without permission to use the command.
@@ -199,9 +199,12 @@ class Core(commands.Cog):
         Args:
             interaction (discord.Interaction): The user interaction.
         """
-        await interaction.response.send_message(
-            "You do not have permission to use this command.", ephemeral=True
-        )
+        if isinstance(error, app_commands.CheckFailure):
+            await interaction.response.send_message(
+                "You do not have permission to use this command.", ephemeral=True
+            )
+        else:
+            console.error(str(error))
 
     async def process_info(self: Self, channel: discord.abc.Messageable) -> None:
         """
