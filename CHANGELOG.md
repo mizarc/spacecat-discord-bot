@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `event trigger` command in order to manually trigger events outside of their set dispatch time.
 - Console message are now prefixed based on type (LOG, DEBUG, ERROR)
+- Users are alerted if they do not have the correct permission to run the command.
 
 ### Changed
 - `event list` and `event view` now display the paused state.
@@ -19,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Last event dispatch time is now the proper dispatch time rather than the time it was supposed to dispatch when the event actually gets dispatched. This desync may have occured if the bot reestablishes the API connection after the event was supposed to trigger, but still triggers.
 
 ### Optimised
-- All one time events and reminders for the next 24 are stored in memory, which should save on database queries.
+- All one time events and reminders for the next 24 hours are stored in memory, which should save on database queries.
 
 ## [0.5.0] - 18-12-2022
 ### Added

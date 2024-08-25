@@ -14,6 +14,7 @@ import asyncio
 import contextlib
 import shutil
 import time
+import traceback
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
@@ -73,6 +74,7 @@ class SpaceCat(commands.Bot):
                         f"Failed to load extension {module}\n"
                         f"{type(exception).__name__}: {exception}\n"
                     )
+                    traceback.print_exc()
 
     async def setup_server_data_tables(self: Self) -> None:
         """Sets up the server data table."""
@@ -191,17 +193,29 @@ class Core(commands.Cog):
                 return
 
     async def on_command_error(
-        self: Self, interaction: discord.Interaction, _: app_commands.AppCommandError
+        self: Self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
         """
-        Throws out users without permission to use the command.
+        Handle errors when a command fails.
+
+        Permission errors are just alerted to the user, while all other
+        errors are also logged in the console.
 
         Args:
             interaction (discord.Interaction): The user interaction.
+            error (app_commands.AppCommandError): The error that was
+                raised.
         """
-        await interaction.response.send_message(
-            "You do not have permission to use this command.", ephemeral=True
-        )
+        if isinstance(error, app_commands.CheckFailure):
+            await interaction.response.send_message(
+                "You do not have permission to use this command.", ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                "Command has errored. Contact the developers for help.", ephemeral=True
+            )
+            console.error(str(error))
+            traceback.format_exc()
 
     async def process_info(self: Self, channel: discord.abc.Messageable) -> None:
         """
