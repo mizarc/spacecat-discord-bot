@@ -196,10 +196,15 @@ class Core(commands.Cog):
         self: Self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
         """
-        Throws out users without permission to use the command.
+        Handle errors when a command fails.
+
+        Permission errors are just alerted to the user, while all other
+        errors are also logged in the console.
 
         Args:
             interaction (discord.Interaction): The user interaction.
+            error (app_commands.AppCommandError): The error that was
+                raised.
         """
         if isinstance(error, app_commands.CheckFailure):
             await interaction.response.send_message(
