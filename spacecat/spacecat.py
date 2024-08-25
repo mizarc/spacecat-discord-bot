@@ -14,6 +14,7 @@ import asyncio
 import contextlib
 import shutil
 import time
+import traceback
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
@@ -73,6 +74,7 @@ class SpaceCat(commands.Bot):
                         f"Failed to load extension {module}\n"
                         f"{type(exception).__name__}: {exception}\n"
                     )
+                    traceback.print_exc()
 
     async def setup_server_data_tables(self: Self) -> None:
         """Sets up the server data table."""
@@ -208,6 +210,7 @@ class Core(commands.Cog):
                 "Command has errored. Contact the developers for help.", ephemeral=True
             )
             console.error(str(error))
+            traceback.format_exc()
 
     async def process_info(self: Self, channel: discord.abc.Messageable) -> None:
         """
