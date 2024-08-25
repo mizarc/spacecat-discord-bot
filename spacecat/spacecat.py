@@ -204,6 +204,9 @@ class Core(commands.Cog):
                 "You do not have permission to use this command.", ephemeral=True
             )
         else:
+            await interaction.response.send_message(
+                "Command has errored. Contact the developers for help.", ephemeral=True
+            )
             console.error(str(error))
 
     async def process_info(self: Self, channel: discord.abc.Messageable) -> None:
