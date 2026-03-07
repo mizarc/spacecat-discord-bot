@@ -8,24 +8,28 @@ class FluxerClient(fluxer.Bot, BaseClient):
         super().__init__(command_prefix="!", intents=fluxer.Intents.default(), *args, **kwargs)
         self.core = core_engine
 
-        # Register commands inside __init__ or via setup methods
-        self.add_command(self.ping)
-
     async def on_ready(self):
         print(f"Fluxer side ready: {self.user.username}")
 
-    # Use the 'ctx' to pass data to your core logic
-    @fluxer.command()
-    async def ping(self, ctx):
-        # We delegate the logic to the core
-        response = await self.core.process_command("ping", user=ctx.author.username)
-        await ctx.reply(response)
+    async def on_message(self, message):
+        # Ignore messages from the bot itself
+        if message.author.id == self.user.id:
+            return
+        
+        # Check if message starts with command prefix
+        if message.content.startswith('!'):
+            command = message.content[1:].split()[0].lower()
+            
+            # Delegate to core engine for command processing
+            response = await self.core.process_command(command, user=message.author.username)
+            await message.reply(response)
 
     # Implementation of the BaseClient "contract"
     async def send_message(self, channel_id: str, text: str):
-        channel = self.get_channel(channel_id)
-        if channel:
-            await channel.send(text)
+        await self.http_client.create_message(
+            channel_id=channel_id,
+            content=text
+        )
 
     async def start_bot(self, token: str):
         await self.start(token)
