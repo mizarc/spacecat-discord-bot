@@ -14,5 +14,5 @@ async def ping(ctx):
 
 
 if __name__ == "__main__":
-    TOKEN = "1478053375523042194.VZG2ZWZNo7XlQEKRF6j0Ff0LHnMrxFZZ_Lx9THQGJt4"
+    TOKEN = "1478053375523042194.WaGnhi3QvkyLo6J5IEELkOD5X2PWBJE8Y9JIMXnM7kw"
     bot.run(TOKEN)

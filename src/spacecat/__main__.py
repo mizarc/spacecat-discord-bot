@@ -99,10 +99,15 @@ class SpacecatCLI:
         print("\nAvailable platforms:")
         for i, platform in enumerate(platforms, 1):
             print(f"{i}. {platform.capitalize()}")
+        print("0. Exit")
         
         while True:
             try:
-                choice = input(f"\nSelect platform (1-{len(platforms)}): ").strip()
+                choice = input(f"\nSelect platform (0-{len(platforms)}): ").strip()
+                if choice == "0":
+                    print("Goodbye!")
+                    sys.exit(0)
+                
                 platform_idx = int(choice) - 1
                 if 0 <= platform_idx < len(platforms):
                     platform = platforms[platform_idx]
@@ -120,10 +125,14 @@ class SpacecatCLI:
             for i, instance in enumerate(instances, 1):
                 print(f"{i}. {instance}")
             print(f"{len(instances) + 1}. Add new instance")
+            print("0. Back to platform selection")
             
             while True:
                 try:
-                    choice = input(f"Select instance (1-{len(instances) + 1}): ").strip()
+                    choice = input(f"\nSelect instance (0-{len(instances) + 1}): ").strip()
+                    if choice == "0":
+                        return self.interactive_mode()
+                    
                     instance_idx = int(choice) - 1
                     
                     if 0 <= instance_idx < len(instances):
@@ -138,7 +147,20 @@ class SpacecatCLI:
                     print("Please enter a number.")
         else:
             print(f"\nNo {platform} instances found.")
-            return self._add_new_instance(platform)
+            print("1. Add new instance")
+            print("0. Back to platform selection")
+            
+            while True:
+                try:
+                    choice = input("Select option (0-1): ").strip()
+                    if choice == "0":
+                        return self.interactive_mode()  # Go back to platform selection
+                    elif choice == "1":
+                        return self._add_new_instance(platform)
+                    else:
+                        print("Invalid choice. Please try again.")
+                except ValueError:
+                    print("Please enter a number.")
     
     def _add_new_instance(self, platform: str):
         """Add a new instance interactively."""
