@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+import toml
+
 from spacecat.core.engine import CoreEngine
 
 try:
@@ -23,46 +25,52 @@ class InstanceManager:
     """Manages bot instances and their configurations."""
     
     def __init__(self):
-        self.config_dir = Path.home() / ".spacecat"
-        self.config_dir.mkdir(exist_ok=True)
-        self.instances_file = self.config_dir / "instances.toml"
-        self.instances = self._load_instances()
-    
-    def _load_instances(self) -> dict:
-        """Load instances from config file."""
-        if not self.instances_file.exists():
-            return {"discord": {}, "fluxer": {}}
-        
-        try:
-            import toml
-            return toml.load(self.instances_file)
-        except Exception:
-            return {"discord": {}, "fluxer": {}}
-    
-    def save_instances(self):
-        """Save instances to config file."""
-        try:
-            import toml
-            with open(self.instances_file, 'w') as f:
-                toml.dump(self.instances, f)
-        except Exception as e:
-            print(f"Warning: Could not save instances: {e}")
+        self.base_dir = Path("data")
+        self.base_dir.mkdir(exist_ok=True)
+        # Initialize platform directories if they don't exist
+        for platform in ["discord", "fluxer"]:
+            (self.base_dir / platform).mkdir(exist_ok=True)
+
+    def _get_config_path(self, platform: str, name: str) -> Path:
+        return self.base_dir / platform / name / "config.toml"
     
     def get_instances(self, platform: str) -> list:
-        """Get list of instances for a platform."""
-        return list(self.instances.get(platform, {}).keys())
+        """Get list of folder names for a given platform."""
+        platform_path = self.base_dir / platform
+        if not platform_path.exists():
+            return []
+        return [d.name for d in platform_path.iterdir() if d.is_dir()]
     
     def add_instance(self, platform: str, name: str, token: str, **kwargs):
-        """Add a new instance."""
-        if platform not in self.instances:
-            self.instances[platform] = {}
-        
-        self.instances[platform][name] = {"token": token, **kwargs}
-        self.save_instances()
-    
+        """Create a new instance folder."""
+        instance_path = self.base_dir / platform / name
+        instance_path.mkdir(parents=True, exist_ok=True)
+
+        # Create a clean TOML structure
+        config = {
+            "settings": {
+                "token": token,
+                "enabled": True
+            }
+        }
+
+        # Save to toml file
+        with open(self._get_config_path(platform, name), 'w') as f:
+            toml.dump(config, f)
+
     def get_instance_config(self, platform: str, name: str) -> Optional[dict]:
-        """Get configuration for a specific instance."""
-        return self.instances.get(platform, {}).get(name)
+        """
+        Get the config file for the instance.
+        """
+        config_path = self._get_config_path(platform, name)
+        if not config_path.exists():
+            return None
+
+        try:
+            return toml.load(config_path)
+        except Exception as e:
+            print(f"Error loading TOML: {e}")
+            return None
 
 
 class SpacecatCLI:
