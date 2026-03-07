@@ -1,44 +1,285 @@
 import argparse
 import asyncio
-from spacecat.platforms.fluxer.client import FluxerClient
-#from spacecat.platforms.discord.client import DiscordClient  # Assuming this is ready
+import sys
+from pathlib import Path
+from typing import Optional
+
+from spacecat.core.engine import CoreEngine
+
+try:
+    from spacecat.platforms.fluxer.client import FluxerClient
+    FLUXER_AVAILABLE = True
+except ImportError:
+    FLUXER_AVAILABLE = False
+
+try:
+    from spacecat.platforms.discord.spacecat import DiscordClient
+    DISCORD_AVAILABLE = True
+except ImportError:
+    DISCORD_AVAILABLE = False
+
+
+class InstanceManager:
+    """Manages bot instances and their configurations."""
+    
+    def __init__(self):
+        self.config_dir = Path.home() / ".spacecat"
+        self.config_dir.mkdir(exist_ok=True)
+        self.instances_file = self.config_dir / "instances.toml"
+        self.instances = self._load_instances()
+    
+    def _load_instances(self) -> dict:
+        """Load instances from config file."""
+        if not self.instances_file.exists():
+            return {"discord": {}, "fluxer": {}}
+        
+        try:
+            import toml
+            return toml.load(self.instances_file)
+        except Exception:
+            return {"discord": {}, "fluxer": {}}
+    
+    def save_instances(self):
+        """Save instances to config file."""
+        try:
+            import toml
+            with open(self.instances_file, 'w') as f:
+                toml.dump(self.instances, f)
+        except Exception as e:
+            print(f"Warning: Could not save instances: {e}")
+    
+    def get_instances(self, platform: str) -> list:
+        """Get list of instances for a platform."""
+        return list(self.instances.get(platform, {}).keys())
+    
+    def add_instance(self, platform: str, name: str, token: str, **kwargs):
+        """Add a new instance."""
+        if platform not in self.instances:
+            self.instances[platform] = {}
+        
+        self.instances[platform][name] = {"token": token, **kwargs}
+        self.save_instances()
+    
+    def get_instance_config(self, platform: str, name: str) -> Optional[dict]:
+        """Get configuration for a specific instance."""
+        return self.instances.get(platform, {}).get(name)
+
+
+class SpacecatCLI:
+    """Main CLI interface for SpaceCat bot."""
+    
+    def __init__(self):
+        self.instance_manager = InstanceManager()
+        self.engine = CoreEngine()
+    
+    def interactive_mode(self):
+        """Run interactive CLI mode."""
+        print(r"   _____                       ______      __ ")
+        print(r"  / ___/____  ____ _________  / ____/___ _/ /_")
+        print(r"  \__ \/ __ \/ __ `/ ___/ _ \/ /   / __ `/ __/")
+        print(r" ___/ / /_/ / /_/ / /__/  __/ /___/ /_/ / /_  ")
+        print(r"/____/ .___/\__,_/\___/\___/\____/\__,_/\__/  ")
+        print(r"    /_/                                       ")
+        print("=" * 30)
+        
+        # Platform selection
+        platforms = []
+        if FLUXER_AVAILABLE:
+            platforms.append("fluxer")
+        if DISCORD_AVAILABLE:
+            platforms.append("discord")
+        
+        if not platforms:
+            print("No platforms are available. Please install platform dependencies:")
+            print("  - For Fluxer: pip install spacecat[fluxer]")
+            print("  - For Discord: pip install spacecat[discord]")
+            print("  - For both: pip install spacecat[all]")
+            sys.exit(1)
+        
+        print("\nAvailable platforms:")
+        for i, platform in enumerate(platforms, 1):
+            print(f"{i}. {platform.capitalize()}")
+        
+        while True:
+            try:
+                choice = input(f"\nSelect platform (1-{len(platforms)}): ").strip()
+                platform_idx = int(choice) - 1
+                if 0 <= platform_idx < len(platforms):
+                    platform = platforms[platform_idx]
+                    break
+                else:
+                    print("Invalid choice. Please try again.")
+            except ValueError:
+                print("Please enter a number.")
+        
+        # Instance selection
+        instances = self.instance_manager.get_instances(platform)
+        
+        if instances:
+            print(f"\nAvailable {platform} instances:")
+            for i, instance in enumerate(instances, 1):
+                print(f"{i}. {instance}")
+            print(f"{len(instances) + 1}. Add new instance")
+            
+            while True:
+                try:
+                    choice = input(f"Select instance (1-{len(instances) + 1}): ").strip()
+                    instance_idx = int(choice) - 1
+                    
+                    if 0 <= instance_idx < len(instances):
+                        instance_name = instances[instance_idx]
+                        config = self.instance_manager.get_instance_config(platform, instance_name)
+                        return platform, instance_name, config.get("token")
+                    elif instance_idx == len(instances):
+                        return self._add_new_instance(platform)
+                    else:
+                        print("Invalid choice. Please try again.")
+                except ValueError:
+                    print("Please enter a number.")
+        else:
+            print(f"\nNo {platform} instances found.")
+            return self._add_new_instance(platform)
+    
+    def _add_new_instance(self, platform: str):
+        """Add a new instance interactively."""
+        print(f"\nAdding new {platform} instance:")
+        
+        name = input("Instance name: ").strip()
+        if not name:
+            print("Instance name cannot be empty.")
+            return self.interactive_mode()
+        
+        token = input("Bot token: ").strip()
+        if not token:
+            print("Token cannot be empty.")
+            return self.interactive_mode()
+        
+        self.instance_manager.add_instance(platform, name, token)
+        print(f"Instance '{name}' added successfully!")
+        
+        return platform, name, token
+    
+    def run_direct(self, platform: str, instance: Optional[str] = None, token: Optional[str] = None):
+        """Run bot directly with command line arguments."""
+        if instance and not token:
+            config = self.instance_manager.get_instance_config(platform, instance)
+            if not config:
+                print(f"Instance '{instance}' not found for platform '{platform}'")
+                sys.exit(1)
+            token = config.get("token")
+        
+        if not token:
+            print("Token is required for direct execution")
+            sys.exit(1)
+        
+        instance_name = instance or "default"
+        return platform, instance_name, token
 
 
 async def start_app():
-    # 1. Setup Argument Parser
-    parser = argparse.ArgumentParser(description="Spacecat Discord Bot Runner")
+    """Main application entry point."""
+    parser = argparse.ArgumentParser(
+        description="SpaceCat Hybrid Bot Runner",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  spacecat                           # Interactive mode
+  spacecat discord                   # Interactive mode for Discord
+  spacecat fluxer --instance mybot   # Direct execution with saved instance
+  spacecat discord --token TOKEN     # Direct execution with token
+        """
+    )
+    
     parser.add_argument(
         "platform",
+        nargs="?",
         choices=["fluxer", "discord"],
-        help="Which platform to launch"
+        help="Platform to run (discord/fluxer). If omitted, runs in interactive mode."
     )
-    parser.add_argument("--token", help="Override the token from CLI", default=None)
-
+    
+    parser.add_argument(
+        "--instance", "-i",
+        help="Instance name to run (requires saved configuration)"
+    )
+    
+    parser.add_argument(
+        "--token", "-t",
+        help="Bot token (overrides instance token)"
+    )
+    
+    parser.add_argument(
+        "--list-instances", "-l",
+        action="store_true",
+        help="List all configured instances"
+    )
+    
     args = parser.parse_args()
-    engine = CoreEngine()
-
-    # 2. Select the Client
-    if args.platform == "fluxer":
-        print("--- Launching Fluxer Platform ---")
-        client = FluxerClient(core_engine=engine)
-        token = args.token or "YOUR_DEFAULT_FLUXER_TOKEN"
+    
+    cli = SpacecatCLI()
+    
+    # Handle list instances
+    if args.list_instances:
+        print("Configured instances:")
+        for platform in ["discord", "fluxer"]:
+            instances = cli.instance_manager.get_instances(platform)
+            if instances:
+                print(f"\n{platform.capitalize()}:")
+                for instance in instances:
+                    print(f"  - {instance}")
+        return
+    
+    # Determine execution mode
+    if not args.platform:
+        # Interactive mode
+        platform, instance_name, token = cli.interactive_mode()
     else:
-        print("--- Launching Discord Platform ---")
-        client = DiscordClient(core_engine=engine)
-        token = args.token or "YOUR_DEFAULT_DISCORD_TOKEN"
-
-    # 3. Run the selected client
-    async with client:
+        # Direct mode
+        if args.platform == "discord" and not DISCORD_AVAILABLE:
+            print("Discord platform is not available. Install with: pip install spacecat[discord]")
+            sys.exit(1)
+        
+        if args.platform == "fluxer" and not FLUXER_AVAILABLE:
+            print("Fluxer platform is not available. Install with: pip install spacecat[fluxer]")
+            sys.exit(1)
+        
+        platform, instance_name, token = cli.run_direct(args.platform, args.instance, args.token)
+    
+    # Launch the bot
+    print(f"\n--- Launching {platform.capitalize()} Platform ({instance_name}) ---")
+    
+    try:
+        if platform == "fluxer":
+            if not FLUXER_AVAILABLE:
+                print("Fluxer platform is not available. Install with: pip install spacecat[fluxer]")
+                sys.exit(1)
+            client = FluxerClient(core_engine=cli.engine)
+        elif platform == "discord":
+            if not DISCORD_AVAILABLE:
+                print("Discord platform is not available. Install with: pip install spacecat[discord]")
+                sys.exit(1)
+            client = DiscordClient(core_engine=cli.engine)
+        else:
+            print(f"Unsupported platform: {platform}")
+            sys.exit(1)
+        
         await client.start_bot(token)
+    
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+    except Exception as e:
+        print(f"Fatal error: {e}")
+        sys.exit(1)
 
 
 def main():
+    """Entry point for the spacecat command."""
     try:
         asyncio.run(start_app())
     except KeyboardInterrupt:
         print("\nShutting down...")
     except Exception as e:
         print(f"Fatal error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,6 @@ class CoreEngine:
     def register(self, name: str, func):
         """Allows you to add new commands from anywhere!"""
         self.commands[name.lower()] = func
-        print(f"Core: Registered command '!{name}'")
 
     async def process_command(self, command_name: str, **kwargs) -> str:
         command_name = command_name.lower()
@@ -31,7 +30,7 @@ class CoreEngine:
 
     async def _cmd_ping(self, **kwargs) -> str:
         user = kwargs.get("user", "User")
-        return f"🏓 Pong! Nice to see you, {user}!"
+        return f"Pong! Nice to see you, {user}!"
 
     async def _cmd_status(self, **kwargs) -> str:
-        return "🚀 All systems go."
+        return "All systems go."
