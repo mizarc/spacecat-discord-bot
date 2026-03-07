@@ -146,7 +146,7 @@ class SpacecatCLI:
                     if 0 <= instance_idx < len(instances):
                         instance_name = instances[instance_idx]
                         config = self.instance_manager.get_instance_config(platform, instance_name)
-                        return platform, instance_name, config.get("token")
+                        return platform, instance_name, config.get("settings", {}).get("token")
                     elif instance_idx == len(instances):
                         return self._add_new_instance(platform)
                     else:
