@@ -16,7 +16,7 @@ pip install -r requirements.txt
 pip install -e .
 
 # Run the "spacecat" program
-python -m spacecat
+python3 -m spacecat
 
 # Deactivate the virtual environment
 deactivate
