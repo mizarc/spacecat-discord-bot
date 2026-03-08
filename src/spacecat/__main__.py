@@ -11,7 +11,7 @@ from spacecat.core.engine import CoreEngine
 try:
     from spacecat.platforms.fluxer.client import FluxerClient
     FLUXER_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     FLUXER_AVAILABLE = False
 
 try:
