@@ -18,6 +18,7 @@ from typing import NamedTuple, Self, cast
 import fluxer
 
 from spacecat.platforms.fluxer.helpers import constants, permissions
+import spacecat.core.features.fun as core_fun
 
 
 class RPSAction(enum.Enum):
@@ -151,17 +152,6 @@ class Fun(fluxer.Cog):
 
     @fluxer.Cog.command()
     @permissions.check()
-    async def echo(self: Self, ctx, *, message: str) -> None:
-        """Repeats a given message.
-
-        Args:
-            ctx: The command context.
-            message (str): The message to repeat.
-        """
-        await ctx.reply(message)
-
-    @fluxer.Cog.command()
-    @permissions.check()
     async def coinflip(self: Self, ctx) -> None:
         """
         Simulates a coin flip.
@@ -169,11 +159,8 @@ class Fun(fluxer.Cog):
         Args:
             ctx: The command context.
         """
-        coin = random.randint(0, 1)  # noqa: S311
-        if coin:
-            await ctx.reply("Heads")
-        else:
-            await ctx.reply("Tails")
+        message = core_fun.coinflip()
+        await ctx.reply(message)
 
     @fluxer.Cog.command()
     @permissions.check()
@@ -186,8 +173,8 @@ class Fun(fluxer.Cog):
             sides (int, optional): The number of sides on the dice.
                 Defaults to 6.
         """
-        result = random.randint(1, sides)  # noqa: S311
-        await ctx.reply(f"You rolled a {result} on a {sides} sided dice")
+        message = core_fun.diceroll(sides)
+        await ctx.reply(message)
 
     @fluxer.Cog.command()
     @permissions.check()
@@ -269,29 +256,11 @@ class Fun(fluxer.Cog):
             f"                                             ∩(óᗝò)∩ {member.mention} got dunked!"
         )
 
-    @fluxer.Cog.command()
-    @permissions.check()
-    async def stealuserpic(
-            self: Self, ctx, user: fluxer.User
-    ) -> None:
-        """
-        Steals the profile picture of a target user.
-
-        Args:
-            ctx: The command context.
-            user (fluxer.User): The user whose avatar URL is to be retrieved.
-        """
-        if user.avatar is not None:
-            await ctx.reply(user.avatar.url)
-        else:
-            await ctx.reply("This user doesn't have an avatar.")
-
-
 async def setup(bot: fluxer.Bot) -> None:
     """
-    Load the Seethreepio cog.
+    Load the Fun cog.
 
     Args:
         bot (fluxer.Bot): The Fluxer bot instance.
     """
-    await bot.add_cog(Seethreepio(bot))
+    await bot.add_cog(Fun(bot))

@@ -7,7 +7,7 @@ ENV_NAME=".venv"
 python -m venv "$ENV_NAME"
 
 # Activate the virtual environment
-source "$ENV_NAME/Scripts/activate"
+source "$ENV_NAME/bin/activate"
 
 # Install requirements from the requirements.txt file
 pip install -r requirements.txt
@@ -16,7 +16,4 @@ pip install -r requirements.txt
 pip install -e .
 
 # Run the "spacecat" program
-python3 -m spacecat
-
-# Deactivate the virtual environment
-deactivate
+spacecat

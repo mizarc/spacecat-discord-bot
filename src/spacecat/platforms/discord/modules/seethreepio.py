@@ -22,6 +22,7 @@ from discord.ui import Button
 
 from src.spacecat.platforms.discord.helpers import constants, permissions
 from spacecat import DefaultView
+from spacecat.core import roll_dice
 
 
 class RPSAction(enum.Enum):
@@ -303,8 +304,8 @@ class Seethreepio(commands.Cog):
             sides (int, optional): The number of sides on the dice.
                 Defaults to 6.
         """
-        result = random.randint(1, sides)  # noqa: S311
-        await interaction.response.send_message(f"You rolled a {result} on a {sides} sided dice")
+        message = roll_dice(sides)
+        await interaction.response.send_message(message)
 
     @app_commands.command()
     @permissions.check()
