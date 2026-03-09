@@ -1,14 +1,15 @@
 import asyncio
 import fluxer
+
+from .features.utility import Utility
 from ..base import BaseClient
 from .features.fun import Fun
 
 
 class FluxerClient(fluxer.Bot, BaseClient):
-    def __init__(self, core_engine, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         # Initialize fluxer.Bot with your prefix and intents
         super().__init__(command_prefix="!", intents=fluxer.Intents.default(), *args, **kwargs)
-        self.core = core_engine
         self._register_handlers()
         asyncio.create_task(self._register_cogs())
 
@@ -16,11 +17,6 @@ class FluxerClient(fluxer.Bot, BaseClient):
         @self.event
         async def on_ready():
             print(f"Fluxer side ready: {self.user.username}")
-
-        @self.command()
-        async def ping(ctx):
-            response = await self.core.process_command("ping", user=ctx.author.username)
-            await ctx.reply(response)
 
     async def on_message(self, message):
         # Ignore messages from the bot itself
@@ -40,6 +36,7 @@ class FluxerClient(fluxer.Bot, BaseClient):
     async def _register_cogs(self):
         """Register all cogs for the bot."""
         await self.add_cog(Fun(self))
+        await self.add_cog(Utility(self))
 
     # Implementation of the BaseClient "contract"
     async def send_message(self, channel_id: str, text: str):

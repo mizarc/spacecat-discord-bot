@@ -6,8 +6,6 @@ from typing import Optional
 
 import toml
 
-from spacecat.core.engine import CoreEngine
-
 try:
     from spacecat.platforms.fluxer.client import FluxerClient
     FLUXER_AVAILABLE = True
@@ -78,7 +76,7 @@ class SpacecatCLI:
     
     def __init__(self):
         self.instance_manager = InstanceManager()
-        self.engine = CoreEngine()
+        #self.engine = CoreEngine()
     
     def interactive_mode(self):
         """Run interactive CLI mode."""
@@ -282,7 +280,7 @@ Examples:
             if not FLUXER_AVAILABLE:
                 print("Fluxer platform is not available. Install with: pip install spacecat[fluxer]")
                 sys.exit(1)
-            client = FluxerClient(core_engine=cli.engine)
+            client = FluxerClient()
         elif platform == "discord":
             if not DISCORD_AVAILABLE:
                 print("Discord platform is not available. Install with: pip install spacecat[discord]")
