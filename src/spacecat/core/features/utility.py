@@ -4,14 +4,6 @@ import time
 from typing import NamedTuple, TypedDict
 
 
-class UptimeInfo(NamedTuple):
-    """Uptime information container."""
-
-    hours: int
-    minutes: int
-    seconds: int
-
-
 class UserData(NamedTuple):
     """User information container."""
 
@@ -54,21 +46,6 @@ class UniversalEmbed(TypedDict):
     title: str
     fields: list[EmbedField]
     color: int
-
-
-def format_uptime(start_time: float) -> UptimeInfo:
-    """Calculate uptime from a start timestamp.
-
-    Args:
-        start_time: Unix timestamp when the process started.
-
-    Returns:
-        UptimeInfo with hours, minutes, and seconds.
-    """
-    uptime_seconds = int(time.time() - start_time)
-    hours, remainder = divmod(uptime_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return UptimeInfo(hours=hours, minutes=minutes, seconds=seconds)
 
 
 def avatar(avatar_url: str | None) -> str:
@@ -140,7 +117,6 @@ def serverinfo(server_data: ServerData) -> UniversalEmbed:
     if server_data.channels:
         fields.append({"name": "Channels", "value": server_data.channels, "inline": False})
 
-    # Return the final embed object
     return {
         "title": f"Server: {server_data.name}",
         "fields": fields,
@@ -155,17 +131,21 @@ def uptime(start_timestamp: float) -> str:
         start_timestamp: Unix timestamp when the bot started.
 
     Returns:
-        Formatted uptime string.
+        Formatted uptime string or UptimeInfo object if return_raw is True.
     """
-    uptime_info = format_uptime(start_timestamp)
-    parts = []
+    # Calculate uptime in hours, minutes, and seconds.
+    uptime_seconds = int(time.time() - start_timestamp)
+    hours, remainder = divmod(uptime_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
 
-    if uptime_info.hours > 0:
-        parts.append(f"{uptime_info.hours} hour{'s' if uptime_info.hours != 1 else ''}")
-    if uptime_info.minutes > 0:
-        parts.append(f"{uptime_info.minutes} minute{'s' if uptime_info.minutes != 1 else ''}")
-    if uptime_info.seconds > 0 or not parts:
-        parts.append(f"{uptime_info.seconds} second{'s' if uptime_info.seconds != 1 else ''}")
+    # Build the uptime string.
+    parts = []
+    if hours > 0:
+        parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
+    if minutes > 0:
+        parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+    if seconds > 0 or not parts:
+        parts.append(f"{seconds} second{'s' if seconds != 1 else ''}")
 
     return f"Bot Uptime: {' '.join(parts)}."
 
