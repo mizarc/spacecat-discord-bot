@@ -13,7 +13,7 @@ def diceroll(sides: int = 6) -> str:
         A formatted message with the roll result.
     """
     result = random.randint(1, sides)
-    return f"You rolled a {result} on a {sides} sided dice"
+    return f"You rolled a {result}!"
 
 
 def coinflip() -> str:

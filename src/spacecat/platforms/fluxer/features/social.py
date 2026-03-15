@@ -9,16 +9,13 @@ that are fun to play include the Rock Paper Scissors game.
 
 from __future__ import annotations
 
-import asyncio
 import enum
-import random
-import time
 from typing import NamedTuple, Self, cast
 
 import fluxer
 
 from spacecat.platforms.fluxer.helpers import constants, permissions
-import spacecat.core.features.fun as core_fun
+import spacecat.core.features.social as core_social
 
 
 class RPSAction(enum.Enum):
@@ -122,14 +119,17 @@ class RPSGame:
 # These classes are kept for compatibility but may not work
 class RPSButton:
     """Placeholder for RPS button functionality."""
+
     def __init__(self, *args, **kwargs):
         pass
 
     async def callback(self, *args, **kwargs):
         pass
 
+
 class CatchButton:
     """Placeholder for catch button functionality."""
+
     def __init__(self, *args, **kwargs):
         pass
 
@@ -148,7 +148,7 @@ class Fun(fluxer.Cog):
             bot (fluxer.Bot): The bot instance.
         """
         super().__init__(bot)
-        self.throwings: dict[int, Throwing] = {}
+        # self.throwings: dict[int, Throwing] = {}
 
     @fluxer.Cog.command()
     @permissions.check()
@@ -159,7 +159,7 @@ class Fun(fluxer.Cog):
         Args:
             ctx: The command context.
         """
-        message = core_fun.coinflip()
+        message = core_social.coinflip()
         await ctx.reply(message)
 
     @fluxer.Cog.command()
@@ -173,47 +173,8 @@ class Fun(fluxer.Cog):
             sides (int, optional): The number of sides on the dice.
                 Defaults to 6.
         """
-        message = core_fun.diceroll(sides)
+        message = core_social.diceroll(int(sides))
         await ctx.reply(message)
-
-    @fluxer.Cog.command()
-    @permissions.check()
-    async def rps(self: Self, ctx, target: fluxer.User = None) -> None:
-        """
-        Starts a game of Rock Paper Scissors against a target user.
-
-        Args:
-            ctx: The command context.
-            target (fluxer.User): The user to challenge. If None, plays against bot.
-        """
-        # If no target specified, play against the bot
-        target_instance = None
-
-        # 1. Handle user lookup if a target is provided
-        if target:
-            # Clean the ID string (handling <@!123> or <@123> mentions)
-            clean_id = target.replace("<@", "").replace("!", "").replace(">", "")
-            print(clean_id)
-            try:
-                # Fetch the user object from the API
-                target_instance = await self.bot.fetch_user(clean_id)
-            except (ValueError, Exception):
-                await ctx.reply("Could not find that user. Please provide a valid mention or ID.")
-                return
-
-        # 2. Logic for when no target is provided (play against bot)
-        if not target_instance:
-            await ctx.reply("You are playing against the bot! (Add a user mention to challenge someone else).")
-            # Logic to handle bot opponent here...
-            return
-
-        # 3. Proceed with the challenge
-        # Now 'target' is a valid fluxer.User object with an .id attribute
-        await ctx.reply(
-            f"<@{target_instance.id}> has been challenged by <@{ctx.author.id}> to Rock Paper Scissors!\n"
-            f"Choose: rock, paper, or scissors\n"
-            f"Use: !rps_choice <your_choice>"
-        )
 
     @fluxer.Cog.command()
     @permissions.check()
@@ -255,6 +216,7 @@ class Fun(fluxer.Cog):
             f"{ctx.author.mention} (∩òᗝó)⊃ --==({item})"
             f"                                             ∩(óᗝò)∩ {member.mention} got dunked!"
         )
+
 
 async def setup(bot: fluxer.Bot) -> None:
     """
