@@ -5,6 +5,7 @@ import time
 from typing import TypedDict
 import qrcode as qr_code
 from PIL import Image
+import simpleeval
 from dateutil import parser
 
 
@@ -37,6 +38,14 @@ def avatar(avatar_url: str | None) -> str:
     if avatar_url:
         return f"Avatar URL: {avatar_url}"
     return "This user does not have an avatar."
+
+
+def calc(expression: str) -> str:
+    """Core logic to calculate a math equation."""
+    try:
+        return str(simpleeval.simple_eval(expression))
+    except Exception as e:
+        return f"Could not calculate that. {e}"
 
 
 def color(hex_code: str) -> tuple[io.BytesIO, dict[str, str]]:
