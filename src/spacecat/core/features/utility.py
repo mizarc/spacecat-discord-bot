@@ -47,13 +47,23 @@ def echo(message: str) -> str:
     return message
 
 
-def ping() -> str:
+async def ping(send_func, edit_func) -> str:
     """Return a ping response.
 
     Returns:
         A simple ping response string.
     """
-    return "Pong!"
+    start_time = time.perf_counter()
+
+    # 1. Use the injected 'send_func'
+    msg = await send_func("Calculating latency...")
+
+    end_time = time.perf_counter()
+    latency_ms = round((end_time - start_time) * 1000)
+
+    # 2. Use the injected 'edit_func'
+    response = f"Pong! Bot latency is: {latency_ms}ms"
+    await edit_func(msg, response)
 
 
 def uptime(start_timestamp: float) -> str:

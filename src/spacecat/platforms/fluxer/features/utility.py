@@ -59,8 +59,10 @@ class Utility(fluxer.Cog):
         Args:
             ctx: The command context.
         """
-        response = core_utility.ping()
-        await ctx.reply(response)
+        await core_utility.ping(
+            send_func=ctx.reply,
+            edit_func=lambda msg, content: msg.edit(content=content)
+        )
 
     @fluxer.Cog.command()
     @permissions.check()
