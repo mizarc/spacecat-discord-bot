@@ -4,34 +4,6 @@ import time
 from typing import NamedTuple, TypedDict
 
 
-class UserData(NamedTuple):
-    """User information container."""
-
-    id: str
-    username: str
-    display_name: str | None
-    discriminator: str | None
-    avatar_url: str | None
-    created_at: str | None
-    is_bot: str | None
-    status: str | None
-    roles: str | None
-
-
-class ServerData(NamedTuple):
-    """Server information container."""
-
-    id: str
-    name: str
-    owner_id: str | None
-    member_count: str | None
-    created_at: str | None
-    icon_url: str | None
-    features: str | None
-    roles: str | None
-    channels: str | None
-
-
 class EmbedField(TypedDict):
     """A field within a universal embed."""
 
@@ -84,46 +56,6 @@ def ping() -> str:
     return "Pong!"
 
 
-def serverinfo(server_data: ServerData) -> UniversalEmbed:
-    """Display the server's information.
-
-    This leverages a universal embed format with server-specific
-    information that can be parsed by the individual platforms.
-
-    Args:
-        server_data: The server's data.
-
-    Returns:
-        A UniversalEmbed object that stores metadata for the platform
-        to parse into a formatted layout.
-    """
-    # Required embed field.
-    fields: list[EmbedField] = [
-        {"name": "Server ID", "value": server_data.id, "inline": True},
-        {"name": "Server Name", "value": server_data.name, "inline": True},
-    ]
-
-    # Optional fields that can be applied to the embed.
-    if server_data.owner_id:
-        fields.append({"name": "Owner ID", "value": server_data.owner_id, "inline": True})
-    if server_data.member_count:
-        fields.append({"name": "Member Count", "value": server_data.member_count, "inline": True})
-    if server_data.created_at:
-        fields.append({"name": "Server Created", "value": server_data.created_at, "inline": True})
-    if server_data.features:
-        fields.append({"name": "Features", "value": server_data.features, "inline": False})
-    if server_data.roles:
-        fields.append({"name": "Roles", "value": server_data.roles, "inline": False})
-    if server_data.channels:
-        fields.append({"name": "Channels", "value": server_data.channels, "inline": False})
-
-    return {
-        "title": f"Server: {server_data.name}",
-        "fields": fields,
-        "color": 0x3498DB,
-    }
-
-
 def uptime(start_timestamp: float) -> str:
     """Format bot uptime into a human-readable string.
 
@@ -148,45 +80,3 @@ def uptime(start_timestamp: float) -> str:
         parts.append(f"{seconds} second{'s' if seconds != 1 else ''}")
 
     return f"Bot Uptime: {' '.join(parts)}."
-
-
-def userinfo(user_data: UserData) -> UniversalEmbed:
-    """Display the user's server profile info.
-
-    This leverages a universal embed format with user-specific
-    information that can be parsed by the individual platforms.
-
-    Args:
-        user_data: The user's profile data.
-
-    Returns:
-        A UniversalEmbed object that stores metadata for the platform
-        to parse into a formatted layout.
-    """
-    # Required embed field.
-    fields: list[EmbedField] = [
-        {"name": "User ID", "value": user_data.id, "inline": True},
-    ]
-
-    # Optional fields that can be applied to the embed.
-    if user_data.display_name:
-        fields.append({"name": "Display Name", "value": user_data.display_name, "inline": True})
-    if user_data.discriminator:
-        fields.append(
-            {"name": "Discriminator", "value": f"#{user_data.discriminator}", "inline": True}
-        )
-    if user_data.created_at:
-        fields.append({"name": "Account Created", "value": user_data.created_at, "inline": True})
-    if user_data.is_bot:
-        fields.append({"name": "Bot User", "value": "🤖 Yes", "inline": True})
-    if user_data.status:
-        fields.append({"name": "Status", "value": user_data.status, "inline": True})
-    if user_data.roles:
-        fields.append({"name": "Roles", "value": user_data.roles, "inline": False})
-
-    # Return the final embed object
-    return {
-        "title": f"Profile: {user_data.username}",
-        "fields": fields,
-        "color": 0x3498DB,
-    }
