@@ -1,7 +1,8 @@
 """Shared utility command logic."""
-
+import io
 import time
 from typing import NamedTuple, TypedDict
+import qrcode as qr_code
 
 
 class EmbedField(TypedDict):
@@ -64,6 +65,20 @@ async def ping(send_func, edit_func) -> str:
     # 2. Use the injected 'edit_func'
     response = f"Pong! Bot latency is: {latency_ms}ms"
     await edit_func(msg, response)
+
+
+def qrcode(data: str) -> io.BytesIO:
+    """Core logic to generate a QR code image buffer."""
+    qr = qr_code.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(data)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    return buffer
 
 
 def uptime(start_timestamp: float) -> str:
