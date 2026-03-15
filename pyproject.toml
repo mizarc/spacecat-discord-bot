@@ -9,9 +9,9 @@ description = "A self hostable modular Discord bot."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
-    {name = "Mizarc", email = "contact@mizarc.dev"}
+    { name = "Mizarc", email = "contact@mizarc.dev" }
 ]
-license = {text = "Apache License 2.0"}
+license = { text = "Apache License 2.0" }
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -29,7 +29,9 @@ classifiers = [
 dependencies = [
     "beautifulsoup4==4.14.3",
     "Pillow>=12.1.1",
+    "python-dateutil==2.9.0.post0",
     "pytz==2026.1.post1",
+    "qrcode==8.2",
     "requests==2.32.5",
     "toml==0.10.2",
 ]
