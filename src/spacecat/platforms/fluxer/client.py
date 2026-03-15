@@ -3,7 +3,7 @@ import fluxer
 
 from .features.utility import Utility
 from ..base import BaseClient
-from .features.fun import Fun
+from .features.social import Fun
 
 
 class FluxerClient(fluxer.Bot, BaseClient):
@@ -22,11 +22,11 @@ class FluxerClient(fluxer.Bot, BaseClient):
         # Ignore messages from the bot itself
         if message.author.id == self.user.id:
             return
-        
+
         # Check if message starts with command prefix
         if message.content.startswith('!'):
             command = message.content[1:].split()[0].lower()
-            
+
             # Delegate to core engine for command processing
             print(command)
             response = await self.core.process_command(command, user=message.author.username)
