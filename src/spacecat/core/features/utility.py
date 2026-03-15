@@ -2,9 +2,10 @@
 import colorsys
 import io
 import time
-from typing import NamedTuple, TypedDict
+from typing import TypedDict
 import qrcode as qr_code
 from PIL import Image
+from dateutil import parser
 
 
 class EmbedField(TypedDict):
@@ -114,6 +115,31 @@ def qrcode(data: str) -> io.BytesIO:
     img.save(buffer, format="PNG")
     buffer.seek(0)
     return buffer
+
+
+def timestamp(time: str) -> str:
+    """Core logic to generate a timestamp."""
+    try:
+        # Parse the string into a datetime object
+        dt = parser.parse(time)
+
+        # Convert to a Unix timestamp
+        unix_time = int(dt.timestamp())
+
+        formats = [
+            ("Short Time", f"<t:{unix_time}:t>"),
+            ("Long Time", f"<t:{unix_time}:T>"),
+            ("Short Date", f"<t:{unix_time}:d>"),
+            ("Long Date", f"<t:{unix_time}:D>"),
+            ("Short Date/Time", f"<t:{unix_time}:f>"),
+            ("Long Date/Time", f"<t:{unix_time}:F>"),
+            ("Relative Time", f"<t:{unix_time}:R>")
+        ]
+
+        # Respond with the formatted strings
+        return "\n".join([f"**{name}:** `{code}` -> {code}" for name, code in formats])
+    except Exception:
+        return "Sorry, I couldn't understand that time format."
 
 
 def uptime(start_timestamp: float) -> str:
