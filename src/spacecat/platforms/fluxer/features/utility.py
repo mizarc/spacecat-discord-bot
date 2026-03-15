@@ -66,6 +66,23 @@ class Utility(fluxer.Cog):
 
     @fluxer.Cog.command()
     @permissions.check()
+    async def qrcode(self: Self, ctx, *, data: str) -> None:
+        """Generates a QR code from the provided text or URL.
+
+        Args:
+            ctx: The command context.
+            data: The URL or text to encode.
+        """
+        # 1. Logic call
+        buffer = core_utility.qrcode(data)
+
+        # 2. Prepare the file
+        file = fluxer.File(fp=buffer, filename="qrcode.png")
+
+        await ctx.reply(file=file)
+
+    @fluxer.Cog.command()
+    @permissions.check()
     async def uptime(self: Self, ctx) -> None:
         """Check how long the bot has been running.
 
