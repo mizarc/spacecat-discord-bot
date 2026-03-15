@@ -9,7 +9,6 @@ from typing import Self
 import fluxer
 
 from spacecat.platforms.fluxer.helpers import permissions
-from spacecat.platforms.fluxer.helpers.embeds import format_universal_embed
 import spacecat.core.features.utility as core_utility
 
 
@@ -112,6 +111,14 @@ class Utility(fluxer.Cog):
         file = fluxer.File(fp=buffer, filename="qrcode.png")
 
         await ctx.reply(file=file)
+
+    @fluxer.Cog.command()
+    @permissions.check()
+    async def timestamp(self: Self, ctx, *, time: str | None = None):
+        if time is None:
+            time = str(datetime.now())
+        response = core_utility.timestamp(time)
+        await ctx.reply(response)
 
     @fluxer.Cog.command()
     @permissions.check()
