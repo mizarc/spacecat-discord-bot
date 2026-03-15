@@ -41,6 +41,38 @@ class Utility(fluxer.Cog):
 
     @fluxer.Cog.command()
     @permissions.check()
+    async def color(self: Self, ctx, hex_code: str) -> None:
+        """Provides a visual preview and data for a color code.
+
+        Args:
+            ctx: The command context.
+            hex_code: The hex color code (e.g., #FF5733).
+        """
+        try:
+            # 1. Generate the image in memory
+            buffer, data = core_utility.color(hex_code)
+
+            # 2. Convert HEX for the embed color parameter
+            # We need to strip the '#' and turn it into an int
+            embed_color = int(hex_code.lstrip('#'), 16)
+
+            # 3. Present data
+            embed = fluxer.Embed(
+                title=f"Color Preview: {hex_code}",
+                color=embed_color
+            )
+            clean_hex = hex_code.lstrip('#')
+            embed.set_thumbnail(url=f"https://dummyimage.com/100x100/{clean_hex}/{clean_hex}.png")
+            embed.add_field(name="RGB", value=data["rgb"], inline=False)
+            embed.add_field(name="HSL", value=data["hsl"], inline=False)
+            embed.add_field(name="CMYK", value=data["cmyk"], inline=False)
+
+            await ctx.reply(embed=embed)
+        except ValueError:
+            await ctx.reply("Invalid HEX code! Make sure it's in the format #RRGGBB.")
+
+    @fluxer.Cog.command()
+    @permissions.check()
     async def echo(self: Self, ctx, *, message: str) -> None:
         """Repeats a given message.
 

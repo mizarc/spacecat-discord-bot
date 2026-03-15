@@ -1,8 +1,10 @@
 """Shared utility command logic."""
+import colorsys
 import io
 import time
 from typing import NamedTuple, TypedDict
 import qrcode as qr_code
+from PIL import Image
 
 
 class EmbedField(TypedDict):
@@ -34,6 +36,39 @@ def avatar(avatar_url: str | None) -> str:
     if avatar_url:
         return f"Avatar URL: {avatar_url}"
     return "This user does not have an avatar."
+
+
+def color(hex_code: str) -> tuple[io.BytesIO, dict[str, str]]:
+    """Core logic to generate a color preview image buffer."""
+    # Ensure the format is clean
+    hex_code = hex_code.lstrip('#')
+
+    # Convert HEX string to RGB tuple
+    rgb = tuple(int(hex_code[i:i + 2], 16) for i in (0, 2, 4))
+
+    # Calculate RGB, HSL, and CMYK
+    r, g, b = [x / 255.0 for x in rgb]
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+    # CMYK Conversion
+    k = 1 - max(r, g, b)
+    c = (1 - r - k) / (1 - k) if k != 1 else 0
+    m = (1 - g - k) / (1 - k) if k != 1 else 0
+    y = (1 - b - k) / (1 - k) if k != 1 else 0
+
+    # Create the square image (100x100 pixels)
+    img = Image.new("RGB", (100, 100), color=rgb)
+
+    # Save to memory buffer
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    return buffer, {
+        "rgb": f"{rgb[0]}, {rgb[1]}, {rgb[2]}",
+        "hsl": f"{round(h * 360)}°, {round(s * 100)}%, {round(l * 100)}%",
+        "cmyk": f"{round(c * 100)}%, {round(m * 100)}%, {round(y * 100)}%, {round(k * 100)}%"
+    }
 
 
 def echo(message: str) -> str:
