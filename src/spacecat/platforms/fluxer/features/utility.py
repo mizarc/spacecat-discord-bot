@@ -40,6 +40,13 @@ class Utility(fluxer.Cog):
 
     @fluxer.Cog.command()
     @permissions.check()
+    async def calc(self: Self, ctx, *, expression: str):
+        """Core logic to calculate a math equation."""
+        response = core_utility.calc(expression)
+        await ctx.reply(response)
+
+    @fluxer.Cog.command()
+    @permissions.check()
     async def color(self: Self, ctx, hex_code: str) -> None:
         """Provides a visual preview and data for a color code.
 
