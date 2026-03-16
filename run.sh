@@ -13,7 +13,7 @@ source "$ENV_NAME/bin/activate"
 pip install -r requirements.txt
 
 # Install the "spacecat" program
-pip install -e .
+pip install -e .[all]
 
 # Run the "spacecat" program
 spacecat
