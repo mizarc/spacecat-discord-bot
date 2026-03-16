@@ -33,6 +33,7 @@ dependencies = [
     "pytz==2026.1.post1",
     "qrcode==8.2",
     "requests==2.32.5",
+    "simpleeval==1.0.7",
     "toml==0.10.2",
 ]
 
