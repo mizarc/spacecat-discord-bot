@@ -30,7 +30,7 @@ def diceroll(sides: int = 6) -> str:
     return f"You rolled a {result}!"
 
 
-def slap(profile_image: Union[Image.Image, bytes], frames: int = 30) -> bytes:
+def slap(profile_image: Union[Image.Image, bytes], frames: int = 60) -> bytes:
     """Create a slap animation by interposing a profile picture into a preset GIF.
 
     The function loads a preset slap GIF template and replaces the face area in each frame
@@ -103,10 +103,13 @@ def _get_manual_tracking_points(num_frames: int) -> List[Tuple[int, int]]:
     # Define your "Control Points" (frame_index, x, y)
     # The animation will smoothly move from one point to the next
     keyframes = [
-        (0, 30, 150),  # Start: At rest
-        (20, 35, 150),
-        (40, 35, 148),
-        (60, 40, 144)
+        (0, 20, 140),
+        (10, 30, 150),
+        (25, 35, 150),
+        (30, 45, 140),
+        (35, 50, 135),
+        (50, 43, 145),
+        (60, 38, 150)
     ]
 
     points = []
