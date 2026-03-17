@@ -9,6 +9,7 @@ that are fun to play include the Rock Paper Scissors game.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import enum
 import requests
@@ -91,6 +92,38 @@ class Fun(fluxer.Cog):
 
         except Exception as e:
             await ctx.reply(f"Sorry, I couldn't create the slap animation: {str(e)}")
+
+    @fluxer.Cog.command()
+    @permissions.check()
+    async def wheelspin(self: Self, ctx, *, choices: str) -> None:
+        """Spin a wheel of choices."""
+        # Split by comma and clean up whitespace
+        options = [opt.strip() for opt in choices.split(",") if opt.strip()]
+
+        if len(options) < 2:
+            return await ctx.reply("Please provide at least 2 options separated by commas!")
+        if len(options) > 15:
+            return await ctx.reply("Too many options! Try to keep it under 15.")
+
+        # Get our animation frames
+        header, frames = core_social.wheelspin(options)
+
+        # Send the initial message
+        message = await ctx.reply(f"**{header}**\n{frames[0][0]}")
+
+        # Loop through frames and edit
+        for i in range(1, len(frames)):
+            content, delay = frames[i]
+            await asyncio.sleep(delay)
+            try:
+                await message.edit(content=f"**{header}**\n{content}")
+            except Exception:
+                # Handle cases where the message is deleted during spin
+                break
+
+        # Final flair: Bold the winner
+        winner_text = frames[-1][0].replace("<--", "⬅️ **WINNER**")
+        return await message.edit(content=f"**{header}**\n{winner_text}")
 
 
 async def setup(bot: fluxer.Bot) -> None:
