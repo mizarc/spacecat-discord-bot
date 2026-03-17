@@ -99,6 +99,52 @@ def slap(profile_image: Union[Image.Image, bytes], frames: int = 60) -> bytes:
     return gif_bytes.getvalue()
 
 
+def wheelspin(options: List[str], steps: float = 12) -> Tuple[str, List[Tuple[str, float]]]:
+    """
+    Generates frames for a wheel spin, ensuring the arrow never stays
+    on the same option for two consecutive frames.
+    """
+    frames = []
+    num_options = len(options)
+    header = "🎡 Spinning the wheel!"
+
+    # Decide the winner immediately
+    winner_index = random.randint(0, num_options - 1)
+    last_idx = -1  # Placeholder for the first move
+
+    for i in range(steps):
+        # If it's the last frame, use the winner
+        if i == steps - 1:
+            current_idx = winner_index
+        else:
+            # Pick a random index that ISN'T the last one we showed
+            # and ISN'T the winner
+            possible_indices = [
+                idx for idx in range(num_options)
+                if idx != last_idx
+            ]
+
+            # Fallback: if there are only 2 options, we just have to pick the non-last one
+            if not possible_indices:
+                possible_indices = [idx for idx in range(num_options) if idx != last_idx]
+
+            current_idx = random.choice(possible_indices)
+
+        last_idx = current_idx
+
+        # Build the display string
+        display = [f"{idx + 1}. {opt}   {'<--' if idx == current_idx else ''}"
+                   for idx, opt in enumerate(options)]
+
+        # Calculate the slowing delay (Quadratic Easing)
+        # This starts fast and gets significantly slower at the end
+        delay = 0.1 + (i / steps) ** 2
+
+        frames.append(("\n".join(display), delay))
+
+    return header, frames
+
+
 def _get_manual_tracking_points(num_frames: int) -> List[Tuple[int, int]]:
     # Define your "Control Points" (frame_index, x, y)
     # The animation will smoothly move from one point to the next
