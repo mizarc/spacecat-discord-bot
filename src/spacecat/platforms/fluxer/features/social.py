@@ -28,7 +28,7 @@ class Social(fluxer.Cog):
         Initialises a new instance of the Fun class.
 
         Args:
-            bot (fluxer.Bot): The bot instance.
+            bot: The bot instance.
         """
         super().__init__(bot)
 
@@ -52,7 +52,7 @@ class Social(fluxer.Cog):
 
         Args:
             ctx: The command context.
-            sides (int, optional): The number of sides on the die.
+            sides: The number of sides on the die.
                 Defaults to 6.
         """
         message = core_social.diceroll(int(sides))
@@ -66,7 +66,7 @@ class Social(fluxer.Cog):
 
         Args:
             ctx: The command context.
-            target (str, optional): The user to slap. If not provided,
+            target: The user to slap. If not provided,
                 it uses the command author's profile picture.
         """
         try:
