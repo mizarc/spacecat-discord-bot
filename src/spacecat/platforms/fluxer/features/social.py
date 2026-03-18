@@ -11,22 +11,21 @@ from __future__ import annotations
 
 import asyncio
 import io
-import enum
 import requests
-from typing import NamedTuple, Self, cast
+from typing import Self
 
 import fluxer
 
-from spacecat.platforms.fluxer.helpers import constants, permissions
+from spacecat.platforms.fluxer.helpers import permissions
 import spacecat.core.features.social as core_social
 
 
-class Fun(fluxer.Cog):
-    """Random text response based features."""
+class Social(fluxer.Cog):
+    """Commands suite to provide fun social interactions."""
 
-    def __init__(self: Fun, bot: fluxer.Bot) -> None:
+    def __init__(self: Social, bot: fluxer.Bot) -> None:
         """
-        Initializes a new instance of the Fun class.
+        Initialises a new instance of the Fun class.
 
         Args:
             bot (fluxer.Bot): The bot instance.
@@ -76,7 +75,8 @@ class Fun(fluxer.Cog):
             user_instance = await self.bot.fetch_user(clean_id)
 
             # Get user's avatar
-            avatar_url = user_instance.avatar_url if user_instance.avatar_url else target.default_avatar_url
+            avatar_url = user_instance.avatar_url \
+                if user_instance.avatar_url else target.default_avatar_url
 
             # Download the avatar
             response = requests.get(avatar_url)

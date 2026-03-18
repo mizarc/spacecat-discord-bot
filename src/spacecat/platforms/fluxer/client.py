@@ -3,7 +3,7 @@ import fluxer
 
 from .features.utility import Utility
 from ..base import BaseClient
-from .features.social import Fun
+from .features.social import Social
 
 
 class FluxerClient(fluxer.Bot, BaseClient):
@@ -35,7 +35,7 @@ class FluxerClient(fluxer.Bot, BaseClient):
 
     async def _register_cogs(self):
         """Register all cogs for the bot."""
-        await self.add_cog(Fun(self))
+        await self.add_cog(Social(self))
         await self.add_cog(Utility(self))
 
     # Implementation of the BaseClient "contract"
