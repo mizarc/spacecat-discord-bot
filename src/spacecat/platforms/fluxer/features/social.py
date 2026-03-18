@@ -1,23 +1,23 @@
 """
-This module provides fun games for users to play.
+This module provides social tools and games for users to play.
 
-Features within this module must be fun little tools or games that the
-user can play with their friends. Notable tools include the dice roll
-which can be used for things like DnD or general decision making. Games
-that are fun to play include the Rock Paper Scissors game.
+Commands within this module focus on the social aspects of interactions,
+encouraging users to have fun and interact with others. Notable tools
+include the dice roll which can be used for things like DnD or general
+decision-making.
 """
 
 from __future__ import annotations
 
 import asyncio
 import io
-import requests
 from typing import Self
 
 import fluxer
+import requests
 
-from spacecat.platforms.fluxer.helpers import permissions
 import spacecat.core.features.social as core_social
+from spacecat.platforms.fluxer.helpers import permissions
 
 
 class Social(fluxer.Cog):
@@ -34,7 +34,7 @@ class Social(fluxer.Cog):
 
     @fluxer.Cog.command()
     @permissions.check()
-    async def coinflip(self: Self, ctx) -> None:
+    async def coinflip(self: Self, ctx: fluxer.Message) -> None:
         """
         Simulates a coin flip.
 
@@ -46,13 +46,13 @@ class Social(fluxer.Cog):
 
     @fluxer.Cog.command()
     @permissions.check()
-    async def diceroll(self: Self, ctx, sides: int = 6) -> None:
+    async def diceroll(self: Self, ctx: fluxer.Message, sides: int = 6) -> None:
         """
-        Simulates a dice roll with a given number of sides.
+        Simulates a die roll with a given number of sides.
 
         Args:
             ctx: The command context.
-            sides (int, optional): The number of sides on the dice.
+            sides (int, optional): The number of sides on the die.
                 Defaults to 6.
         """
         message = core_social.diceroll(int(sides))
@@ -60,14 +60,14 @@ class Social(fluxer.Cog):
 
     @fluxer.Cog.command()
     @permissions.check()
-    async def slap(self: Self, ctx, target: str = None) -> None:
+    async def slap(self: Self, ctx: fluxer.Message, target: str) -> None:
         """
         Create a slap animation using a user's profile picture.
 
         Args:
             ctx: The command context.
             target (str, optional): The user to slap. If not provided,
-                uses the command author's profile picture.
+                it uses the command author's profile picture.
         """
         try:
             # Get the target user (default to command author if not specified)
@@ -75,11 +75,10 @@ class Social(fluxer.Cog):
             user_instance = await self.bot.fetch_user(clean_id)
 
             # Get user's avatar
-            avatar_url = user_instance.avatar_url \
-                if user_instance.avatar_url else target.default_avatar_url
+            avatar_url = user_instance.avatar_url or user_instance.default_avatar_url
 
             # Download the avatar
-            response = requests.get(avatar_url)
+            response = await asyncio.to_thread(requests.get, avatar_url, timeout=10)
             response.raise_for_status()
             avatar_data = response.content
 
@@ -90,20 +89,24 @@ class Social(fluxer.Cog):
             gif_file = fluxer.File(io.BytesIO(gif_data), filename="slap.gif")
             await ctx.reply(file=gif_file)
 
-        except Exception as e:
-            await ctx.reply(f"Sorry, I couldn't create the slap animation: {str(e)}")
+        except requests.RequestException as e:
+            await ctx.reply(f"Sorry, I couldn't create the slap animation: {e}")
 
     @fluxer.Cog.command()
     @permissions.check()
-    async def wheelspin(self: Self, ctx, *, choices: str) -> None:
+    async def wheelspin(self: Self, ctx: fluxer.Message, *, choices: str) -> None:
         """Spin a wheel of choices."""
         # Split by comma and clean up whitespace
+        min_options = 2
+        max_options = 15
         options = [opt.strip() for opt in choices.split(",") if opt.strip()]
 
-        if len(options) < 2:
-            return await ctx.reply("Please provide at least 2 options separated by commas!")
-        if len(options) > 15:
-            return await ctx.reply("Too many options! Try to keep it under 15.")
+        if len(options) < min_options:
+            await ctx.reply("Please provide at least 2 options separated by commas!")
+            return
+        if len(options) > max_options:
+            await ctx.reply("Too many options! Try to keep it under 15.")
+            return
 
         # Get our animation frames
         header, frames = core_social.wheelspin(options)
@@ -117,13 +120,13 @@ class Social(fluxer.Cog):
             await asyncio.sleep(delay)
             try:
                 await message.edit(content=f"**{header}**\n{content}")
-            except Exception:
+            except fluxer.errors.NotFound:
                 # Handle cases where the message is deleted during spin
                 break
 
         # Final flair: Bold the winner
         winner_text = frames[-1][0].replace("<--", "⬅️ **WINNER**")
-        return await message.edit(content=f"**{header}**\n{winner_text}")
+        await message.edit(content=f"**{header}**\n{winner_text}")
 
 
 async def setup(bot: fluxer.Bot) -> None:
@@ -133,4 +136,4 @@ async def setup(bot: fluxer.Bot) -> None:
     Args:
         bot (fluxer.Bot): The Fluxer bot instance.
     """
-    await bot.add_cog(Fun(bot))
+    await bot.add_cog(Social(bot))
