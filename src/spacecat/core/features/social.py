@@ -15,7 +15,7 @@ def coinflip() -> str:
         The word 'Heads' or 'Tails' depending on the random result.
     """
     result = "Heads" if random.randint(0, 1) else "Tails"
-    return f"🪙The coin lands on... {result}!"
+    return f"🪙 The coin lands on... {result}!"
 
 
 def diceroll(sides: int = 6) -> str:
