@@ -15,7 +15,7 @@ def coinflip() -> str:
         The word 'Heads' or 'Tails' depending on the random result.
     """
     result = "Heads" if random.randint(0, 1) else "Tails"
-    return f"The coin lands on... {result}!"
+    return f"🪙The coin lands on... {result}!"
 
 
 def diceroll(sides: int = 6) -> str:
@@ -28,7 +28,7 @@ def diceroll(sides: int = 6) -> str:
         A formatted message with the roll result.
     """
     result = random.randint(1, sides)
-    return f"You rolled a {result}!"
+    return f"🎲 You rolled a {result}!"
 
 
 def slap(profile_image: Union[Image.Image, bytes], frames: int = 60) -> bytes:
