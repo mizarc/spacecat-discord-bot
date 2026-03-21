@@ -1,9 +1,11 @@
 import asyncio
+
 import fluxer
 
-from .features.utility import Utility
 from ..base import BaseClient
+from .features.scheduler import Scheduler
 from .features.social import Social
+from .features.utility import Utility
 
 
 class FluxerClient(fluxer.Bot, BaseClient):
@@ -35,6 +37,7 @@ class FluxerClient(fluxer.Bot, BaseClient):
 
     async def _register_cogs(self):
         """Register all cogs for the bot."""
+        #await self.add_cog(Scheduler(self))
         await self.add_cog(Social(self))
         await self.add_cog(Utility(self))
 

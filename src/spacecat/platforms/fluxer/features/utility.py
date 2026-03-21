@@ -8,8 +8,8 @@ from typing import Self
 
 import fluxer
 
-from spacecat.platforms.fluxer.helpers import permissions
 import spacecat.core.features.utility as core_utility
+from spacecat.platforms.fluxer.helpers import permissions
 
 
 class Utility(fluxer.Cog):
