@@ -18,7 +18,7 @@ from spacecat.core.models.actions import Action
 from spacecat.core.models.events import Event, Repeat
 
 if TYPE_CHECKING:
-    from spacecat.core.interfaces import BotInterface
+    from spacecat.core.interfaces import BaseDispatcher
 
 FIVE_MINUTES_IN_SECONDS = 300
 
@@ -31,14 +31,14 @@ class EventService:
     including action execution and event lifecycle management.
     """
 
-    def __init__(self, bot: BotInterface) -> None:
+    def __init__(self, dispatcher: BaseDispatcher) -> None:
         """
         Initializes a new EventService instance.
 
         Args:
             bot: The bot instance implementing BotInterface.
         """
-        self.bot = bot
+        self.dispatcher = dispatcher
 
     async def dispatch(self, event: Event) -> None:
         """
@@ -82,11 +82,11 @@ class EventService:
         for action in actions:
             try:
                 # We pass the agnostic bot interface to the action
-                await action.run(self.bot)
+                await action.run(self.dispatcher)
             except Exception as e:
                 print(f"Error executing action {action.id} ({action.action_type}): {e}")
 
-    async def get_upcoming_events(self, time_limit: int = FIVE_MINUTES_IN_SECONDS) -> list[Event]:
+    async def get_upcoming(self, time_limit: int = FIVE_MINUTES_IN_SECONDS) -> list[Event]:
         """
         Gets upcoming events within the time limit.
 
