@@ -50,6 +50,37 @@ class BaseScheduler:
             task.cancel()
         self.tasks.clear()
 
+    async def schedule(self, item: Schedulable) -> None:
+        """
+        Add a new scheduled item to the scheduler to run later.
+
+        Args:
+            item: The item to schedule.
+        """
+        # If a task for this ID is already running, cancel it first (prevents duplicates)
+        if item.id in self.tasks:
+            self.tasks[item.id].cancel()
+
+        delay = max(0.0, item.dispatch_time - time.time())
+        # Start the tracking task immediately
+        self.tasks[item.id] = asyncio.create_task(self._run(item, delay))
+
+    def unschedule(self, item_id: Any) -> bool:
+        """
+        Removes a scheduled item by its ID to stop it from running.
+
+        Args:
+            item_id: The ID of the item to remove.
+
+        Returns:
+            bool: True if the item was removed, False otherwise.
+        """
+        task = self.tasks.pop(item_id, None)
+        if task:
+            task.cancel()
+            return True
+        return False
+
     async def _scheduler_loop(self) -> None:
         """The background pulse of the scheduler."""
         while self._running:
