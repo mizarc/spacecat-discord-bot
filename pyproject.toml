@@ -7,7 +7,7 @@ name = "spacecat"
 version = "0.4.0"
 description = "A self hostable modular Discord bot."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 authors = [
     { name = "Mizarc", email = "contact@mizarc.dev" }
 ]
@@ -16,7 +16,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: Apache Software License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
