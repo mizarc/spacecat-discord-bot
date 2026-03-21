@@ -8,7 +8,12 @@ for actions and their repositories.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from tortoise import fields, models
+
+if TYPE_CHECKING:
+    from spacecat.core.interfaces import BaseDispatcher, BotInterface
 
 
 class Action(models.Model):
@@ -38,3 +43,25 @@ class Action(models.Model):
         """Returns a human-readable summary of the action."""
         # This can be expanded to return specific strings based on action_type
         return f"{self.action_type.title()} Action (ID: {str(self.id)[:4]})"
+
+    async def run(self, dispatcher: BaseDispatcher) -> None:
+        """Run the action using the associated dispatch function.
+
+        Args:
+            dispatcher: The dispatcher to use for running the action.
+        """
+        if not self.is_enabled:
+            return
+
+        # Dynamically find the method: e.g., "dispatch_send_message"
+        method_name = f"dispatch_{self.action_type}"
+        handler = getattr(dispatcher, method_name, None)
+
+        if handler:
+            try:
+                # Spreads the database JSON 'data' as keyword arguments
+                await handler(**self.data)
+            except Exception as e:
+                print(f"Execution Error [{self.action_type}]: {e}")
+        else:
+            print(f"Error: Dispatcher {type(dispatcher).__name__} has no method {method_name}")

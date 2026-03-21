@@ -40,9 +40,9 @@ class Event(models.Model):
 
     id = fields.UUIDField(pk=True)
     guild_id = fields.BigIntField(index=True)
-    dispatch_time = fields.IntField()
-    last_run_time = fields.IntField(null=True)
-    repeat_interval = fields.IntEnumField(Repeat, default=Repeat.No)
+    dispatch_time = fields.BigIntField()
+    last_run_time = fields.BigIntField(null=True)
+    repeat_interval = fields.BigIntField(default=Repeat.No.value)
     repeat_multiplier = fields.IntField(default=1)
     name = fields.CharField(max_length=255)
     description = fields.TextField(default="")

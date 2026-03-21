@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 from spacecat.core.models.reminders import Reminder
 
 if TYPE_CHECKING:
-    from spacecat.core.interfaces import BotInterface
+    from spacecat.core.interfaces import BaseDispatcher
 
 FIVE_MINUTES_IN_SECONDS = 300
 
@@ -31,14 +31,14 @@ class ReminderService:
     they are dispatched and then cleaned up from the database.
     """
 
-    def __init__(self, bot: BotInterface) -> None:
+    def __init__(self, dispatcher: BaseDispatcher) -> None:
         """
         Initializes a new ReminderService instance.
 
         Args:
-            bot: The bot instance implementing BotInterface.
+            dispatcher: The dispatcher instance.
         """
-        self.bot = bot
+        self.dispatcher = dispatcher
 
     async def get_upcoming(self, time_limit: int = FIVE_MINUTES_IN_SECONDS) -> list[Reminder]:
         """Gets upcoming reminders within the time limit.
@@ -66,7 +66,9 @@ class ReminderService:
         """
         try:
             # Delegate the actual sending to the bot interface
-            await self.bot.dispatch_reminder(reminder)
+            await self.dispatcher.dispatch_reminder(
+                reminder.channel_id, reminder.message_id, reminder.message
+            )
         except Exception as e:
             print(f"Error dispatching reminder {reminder.id}: {e}")
         finally:
