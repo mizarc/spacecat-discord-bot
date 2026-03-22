@@ -36,7 +36,7 @@ class EventService:
         Initializes a new EventService instance.
 
         Args:
-            bot: The bot instance implementing BotInterface.
+            dispatcher: The dispatcher to use for dispatching actions.
         """
         self.dispatcher = dispatcher
 
@@ -66,9 +66,9 @@ class EventService:
 
             await event.save()
 
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as error:
             # In production, swap this for a proper logger
-            print(f"Critical error during dispatch of Event {event.id}: {e}")
+            print(f"Critical error during dispatch of Event {event.id}: {error}")
 
     async def execute_actions(self, event: Event) -> None:
         """Fetch and run all enabled actions for an event.
@@ -83,8 +83,8 @@ class EventService:
             try:
                 # We pass the agnostic bot interface to the action
                 await action.run(self.dispatcher)
-            except Exception as e:
-                print(f"Error executing action {action.id} ({action.action_type}): {e}")
+            except (OSError, ValueError, RuntimeError) as error:
+                print(f"Error executing action {action.id} ({action.action_type}): {error}")
 
     async def get_upcoming(self, time_limit: int = FIVE_MINUTES_IN_SECONDS) -> list[Event]:
         """
