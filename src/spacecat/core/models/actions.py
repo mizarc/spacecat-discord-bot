@@ -13,7 +13,15 @@ from typing import TYPE_CHECKING
 from tortoise import fields, models
 
 if TYPE_CHECKING:
-    from spacecat.core.interfaces import BaseDispatcher, BotInterface
+    from spacecat.core.interfaces import BaseDispatcher
+
+# Required keys for each action type
+REQUIRED_KEYS = {
+    "message": ["channel_id", "content"],
+    "embed": ["channel_id", "title", "description"],
+    "voice_move": ["guild_id", "user_id", "target_vc"],
+    "timeout": ["guild_id", "user_id", "duration"],
+}
 
 
 class Action(models.Model):
