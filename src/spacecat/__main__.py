@@ -6,22 +6,28 @@ from typing import Optional
 
 import toml
 
+from spacecat.core.logger import setup_logging
+
 try:
     from spacecat.platforms.fluxer.client import FluxerClient
+
     FLUXER_AVAILABLE = True
 except ImportError as e:
     FLUXER_AVAILABLE = False
 
 try:
     from spacecat.platforms.discord.spacecat import DiscordClient
+
     DISCORD_AVAILABLE = True
 except ImportError:
     DISCORD_AVAILABLE = False
 
+setup_logging()
+
 
 class InstanceManager:
     """Manages bot instances and their configurations."""
-    
+
     def __init__(self):
         self.base_dir = Path("data")
         self.base_dir.mkdir(exist_ok=True)
@@ -31,29 +37,24 @@ class InstanceManager:
 
     def _get_config_path(self, platform: str, name: str) -> Path:
         return self.base_dir / platform / name / "config.toml"
-    
+
     def get_instances(self, platform: str) -> list:
         """Get list of folder names for a given platform."""
         platform_path = self.base_dir / platform
         if not platform_path.exists():
             return []
         return [d.name for d in platform_path.iterdir() if d.is_dir()]
-    
+
     def add_instance(self, platform: str, name: str, token: str, **kwargs):
         """Create a new instance folder."""
         instance_path = self.base_dir / platform / name
         instance_path.mkdir(parents=True, exist_ok=True)
 
         # Create a clean TOML structure
-        config = {
-            "settings": {
-                "token": token,
-                "enabled": True
-            }
-        }
+        config = {"settings": {"token": token, "enabled": True}}
 
         # Save to toml file
-        with open(self._get_config_path(platform, name), 'w') as f:
+        with open(self._get_config_path(platform, name), "w") as f:
             toml.dump(config, f)
 
     def get_instance_config(self, platform: str, name: str) -> Optional[dict]:
@@ -73,11 +74,11 @@ class InstanceManager:
 
 class SpacecatCLI:
     """Main CLI interface for SpaceCat bot."""
-    
+
     def __init__(self):
         self.instance_manager = InstanceManager()
-        #self.engine = CoreEngine()
-    
+        # self.engine = CoreEngine()
+
     def interactive_mode(self):
         """Run interactive CLI mode."""
         print(r"   _____                       ______      __ ")
@@ -87,33 +88,33 @@ class SpacecatCLI:
         print(r"/____/ .___/\__,_/\___/\___/\____/\__,_/\__/  ")
         print(r"    /_/                                       ")
         print("=" * 30)
-        
+
         # Platform selection
         platforms = []
         if FLUXER_AVAILABLE:
             platforms.append("fluxer")
         if DISCORD_AVAILABLE:
             platforms.append("discord")
-        
+
         if not platforms:
             print("No platforms are available. Please install platform dependencies:")
             print("  - For Fluxer: pip install spacecat[fluxer]")
             print("  - For Discord: pip install spacecat[discord]")
             print("  - For both: pip install spacecat[all]")
             sys.exit(1)
-        
+
         print("\nAvailable platforms:")
         for i, platform in enumerate(platforms, 1):
             print(f"{i}. {platform.capitalize()}")
         print("0. Exit")
-        
+
         while True:
             try:
                 choice = input(f"\nSelect platform (0-{len(platforms)}): ").strip()
                 if choice == "0":
                     print("Goodbye!")
                     sys.exit(0)
-                
+
                 platform_idx = int(choice) - 1
                 if 0 <= platform_idx < len(platforms):
                     platform = platforms[platform_idx]
@@ -122,25 +123,25 @@ class SpacecatCLI:
                     print("Invalid choice. Please try again.")
             except ValueError:
                 print("Please enter a number.")
-        
+
         # Instance selection
         instances = self.instance_manager.get_instances(platform)
-        
+
         if instances:
             print(f"\nAvailable {platform} instances:")
             for i, instance in enumerate(instances, 1):
                 print(f"{i}. {instance}")
             print(f"{len(instances) + 1}. Add new instance")
             print("0. Back to platform selection")
-            
+
             while True:
                 try:
                     choice = input(f"\nSelect instance (0-{len(instances) + 1}): ").strip()
                     if choice == "0":
                         return self.interactive_mode()
-                    
+
                     instance_idx = int(choice) - 1
-                    
+
                     if 0 <= instance_idx < len(instances):
                         instance_name = instances[instance_idx]
                         config = self.instance_manager.get_instance_config(platform, instance_name)
@@ -155,7 +156,7 @@ class SpacecatCLI:
             print(f"\nNo {platform} instances found.")
             print("1. Add new instance")
             print("0. Back to platform selection")
-            
+
             while True:
                 try:
                     choice = input("Select option (0-1): ").strip()
@@ -167,27 +168,29 @@ class SpacecatCLI:
                         print("Invalid choice. Please try again.")
                 except ValueError:
                     print("Please enter a number.")
-    
+
     def _add_new_instance(self, platform: str):
         """Add a new instance interactively."""
         print(f"\nAdding new {platform} instance:")
-        
+
         name = input("Instance name: ").strip()
         if not name:
             print("Instance name cannot be empty.")
             return self.interactive_mode()
-        
+
         token = input("Bot token: ").strip()
         if not token:
             print("Token cannot be empty.")
             return self.interactive_mode()
-        
+
         self.instance_manager.add_instance(platform, name, token)
         print(f"Instance '{name}' added successfully!")
-        
+
         return platform, name, token
-    
-    def run_direct(self, platform: str, instance: Optional[str] = None, token: Optional[str] = None):
+
+    def run_direct(
+        self, platform: str, instance: Optional[str] = None, token: Optional[str] = None
+    ):
         """Run bot directly with command line arguments."""
         if instance and not token:
             config = self.instance_manager.get_instance_config(platform, instance)
@@ -195,11 +198,11 @@ class SpacecatCLI:
                 print(f"Instance '{instance}' not found for platform '{platform}'")
                 sys.exit(1)
             token = config.get("token")
-        
+
         if not token:
             print("Token is required for direct execution")
             sys.exit(1)
-        
+
         instance_name = instance or "default"
         return platform, instance_name, token
 
@@ -215,36 +218,30 @@ Examples:
   spacecat discord                   # Interactive mode for Discord
   spacecat fluxer --instance mybot   # Direct execution with saved instance
   spacecat discord --token TOKEN     # Direct execution with token
-        """
+        """,
     )
-    
+
     parser.add_argument(
         "platform",
         nargs="?",
         choices=["fluxer", "discord"],
-        help="Platform to run (discord/fluxer). If omitted, runs in interactive mode."
+        help="Platform to run (discord/fluxer). If omitted, runs in interactive mode.",
     )
-    
+
     parser.add_argument(
-        "--instance", "-i",
-        help="Instance name to run (requires saved configuration)"
+        "--instance", "-i", help="Instance name to run (requires saved configuration)"
     )
-    
+
+    parser.add_argument("--token", "-t", help="Bot token (overrides instance token)")
+
     parser.add_argument(
-        "--token", "-t",
-        help="Bot token (overrides instance token)"
+        "--list-instances", "-l", action="store_true", help="List all configured instances"
     )
-    
-    parser.add_argument(
-        "--list-instances", "-l",
-        action="store_true",
-        help="List all configured instances"
-    )
-    
+
     args = parser.parse_args()
-    
+
     cli = SpacecatCLI()
-    
+
     # Handle list instances
     if args.list_instances:
         print("Configured instances:")
@@ -255,7 +252,7 @@ Examples:
                 for instance in instances:
                     print(f"  - {instance}")
         return
-    
+
     # Determine execution mode
     if not args.platform:
         # Interactive mode
@@ -265,33 +262,37 @@ Examples:
         if args.platform == "discord" and not DISCORD_AVAILABLE:
             print("Discord platform is not available. Install with: pip install spacecat[discord]")
             sys.exit(1)
-        
+
         if args.platform == "fluxer" and not FLUXER_AVAILABLE:
             print("Fluxer platform is not available. Install with: pip install spacecat[fluxer]")
             sys.exit(1)
-        
+
         platform, instance_name, token = cli.run_direct(args.platform, args.instance, args.token)
-    
+
     # Launch the bot
     print(f"\n--- Launching {platform.capitalize()} Platform ({instance_name}) ---")
-    
+
     try:
         if platform == "fluxer":
             if not FLUXER_AVAILABLE:
-                print("Fluxer platform is not available. Install with: pip install spacecat[fluxer]")
+                print(
+                    "Fluxer platform is not available. Install with: pip install spacecat[fluxer]"
+                )
                 sys.exit(1)
             client = FluxerClient()
         elif platform == "discord":
             if not DISCORD_AVAILABLE:
-                print("Discord platform is not available. Install with: pip install spacecat[discord]")
+                print(
+                    "Discord platform is not available. Install with: pip install spacecat[discord]"
+                )
                 sys.exit(1)
             client = DiscordClient(core_engine=cli.engine)
         else:
             print(f"Unsupported platform: {platform}")
             sys.exit(1)
-        
+
         await client.start_bot(token)
-    
+
     except KeyboardInterrupt:
         print("\nShutting down...")
     except Exception as e:
