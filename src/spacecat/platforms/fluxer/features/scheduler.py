@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Self
 
 import fluxer
 
+from spacecat.core.features.scheduler import reminder_list
 from spacecat.core.features.scheduler import remindme as create_reminder
 from spacecat.platforms.fluxer.helpers import permissions
 
@@ -88,7 +89,7 @@ class Scheduler(fluxer.Cog):
 
     @fluxer.Cog.command()
     @permissions.check()
-    async def reminders(self: Self, ctx) -> None:
+    async def reminders(self: Self, ctx: fluxer.Message) -> None:
         """
         Lists all your reminders in the current server.
 
@@ -99,25 +100,14 @@ class Scheduler(fluxer.Cog):
             await ctx.reply("This command can only be used in a server!")
             return
 
-        reminders = self.reminders.get_by_guild_and_user(ctx.guild.id, ctx.author.id)
-        if not reminders:
-            await ctx.reply("You have no active reminders!")
-            return
+        result = await reminder_list(ctx.guild.id, ctx.author.id)
 
-        # Format reminders
-        reminder_list = []
-        for i, reminder in enumerate(reminders, 1):
-            time_until = reminder.dispatch_time - time.time()
-            if time_until > 0:
-                time_str = self._format_duration(int(time_until))
-                reminder_list.append(
-                    f"{i}. {reminder.message[:50]}{'...' if len(reminder.message) > 50 else ''} - {time_str}"
-                )
+        # Create a nice embed for the reminders
+        embed = fluxer.Embed(title=result["title"], color=0x3498DB)
 
-        if reminder_list:
-            await ctx.reply("**Your active reminders:**\n" + "\n".join(reminder_list))
-        else:
-            await ctx.reply("You have no active reminders!")
+        embed.description = result["display"]
+
+        await ctx.reply(embed=embed)
 
     @fluxer.Cog.command()
     @permissions.check()
