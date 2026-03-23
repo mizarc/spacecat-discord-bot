@@ -12,6 +12,7 @@ intended to be a central component of the bot's automation system.
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -19,6 +20,8 @@ from spacecat.core.models.reminders import Reminder
 
 if TYPE_CHECKING:
     from spacecat.core.interfaces import BaseDispatcher
+
+logger = logging.getLogger(__name__)
 
 FIVE_MINUTES_IN_SECONDS = 300
 
@@ -69,8 +72,8 @@ class ReminderService:
             await self.dispatcher.dispatch_reminder(
                 reminder.channel_id, reminder.message_id, reminder.message
             )
-        except Exception as e:
-            print(f"Error dispatching reminder {reminder.id}: {e}")
+        except (ConnectionError, TimeoutError, OSError):
+            logger.exception("Error dispatching reminder %s", reminder.id)
         finally:
             # Reminders are one-off, so we remove them regardless of success
             await self.remove_reminder(reminder)
