@@ -4,6 +4,7 @@ import time
 import uuid
 from typing import Any
 
+from spacecat.core.models.reminders import Reminder
 from spacecat.core.registry import ServiceRegistry
 
 
@@ -55,15 +56,32 @@ async def remindme(
     }
 
 
-def reminder_list(reminders: list[Any]) -> str:
-    """Formats a list of reminders into a human-readable string."""
-    if not reminders:
-        return "You have no active reminders."
+async def reminder_list(guild_id: int, author_id: int) -> dict[str, Any]:
+    """Fetch reminders for a specific guild and author.
 
-    lines = ["**Your Reminders:**"]
+    Args:
+        guild_id: The ID of the guild to filter reminders by.
+        author_id: The ID of the author to filter reminders by.
+
+    Returns:
+        A dictionary containing the reminders list, title, and formatted display string.
+    """
+    reminders = await Reminder.filter(guild_id=guild_id, user_id=author_id).order_by(
+        "dispatch_time"
+    )
+
+    if not reminders:
+        return {
+            "reminders": [],
+            "title": "🔔 Your Reminders",
+            "display": "You have no active reminders.",
+        }
+
+    lines = []
     for i, rem in enumerate(reminders, 1):
         lines.append(f"{i}. {rem.message[:20]}... | <t:{int(rem.dispatch_time)}:R>")
-    return "\n".join(lines)
+
+    return {"reminders": reminders, "title": "🔔 Your Reminders", "display": "\n".join(lines)}
 
 
 def reminder_remove(reminders: list[Any], index: int) -> tuple[bool, str]:
