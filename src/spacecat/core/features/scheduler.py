@@ -4,6 +4,8 @@ import time
 import uuid
 from typing import Any
 
+import dateparser
+
 from spacecat.core.models.reminders import Reminder
 from spacecat.core.registry import ServiceRegistry
 
@@ -11,7 +13,7 @@ from spacecat.core.registry import ServiceRegistry
 async def remindme(
     user_id: str,
     message: str,
-    delay_seconds: int,
+    dispatch_time_text: str,
     guild_id: int,
     channel_id: int,
     message_id: int,
@@ -21,8 +23,8 @@ async def remindme(
     Args:
         user_id: The ID of the user to remind.
         message: The reminder message content.
-        delay_seconds: Number of seconds until the reminder should
-            dispatch.
+        dispatch_time_text: The time to dispatch the reminder in a
+            human-readable format.
         guild_id: The ID of the guild where the reminder was created.
         channel_id: The ID of the channel where the reminder was
             created.
@@ -36,6 +38,19 @@ async def remindme(
     scheduler = ServiceRegistry.reminder_scheduler()
 
     current_time = int(time.time())
+    target_time = dateparser.parse(dispatch_time_text)
+    if not target_time:
+        return {
+            "display": "Could not parse time input.",
+        }
+
+    target_timestamp = target_time.timestamp()
+    if target_timestamp <= current_time:
+        return {
+            "display": "Time must be in the future.",
+        }
+
+    delay_seconds = int(target_timestamp - current_time)
     dispatch_time = current_time + delay_seconds
 
     reminder = await reminder_service.create_reminder(
