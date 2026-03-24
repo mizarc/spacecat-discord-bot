@@ -8,14 +8,15 @@ and scheduled events.
 
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING, Self
 
 import fluxer
+from dateutil import parser
 
 from spacecat.core.features.scheduler import reminder_list
 from spacecat.core.features.scheduler import remindme as create_reminder
 from spacecat.platforms.fluxer.helpers import permissions
+from spacecat.platforms.fluxer.helpers.utils import parse_quoted_args
 
 if TYPE_CHECKING:
     from spacecat.platforms.fluxer.client import FluxerClient
@@ -38,47 +39,25 @@ class Scheduler(fluxer.Cog):
     async def remindme(
         self: Self,
         ctx: fluxer.Message,
-        seconds: int = 0,
-        minutes: int = 0,
-        hours: int = 0,
-        days: int = 0,
-        weeks: int = 0,
         *,
-        message: str,
+        reminder_text: str,
     ) -> None:
         """
-        Sets a reminder to send a message after an amount of time.
+        Set a reminder to send a message after a specified time.
 
         Args:
             ctx: The command context.
-            message (str): The message to be sent in the reminder.
-            seconds (int): The number of seconds.
-            minutes (int): The number of minutes.
-            hours (int): The number of hours.
-            days (int): The number of days.
-            weeks (int): The number of weeks.
+            reminder_text: Full reminder text in format "time message"
+                (e.g., '30m' 'Meeting time')
         """
-        # Calculate total time in seconds
-        print(message)
-        print(seconds, minutes, hours, days, weeks)
-        total_seconds = (
-            int(seconds)
-            + (int(minutes) * 60)
-            + (int(hours) * 3600)
-            + (int(days) * 86400)
-            + (int(weeks) * 604800)
-        )
-        print(total_seconds)
-
-        if total_seconds <= 0:
-            await ctx.reply("Please specify a valid time duration!")
-            return
+        # Parse two arguments with quote support
+        time_input, message = parse_quoted_args(reminder_text)
 
         # Use the core remindme function to create and schedule the reminder
         result = await create_reminder(
             user_id=str(ctx.author.id),
             message=message,
-            delay_seconds=total_seconds,
+            dispatch_time_text=time_input,
             guild_id=ctx.guild.id if ctx.guild else 0,
             channel_id=ctx.channel.id,
             message_id=ctx.id,
