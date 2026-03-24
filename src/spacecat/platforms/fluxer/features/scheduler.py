@@ -14,6 +14,7 @@ import fluxer
 from dateutil import parser
 
 from spacecat.core.features.scheduler import reminder_list
+from spacecat.core.features.scheduler import reminder_remove as delete_reminder
 from spacecat.core.features.scheduler import remindme as create_reminder
 from spacecat.platforms.fluxer.helpers import permissions
 from spacecat.platforms.fluxer.helpers.utils import parse_quoted_args
@@ -66,19 +67,15 @@ class Scheduler(fluxer.Cog):
         # Send confirmation
         await ctx.reply(result["display"])
 
-    @fluxer.Cog.command()
+    @fluxer.Cog.command(name="reminder list")
     @permissions.check()
-    async def reminders(self: Self, ctx: fluxer.Message) -> None:
+    async def reminder_list(self: Self, ctx: fluxer.Message) -> None:
         """
         Lists all your reminders in the current server.
 
         Args:
             ctx: The command context.
         """
-        if not ctx.guild:
-            await ctx.reply("This command can only be used in a server!")
-            return
-
         result = await reminder_list(ctx.guild.id, ctx.author.id)
 
         # Create a nice embed for the reminders
@@ -88,40 +85,28 @@ class Scheduler(fluxer.Cog):
 
         await ctx.reply(embed=embed)
 
-    @fluxer.Cog.command()
+    @fluxer.Cog.command(name="reminder remove")
     @permissions.check()
-    async def delreminder(
+    async def reminder_remove(
         self: Self,
-        ctx,
+        ctx: fluxer.Message,
         index: int,
     ) -> None:
         """
-        Deletes a reminder by its index number.
+        Delete a reminder by its index number.
 
         Args:
             ctx: The command context.
-            index (int): The index of the reminder to delete.
+            index: The index of the reminder to delete.
         """
+        index = int(index)
+
         if not ctx.guild:
             await ctx.reply("This command can only be used in a server!")
             return
 
-        reminders = self.reminders.get_by_guild_and_user(ctx.guild.id, ctx.author.id)
-        if not reminders:
-            await ctx.reply("You have no reminders to delete!")
-            return
-
-        try:
-            reminder = reminders[index - 1]
-        except IndexError:
-            await ctx.reply(f"Invalid reminder number! You have {len(reminders)} reminder(s).")
-            return
-
-        # Unschedule and remove the reminder
-        await self.reminder_scheduler.unschedule(reminder)
-        self.reminders.remove(reminder.id)
-
-        await ctx.reply(f"✅ Reminder #{index} has been deleted!")
+        result = await delete_reminder(ctx.guild.id, ctx.author.id, index)
+        await ctx.reply(result["display"])
 
 
 async def setup(bot: FluxerClient) -> None:

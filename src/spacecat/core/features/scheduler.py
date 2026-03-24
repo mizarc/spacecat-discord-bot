@@ -81,10 +81,12 @@ async def reminder_list(guild_id: int, author_id: int) -> dict[str, Any]:
     Returns:
         A dictionary containing the reminders list, title, and formatted display string.
     """
+    # Get reminders for the user and guild
     reminders = await Reminder.filter(guild_id=guild_id, user_id=author_id).order_by(
         "dispatch_time"
     )
 
+    # Inform user that they have no reminders
     if not reminders:
         return {
             "reminders": [],
@@ -92,6 +94,7 @@ async def reminder_list(guild_id: int, author_id: int) -> dict[str, Any]:
             "display": "You have no active reminders.",
         }
 
+    # Build the display strings for the list of reminders
     lines = []
     for i, rem in enumerate(reminders, 1):
         lines.append(f"{i}. {rem.message[:20]}... | <t:{int(rem.dispatch_time)}:R>")
@@ -99,14 +102,39 @@ async def reminder_list(guild_id: int, author_id: int) -> dict[str, Any]:
     return {"reminders": reminders, "title": "🔔 Your Reminders", "display": "\n".join(lines)}
 
 
-def reminder_remove(reminders: list[Any], index: int) -> tuple[bool, str]:
-    """Validates if a reminder can be removed by index."""
-    if 0 < index <= len(reminders):
-        return True, f"Reminder {index} has been removed."
-    return False, "Invalid reminder index."
+async def reminder_remove(guild_id: int, user_id: int, index: int) -> dict[str, Any]:
+    """Remove a reminder by index for a specific user and guild.
 
+    Args:
+        guild_id: The ID of the guild.
+        user_id: The ID of the user.
+        index: The 1-based index of the reminder to remove.
 
-# --- Events: Lifecycle ---
+    Returns:
+        A dictionary containing the result message.
+    """
+    # Get reminders for the user and guild
+    reminders = await Reminder.filter(guild_id=guild_id, user_id=user_id).order_by("dispatch_time")
+
+    # Alert user that they have no reminders to remove
+    if not reminders:
+        return {"display": "You have no reminders to delete!"}
+
+    # Alert the user if the index does not contain a reminder.
+    if index < 1 or index > len(reminders):
+        return {"display": f"Invalid reminder! You have {len(reminders)} reminder(s)."}
+
+    # Get the reminder to remove
+    reminder_to_remove = reminders[index - 1]
+
+    # Get the scheduler service to unschedule the reminder
+    scheduler = ServiceRegistry.reminder_scheduler()
+    scheduler.unschedule(reminder_to_remove)
+
+    # Delete the reminder from database
+    await reminder_to_remove.delete()
+
+    return {"display": f"✅ Reminder '{reminder_to_remove.message}' has been deleted!"}
 
 
 def event_create(name: str, dispatch_time: int, repeat: Any) -> str:
