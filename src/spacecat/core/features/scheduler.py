@@ -7,6 +7,7 @@ from typing import Any
 import dateparser
 
 from spacecat.core.models.reminders import Reminder
+from spacecat.core.models.tasks import Repeat, Task
 from spacecat.core.registry import ServiceRegistry
 
 
@@ -137,17 +138,83 @@ async def reminder_remove(guild_id: int, user_id: int, index: int) -> dict[str, 
     return {"display": f"✅ Reminder '{reminder_to_remove.message}' has been deleted!"}
 
 
-def event_create(name: str, dispatch_time: int, repeat: Any) -> str:
-    """Returns the success message for event creation."""
-    return f"✅ Event `{name}` created for <t:{dispatch_time}:F>."
+async def task_list(guild_id: int) -> str:
+    """Formats a summary list of all guild tasks from the ORM."""
+    tasks = await Task.filter(guild_id=guild_id).order_by("dispatch_time")
+
+    if not tasks:
+        return "There are no available tasks."
+
+    return "\n".join(
+        [
+            f"- **{task.name}**: <t:{task.dispatch_time}:t>"
+            " ({'Paused' if task.is_paused else 'Active'})"
+            for task in tasks
+        ]
+    )
 
 
-def event_destroy(name: str) -> str:
-    """Returns the success message for event destruction."""
-    return f"🗑️ Event `{name}` and all associated actions have been deleted."
+async def task_create(
+    guild_id: int,
+    name: str,
+    description: str,
+    dispatch_time: int | None = None,
+    repeat_interval: Repeat = Repeat.No,
+    repeat_multiplier: int = 1,
+) -> dict[str, Any]:
+    """Creates a new task in the ORM with unique name validation.
+
+    Args:
+        guild_id: The ID of the guild where the task will be created
+        name: The unique name for the task within the guild
+        description: Optional description for the task
+        dispatch_time: When the task should run (timestamp). If None, creates a manual-only task
+        repeat_interval: How often the task should repeat (ignored for manual-only tasks)
+        repeat_multiplier: Multiplier for the repeat interval (ignored for manual-only tasks)
+
+    Returns:
+        Dictionary with success status and message
+    """
+    # Check if the task name already exists for this guild
+    existing_task = await Task.filter(guild_id=guild_id, name=name).first()
+    if existing_task:
+        return {
+            "success": False,
+            "message": f"A task with name `{name}` already exists in this guild.",
+        }
+
+    # Use None for manual-only tasks (no automatic dispatch)
+    task_dispatch_time = None if dispatch_time is None else dispatch_time
+
+    # For manual-only tasks, set repeat to No
+    if dispatch_time is None:
+        repeat_interval = Repeat.No
+        repeat_multiplier = 1
+
+    # Create the new task
+    task = await Task.create_new(
+        guild_id=guild_id,
+        dispatch_time=task_dispatch_time,
+        repeat_interval=repeat_interval,
+        repeat_multiplier=repeat_multiplier,
+        name=name,
+        description=description,
+    )
+
+    if dispatch_time is None:
+        return {
+            "success": True,
+            "task": task,
+            "message": f"✅ Task `{name}` created.",
+        }
+    return {
+        "success": True,
+        "task": task,
+        "message": f"✅ Task `{name}` created for <t:{dispatch_time}:F>.",
+    }
 
 
-def event_view(event: Any, actions: list[Any]) -> str:
+def task_info(event: Any, actions: list[Any]) -> str:
     """Formats the full detail view of a single event."""
     status = "Paused" if event.is_paused else "Active"
     repeat_info = f"Repeats: {event.repeat_interval.name}"
@@ -162,17 +229,9 @@ def event_view(event: Any, actions: list[Any]) -> str:
     )
 
 
-def event_list(events: list[Any]) -> str:
-    """Formats a summary list of all guild events."""
-    if not events:
-        return "There are no scheduled events."
-
-    return "\n".join(
-        [
-            f"• **{e.name}**: <t:{e.dispatch_time}:t> ({'Paused' if e.is_paused else 'Active'})"
-            for e in events
-        ]
-    )
+def task_destroy(name: str) -> str:
+    """Returns the success message for event destruction."""
+    return f"🗑️ Event `{name}` and all associated actions have been deleted."
 
 
 # --- Events: Modification ---

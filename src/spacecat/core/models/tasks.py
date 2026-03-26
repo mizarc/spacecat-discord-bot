@@ -40,7 +40,7 @@ class Task(models.Model):
 
     id = fields.UUIDField(pk=True)
     guild_id = fields.BigIntField(index=True)
-    dispatch_time = fields.BigIntField()
+    dispatch_time = fields.BigIntField(null=True)
     last_run_time = fields.BigIntField(null=True)
     repeat_interval = fields.BigIntField(default=Repeat.No.value)
     repeat_multiplier = fields.IntField(default=1)
@@ -57,7 +57,7 @@ class Task(models.Model):
     async def create_new(
         cls,
         guild_id: int,
-        dispatch_time: int,
+        dispatch_time: int | None,
         repeat_interval: Repeat,
         repeat_multiplier: int,
         name: str,
@@ -67,7 +67,7 @@ class Task(models.Model):
 
         Args:
             guild_id: The ID of the guild.
-            dispatch_time: The time to dispatch the task.
+            dispatch_time: The time to dispatch the task, or None for manual-only tasks.
             repeat_interval: The interval in which the task should
                 repeat its dispatch.
             repeat_multiplier: A multiplier value to affect the
