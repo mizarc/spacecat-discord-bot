@@ -1,8 +1,8 @@
 """
-Event Data Models and Scheduling Definitions.
+Task Data Models and Scheduling Definitions.
 
 This module defines the persistence layer for the automation system's
-events. It includes the `Event` Tortoise-ORM model and the `Repeat`
+tasks. It includes the `Task` Tortoise-ORM model and the `Repeat`
 enumeration, which together manage the state, timing, and recurrence
 logic for scheduled tasks within the bot.
 """
@@ -14,13 +14,13 @@ from tortoise import fields, models
 
 class Repeat(IntEnum):
     """
-    Represents the time at which an event should be repeated.
+    Represents the time at which a task should be repeated.
 
     Attributes:
         No (int): No repeats will be set.
-        Hourly (int): The event will be set to repeat every hour.
-        Daily (int): The event will be set to repeat every day.
-        Weekly (int): The event will be set to repeat every week.
+        Hourly (int): The task will be set to repeat every hour.
+        Daily (int): The task will be set to repeat every day.
+        Weekly (int): The task will be set to repeat every week.
     """
 
     No = 0
@@ -29,11 +29,11 @@ class Repeat(IntEnum):
     Weekly = 604800
 
 
-class Event(models.Model):
+class Task(models.Model):
     """
-    A representation of an Event.
+    A representation of a Task.
 
-    This class holds information required about an event, such as the
+    This class holds information required about a task, such as the
     name and guild/server for access, as well as dispatch time and
     intervals to determine when to execute the actions.
     """
@@ -49,9 +49,9 @@ class Event(models.Model):
     is_paused = fields.BooleanField(default=False)
 
     class Meta:
-        """Metadata for the Event model."""
+        """Metadata for the Task model."""
 
-        table = "events"
+        table = "tasks"
 
     @classmethod
     async def create_new(
@@ -62,23 +62,23 @@ class Event(models.Model):
         repeat_multiplier: int,
         name: str,
         description: str = "",
-    ) -> "Event":
-        """Create a new instance of an Event.
+    ) -> "Task":
+        """Create a new instance of a Task.
 
         Args:
             guild_id: The ID of the guild.
-            dispatch_time: The time to dispatch the event.
-            repeat_interval: The interval in which the event should
+            dispatch_time: The time to dispatch the task.
+            repeat_interval: The interval in which the task should
                 repeat its dispatch.
             repeat_multiplier: A multiplier value to affect the
                 interval. (i.e. 2 on a Daily interval would double the
                 interval to 2 days.)
-            name: The name of the event.
-            description: The description of the event.
+            name: The name of the task.
+            description: The description of the task.
                 Defaults to "".
 
         Returns:
-            Event: The created event.
+            Task: The created task.
         """
         return await cls.create(
             guild_id=guild_id,
