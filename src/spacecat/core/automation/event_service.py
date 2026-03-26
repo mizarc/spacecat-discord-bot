@@ -15,7 +15,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from spacecat.core.models.actions import Action
-from spacecat.core.models.events import Event, Repeat
+from spacecat.core.models.tasks import Repeat, Task
 
 if TYPE_CHECKING:
     from spacecat.core.interfaces import BaseDispatcher
@@ -40,7 +40,7 @@ class EventService:
         """
         self.dispatcher = dispatcher
 
-    async def dispatch(self, event: Event) -> None:
+    async def dispatch(self, event: Task) -> None:
         """
         The core execution flow for a triggered event.
 
@@ -70,7 +70,7 @@ class EventService:
             # In production, swap this for a proper logger
             print(f"Critical error during dispatch of Event {event.id}: {error}")
 
-    async def execute_actions(self, event: Event) -> None:
+    async def execute_actions(self, event: Task) -> None:
         """Fetch and run all enabled actions for an event.
 
         Args:
@@ -86,7 +86,7 @@ class EventService:
             except (OSError, ValueError, RuntimeError) as error:
                 print(f"Error executing action {action.id} ({action.action_type}): {error}")
 
-    async def get_upcoming(self, time_limit: int = FIVE_MINUTES_IN_SECONDS) -> list[Event]:
+    async def get_upcoming(self, time_limit: int = FIVE_MINUTES_IN_SECONDS) -> list[Task]:
         """
         Gets upcoming events within the time limit.
 
@@ -99,11 +99,11 @@ class EventService:
             A list of upcoming events.
         """
         current_time = int(time.time())
-        return await Event.filter(
+        return await Task.filter(
             dispatch_time__lte=current_time + time_limit, is_paused=False
         ).order_by("dispatch_time")
 
-    async def add_action(self, event: Event, action_type: str, config: dict) -> Action:
+    async def add_action(self, event: Task, action_type: str, config: dict) -> Action:
         """Add a new action to an event.
 
         Args:
@@ -116,7 +116,7 @@ class EventService:
         """
         return await Action.create(event=event, action_type=action_type, data=config)
 
-    async def get_actions(self, event: Event) -> list[Action]:
+    async def get_actions(self, event: Task) -> list[Action]:
         """Gets all actions for an event.
 
         Args:
@@ -127,7 +127,7 @@ class EventService:
         """
         return await event.actions.all()
 
-    async def update_event(self, event: Event, **kwargs: dict[str, Any]) -> None:
+    async def update_event(self, event: Task, **kwargs: dict[str, Any]) -> None:
         """Updates event attributes and saves to DB.
 
         Args:
@@ -136,7 +136,7 @@ class EventService:
         """
         await event.update_from_dict(kwargs).save()
 
-    async def remove_event(self, event: Event) -> None:
+    async def remove_event(self, event: Task) -> None:
         """Remove an event and all its actions.
 
         Args:
