@@ -22,10 +22,10 @@ if TYPE_CHECKING:
     from spacecat.platforms.fluxer.client import FluxerClient
 
 
-class Scheduler(fluxer.Cog):
+class Automation(fluxer.Cog):
     """Schedule events and reminders for Fluxer."""
 
-    def __init__(self: Scheduler, bot: fluxer.Bot) -> None:
+    def __init__(self: Automation, bot: fluxer.Bot) -> None:
         """
         Initializes a new instance of the Scheduler class.
 
@@ -113,4 +113,4 @@ async def setup(bot: FluxerClient) -> None:
     Args:
         bot (FluxerClient): The Fluxer bot instance.
     """
-    await bot.add_cog(Scheduler(bot))
+    await bot.add_cog(Automation(bot))
