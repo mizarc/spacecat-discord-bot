@@ -87,14 +87,33 @@ class ReminderService:
         """
         await reminder.delete()
 
-    async def create_reminder(self, **kwargs: dict[str, Any]) -> Reminder:
-        """
-        Creates and persists a new reminder.
+    async def create_reminder(
+        self,
+        user_id: int,
+        guild_id: int,
+        channel_id: int,
+        message_id: int,
+        dispatch_time: int,
+        message: str,
+    ) -> Reminder:
+        """Create a new reminder.
 
         Args:
-            **kwargs: Keyword arguments for creating a new reminder.
+            user_id: The ID of the user creating the reminder.
+            guild_id: The ID of the guild where the reminder was created.
+            channel_id: The ID of the channel where the reminder was created.
+            message_id: The ID of the message that triggered the reminder.
+            dispatch_time: Unix timestamp when the reminder should be dispatched.
+            message: The reminder message content.
 
         Returns:
-            The created reminder.
+            The newly created Reminder instance.
         """
-        return await Reminder.create(**kwargs)
+        return await Reminder.create_new(
+            user_id=user_id,
+            guild_id=guild_id,
+            channel_id=channel_id,
+            message_id=message_id,
+            dispatch_time=dispatch_time,
+            message=message,
+        )

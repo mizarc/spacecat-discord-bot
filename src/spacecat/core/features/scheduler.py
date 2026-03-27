@@ -1,11 +1,12 @@
-"""Shared automation and event command logic."""
+"""Shared automation and task command logic."""
 
 import time
-import uuid
 from typing import Any
 
 import dateparser
+from tortoise.exceptions import DoesNotExist, IntegrityError, ValidationError
 
+from spacecat.core.models.actions import REQUIRED_KEYS, Action
 from spacecat.core.models.reminders import Reminder
 from spacecat.core.models.tasks import Repeat, Task
 from spacecat.core.registry import ServiceRegistry
@@ -55,12 +56,10 @@ async def remindme(
     dispatch_time = current_time + delay_seconds
 
     reminder = await reminder_service.create_reminder(
-        id=str(uuid.uuid4()),
         user_id=int(user_id),
         guild_id=guild_id,
         channel_id=channel_id,
         message_id=message_id,
-        creation_time=current_time,
         dispatch_time=dispatch_time,
         message=message,
     )
@@ -138,20 +137,118 @@ async def reminder_remove(guild_id: int, user_id: int, index: int) -> dict[str, 
     return {"display": f"✅ Reminder '{reminder_to_remove.message}' has been deleted!"}
 
 
-async def task_list(guild_id: int) -> str:
-    """Formats a summary list of all guild tasks from the ORM."""
-    tasks = await Task.filter(guild_id=guild_id).order_by("dispatch_time")
+async def task_action_add(
+    guild_id: int, task_name: str, action_type: str, config: dict[str, Any]
+) -> dict[str, Any]:
+    """Adds an action to a task.
 
-    if not tasks:
-        return "There are no available tasks."
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        task_name: The name of the task to add the action to.
+        action_type: The type of action to add.
+        config: The configuration for the action.
 
-    return "\n".join(
-        [
-            f"- **{task.name}**: <t:{task.dispatch_time}:t>"
-            " ({'Paused' if task.is_paused else 'Active'})"
-            for task in tasks
-        ]
-    )
+    Returns:
+        Dictionary with success status and message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=task_name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{task_name}` not found."}
+
+    if action_type in REQUIRED_KEYS:
+        missing_keys = [key for key in REQUIRED_KEYS[action_type] if key not in config]
+        if missing_keys:
+            return {
+                "success": False,
+                "message": (
+                    f"Missing required keys for `{action_type}` action: {', '.join(missing_keys)}"
+                ),
+            }
+
+    try:
+        await Action.create(task=task, action_type=action_type, data=config)
+    except (IntegrityError, ValidationError, DoesNotExist) as error:
+        return {"success": False, "message": f"Error adding action: {error!s}"}
+    else:
+        return {
+            "success": True,
+            "message": f"➕ Added `{action_type}` action to task `{task_name}`.",  # noqa: RUF001
+        }
+
+
+async def task_action_remove(guild_id: int, task_name: str, action_index: int) -> dict[str, Any]:
+    """Removes an action from a task by index.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        task_name: The name of the task to remove the action from.
+        action_index: The 1-based index of the action to remove.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=task_name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{task_name}` not found."}
+
+    # Get all actions for the task
+    actions = await task.actions.all().order_by("id")
+
+    if not actions:
+        return {"success": False, "message": f"Task `{task_name}` has no actions to remove."}
+
+    if action_index < 1 or action_index > len(actions):
+        return {
+            "success": False,
+            "message": f"Invalid action index {action_index}. Task has {len(actions)} action(s).",
+        }
+
+    action_to_remove = actions[action_index - 1]
+    action_type = action_to_remove.action_type
+
+    try:
+        await action_to_remove.delete()
+    except (IntegrityError, ValidationError, DoesNotExist) as error:
+        return {"success": False, "message": f"Error removing action: {error!s}"}
+    else:
+        return {
+            "success": True,
+            "message": f"➖ Removed {action_type} from `{task_name}`.",  # noqa: RUF001
+        }
+
+
+async def task_action_reorder(guild_id: int, task_name: str) -> dict[str, Any]:
+    """Placeholder for reordering task actions.
+
+    Note: This would require adding an 'order' field to the Action model
+    for proper ordering functionality.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        task_name: The name of the task to reorder actions for.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=task_name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{task_name}` not found."}
+
+    # Get all actions for the task
+    actions = await task.actions.all()
+
+    if not actions:
+        return {"success": False, "message": f"Task `{task_name}` has no actions to reorder."}
+
+    # For now, return a message indicating this functionality
+    # would require schema changes to implement properly
+    return {
+        "success": False,
+        "message": "Action reordering requires adding an 'order' field to the Action model.",
+    }
 
 
 async def task_create(
@@ -168,9 +265,12 @@ async def task_create(
         guild_id: The ID of the guild where the task will be created
         name: The unique name for the task within the guild
         description: Optional description for the task
-        dispatch_time: When the task should run (timestamp). If None, creates a manual-only task
-        repeat_interval: How often the task should repeat (ignored for manual-only tasks)
-        repeat_multiplier: Multiplier for the repeat interval (ignored for manual-only tasks)
+        dispatch_time: When the task should run (timestamp). If None,
+            creates a manual-only task
+        repeat_interval: How often the task should repeat (ignored for
+            manual-only tasks)
+        repeat_multiplier: Multiplier for the repeat interval (ignored
+            for manual-only tasks)
 
     Returns:
         Dictionary with success status and message
@@ -214,70 +314,273 @@ async def task_create(
     }
 
 
-def task_info(event: Any, actions: list[Any]) -> str:
-    """Formats the full detail view of a single event."""
-    status = "Paused" if event.is_paused else "Active"
-    repeat_info = f"Repeats: {event.repeat_interval.name}"
+async def task_delete(guild_id: int, name: str) -> dict[str, Any]:
+    """Deletes a task by name and guild_id using the ORM.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        name: The name of the task to delete.
+
+    Returns:
+        Dictionary with success status and message
+    """
+    # Find the task by guild_id and name
+    task = await Task.filter(guild_id=guild_id, name=name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{name}` not found."}
+
+    # Delete the task from the database
+    await task.delete()
+
+    return {
+        "success": True,
+        "message": f"🗑️ Task `{name}` has been deleted.",
+    }
+
+
+async def task_description(guild_id: int, name: str, description: str) -> dict[str, Any]:
+    """Updates a task's description by name and guild_id.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        name: The name of the task to update.
+        description: The new description for the task.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{name}` not found."}
+
+    task.description = description
+    await task.save()
+
+    return {"success": True, "message": f"📝 Description updated for `{name}`."}
+
+
+async def task_list(guild_id: int) -> str:
+    """Formats a summary list of all guild tasks."""
+    tasks = await Task.filter(guild_id=guild_id).order_by("dispatch_time")
+
+    if not tasks:
+        return "There are no available tasks."
+
+    return "\n".join(
+        [
+            f"- **{task.name}**: <t:{task.dispatch_time}:t>"
+            " ({'Paused' if task.is_paused else 'Active'})"
+            for task in tasks
+        ]
+    )
+
+
+async def task_info(guild_id: int, name: str) -> dict[str, Any]:
+    """Formats the full detail view of a single task.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        name: The name of the task to display.
+
+    Returns:
+        Dictionary with success status and formatted display message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{name}` not found."}
+
+    actions = await task.actions.all().order_by("id")
+
+    status = "Paused" if task.is_paused else "Active"
+    repeat_info = f"Repeats: {Repeat(task.repeat_interval).name}"
 
     action_list = "\n".join([f"- {a.action_type}: {a.data}" for a in actions]) or "No actions set."
 
-    return (
-        f"**Event: {event.name}** ({status})\n"
-        f"Next Run: <t:{event.dispatch_time}:R>\n"
+    display = (
+        f"**Task: {task.name}** ({status})\n"
+        f"Next Run: <t:{task.dispatch_time}:R>\n"
         f"{repeat_info}\n\n"
         f"**Actions:**\n{action_list}"
     )
 
-
-def task_destroy(name: str) -> str:
-    """Returns the success message for event destruction."""
-    return f"🗑️ Event `{name}` and all associated actions have been deleted."
+    return {"success": True, "task": task, "display": display}
 
 
-# --- Events: Modification ---
+async def task_pause(guild_id: int, task_name: str) -> dict[str, Any]:
+    """Pauses a task by name and guild_id.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        task_name: The name of the task to pause.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=task_name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{task_name}` not found."}
+
+    if task.is_paused:
+        return {"success": False, "message": f"Task `{task_name}` is already paused."}
+
+    task.is_paused = True
+    await task.save()
+
+    return {
+        "success": True,
+        "message": (
+            f"⏸️ Task `{task_name}` has been paused."
+            " It will not automatically trigger until resumed."
+        ),
+    }
 
 
-def event_pause(event_name: str) -> str:
-    return f"⏸️ Event `{event_name}` has been paused. It will not trigger until resumed."
+async def task_rename(guild_id: int, old_name: str, new_name: str) -> dict[str, Any]:
+    """Renames a task by name and guild_id.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        old_name: The current name of the task.
+        new_name: The new name for the task.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    # Check if the new name already exists
+    existing_task = await Task.filter(guild_id=guild_id, name=new_name).first()
+    if existing_task:
+        return {"success": False, "message": f"A task with name `{new_name}` already exists."}
+
+    task = await Task.filter(guild_id=guild_id, name=old_name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{old_name}` not found."}
+
+    task.name = new_name
+    await task.save()
+
+    return {"success": True, "message": f"📝 Task `{old_name}` renamed to `{new_name}`."}
 
 
-def event_resume(event_name: str) -> str:
-    return f"▶️ Event `{event_name}` is now active."
+async def task_resume(guild_id: int, task_name: str) -> dict[str, Any]:
+    """Resumes a task by name and guild_id.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        task_name: The name of the task to resume.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=task_name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{task_name}` not found."}
+
+    if not task.is_paused:
+        return {"success": False, "message": f"Task `{task_name}` is already active."}
+
+    task.is_paused = False
+    await task.save()
+
+    return {"success": True, "message": f"▶️ Task `{task_name}` is now active."}
 
 
-def event_rename(old_name: str, new_name: str) -> str:
-    return f"📝 Event `{old_name}` renamed to `{new_name}`."
+async def task_reschedule(guild_id: int, name: str, new_time: int) -> dict[str, Any]:
+    """Reschedules a task by name and guild_id.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        name: The name of the task to reschedule.
+        new_time: The new dispatch time as a timestamp.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{name}` not found."}
+
+    task.dispatch_time = new_time
+    await task.save()
+
+    return {"success": True, "message": f"📅 `{name}` rescheduled to <t:{new_time}:F>."}
 
 
-def event_description(name: str, description: str) -> str:
-    return f"📝 Description updated for `{name}`."
+async def task_interval(
+    guild_id: int, name: str, interval_name: str, multiplier: int
+) -> dict[str, Any]:
+    """Updates a task's repeat interval by name and guild_id.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        name: The name of the task to update.
+        interval_name: The name of the repeat interval (Hourly, Daily,
+            Weekly).
+        multiplier: The multiplier for the interval.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{name}` not found."}
+
+    # Convert interval name to Repeat enum
+    interval_map = {
+        "hourly": Repeat.Hourly,
+        "daily": Repeat.Daily,
+        "weekly": Repeat.Weekly,
+        "no": Repeat.No,
+    }
+
+    interval_lower = interval_name.lower()
+    if interval_lower not in interval_map:
+        return {
+            "success": False,
+            "message": f"Invalid interval `{interval_name}`. Use: hourly, daily, weekly, or no.",
+        }
+
+    task.repeat_interval = interval_map[interval_lower]
+    task.repeat_multiplier = multiplier
+    await task.save()
+
+    return {
+        "success": True,
+        "message": f"🔄 `{name}` will now repeat every {multiplier} {interval_name}(s).",
+    }
 
 
-def event_reschedule(name: str, new_time: int) -> str:
-    return f"📅 `{name}` rescheduled to <t:{new_time}:F>."
+async def task_trigger(guild_id: int, name: str) -> dict[str, Any]:
+    """Manually triggers a task's actions.
 
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        name: The name of the task to trigger.
 
-def event_interval(name: str, interval_name: str, multiplier: int) -> str:
-    return f"🔄 `{name}` will now repeat every {multiplier} {interval_name}(s)."
+    Returns:
+        Dictionary with success status and message.
+    """
+    task = await Task.filter(guild_id=guild_id, name=name).first()
 
+    if not task:
+        return {"success": False, "message": f"Task `{name}` not found."}
 
-# --- Events: Actions & Execution ---
+    event_service = ServiceRegistry.events()
 
+    try:
+        await event_service.execute_actions(task)
 
-def event_trigger(name: str) -> str:
-    """Response for a manual 'Run Now' command."""
-    return f"🚀 Manually triggering actions for `{name}`..."
-
-
-def event_add_action(event_name: str, action_type: str, config: dict[str, Any]) -> str:
-    """Generic response for adding any action (message, voice, etc)."""
-    return f"➕ Added `{action_type}` action to event `{event_name}`."
-
-
-def event_remove_action(event_name: str, action_index: int) -> str:
-    return f"➖ Removed action {action_index} from `{event_name}`."
-
-
-def event_reorder_actions(event_name: str) -> str:
-    """Response for shifting action priority."""
-    return f"🔢 Actions for `{event_name}` have been reordered."
+        now = int(time.time())
+        task.last_run_time = now
+        await task.save()
+    except (OSError, ValueError, RuntimeError) as error:
+        return {"success": False, "message": f"Error triggering task `{name}`: {error}"}
+    else:
+        return {"success": True, "message": f"🚀 Successfully triggered actions for `{name}`."}

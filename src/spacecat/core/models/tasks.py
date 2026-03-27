@@ -7,9 +7,15 @@ enumeration, which together manage the state, timing, and recurrence
 logic for scheduled tasks within the bot.
 """
 
+from __future__ import annotations
+
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 from tortoise import fields, models
+
+if TYPE_CHECKING:
+    from spacecat.core.models.actions import Action
 
 
 class Repeat(IntEnum):
@@ -47,6 +53,9 @@ class Task(models.Model):
     name = fields.CharField(max_length=255)
     description = fields.TextField(default="")
     is_paused = fields.BooleanField(default=False)
+
+    # Reverse relation from Action model's ForeignKey with related_name="actions"
+    actions: fields.ReverseRelation[Action]
 
     class Meta:
         """Metadata for the Task model."""
