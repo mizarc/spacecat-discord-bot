@@ -12,9 +12,9 @@ from typing import TYPE_CHECKING, Self
 
 import fluxer
 
-from spacecat.core.features.scheduler import reminder_list
-from spacecat.core.features.scheduler import reminder_remove as delete_reminder
-from spacecat.core.features.scheduler import remindme as create_reminder
+from spacecat.core.features.automation import reminder_list
+from spacecat.core.features.automation import reminder_remove as delete_reminder
+from spacecat.core.features.automation import remindme as create_reminder
 from spacecat.platforms.fluxer.helpers import permissions
 from spacecat.platforms.fluxer.helpers.utils import parse_quoted_args
 
