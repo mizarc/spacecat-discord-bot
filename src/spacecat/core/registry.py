@@ -67,6 +67,17 @@ class ServiceRegistry:
             await cls._reminder_scheduler.stop()
 
     @classmethod
+    def events(cls) -> EventService:
+        """Get the event service instance.
+
+        Returns:
+            EventService: The event service instance.
+        """
+        if cls._events is None:
+            raise RuntimeError("ServiceRegistry not initialized! Call initialize() first.")
+        return cls._events
+
+    @classmethod
     def reminders(cls) -> ReminderService:
         """Get the reminder service instance.
 

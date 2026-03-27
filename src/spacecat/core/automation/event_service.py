@@ -114,7 +114,7 @@ class EventService:
         Returns:
             The created action.
         """
-        return await Action.create(event=event, action_type=action_type, data=config)
+        return await Action.create(task=event, action_type=action_type, data=config)
 
     async def get_actions(self, event: Task) -> list[Action]:
         """Gets all actions for an event.

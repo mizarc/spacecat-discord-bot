@@ -34,9 +34,9 @@ class Action(models.Model):
     """
 
     id = fields.UUIDField(pk=True)
-    # The 'related_name' allows event.actions.all()
-    event = fields.ForeignKeyField(
-        "models.Event", related_name="actions", on_delete=fields.CASCADE
+    # The 'related_name' allows task.actions.all()
+    task = fields.ForeignKeyField(
+        "models.Task", related_name="actions", on_delete=fields.CASCADE
     )
     action_type = fields.CharField(max_length=50, index=True)
     data = fields.JSONField()

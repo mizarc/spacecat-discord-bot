@@ -11,7 +11,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Self
 
 import fluxer
-from dateutil import parser
 
 from spacecat.core.features.scheduler import reminder_list
 from spacecat.core.features.scheduler import reminder_remove as delete_reminder
@@ -101,11 +100,9 @@ class Scheduler(fluxer.Cog):
         """
         index = int(index)
 
-        if not ctx.guild:
-            await ctx.reply("This command can only be used in a server!")
-            return
-
+        # Delete the reminder
         result = await delete_reminder(ctx.guild.id, ctx.author.id, index)
+
         await ctx.reply(result["display"])
 
 
