@@ -71,7 +71,7 @@ class Task(models.Model):
         repeat_multiplier: int,
         name: str,
         description: str = "",
-    ) -> "Task":
+    ) -> Task:
         """Create a new instance of a Task.
 
         Args:
