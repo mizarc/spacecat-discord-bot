@@ -166,8 +166,14 @@ async def task_action_add(
                 ),
             }
 
+    # Calculate the next order value based on existing actions
+    last_action = await task.actions.all().order_by("-position").first()
+    next_position = (last_action.position + 1) if last_action else 1
+
     try:
-        await Action.create(task=task, action_type=action_type, data=config)
+        await Action.create(
+            task=task, action_type=action_type, data=config, position=next_position
+        )
     except (IntegrityError, ValidationError, DoesNotExist) as error:
         return {"success": False, "message": f"Error adding action: {error!s}"}
     else:
@@ -194,7 +200,7 @@ async def task_action_remove(guild_id: int, task_name: str, action_index: int) -
         return {"success": False, "message": f"Task `{task_name}` not found."}
 
     # Get all actions for the task
-    actions = await task.actions.all().order_by("id")
+    actions = await task.actions.all().order_by("position")
 
     if not actions:
         return {"success": False, "message": f"Task `{task_name}` has no actions to remove."}
@@ -238,16 +244,19 @@ async def task_action_reorder(guild_id: int, task_name: str) -> dict[str, Any]:
         return {"success": False, "message": f"Task `{task_name}` not found."}
 
     # Get all actions for the task
-    actions = await task.actions.all()
+    actions = await task.actions.all().order_by("position")
 
     if not actions:
         return {"success": False, "message": f"Task `{task_name}` has no actions to reorder."}
 
-    # For now, return a message indicating this functionality
-    # would require schema changes to implement properly
+    # Example logic to normalize the order to 1, 2, 3...
+    for i, action in enumerate(actions, 1):
+        action.position = i
+        await action.save()
+
     return {
-        "success": False,
-        "message": "Action reordering requires adding an 'order' field to the Action model.",
+        "success": True,
+        "message": f"✅ Actions for `{task_name}` have been normalized.",
     }
 
 
@@ -411,7 +420,7 @@ async def task_info(guild_id: int, name: str) -> dict[str, Any]:
     if not task:
         return {"success": False, "message": f"Task `{name}` not found."}
 
-    actions = await task.actions.all().order_by("id")
+    actions = await task.actions.all().order_by("position")
 
     status = "Paused" if task.is_paused else "Active"
     repeat_info = f"Repeats: {Repeat(task.repeat_interval).name}"

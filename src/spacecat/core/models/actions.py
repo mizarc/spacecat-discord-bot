@@ -40,6 +40,7 @@ class Action(models.Model):
     task = fields.ForeignKeyField(Task, related_name="actions", on_delete=fields.CASCADE)
     action_type = fields.CharField(max_length=50, index=True)
     data = fields.JSONField()
+    position = fields.IntField(default=0)
     is_enabled = fields.BooleanField(default=True)
 
     class Meta:
