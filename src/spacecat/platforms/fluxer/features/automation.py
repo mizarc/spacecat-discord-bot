@@ -386,7 +386,7 @@ class Automation(fluxer.Cog):
             index: 1-based index of the action.
         """
         result = await core_automation.task_action_remove(
-            ctx.guild.id if ctx.guild else 0, task_name, index
+            ctx.guild.id if ctx.guild else 0, task_name, int(index)
         )
         await ctx.reply(result["message"])
 
