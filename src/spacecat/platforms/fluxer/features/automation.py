@@ -9,17 +9,41 @@ and scheduled events.
 from __future__ import annotations
 
 import json
+import shlex
 from typing import TYPE_CHECKING, Self
 
 import dateparser
 import fluxer
 
 import spacecat.core.features.automation as core_automation
+from spacecat.core.models.actions import REQUIRED_KEYS
 from spacecat.platforms.fluxer.helpers import permissions
 from spacecat.platforms.fluxer.helpers.utils import parse_quoted_args
 
 if TYPE_CHECKING:
     from spacecat.platforms.fluxer.client import FluxerClient
+
+
+def _parse_action_args(args: list[str]) -> dict:
+    """
+    Parses a list of key=value strings into a dictionary.
+
+    Args:
+        args: A list of strings in 'key=value' format.
+
+    Returns:
+        dict: The parsed configuration dictionary.
+    """
+    config = {}
+    for arg in args:
+        if "=" in arg:
+            key, value = arg.split("=", 1)
+            # Clean up quotes and try to convert numbers
+            value = value.strip("'\"")
+            if value.isdigit():
+                value = int(value)
+            config[key] = value
+    return config
 
 
 class Automation(fluxer.Cog):
@@ -296,7 +320,7 @@ class Automation(fluxer.Cog):
     @fluxer.Cog.command(name="task action add")
     @permissions.check()
     async def task_action_add(
-        self: Self, ctx: fluxer.Message, task_name: str, action_type: str, *, config_json: str
+        self: Self, ctx: fluxer.Message, task_name: str, action_type: str, *, action_info: str
     ) -> None:
         """
         Add an action to a task.
@@ -305,14 +329,28 @@ class Automation(fluxer.Cog):
             ctx: The command context.
             task_name: The name of the task.
             action_type: The type of action.
-            config_json: JSON configuration for the action.
+            action_info: Space-separated key=value pairs
+                (e.g., channel_id=123 content="Hello").
         """
+        # Parse the action info as key value pairs
         try:
-            config = json.loads(config_json)
-        except json.JSONDecodeError:
-            await ctx.reply("Invalid JSON configuration.")
+            args = shlex.split(action_info)
+        except ValueError:
+            await ctx.reply("❌ Error parsing arguments. Check your quotes!")
             return
 
+        # Map those args to a dictionary
+        config = _parse_action_args(args)
+
+        # Check if they provided the right keys before even calling the backend
+        if action_type in REQUIRED_KEYS:
+            missing = [k for k in REQUIRED_KEYS[action_type] if k not in config]
+            if missing:
+                usage = " ".join([f"{k}=value" for k in REQUIRED_KEYS[action_type]])
+                await ctx.reply(f"❌ Missing keys for `{action_type}`. Usage: `{usage}`")
+                return
+
+        # Pass the cleaned config to your existing logic
         result = await core_automation.task_action_add(
             ctx.guild.id if ctx.guild else 0, task_name, action_type, config
         )
