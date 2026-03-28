@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 from tortoise import fields, models
 
+from spacecat.core.models.tasks import Task
+
 if TYPE_CHECKING:
     from spacecat.core.interfaces import BaseDispatcher
 
@@ -35,9 +37,7 @@ class Action(models.Model):
 
     id = fields.UUIDField(pk=True)
     # The 'related_name' allows task.actions.all()
-    task = fields.ForeignKeyField(
-        "models.Task", related_name="actions", on_delete=fields.CASCADE
-    )
+    task = fields.ForeignKeyField(Task, related_name="actions", on_delete=fields.CASCADE)
     action_type = fields.CharField(max_length=50, index=True)
     data = fields.JSONField()
     is_enabled = fields.BooleanField(default=True)
