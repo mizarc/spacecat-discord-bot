@@ -373,21 +373,24 @@ async def task_list(guild_id: int, page: int = 1, page_size: int = 10) -> dict[s
 
     if not tasks:
         return {
-            "title": "📋 Guild Tasks",
+            "title": "📋 Available Tasks",
             "body": "There are no available tasks.",
         }
 
     total_pages = (total_count + page_size - 1) // page_size
 
-    body = "\n".join(
-        [
-            f"- **{task.name}**: <t:{task.dispatch_time}:t>"
-            f" ({'Paused' if task.is_paused else 'Active'})"
-            for task in tasks
-        ]
-    )
+    lines = []
+    for task in tasks:
+        if task.dispatch_time:
+            status = "Paused" if task.is_paused else "Active"
+            lines.append(f"- **{task.name}:** <t:{task.dispatch_time}:t> ({status})")
+        else:
+            lines.append(f"- **{task.name}:** No Schedule")
+
+    body = "\n".join(lines)
+
     return {
-        "title": "📋 Guild Tasks",
+        "title": "📋 Available Tasks",
         "body": body,
         "footer": f"Page {page} of {total_pages} ({total_count} total tasks)",
     }
