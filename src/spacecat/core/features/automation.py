@@ -361,15 +361,23 @@ async def task_description(guild_id: int, name: str, description: str) -> dict[s
     return {"success": True, "message": f"📝 Description updated for `{name}`."}
 
 
-async def task_list(guild_id: int) -> dict[str, Any]:
+async def task_list(guild_id: int, page: int = 1, page_size: int = 10) -> dict[str, Any]:
     """Formats a summary list of all guild tasks."""
-    tasks = await Task.filter(guild_id=guild_id).order_by("dispatch_time")
+    total_count = await Task.filter(guild_id=guild_id).count()
+    tasks = (
+        await Task.filter(guild_id=guild_id)
+        .order_by("dispatch_time")
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+    )
 
     if not tasks:
         return {
             "title": "📋 Guild Tasks",
             "body": "There are no available tasks.",
         }
+
+    total_pages = (total_count + page_size - 1) // page_size
 
     body = "\n".join(
         [
@@ -381,6 +389,7 @@ async def task_list(guild_id: int) -> dict[str, Any]:
     return {
         "title": "📋 Guild Tasks",
         "body": body,
+        "footer": f"Page {page} of {total_pages} ({total_count} total tasks)",
     }
 
 
