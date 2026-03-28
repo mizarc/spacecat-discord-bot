@@ -4,6 +4,7 @@ import time
 from typing import Any
 
 import dateparser
+from tortoise import expressions
 from tortoise.exceptions import DoesNotExist, IntegrityError, ValidationError
 
 from spacecat.core.models.actions import REQUIRED_KEYS, Action
@@ -215,7 +216,11 @@ async def task_action_remove(guild_id: int, task_name: str, action_index: int) -
     action_type = action_to_remove.action_type
 
     try:
+        deleted_position = action_to_remove.position
         await action_to_remove.delete()
+        await task.actions.filter(position__gt=deleted_position).update(
+            position=expressions.F("position") - 1
+        )
     except (IntegrityError, ValidationError, DoesNotExist) as error:
         return {"success": False, "message": f"Error removing action: {error!s}"}
     else:
@@ -431,7 +436,8 @@ async def task_info(guild_id: int, name: str) -> dict[str, Any]:
         if a.action_type == "message" and "content" in a.data:
             msg = a.data.get("content", "")
             channel = f" <#{a.data['channel_id']}>" if "channel_id" in a.data else ""
-            truncated_msg = f"{msg[:30]}..." if len(msg) > 30 else msg
+            max_msg_length = 30
+            truncated_msg = f"{msg[:30]}..." if len(msg) > max_msg_length else msg
             content = f"Send '{truncated_msg}' to channel{channel}"
         action_lines.append(f"**{i}. {a.action_type}:** {content}")
 
