@@ -254,7 +254,7 @@ async def task_action_reorder(guild_id: int, task_name: str) -> dict[str, Any]:
 async def task_create(
     guild_id: int,
     name: str,
-    description: str,
+    description: str | None = None,
     dispatch_time: int | None = None,
     repeat_interval: Repeat = Repeat.No,
     repeat_multiplier: int = 1,
@@ -361,20 +361,27 @@ async def task_description(guild_id: int, name: str, description: str) -> dict[s
     return {"success": True, "message": f"📝 Description updated for `{name}`."}
 
 
-async def task_list(guild_id: int) -> str:
+async def task_list(guild_id: int) -> dict[str, Any]:
     """Formats a summary list of all guild tasks."""
     tasks = await Task.filter(guild_id=guild_id).order_by("dispatch_time")
 
     if not tasks:
-        return "There are no available tasks."
+        return {
+            "title": "📋 Guild Tasks",
+            "body": "There are no available tasks.",
+        }
 
-    return "\n".join(
+    body = "\n".join(
         [
             f"- **{task.name}**: <t:{task.dispatch_time}:t>"
-            " ({'Paused' if task.is_paused else 'Active'})"
+            f" ({'Paused' if task.is_paused else 'Active'})"
             for task in tasks
         ]
     )
+    return {
+        "title": "📋 Guild Tasks",
+        "body": body,
+    }
 
 
 async def task_info(guild_id: int, name: str) -> dict[str, Any]:
