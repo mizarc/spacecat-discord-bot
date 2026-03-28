@@ -197,7 +197,23 @@ class Automation(fluxer.Cog):
         """
         result = await core_automation.task_info(ctx.guild.id if ctx.guild else 0, name)
         if result["success"]:
-            await ctx.reply(result["display"])
+            result_embed = result["embed"]
+            print(result_embed)
+            embed = fluxer.Embed(title=f"📝 Task: {name}", color=0x2ECC71)
+            embed.description = result_embed.get("description", "No description provided.")
+            embed.add_field(
+                name="Status", value=result_embed.get("status", "Unknown"), inline=True
+            )
+            embed.add_field(
+                name="Next Run", value=result_embed.get("next_run", "Not scheduled"), inline=True
+            )
+            embed.add_field(
+                name="Interval", value=result_embed.get("interval", "None"), inline=True
+            )
+            embed.add_field(
+                name="Actions", value=result_embed.get("actions", "No actions"), inline=False
+            )
+            await ctx.reply(embed=embed)
         else:
             await ctx.reply(result["message"])
 

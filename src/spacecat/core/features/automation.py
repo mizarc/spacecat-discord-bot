@@ -416,16 +416,28 @@ async def task_info(guild_id: int, name: str) -> dict[str, Any]:
     status = "Paused" if task.is_paused else "Active"
     repeat_info = f"Repeats: {Repeat(task.repeat_interval).name}"
 
-    action_list = "\n".join([f"- {a.action_type}: {a.data}" for a in actions]) or "No actions set."
+    action_lines = []
+    for i, a in enumerate(actions, 1):
+        content = ""
+        if a.action_type == "message" and "content" in a.data:
+            msg = a.data.get("content", "")
+            channel = f" <#{a.data['channel_id']}>" if "channel_id" in a.data else ""
+            truncated_msg = f"{msg[:30]}..." if len(msg) > 30 else msg
+            content = f"Send '{truncated_msg}' to channel{channel}"
+        action_lines.append(f"**{i}. {a.action_type}:** {content}")
 
-    display = (
-        f"**Task: {task.name}** ({status})\n"
-        f"Next Run: <t:{task.dispatch_time}:R>\n"
-        f"{repeat_info}\n\n"
-        f"**Actions:**\n{action_list}"
-    )
+    action_list = "\n".join(action_lines) or "No actions set."
 
-    return {"success": True, "task": task, "display": display}
+    embed_data = {
+        "title": f"Task: {task.name}",
+        "description": task.description or "No description provided.",
+        "status": status,
+        "next_run": f"<t:{task.dispatch_time}:R>" if task.dispatch_time else "Manual Only",
+        "repeat": repeat_info,
+        "actions": action_list,
+    }
+
+    return {"success": True, "task": task, "embed": embed_data}
 
 
 async def task_pause(guild_id: int, task_name: str) -> dict[str, Any]:
