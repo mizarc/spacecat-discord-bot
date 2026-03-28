@@ -8,13 +8,13 @@ and scheduled events.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Self
 
+import dateparser
 import fluxer
 
-from spacecat.core.features.automation import reminder_list
-from spacecat.core.features.automation import reminder_remove as delete_reminder
-from spacecat.core.features.automation import remindme as create_reminder
+import spacecat.core.features.automation as core_automation
 from spacecat.platforms.fluxer.helpers import permissions
 from spacecat.platforms.fluxer.helpers.utils import parse_quoted_args
 
@@ -50,11 +50,17 @@ class Automation(fluxer.Cog):
             reminder_text: Full reminder text in format "time message"
                 (e.g., '30m' 'Meeting time')
         """
-        # Parse two arguments with quote support
-        time_input, message = parse_quoted_args(reminder_text)
+        # Parse arguments with quote support
+        args = parse_quoted_args(reminder_text)
+        arg_count = 2
+        if len(args) < arg_count:
+            await ctx.reply('Usage: !remindme "time" "message"')
+            return
+
+        time_input, message = args[0], args[1]
 
         # Use the core remindme function to create and schedule the reminder
-        result = await create_reminder(
+        result = await core_automation.remindme(
             user_id=str(ctx.author.id),
             message=message,
             dispatch_time_text=time_input,
@@ -75,11 +81,12 @@ class Automation(fluxer.Cog):
         Args:
             ctx: The command context.
         """
-        result = await reminder_list(ctx.guild.id, ctx.author.id)
+        result = await core_automation.reminder_list(
+            ctx.guild.id if ctx.guild else 0, ctx.author.id
+        )
 
         # Create a nice embed for the reminders
         embed = fluxer.Embed(title=result["title"], color=0x3498DB)
-
         embed.description = result["display"]
 
         await ctx.reply(embed=embed)
@@ -98,12 +105,251 @@ class Automation(fluxer.Cog):
             ctx: The command context.
             index: The index of the reminder to delete.
         """
-        index = int(index)
-
         # Delete the reminder
-        result = await delete_reminder(ctx.guild.id, ctx.author.id, index)
+        result = await core_automation.reminder_remove(
+            ctx.guild.id if ctx.guild else 0, ctx.author.id, index
+        )
 
         await ctx.reply(result["display"])
+
+    @fluxer.Cog.command(name="task list")
+    @permissions.check()
+    async def task_list(self: Self, ctx: fluxer.Message) -> None:
+        """
+        Lists all your tasks in the current server.
+
+        Args:
+            ctx: The command context.
+        """
+        result = await core_automation.task_list(ctx.guild.id if ctx.guild else 0)
+
+        embed = fluxer.Embed(title=result["title"], color=0x2ECC71)
+        embed.description = result["body"]
+        if result.get("footer"):
+            embed.set_footer(text=result["footer"])
+
+        await ctx.reply(embed=embed)
+
+    @fluxer.Cog.command(name="task create")
+    @permissions.check()
+    async def task_create(
+        self: Self, ctx: fluxer.Message, name: str, *, description: str = ""
+    ) -> None:
+        """
+        Create a new task in the guild.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+            description: Optional description for the task.
+        """
+        result = await core_automation.task_create(
+            guild_id=ctx.guild.id if ctx.guild else 0, name=name, description=description
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task delete")
+    @permissions.check()
+    async def task_delete(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Delete a task by name.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_delete(ctx.guild.id if ctx.guild else 0, name)
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task info")
+    @permissions.check()
+    async def task_info(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Show details of a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_info(ctx.guild.id if ctx.guild else 0, name)
+        if result["success"]:
+            await ctx.reply(result["display"])
+        else:
+            await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task pause")
+    @permissions.check()
+    async def task_pause(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Pause a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_pause(ctx.guild.id if ctx.guild else 0, name)
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task resume")
+    @permissions.check()
+    async def task_resume(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Resume a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_resume(ctx.guild.id if ctx.guild else 0, name)
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task rename")
+    @permissions.check()
+    async def task_rename(self: Self, ctx: fluxer.Message, old_name: str, new_name: str) -> None:
+        """
+        Rename a task.
+
+        Args:
+            ctx: The command context.
+            old_name: The current name of the task.
+            new_name: The new name for the task.
+        """
+        result = await core_automation.task_rename(
+            ctx.guild.id if ctx.guild else 0, old_name, new_name
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task description")
+    @permissions.check()
+    async def task_description(
+        self: Self, ctx: fluxer.Message, name: str, *, description: str
+    ) -> None:
+        """
+        Update task description.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+            description: The new description.
+        """
+        result = await core_automation.task_description(
+            ctx.guild.id if ctx.guild else 0, name, description
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task reschedule")
+    @permissions.check()
+    async def task_reschedule(
+        self: Self, ctx: fluxer.Message, name: str, *, time_text: str
+    ) -> None:
+        """
+        Reschedule a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+            time_text: Human readable time.
+        """
+        target_time = dateparser.parse(time_text)
+        if not target_time:
+            await ctx.reply("Could not parse time input.")
+            return
+
+        new_timestamp = int(target_time.timestamp())
+        result = await core_automation.task_reschedule(
+            ctx.guild.id if ctx.guild else 0, name, new_timestamp
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task interval")
+    @permissions.check()
+    async def task_interval(
+        self: Self, ctx: fluxer.Message, name: str, interval: str, multiplier: int = 1
+    ) -> None:
+        """
+        Set task repeat interval.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+            interval: hourly, daily, weekly, or no.
+            multiplier: Interval multiplier.
+        """
+        result = await core_automation.task_interval(
+            ctx.guild.id if ctx.guild else 0, name, interval, multiplier
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task trigger")
+    @permissions.check()
+    async def task_trigger(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Manually trigger a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_trigger(ctx.guild.id if ctx.guild else 0, name)
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task action add")
+    @permissions.check()
+    async def task_action_add(
+        self: Self, ctx: fluxer.Message, task_name: str, action_type: str, *, config_json: str
+    ) -> None:
+        """
+        Add an action to a task.
+
+        Args:
+            ctx: The command context.
+            task_name: The name of the task.
+            action_type: The type of action.
+            config_json: JSON configuration for the action.
+        """
+        try:
+            config = json.loads(config_json)
+        except json.JSONDecodeError:
+            await ctx.reply("Invalid JSON configuration.")
+            return
+
+        result = await core_automation.task_action_add(
+            ctx.guild.id if ctx.guild else 0, task_name, action_type, config
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task action remove")
+    @permissions.check()
+    async def task_action_remove(
+        self: Self, ctx: fluxer.Message, task_name: str, index: int
+    ) -> None:
+        """
+        Remove an action from a task.
+
+        Args:
+            ctx: The command context.
+            task_name: The name of the task.
+            index: 1-based index of the action.
+        """
+        result = await core_automation.task_action_remove(
+            ctx.guild.id if ctx.guild else 0, task_name, index
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task action reorder")
+    @permissions.check()
+    async def task_action_reorder(self: Self, ctx: fluxer.Message, task_name: str) -> None:
+        """
+        Reorder task actions.
+
+        Args:
+            ctx: The command context.
+            task_name: The name of the task.
+        """
+        result = await core_automation.task_action_reorder(
+            ctx.guild.id if ctx.guild else 0, task_name
+        )
+        await ctx.reply(result["message"])
 
 
 async def setup(bot: FluxerClient) -> None:
