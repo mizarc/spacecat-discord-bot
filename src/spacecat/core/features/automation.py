@@ -457,6 +457,11 @@ async def task_info(guild_id: int, name: str) -> dict[str, Any]:
             max_msg_length = 30
             truncated_msg = f"{msg[:30]}..." if len(msg) > max_msg_length else msg
             content = f"Send '{truncated_msg}' to channel{channel}"
+        elif a.action_type == "voice_move":
+            content = (
+                f"Move users from <#{a.data['source_channel']}> "
+                f"to <#{a.data['destination_channel']}>"
+            )
         action_lines.append(f"**{i}. {a.action_type}:** {content}")
 
     action_list = "\n".join(action_lines) or "No actions set."
