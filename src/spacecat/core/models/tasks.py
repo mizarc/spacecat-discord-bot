@@ -9,30 +9,26 @@ logic for scheduled tasks within the bot.
 
 from __future__ import annotations
 
-from enum import IntEnum
+import datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from dateutil.relativedelta import relativedelta
 from tortoise import fields, models
 
 if TYPE_CHECKING:
     from spacecat.core.models.actions import Action
 
 
-class Repeat(IntEnum):
-    """
-    Represents the time at which a task should be repeated.
+class Repeat(StrEnum):
+    """Supported intervals for task recurrence."""
 
-    Attributes:
-        No (int): No repeats will be set.
-        Hourly (int): The task will be set to repeat every hour.
-        Daily (int): The task will be set to repeat every day.
-        Weekly (int): The task will be set to repeat every week.
-    """
-
-    No = 0
-    Hourly = 3600
-    Daily = 86400
-    Weekly = 604800
+    HOURLY = "hourly"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+    NONE = "no"
 
 
 class Task(models.Model):
@@ -46,9 +42,9 @@ class Task(models.Model):
 
     id = fields.UUIDField(pk=True)
     guild_id = fields.BigIntField(index=True)
-    dispatch_time = fields.BigIntField(null=True)
-    last_run_time = fields.BigIntField(null=True)
-    repeat_interval = fields.BigIntField(default=Repeat.No.value)
+    dispatch_time = fields.DatetimeField(null=True, index=True)
+    last_run_time = fields.DatetimeField(null=True, index=True)
+    repeat_interval = fields.TextField(default=Repeat.NONE)
     repeat_multiplier = fields.IntField(default=1)
     name = fields.CharField(max_length=255)
     description = fields.TextField(default="")
@@ -98,15 +94,28 @@ class Task(models.Model):
             description=description,
         )
 
-    def get_next_run_timestamp(self) -> int:
-        """Calculates the next run time.
+    def get_next_run_time(self) -> datetime.datetime:
+        """
+        Calculates the next run time using calendar-aware math.
 
         Returns:
-            The next run time as a timestamp.
+            datetime: The next calculated UTC dispatch time.
         """
-        if self.repeat_interval == Repeat.No:
-            return self.dispatch_time
+        # We calculate based on when it SHOULD have run to prevent drift
+        base_dt = self.dispatch_time or datetime.datetime.now(datetime.UTC)
+        mult = self.repeat_multiplier or 1
 
-        base_time = self.last_run_time or self.dispatch_time
-        interval_seconds = self.repeat_interval.value * self.repeat_multiplier
-        return base_time + interval_seconds
+        mapping = {
+            Repeat.HOURLY: {"hours": mult},
+            Repeat.DAILY: {"days": mult},
+            Repeat.WEEKLY: {"weeks": mult},
+            Repeat.MONTHLY: {"months": mult},
+            Repeat.YEARLY: {"years": mult},
+        }
+
+        if self.repeat_interval not in mapping:
+            return base_dt
+
+        # relativedelta handles the varying lengths of months/years automatically
+        delta = relativedelta(**mapping[self.repeat_interval])
+        return base_dt + delta

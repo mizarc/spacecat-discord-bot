@@ -11,15 +11,19 @@ intended to be a central component of the bot's automation system.
 """
 
 import asyncio
+import datetime
+import logging
 import time
 from typing import Any, Protocol
+
+logger = logging.getLogger(__name__)
 
 
 class Schedulable(Protocol):
     """Interface for items that can be scheduled."""
 
     id: Any
-    dispatch_time: int
+    dispatch_time: datetime.datetime
 
 
 class BaseScheduler:
@@ -61,8 +65,7 @@ class BaseScheduler:
         if item.id in self.tasks:
             self.tasks[item.id].cancel()
 
-        delay = max(0.0, item.dispatch_time - time.time())
-        # Start the tracking task immediately
+        delay = await self._calculate_delay(item.dispatch_time)
         self.tasks[item.id] = asyncio.create_task(self._run(item, delay))
 
     def unschedule(self, item_id: Any) -> bool:
@@ -92,26 +95,43 @@ class BaseScheduler:
                 for item in items:
                     existing_task = self.tasks.get(item.id)
                     if existing_task is None or existing_task.done():
-                        delay = max(0, item.dispatch_time - time.time())
+                        delay = await self._calculate_delay(item.dispatch_time)
                         self.tasks[item.id] = asyncio.create_task(self._run(item, delay))
 
                 await asyncio.sleep(self.interval)
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 # Log the error and wait before retrying
-                print(f"Scheduler Loop Error: {e}")
+                logger.exception("Scheduler Loop Error")
                 await asyncio.sleep(10)
+
+    async def _calculate_delay(self, dispatch_time: datetime.datetime) -> float:
+        """Calculate the seconds to wait until dispatch_time.
+
+        Args:
+            dispatch_time: The time to wait until dispatch_time.
+        """
+        now = datetime.datetime.now(datetime.UTC)
+        # If dispatch_time is naive, assume UTC; otherwise ensure it's UTC
+        if dispatch_time.tzinfo is None:
+            dispatch_time = dispatch_time.replace(tzinfo=datetime.UTC)
+
+        return max(0.0, (dispatch_time - now).total_seconds())
 
     async def _run(self, item: Schedulable, delay: float) -> None:
         """Run a scheduled item."""
         try:
-            await asyncio.sleep(delay)
+            if delay > 0:
+                await asyncio.sleep(delay)
             await self.service.dispatch(item)
+
         except asyncio.CancelledError:
-            pass  # Task was cancelled (event deleted/paused)
-        except Exception as e:
-            print(f"Dispatch Error for {item.id}: {e}")
+            pass
+        except Exception:
+            logger.exception("Dispatch Error for %s", item.id)
         finally:
-            # Clean up the reference so it can be re-scheduled if repeating
+            # Clean up the reference.
+            # If the task is repeating, the next loop will re-pick it up
+            # with its new dispatch_time.
             self.tasks.pop(item.id, None)

@@ -274,11 +274,9 @@ class Automation(fluxer.Cog):
             embed.add_field(
                 name="Status", value=result_embed.get("status", "Unknown"), inline=True
             )
+            embed.add_field(name="Interval", value=result_embed.get("repeat", "None"), inline=True)
             embed.add_field(
-                name="Next Run", value=result_embed.get("next_run", "Not scheduled"), inline=True
-            )
-            embed.add_field(
-                name="Interval", value=result_embed.get("interval", "None"), inline=True
+                name="Next Run", value=result_embed.get("next_run", "Not scheduled"), inline=False
             )
             embed.add_field(
                 name="Actions", value=result_embed.get("actions", "No actions"), inline=False

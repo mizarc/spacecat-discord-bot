@@ -11,6 +11,7 @@ intended to be a central component of the bot's automation system.
 
 from __future__ import annotations
 
+import datetime
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -42,24 +43,33 @@ class TaskService:
 
     async def dispatch(self, task: Task) -> None:
         """
-        The core execution flow for a triggered task.
+        Execute actions and reschedules based on calendar logic.
 
-        This method is called by the Scheduler. It handles the 'Business
-        Rules' of firing actions and rescheduling the task if it is
-        repeating.
+        Args:
+            task: The task to dispatch.
         """
         try:
             # 1. Execute the payload
             await self.execute_actions(task)
 
-            # 2. Update state for record keeping
-            now = int(time.time())
+            # 2. Update state for record keeping (Using UTC Datetime)
+            now = datetime.datetime.now(datetime.UTC)
             task.last_run_time = now
 
             # 3. Handle Recurrence (The Business Policy)
-            if task.repeat_interval != Repeat.No and not task.is_paused:
-                # Use the model's logic to find the next timestamp
-                task.dispatch_time = task.get_next_run_timestamp()
+            # Check if it's set to repeat (not "no") and not paused
+            if task.repeat_interval != Repeat.NONE and not task.is_paused:
+                # Calculate the next intended slot
+                new_time = task.get_next_run_time()
+
+                # CATCH-UP LOGIC:
+                # If the bot was offline, we loop until we find the next future run time
+                # based on the original schedule anchor.
+                while new_time <= now:
+                    task.dispatch_time = new_time
+                    new_time = task.get_next_run_time()
+
+                task.dispatch_time = new_time
             else:
                 # If not repeating, we pause it so it doesn't fire again
                 task.is_paused = True
@@ -67,7 +77,6 @@ class TaskService:
             await task.save()
 
         except (OSError, ValueError, RuntimeError) as error:
-            # In production, swap this for a proper logger
             print(f"Critical error during dispatch of Task {task.id}: {error}")
 
     async def execute_actions(self, task: Task) -> None:
@@ -77,18 +86,17 @@ class TaskService:
             task: The task to execute actions for.
         """
         # Use select_related or similar if needed, but Tortoise filter is fine here
-        actions = await task.actions.filter(is_enabled=True)
+        actions = await task.actions.filter(is_enabled=True).order_by("position")
 
         for action in actions:
             try:
-                # We pass the agnostic bot interface to the action
                 await action.run(self.dispatcher)
             except (OSError, ValueError, RuntimeError) as error:
-                print(f"Error executing action {action.id} ({action.action_type}): {error}")
+                print(f"Error executing action {action.id}: {error}")
 
     async def get_upcoming(self, time_limit: int = FIVE_MINUTES_IN_SECONDS) -> list[Task]:
         """
-        Gets upcoming tasks within the time limit.
+        Get upcoming tasks within the time limit.
 
         Used by the Scheduler to populate its task queue.
 
@@ -98,10 +106,13 @@ class TaskService:
         Returns:
             A list of upcoming tasks.
         """
-        current_time = int(time.time())
-        return await Task.filter(
-            dispatch_time__lte=current_time + time_limit, is_paused=False
-        ).order_by("dispatch_time")
+        now = datetime.datetime.now(datetime.UTC)
+        limit = now + datetime.timedelta(seconds=time_limit)
+
+        # Tortoise handles the datetime comparison natively
+        return await Task.filter(dispatch_time__lte=limit, is_paused=False).order_by(
+            "dispatch_time"
+        )
 
     async def add_action(self, task: Task, action_type: str, config: dict) -> Action:
         """Add a new action to a task.

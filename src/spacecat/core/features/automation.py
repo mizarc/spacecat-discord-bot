@@ -270,7 +270,7 @@ async def task_create(
     name: str,
     description: str | None = None,
     dispatch_time: int | None = None,
-    repeat_interval: Repeat = Repeat.No,
+    repeat_interval: Repeat = Repeat.NONE,
     repeat_multiplier: int = 1,
 ) -> dict[str, Any]:
     """Creates a new task in the ORM with unique name validation.
@@ -428,7 +428,25 @@ async def task_info(guild_id: int, name: str) -> dict[str, Any]:
     actions = await task.actions.all().order_by("position")
 
     status = "Paused" if task.is_paused else "Active"
-    repeat_info = f"Repeats: {Repeat(task.repeat_interval).name}"
+
+    # Format repeat interval
+    raw_unit = str(task.repeat_interval or "no").lower()
+    multiplier = task.repeat_multiplier or 1
+    if raw_unit in ("no", "none", "0"):
+        repeat_info = "Does not repeat"
+    else:
+        grammar_map = {
+            "hourly": ("Hour", "Hours"),
+            "daily": ("Day", "Days"),
+            "weekly": ("Week", "Weeks"),
+            "monthly": ("Month", "Months"),
+            "yearly": ("Year", "Years"),
+        }
+
+        friendly_names = grammar_map.get(raw_unit, (raw_unit.title(), f"{raw_unit.title()}s"))
+        singular, plural = friendly_names
+
+        repeat_info = f"Every {multiplier} {plural}" if multiplier > 1 else f"Every {singular}"
 
     action_lines = []
     for i, a in enumerate(actions, 1):
@@ -443,11 +461,17 @@ async def task_info(guild_id: int, name: str) -> dict[str, Any]:
 
     action_list = "\n".join(action_lines) or "No actions set."
 
+    # Next run time field
+    next_run_str = "Manual Only"
+    if task.dispatch_time:
+        unix_ts = int(task.dispatch_time.timestamp())
+        next_run_str = f"<t:{unix_ts}:F>"
+
     embed_data = {
         "title": f"Task: {task.name}",
         "description": task.description or "No description provided.",
         "status": status,
-        "next_run": f"<t:{task.dispatch_time}:R>" if task.dispatch_time else "Manual Only",
+        "next_run": next_run_str,
         "repeat": repeat_info,
         "actions": action_list,
     }
@@ -554,10 +578,12 @@ async def task_schedule_interval(
 
     # Map interval name to enum
     interval_map = {
-        "hourly": Repeat.Hourly,
-        "daily": Repeat.Daily,
-        "weekly": Repeat.Weekly,
-        "none": Repeat.No,
+        "hourly": Repeat.HOURLY,
+        "daily": Repeat.DAILY,
+        "weekly": Repeat.WEEKLY,
+        "monthly": Repeat.MONTHLY,
+        "yearly": Repeat.YEARLY,
+        "none": Repeat.NONE,
     }
 
     # Check if interval name is valid
