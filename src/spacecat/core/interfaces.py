@@ -22,7 +22,5 @@ class BaseDispatcher(ABC):
         """Sends a rich embed/card to a channel."""
 
     @abstractmethod
-    async def dispatch_voice_move(
-        self, guild_id: int | str, user_id: int | str, target_vc: int | str
-    ) -> None:
+    async def dispatch_voice_move(self, source_channel: int, destination_channel: int) -> None:
         """Moves a user from one voice channel to another."""
