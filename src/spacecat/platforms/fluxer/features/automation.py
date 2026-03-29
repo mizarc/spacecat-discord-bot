@@ -8,7 +8,6 @@ and scheduled events.
 
 from __future__ import annotations
 
-import json
 import shlex
 from typing import TYPE_CHECKING, Self
 
@@ -136,203 +135,6 @@ class Automation(fluxer.Cog):
 
         await ctx.reply(result["display"])
 
-    @fluxer.Cog.command(name="task list")
-    @permissions.check()
-    async def task_list(self: Self, ctx: fluxer.Message) -> None:
-        """
-        Lists all your tasks in the current server.
-
-        Args:
-            ctx: The command context.
-        """
-        result = await core_automation.task_list(ctx.guild.id if ctx.guild else 0)
-
-        embed = fluxer.Embed(title=result["title"], color=0x2ECC71)
-        embed.description = result["body"]
-        if result.get("footer"):
-            embed.set_footer(text=result["footer"])
-
-        await ctx.reply(embed=embed)
-
-    @fluxer.Cog.command(name="task create")
-    @permissions.check()
-    async def task_create(
-        self: Self, ctx: fluxer.Message, name: str, *, description: str = ""
-    ) -> None:
-        """
-        Create a new task in the guild.
-
-        Args:
-            ctx: The command context.
-            name: The name of the task.
-            description: Optional description for the task.
-        """
-        result = await core_automation.task_create(
-            guild_id=ctx.guild.id if ctx.guild else 0, name=name, description=description
-        )
-        await ctx.reply(result["message"])
-
-    @fluxer.Cog.command(name="task delete")
-    @permissions.check()
-    async def task_delete(self: Self, ctx: fluxer.Message, name: str) -> None:
-        """
-        Delete a task by name.
-
-        Args:
-            ctx: The command context.
-            name: The name of the task.
-        """
-        result = await core_automation.task_delete(ctx.guild.id if ctx.guild else 0, name)
-        await ctx.reply(result["message"])
-
-    @fluxer.Cog.command(name="task info")
-    @permissions.check()
-    async def task_info(self: Self, ctx: fluxer.Message, name: str) -> None:
-        """
-        Show details of a task.
-
-        Args:
-            ctx: The command context.
-            name: The name of the task.
-        """
-        result = await core_automation.task_info(ctx.guild.id if ctx.guild else 0, name)
-        if result["success"]:
-            result_embed = result["embed"]
-            print(result_embed)
-            embed = fluxer.Embed(title=f"📝 Task: {name}", color=0x2ECC71)
-            embed.description = result_embed.get("description", "No description provided.")
-            embed.add_field(
-                name="Status", value=result_embed.get("status", "Unknown"), inline=True
-            )
-            embed.add_field(
-                name="Next Run", value=result_embed.get("next_run", "Not scheduled"), inline=True
-            )
-            embed.add_field(
-                name="Interval", value=result_embed.get("interval", "None"), inline=True
-            )
-            embed.add_field(
-                name="Actions", value=result_embed.get("actions", "No actions"), inline=False
-            )
-            await ctx.reply(embed=embed)
-        else:
-            await ctx.reply(result["message"])
-
-    @fluxer.Cog.command(name="task pause")
-    @permissions.check()
-    async def task_pause(self: Self, ctx: fluxer.Message, name: str) -> None:
-        """
-        Pause a task.
-
-        Args:
-            ctx: The command context.
-            name: The name of the task.
-        """
-        result = await core_automation.task_pause(ctx.guild.id if ctx.guild else 0, name)
-        await ctx.reply(result["message"])
-
-    @fluxer.Cog.command(name="task resume")
-    @permissions.check()
-    async def task_resume(self: Self, ctx: fluxer.Message, name: str) -> None:
-        """
-        Resume a task.
-
-        Args:
-            ctx: The command context.
-            name: The name of the task.
-        """
-        result = await core_automation.task_resume(ctx.guild.id if ctx.guild else 0, name)
-        await ctx.reply(result["message"])
-
-    @fluxer.Cog.command(name="task rename")
-    @permissions.check()
-    async def task_rename(self: Self, ctx: fluxer.Message, old_name: str, new_name: str) -> None:
-        """
-        Rename a task.
-
-        Args:
-            ctx: The command context.
-            old_name: The current name of the task.
-            new_name: The new name for the task.
-        """
-        result = await core_automation.task_rename(
-            ctx.guild.id if ctx.guild else 0, old_name, new_name
-        )
-        await ctx.reply(result["message"])
-
-    @fluxer.Cog.command(name="task description")
-    @permissions.check()
-    async def task_description(
-        self: Self, ctx: fluxer.Message, name: str, *, description: str
-    ) -> None:
-        """
-        Update task description.
-
-        Args:
-            ctx: The command context.
-            name: The name of the task.
-            description: The new description.
-        """
-        result = await core_automation.task_description(
-            ctx.guild.id if ctx.guild else 0, name, description
-        )
-        await ctx.reply(result["message"])
-
-    @fluxer.Cog.command(name="task reschedule")
-    @permissions.check()
-    async def task_reschedule(
-        self: Self, ctx: fluxer.Message, name: str, *, time_text: str
-    ) -> None:
-        """
-        Reschedule a task.
-
-        Args:
-            ctx: The command context.
-            name: The name of the task.
-            time_text: Human readable time.
-        """
-        target_time = dateparser.parse(time_text)
-        if not target_time:
-            await ctx.reply("Could not parse time input.")
-            return
-
-        new_timestamp = int(target_time.timestamp())
-        result = await core_automation.task_reschedule(
-            ctx.guild.id if ctx.guild else 0, name, new_timestamp
-        )
-        await ctx.reply(result["message"])
-
-    @fluxer.Cog.command(name="task interval")
-    @permissions.check()
-    async def task_interval(
-        self: Self, ctx: fluxer.Message, name: str, interval: str, multiplier: int = 1
-    ) -> None:
-        """
-        Set task repeat interval.
-
-        Args:
-            ctx: The command context.
-            name: The name of the task.
-            interval: hourly, daily, weekly, or no.
-            multiplier: Interval multiplier.
-        """
-        result = await core_automation.task_interval(
-            ctx.guild.id if ctx.guild else 0, name, interval, multiplier
-        )
-        await ctx.reply(result["message"])
-
-    @fluxer.Cog.command(name="task trigger")
-    @permissions.check()
-    async def task_trigger(self: Self, ctx: fluxer.Message, name: str) -> None:
-        """
-        Manually trigger a task.
-
-        Args:
-            ctx: The command context.
-            name: The name of the task.
-        """
-        result = await core_automation.task_trigger(ctx.guild.id if ctx.guild else 0, name)
-        await ctx.reply(result["message"])
-
     @fluxer.Cog.command(name="task action add")
     @permissions.check()
     async def task_action_add(
@@ -403,6 +205,201 @@ class Automation(fluxer.Cog):
         result = await core_automation.task_action_reorder(
             ctx.guild.id if ctx.guild else 0, task_name
         )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task list")
+    @permissions.check()
+    async def task_list(self: Self, ctx: fluxer.Message) -> None:
+        """
+        Lists all your tasks in the current server.
+
+        Args:
+            ctx: The command context.
+        """
+        result = await core_automation.task_list(ctx.guild.id if ctx.guild else 0)
+
+        embed = fluxer.Embed(title=result["title"], color=0x2ECC71)
+        embed.description = result["body"]
+        if result.get("footer"):
+            embed.set_footer(text=result["footer"])
+
+        await ctx.reply(embed=embed)
+
+    @fluxer.Cog.command(name="task create")
+    @permissions.check()
+    async def task_create(
+        self: Self, ctx: fluxer.Message, name: str, *, description: str = ""
+    ) -> None:
+        """
+        Create a new task in the guild.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+            description: Optional description for the task.
+        """
+        result = await core_automation.task_create(
+            guild_id=ctx.guild.id if ctx.guild else 0, name=name, description=description
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task delete")
+    @permissions.check()
+    async def task_delete(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Delete a task by name.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_delete(ctx.guild.id if ctx.guild else 0, name)
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task info")
+    @permissions.check()
+    async def task_info(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Show details of a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_info(ctx.guild.id if ctx.guild else 0, name)
+        if result["success"]:
+            result_embed = result["embed"]
+            embed = fluxer.Embed(title=f"📝 Task: {name}", color=0x2ECC71)
+            embed.description = result_embed.get("description", "No description provided.")
+            embed.add_field(
+                name="Status", value=result_embed.get("status", "Unknown"), inline=True
+            )
+            embed.add_field(
+                name="Next Run", value=result_embed.get("next_run", "Not scheduled"), inline=True
+            )
+            embed.add_field(
+                name="Interval", value=result_embed.get("interval", "None"), inline=True
+            )
+            embed.add_field(
+                name="Actions", value=result_embed.get("actions", "No actions"), inline=False
+            )
+            await ctx.reply(embed=embed)
+        else:
+            await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task rename")
+    @permissions.check()
+    async def task_rename(self: Self, ctx: fluxer.Message, old_name: str, new_name: str) -> None:
+        """
+        Rename a task.
+
+        Args:
+            ctx: The command context.
+            old_name: The current name of the task.
+            new_name: The new name for the task.
+        """
+        result = await core_automation.task_rename(
+            ctx.guild.id if ctx.guild else 0, old_name, new_name
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task description")
+    @permissions.check()
+    async def task_description(
+        self: Self, ctx: fluxer.Message, name: str, *, description: str
+    ) -> None:
+        """
+        Update task description.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+            description: The new description.
+        """
+        result = await core_automation.task_description(
+            ctx.guild.id if ctx.guild else 0, name, description
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task schedule at")
+    @permissions.check()
+    async def task_schedule_at(
+        self: Self, ctx: fluxer.Message, name: str, *, time_text: str
+    ) -> None:
+        """
+        Reschedule a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+            time_text: Human readable time.
+        """
+        target_time = dateparser.parse(time_text)
+        if not target_time:
+            await ctx.reply("Could not parse time input.")
+            return
+
+        result = await core_automation.task_schedule_at(
+            ctx.guild.id if ctx.guild else 0, name, time_text
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task schedule interval")
+    @permissions.check()
+    async def task_schedule_interval(
+        self: Self, ctx: fluxer.Message, name: str, interval: str, multiplier: int = 1
+    ) -> None:
+        """
+        Set task repeat interval.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+            interval: hourly, daily, weekly, or no.
+            multiplier: Interval multiplier.
+        """
+        result = await core_automation.task_schedule_interval(
+            ctx.guild.id if ctx.guild else 0, name, interval, int(multiplier)
+        )
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task schedule pause")
+    @permissions.check()
+    async def task_schedule_pause(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Pause a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_schedule_pause(ctx.guild.id if ctx.guild else 0, name)
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task schedule resume")
+    @permissions.check()
+    async def task_schedule_resume(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Resume a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_schedule_resume(ctx.guild.id if ctx.guild else 0, name)
+        await ctx.reply(result["message"])
+
+    @fluxer.Cog.command(name="task trigger")
+    @permissions.check()
+    async def task_trigger(self: Self, ctx: fluxer.Message, name: str) -> None:
+        """
+        Manually trigger a task.
+
+        Args:
+            ctx: The command context.
+            name: The name of the task.
+        """
+        result = await core_automation.task_trigger(ctx.guild.id if ctx.guild else 0, name)
         await ctx.reply(result["message"])
 
 
