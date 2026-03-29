@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 REQUIRED_KEYS = {
     "message": ["channel_id", "content"],
     "embed": ["channel_id", "title", "description"],
-    "voice_move": ["guild_id", "user_id", "target_vc"],
+    "voice_move": ["source_channel", "destination_channel"],
     "timeout": ["guild_id", "user_id", "duration"],
 }
 
