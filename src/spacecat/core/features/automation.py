@@ -455,7 +455,132 @@ async def task_info(guild_id: int, name: str) -> dict[str, Any]:
     return {"success": True, "task": task, "embed": embed_data}
 
 
-async def task_pause(guild_id: int, task_name: str) -> dict[str, Any]:
+async def task_rename(guild_id: int, old_name: str, new_name: str) -> dict[str, Any]:
+    """Renames a task by name and guild_id.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        old_name: The current name of the task.
+        new_name: The new name for the task.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    # Check if the new name already exists
+    existing_task = await Task.filter(guild_id=guild_id, name=new_name).first()
+    if existing_task:
+        return {"success": False, "message": f"A task with name `{new_name}` already exists."}
+
+    task = await Task.filter(guild_id=guild_id, name=old_name).first()
+
+    if not task:
+        return {"success": False, "message": f"Task `{old_name}` not found."}
+
+    task.name = new_name
+    await task.save()
+
+    return {"success": True, "message": f"📝 Task `{old_name}` renamed to `{new_name}`."}
+
+
+async def task_schedule_at(
+    guild_id: int,
+    name: str,
+    dispatch_time_text: str,
+) -> dict[str, Any]:
+    """Reschedules a task by name and guild_id.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        name: The name of the task to reschedule.
+        dispatch_time_text: The time to dispatch the reminder in a
+            human-readable format.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    scheduler = ServiceRegistry.task_scheduler()
+
+    # Parse the text timestamp input into a datetime object
+    current_time = int(time.time())
+    target_time = dateparser.parse(dispatch_time_text)
+    if not target_time:
+        return {
+            "display": "Could not parse time input.",
+        }
+
+    # Ensure time is in the future
+    target_timestamp = target_time.timestamp()
+    if target_timestamp <= current_time:
+        return {
+            "display": "Time must be in the future.",
+        }
+    delay_seconds = int(target_timestamp - current_time)
+    dispatch_time = current_time + delay_seconds
+
+    # Get the existing task
+    task = await Task.filter(guild_id=guild_id, name=name).first()
+    if not task:
+        return {"success": False, "message": f"Task `{name}` not found."}
+
+    # Set time and add to scheduler
+    task.dispatch_time = dispatch_time
+    await task.save()
+    await scheduler.schedule(task)
+
+    return {"success": True, "message": f"📅 `{name}` rescheduled to <t:{dispatch_time}:F>."}
+
+
+async def task_schedule_interval(
+    guild_id: int, name: str, interval_name: str, multiplier: int
+) -> dict[str, Any]:
+    """Updates a task's repeat interval by name and guild_id.
+
+    Args:
+        guild_id: The ID of the guild where the task exists.
+        name: The name of the task to update.
+        interval_name: The name of the repeat interval (Hourly, Daily,
+            Weekly).
+        multiplier: The multiplier for the interval.
+
+    Returns:
+        Dictionary with success status and message.
+    """
+    scheduler = ServiceRegistry.task_scheduler()
+
+    # Get the existing task
+    task = await Task.filter(guild_id=guild_id, name=name).first()
+    if not task:
+        return {"success": False, "message": f"Task `{name}` not found."}
+
+    # Map interval name to enum
+    interval_map = {
+        "hourly": Repeat.Hourly,
+        "daily": Repeat.Daily,
+        "weekly": Repeat.Weekly,
+        "none": Repeat.No,
+    }
+
+    # Check if interval name is valid
+    interval_lower = interval_name.lower()
+    if interval_lower not in interval_map:
+        return {
+            "success": False,
+            "message": f"Invalid interval `{interval_name}`. Use: hourly, daily, weekly, or no.",
+        }
+
+    # Set the task's repeat interval
+    task.repeat_interval = interval_map[interval_lower]
+    task.repeat_multiplier = multiplier
+    await task.save()
+    await scheduler.schedule(task)
+
+    return {
+        "success": True,
+        "message": f"🔄 `{name}` will now repeat every {multiplier} {interval_name}(s).",
+    }
+
+
+async def task_schedule_pause(guild_id: int, task_name: str) -> dict[str, Any]:
     """Pauses a task by name and guild_id.
 
     Args:
@@ -485,34 +610,7 @@ async def task_pause(guild_id: int, task_name: str) -> dict[str, Any]:
     }
 
 
-async def task_rename(guild_id: int, old_name: str, new_name: str) -> dict[str, Any]:
-    """Renames a task by name and guild_id.
-
-    Args:
-        guild_id: The ID of the guild where the task exists.
-        old_name: The current name of the task.
-        new_name: The new name for the task.
-
-    Returns:
-        Dictionary with success status and message.
-    """
-    # Check if the new name already exists
-    existing_task = await Task.filter(guild_id=guild_id, name=new_name).first()
-    if existing_task:
-        return {"success": False, "message": f"A task with name `{new_name}` already exists."}
-
-    task = await Task.filter(guild_id=guild_id, name=old_name).first()
-
-    if not task:
-        return {"success": False, "message": f"Task `{old_name}` not found."}
-
-    task.name = new_name
-    await task.save()
-
-    return {"success": True, "message": f"📝 Task `{old_name}` renamed to `{new_name}`."}
-
-
-async def task_resume(guild_id: int, task_name: str) -> dict[str, Any]:
+async def task_schedule_resume(guild_id: int, task_name: str) -> dict[str, Any]:
     """Resumes a task by name and guild_id.
 
     Args:
@@ -536,73 +634,6 @@ async def task_resume(guild_id: int, task_name: str) -> dict[str, Any]:
     return {"success": True, "message": f"▶️ Task `{task_name}` is now active."}
 
 
-async def task_reschedule(guild_id: int, name: str, new_time: int) -> dict[str, Any]:
-    """Reschedules a task by name and guild_id.
-
-    Args:
-        guild_id: The ID of the guild where the task exists.
-        name: The name of the task to reschedule.
-        new_time: The new dispatch time as a timestamp.
-
-    Returns:
-        Dictionary with success status and message.
-    """
-    task = await Task.filter(guild_id=guild_id, name=name).first()
-
-    if not task:
-        return {"success": False, "message": f"Task `{name}` not found."}
-
-    task.dispatch_time = new_time
-    await task.save()
-
-    return {"success": True, "message": f"📅 `{name}` rescheduled to <t:{new_time}:F>."}
-
-
-async def task_interval(
-    guild_id: int, name: str, interval_name: str, multiplier: int
-) -> dict[str, Any]:
-    """Updates a task's repeat interval by name and guild_id.
-
-    Args:
-        guild_id: The ID of the guild where the task exists.
-        name: The name of the task to update.
-        interval_name: The name of the repeat interval (Hourly, Daily,
-            Weekly).
-        multiplier: The multiplier for the interval.
-
-    Returns:
-        Dictionary with success status and message.
-    """
-    task = await Task.filter(guild_id=guild_id, name=name).first()
-
-    if not task:
-        return {"success": False, "message": f"Task `{name}` not found."}
-
-    # Convert interval name to Repeat enum
-    interval_map = {
-        "hourly": Repeat.Hourly,
-        "daily": Repeat.Daily,
-        "weekly": Repeat.Weekly,
-        "no": Repeat.No,
-    }
-
-    interval_lower = interval_name.lower()
-    if interval_lower not in interval_map:
-        return {
-            "success": False,
-            "message": f"Invalid interval `{interval_name}`. Use: hourly, daily, weekly, or no.",
-        }
-
-    task.repeat_interval = interval_map[interval_lower]
-    task.repeat_multiplier = multiplier
-    await task.save()
-
-    return {
-        "success": True,
-        "message": f"🔄 `{name}` will now repeat every {multiplier} {interval_name}(s).",
-    }
-
-
 async def task_trigger(guild_id: int, name: str) -> dict[str, Any]:
     """Manually triggers a task's actions.
 
@@ -618,7 +649,7 @@ async def task_trigger(guild_id: int, name: str) -> dict[str, Any]:
     if not task:
         return {"success": False, "message": f"Task `{name}` not found."}
 
-    event_service = ServiceRegistry.events()
+    event_service = ServiceRegistry.tasks()
 
     try:
         await event_service.execute_actions(task)
