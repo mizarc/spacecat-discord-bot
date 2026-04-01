@@ -230,7 +230,9 @@ async def task_action_remove(guild_id: int, task_name: str, action_index: int) -
         }
 
 
-async def task_action_reorder(guild_id: int, task_name: str) -> dict[str, Any]:
+async def task_action_reorder(
+    guild_id: int, task_name: str, existing_index: int, new_index: int
+) -> dict[str, Any]:
     """Placeholder for reordering task actions.
 
     Note: This would require adding an 'order' field to the Action model
@@ -239,29 +241,51 @@ async def task_action_reorder(guild_id: int, task_name: str) -> dict[str, Any]:
     Args:
         guild_id: The ID of the guild where the task exists.
         task_name: The name of the task to reorder actions for.
+        existing_index: The index of the action to move.
+        new_index: The index of the new position for the action.
 
     Returns:
         Dictionary with success status and message.
     """
-    task = await Task.filter(guild_id=guild_id, name=task_name).first()
+    existing_index -= 1
+    new_index -= 1
 
+    # Get the task
+    task = await Task.filter(guild_id=guild_id, name=task_name).first()
     if not task:
         return {"success": False, "message": f"Task `{task_name}` not found."}
 
     # Get all actions for the task
     actions = await task.actions.all().order_by("position")
-
     if not actions:
         return {"success": False, "message": f"Task `{task_name}` has no actions to reorder."}
 
-    # Example logic to normalize the order to 1, 2, 3...
-    for i, action in enumerate(actions, 1):
-        action.position = i
-        await action.save()
+    # Convert QuerySet to a list to manipulate in memory
+    action_list = list(actions)
+
+    # Validate indices to prevent IndexError
+    if not (0 <= existing_index < len(action_list)):
+        return {"success": False, "message": f"Invalid existing index: {existing_index}"}
+
+    # Clamp the new_index to the bounds of the list
+    new_index = max(0, min(new_index, len(action_list) - 1))
+
+    # Perform the move
+    moved_action = action_list.pop(existing_index)
+    action_list.insert(new_index, moved_action)
+
+    # 4. Bulk update the positions in the database so its sequential
+    for i, action in enumerate(action_list, 1):
+        if action.position != i:
+            action.position = i
+            await action.save()
 
     return {
         "success": True,
-        "message": f"✅ Actions for `{task_name}` have been normalized.",
+        "message": (
+            f"✅  Moved {moved_action.action_type} action from index {existing_index} "
+            f"to {new_index} for `{task_name}`."
+        ),
     }
 
 
@@ -300,9 +324,9 @@ async def task_create(
     # Use None for manual-only tasks (no automatic dispatch)
     task_dispatch_time = None if dispatch_time is None else dispatch_time
 
-    # For manual-only tasks, set repeat to No
+    # For manual-only tasks, set repeat to NONE
     if dispatch_time is None:
-        repeat_interval = Repeat.No
+        repeat_interval = Repeat.NONE
         repeat_multiplier = 1
 
     # Create the new task
