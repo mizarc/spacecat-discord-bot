@@ -194,16 +194,20 @@ class Automation(fluxer.Cog):
 
     @fluxer.Cog.command(name="task action reorder")
     @permissions.check()
-    async def task_action_reorder(self: Self, ctx: fluxer.Message, task_name: str) -> None:
+    async def task_action_reorder(
+        self: Self, ctx: fluxer.Message, task_name: str, existing_index: int, new_index: int
+    ) -> None:
         """
         Reorder task actions.
 
         Args:
             ctx: The command context.
             task_name: The name of the task.
+            existing_index: The index of the action to move.
+            new_index: The index of the new position for the action.
         """
         result = await core_automation.task_action_reorder(
-            ctx.guild.id if ctx.guild else 0, task_name
+            ctx.guild.id if ctx.guild else 0, task_name, int(existing_index), int(new_index)
         )
         await ctx.reply(result["message"])
 
