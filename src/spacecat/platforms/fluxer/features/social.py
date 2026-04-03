@@ -25,7 +25,7 @@ class Social(fluxer.Cog):
 
     def __init__(self: Social, bot: fluxer.Bot) -> None:
         """
-        Initialises a new instance of the Fun class.
+        Initializes a new instance of the Fun class.
 
         Args:
             bot: The bot instance.

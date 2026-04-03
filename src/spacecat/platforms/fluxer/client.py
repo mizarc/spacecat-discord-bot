@@ -7,6 +7,7 @@ from spacecat.core.registry import ServiceRegistry
 from spacecat.platforms.base import BaseClient
 from spacecat.platforms.fluxer.dispatcher import FluxerDispatcher
 from spacecat.platforms.fluxer.features.automation import Automation
+from spacecat.platforms.fluxer.features.knowledge import Knowledge
 from spacecat.platforms.fluxer.features.social import Social
 from spacecat.platforms.fluxer.features.utility import Utility
 
@@ -53,5 +54,6 @@ class FluxerClient(fluxer.Bot, BaseClient):
     async def _register_cogs(self):
         """Register all cogs for the bot."""
         await self.add_cog(Automation(self))
+        await self.add_cog(Knowledge(self))
         await self.add_cog(Social(self))
         await self.add_cog(Utility(self))
