@@ -28,6 +28,7 @@ classifiers = [
 # These are required regardless of the platform
 dependencies = [
     "beautifulsoup4==4.14.3",
+    "googletrans==4.0.2",
     "Pillow>=12.1.1",
     "python-dateutil==2.9.0.post0",
     "pytz==2026.1.post1",
@@ -36,6 +37,7 @@ dependencies = [
     "simpleeval==1.0.7",
     "toml==0.10.2",
     "tortoise-orm==1.1.6"
+
 ]
 
 # --- OPTIONAL PLATFORMS ---
