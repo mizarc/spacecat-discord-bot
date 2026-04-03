@@ -25,22 +25,47 @@ class Knowledge(fluxer.Cog):
 
     @fluxer.Cog.command()
     @permissions.check()
-    async def wiki(self: Self, ctx: fluxer.Message, *, query: str) -> None:
+    async def currency(
+        self: Self, ctx: fluxer.Message, amount: float, base: str, target: str
+    ) -> None:
         """
-        Search Wikipedia for a topic.
+        Convert currency. Usage: !convert 100 USD EUR.
 
         Args:
             ctx: The command context.
-            query: The topic to search for.
+            amount: The number to convert.
+            base: The starting currency code (e.g. USD).
+            target: The target currency code (e.g. EUR).
         """
-        result = await asyncio.to_thread(core_knowledge.wikipedia, query)
+        result = await asyncio.to_thread(core_knowledge.currency, amount, base, target)
 
-        if "error" in result:
-            await ctx.reply(result["error"])
+        if not result["success"]:
+            await ctx.reply(f"❌ {result['error']}")
             return
 
-        response = f"📖 **{result['title']}**\n{result['content']}\n\n🔗 <{result['url']}>"
-        await ctx.reply(response)
+        # Build the Embed
+        embed = fluxer.Embed(title="💱 Currency Conversion")
+
+        # Text Data
+        embed.add_field(
+            name="Result",
+            value=(
+                f"{result['amount']:,} {result['base']} = {result['result']:,} {result['target']}"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="Exchange Rate",
+            value=f"1 {result['base']} = {result['rate']:.4f} {result['target']}",
+            inline=True,
+        )
+
+        # Attach the Graph
+        if result["graph_url"]:
+            embed.set_image(url=result["graph_url"])
+            embed.set_footer(text="Graph shows 1-year historical trend line.")
+
+        await ctx.reply(embed=embed)
 
     @fluxer.Cog.command()
     @permissions.check()
@@ -88,11 +113,30 @@ class Knowledge(fluxer.Cog):
 
         Args:
             ctx: The command context.
-            target_language: The target language code (e.g., 'es', 'fr', 'jp').
+            target_language: The target language code (e.g., 'es', 'cn', 'jp').
             text: The text to translate.
         """
         translation = await core_knowledge.translate(text, target_language)
         await ctx.reply(f"🌍 **Translation ({target_language}):** {translation}")
+
+    @fluxer.Cog.command()
+    @permissions.check()
+    async def wiki(self: Self, ctx: fluxer.Message, *, query: str) -> None:
+        """
+        Search Wikipedia for a topic.
+
+        Args:
+            ctx: The command context.
+            query: The topic to search for.
+        """
+        result = await asyncio.to_thread(core_knowledge.wikipedia, query)
+
+        if "error" in result:
+            await ctx.reply(result["error"])
+            return
+
+        response = f"📖 **{result['title']}**\n{result['content']}\n\n🔗 <{result['url']}>"
+        await ctx.reply(response)
 
 
 async def setup(bot: fluxer.Bot) -> None:
