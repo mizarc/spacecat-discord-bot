@@ -1,4 +1,4 @@
-# 🗄️ SpaceCat Discord Bot — Archived
+# SpaceCat Discord Bot
 
 > **This project has been archived.** The bot is no longer actively maintained, and the source code is preserved here for reference only. Refer to the new project [**Astrokat**](https://github.com/mizarc/astrokat) for its successor.
 
