@@ -1,6 +1,6 @@
 # 🗄️ SpaceCat Discord Bot — Archived
 
-> **This project has been archived.** The bot is no longer actively maintained, and the source code is preserved here for reference only.
+> **This project has been archived.** The bot is no longer actively maintained, and the source code is preserved here for reference only. Refer to the new project [**Astrokat**](https://github.com/mizarc/astrokat) for its successor.
 
 The official source code of the Magic Space Cat Discord bot. Everything here is readily available if you want to host your own instance, with full commands and permission customisation.
 
